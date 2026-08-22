@@ -21,7 +21,10 @@ _PART_AT = re.compile(rb"pdfaid[:\s]*part\s*[=>]\s*[\"']?(\d)", re.I)
 _CONF_AT = re.compile(rb"pdfaid[:\s]*conformance\s*[=>]\s*[\"']?([ABUabu])", re.I)
 _STREAM = re.compile(rb"stream\r?\n")
 
-MAX_STREAM_SCAN = 400_000
+MAX_STREAM_SCAN = 400_000        # compressed bytes read after each stream marker
+MAX_INFLATED_PER_STREAM = 4_000_000   # and what we will let one of them become
+MAX_STREAMS = 512                     # zlib is cheap per call; a million calls are not
+MAX_INFLATED_TOTAL = 32_000_000       # the whole budget for one file
 
 
 @dataclass(frozen=True)
@@ -33,13 +36,25 @@ class PdfFacts:
 
 
 def _haystacks(data: bytes):
+    """The raw bytes, then each stream inflated — under a budget.
+
+    A PDF stream can expand about a thousandfold, and we are looking for one
+    short XMP packet. Inflating everything to find it lets a 3 MB file cost
+    gigabytes, so both the per-stream and the total output are bounded, and so
+    is the number of streams we will even try.
+    """
     yield data
-    for m in _STREAM.finditer(data):
+    spent = 0
+    for seen, m in enumerate(_STREAM.finditer(data)):
+        if seen >= MAX_STREAMS or spent >= MAX_INFLATED_TOTAL:
+            return
         chunk = data[m.end():m.end() + MAX_STREAM_SCAN]
         try:
-            yield zlib.decompressobj().decompress(chunk)
+            out = zlib.decompressobj().decompress(chunk, MAX_INFLATED_PER_STREAM)
         except zlib.error:
             continue
+        spent += len(out)
+        yield out
 
 
 def read(data: bytes) -> PdfFacts:

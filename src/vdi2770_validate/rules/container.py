@@ -16,6 +16,7 @@ DEFECT_TO_RULE = {
     "unsafe-member-name": "Z4",
     "nesting-too-deep": "Z6",
     "metadata-unreadable": "Z3",
+    "metadata-too-large": "Z5",
     "member-unreadable": "Z1",
 }
 

@@ -25,6 +25,10 @@ MAX_MEMBERS = 10_000
 MAX_MEMBER_BYTES = 512 * 1024 * 1024
 MAX_TOTAL_BYTES = 2 * 1024 * 1024 * 1024
 MAX_RATIO = 200
+# The metadata is parsed into a tree and then handed to a schema validator, both
+# of which cost several times the text. The per-member cap is sized for PDFs and
+# is far too generous for something we are going to expand twice.
+MAX_METADATA_BYTES = 16 * 1024 * 1024
 # How many container levels we will open. This is a budget for untrusted input,
 # not a statement about VDI 2770 — the reference project's own vdi2770_excel.zip
 # is a documentation container holding documentation containers holding document
@@ -163,6 +167,13 @@ def read(data: bytes, path: str, depth: int = 0) -> Container:
     wanted = MAIN_XML if c.kind is Kind.DOCUMENTATION else METADATA_XML if c.kind is Kind.DOCUMENT else None
     if wanted:
         try:
+            declared = zf.getinfo(wanted).file_size
+            if declared > MAX_METADATA_BYTES:
+                c.defects.append(Defect("metadata-too-large", c.where.child(member=wanted),
+                                        f"{declared} bytes; this tool parses at most "
+                                        f"{MAX_METADATA_BYTES}"))
+                c.rejected[wanted] = f"larger than this tool will parse ({declared} bytes)"
+                raise KeyError(wanted)
             c.metadata_bytes = zf.read(wanted)
             c.metadata_name = wanted
         except (KeyError, zipfile.BadZipFile, RuntimeError) as e:
