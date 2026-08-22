@@ -14,12 +14,12 @@ from .rules import pdf as r_pdf
 from .rules import schema as r_schema
 
 
-def _facts_for(raw: bytes):
+def _facts_for(raw: bytes, accepted):
     cache = {}
 
     def get(name: str) -> Optional[pdfread.PdfFacts]:
         if name not in cache:
-            member = zipread.member_bytes(raw, name)
+            member = zipread.member_bytes(raw, name, allowed=accepted)
             cache[name] = pdfread.read(member) if member is not None else None
         return cache[name]
 
@@ -67,7 +67,7 @@ def check_bytes(data: bytes, name: str) -> Report:
             raw = zipread.member_bytes(parent_raw, member) if parent_raw else None
             raw_by_path[c.path] = raw
         if raw is not None:
-            for f in r_pdf.check(c, document, _facts_for(raw)):
+            for f in r_pdf.check(c, document, _facts_for(raw, set(c.file_names))):
                 report.add(f)
 
     return report

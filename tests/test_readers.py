@@ -71,3 +71,19 @@ def test_pdf_facts_are_read_without_a_pdf_library():
 
 def test_something_that_is_not_a_pdf_says_so():
     assert pdfread.read(b"hello").is_pdf is False
+
+
+def test_a_rejected_member_cannot_be_read_by_a_later_layer():
+    """Regression: the caps in read() are worthless if something downstream can
+    re-open the archive and decompress a member the reader threw out."""
+    payload = b"0" * (4 * 1024 * 1024)
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr("VDI2770_Metadata.xml", b"<x/>")
+        z.writestr("bomb.bin", payload)       # compresses ~1000x, over MAX_RATIO
+    raw = buf.getvalue()
+    c = zipread.read(raw, "x.zip")
+    assert "bomb.bin" in c.rejected, "the ratio cap should have refused it"
+    assert zipread.member_bytes(raw, "bomb.bin", allowed=set(c.file_names)) is None
+    # and without the allow-list it is still bounded by the per-member cap
+    assert zipread.member_bytes(raw, "VDI2770_Metadata.xml", allowed=set(c.file_names)) == b"<x/>"

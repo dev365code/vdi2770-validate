@@ -148,6 +148,18 @@ def main() -> int:
     f["B.pdf"] = (CORPUS / "pdf" / "encrypted.pdf").read_bytes()
     add("p2-encrypted-pdf.zip", f, "P2", ["B.pdf"], "B.pdf replaced with the corpus's encrypted.pdf")
 
+    # Z5b — a bomb the metadata declares as a PDF.
+    # Regression: the size caps used to be enforced in the reader only, while the
+    # PDF layer re-opened the raw archive and decompressed whatever the metadata
+    # named. The caps have to hold on every path that reaches a member.
+    f = dict(base)
+    f["bomb.pdf"] = b"0" * (40 * 1024 * 1024)
+    f[META] = edit(base[META], '<DigitalFile FileFormat="application/pdf">B.pdf</DigitalFile>',
+                   '<DigitalFile FileFormat="application/pdf">B.pdf</DigitalFile>\n'
+                   '        <DigitalFile FileFormat="application/pdf">bomb.pdf</DigitalFile>')
+    add("z5b-declared-bomb.zip", f, "Z5", ["bomb.pdf", META],
+        "a rejected member that the metadata declares as a PDF")
+
     # P3 — a PDF that makes no PDF/A claim
     f = dict(base)
     f["B.pdf"] = (CORPUS / "pdf" / "scan.pdf").read_bytes()

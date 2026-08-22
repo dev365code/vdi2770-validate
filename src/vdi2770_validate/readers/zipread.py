@@ -11,7 +11,7 @@ import io
 import zipfile
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 
 from ..model import Defect, Location
 
@@ -53,6 +53,9 @@ class Container:
     children: List[Container] = field(default_factory=list)
     defects: List[Defect] = field(default_factory=list)
     near_misses: Dict[str, str] = field(default_factory=dict)
+    # Members we refused, and why. Kept so the report can say "present but
+    # rejected" rather than the untrue "not in the archive".
+    rejected: Dict[str, str] = field(default_factory=dict)
     depth: int = 0
 
     @property
@@ -123,14 +126,18 @@ def read(data: bytes, path: str, depth: int = 0) -> Container:
         reason = _unsafe(i.filename)
         if reason:
             c.defects.append(Defect("unsafe-member-name", c.where.child(member=i.filename), reason))
+            c.rejected[i.filename] = reason
             continue
         if i.file_size > MAX_MEMBER_BYTES:
             c.defects.append(Defect("member-too-large", c.where.child(member=i.filename),
                                     f"{i.file_size} bytes"))
+            c.rejected[i.filename] = f"larger than this tool will read ({i.file_size} bytes)"
             continue
         if i.compress_size > 0 and i.file_size // max(i.compress_size, 1) > MAX_RATIO:
             c.defects.append(Defect("suspicious-compression", c.where.child(member=i.filename),
                                     f"expands {i.file_size // max(i.compress_size, 1)}x"))
+            c.rejected[i.filename] = (
+                f"expands {i.file_size // max(i.compress_size, 1)}x, over this tool's limit")
             continue
         total += i.file_size
         if total > MAX_TOTAL_BYTES:
@@ -171,8 +178,23 @@ def read_file(path: str) -> Container:
         return read(fh.read(), path.rsplit("/", 1)[-1])
 
 
-def member_bytes(data: bytes, name: str) -> Optional[bytes]:
+def member_bytes(data: bytes, name: str, allowed: Optional[Set[str]] = None) -> Optional[bytes]:
+    """Read one member — but only one the reader already accepted.
+
+    The budget in `read()` is worthless if some later layer can reach past it
+    and decompress whatever it likes. `allowed` is the set of members that
+    survived those checks; anything else is refused here too, and the declared
+    size is re-checked because a ZIP header can lie about it.
+    """
     try:
-        return zipfile.ZipFile(io.BytesIO(data)).read(name)
+        zf = zipfile.ZipFile(io.BytesIO(data))
+        if allowed is not None and name not in allowed:
+            return None
+        info = zf.getinfo(name)
+        if info.file_size > MAX_MEMBER_BYTES:
+            return None
+        with zf.open(name) as fh:
+            payload = fh.read(MAX_MEMBER_BYTES + 1)
+        return None if len(payload) > MAX_MEMBER_BYTES else payload
     except Exception:
         return None

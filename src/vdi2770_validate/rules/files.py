@@ -17,10 +17,14 @@ def check(container, document) -> Iterator[Finding]:
 
     for f in document.all_files:
         if f.file_name and f.file_name not in present:
+            rejected = container.rejected.get(f.file_name)
+            detail = (f"{f.file_name!r} is in the archive but was refused: {rejected}"
+                      if rejected else
+                      f"{f.file_name!r} is declared but not in the archive")
             r = rule("F1")
             yield Finding(r, r.title, f.src.child(container=container.path,
                                                   member=container.metadata_name),
-                          detail=f"{f.file_name!r} is declared but not in the archive")
+                          detail=detail)
 
     structural = {MAIN_XML, METADATA_XML, MAIN_PDF}
     for name in sorted(present - declared - structural):
