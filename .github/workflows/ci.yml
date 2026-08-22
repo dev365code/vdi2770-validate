@@ -22,7 +22,11 @@ jobs:
           python -m pip install -e ".[dev]"
       - name: Lint
         run: python -m ruff check src tests tools
+      - name: Build fixtures
+        run: python tools/make_fixtures.py
       - name: Test
         run: python -m pytest
       - name: Corpus is unchanged
         run: python tools/vendor_corpus.py --check
+      - name: Firing coverage
+        run: python tools/rule_coverage.py --check

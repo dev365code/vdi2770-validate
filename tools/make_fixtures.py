@@ -1,0 +1,167 @@
+#!/usr/bin/env python3
+"""Build the violating half of each rule's fixture pair.
+
+Every fixture is ONE deliberate change to a container from the vendored corpus,
+and it records which member it changed. A pair that differs in eleven files is
+not evidence about any one rule, so the difference is kept minimal and written
+down in fixtures/MANIFEST.json.
+
+    python tools/make_fixtures.py
+"""
+from __future__ import annotations
+
+import io
+import json
+import zipfile
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+CORPUS = ROOT / "corpus" / "examples"
+OUT = ROOT / "tests" / "fixtures"
+
+DOC = CORPUS / "container" / "documentcontainer.zip"          # a clean document container
+DOCN = CORPUS / "container" / "documentationcontainer.zip"    # a clean documentation container
+META = "VDI2770_Metadata.xml"
+MAIN_XML = "VDI2770_Main.xml"
+
+
+def members(path: Path):
+    zf = zipfile.ZipFile(path)
+    return {n: zf.read(n) for n in zf.namelist()}
+
+
+def write(name: str, files: dict, *, compress=zipfile.ZIP_DEFLATED) -> None:
+    OUT.mkdir(parents=True, exist_ok=True)
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", compress) as z:
+        for n, data in files.items():
+            z.writestr(n, data)
+    (OUT / name).write_bytes(buf.getvalue())
+
+
+def edit(text: bytes, old: str, new: str) -> bytes:
+    s = text.decode("utf-8")
+    assert s.count(old) >= 1, f"anchor not found: {old!r}"
+    return s.replace(old, new, 1).encode("utf-8")
+
+
+def main() -> int:
+    base = members(DOC)
+    basen = members(DOCN)
+    made = {}
+
+    def add(name, files, rule, changed, note):
+        write(name, files)
+        made[name] = {"rule": rule, "basedOn": "documentcontainer.zip" if META in files else "documentationcontainer.zip",
+                      "changed": changed, "note": note}
+
+    # Z1 — not a ZIP at all
+    OUT.mkdir(parents=True, exist_ok=True)
+    (OUT / "z1-not-a-zip.zip").write_bytes(b"this is not a zip file, it only has the extension\n")
+    made["z1-not-a-zip.zip"] = {"rule": "Z1", "basedOn": None, "changed": ["<whole file>"],
+                                "note": "plain text with a .zip name"}
+
+    # Z4 — a member name that would escape the extraction directory
+    f = dict(base)
+    f["../escaped.txt"] = b"x"
+    add("z4-path-traversal.zip", f, "Z4", ["../escaped.txt"], "added one member with a parent-directory segment")
+
+    # Z5 — a member that expands far beyond this tool's ratio budget
+    f = dict(base)
+    f["bomb.txt"] = b"0" * (40 * 1024 * 1024)
+    add("z5-compression-ratio.zip", f, "Z5", ["bomb.txt"], "40 MiB of a single repeated byte")
+
+    # Z6 — one nesting level deeper than VDI 2770 uses
+    inner = io.BytesIO()
+    with zipfile.ZipFile(inner, "w", zipfile.ZIP_DEFLATED) as z:
+        for n, d in base.items():
+            z.writestr(n, d)
+    deep = io.BytesIO()
+    with zipfile.ZipFile(deep, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr(META, base[META])
+        z.writestr("deeper.zip", inner.getvalue())
+    mid = io.BytesIO()
+    with zipfile.ZipFile(mid, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr(META, base[META])
+        z.writestr("deep.zip", deep.getvalue())
+    f = dict(basen)
+    f["level2.zip"] = mid.getvalue()
+    add("z6-nesting-too-deep.zip", f, "Z6", ["level2.zip"], "four container levels instead of two")
+
+    # X1 — the metadata does not parse
+    f = dict(base)
+    f[META] = base[META].replace(b"</Document>", b"</Documen")
+    add("x1-malformed-xml.zip", f, "X1", [META], "closing tag truncated")
+
+    # X2 — parses, but the schema refuses it
+    f = dict(base)
+    f[META] = edit(base[META], "<ClassId>02-01</ClassId>", "<NotAThing>02-01</NotAThing>")
+    add("x2-schema-violation.zip", f, "X2", [META], "ClassId replaced by an element the schema does not declare")
+
+    # X3 — the metadata tries to expand an entity
+    xxe = (b'<?xml version="1.0"?>\n<!DOCTYPE Document [<!ENTITY x SYSTEM "file:///etc/passwd">]>\n'
+           b'<Document xmlns="http://www.vdi.de/schemas/vdi2770"><DocumentId DomainId="d">&x;</DocumentId></Document>\n')
+    f = dict(base)
+    f[META] = xxe
+    add("x3-entity-expansion.zip", f, "X3", [META], "DOCTYPE with an external entity")
+
+    # F3 — declared media type disagrees with the file name
+    f = dict(base)
+    f[META] = edit(base[META], '<DigitalFile FileFormat="application/pdf">B.pdf</DigitalFile>',
+                                   '<DigitalFile FileFormat="application/pdf">B.docx</DigitalFile>')
+    add("f3-format-extension.zip", f, "F3", [META], "application/pdf declared for a .docx name")
+
+    # M1 — no VDI 2770 classification at all
+    f = dict(base)
+    f[META] = edit(base[META], 'ClassificationSystem="VDI2770:2018"',
+                                   'ClassificationSystem="SomethingElse"')
+    add("m1-no-vdi-classification.zip", f, "M1", [META], "the only VDI2770:2018 classification renamed")
+
+    # M2 — a class id that is not one of the twelve
+    f = dict(base)
+    f[META] = edit(base[META], "<ClassId>02-01</ClassId>", "<ClassId>99-99</ClassId>")
+    add("m2-unknown-class-id.zip", f, "M2", [META], "ClassId 99-99")
+
+    # M5 — a language code that is not ISO 639
+    f = dict(base)
+    f[META] = edit(base[META], "<Language>de</Language>", "<Language>deutsch</Language>")
+    add("m5-bad-language-code.zip", f, "M5", [META], "Language 'deutsch'")
+
+    # M6 — the version declares no PDF
+    f = dict(base)
+    f[META] = edit(base[META], 'FileFormat="application/pdf">B.pdf',
+                                   'FileFormat="application/msword">B.pdf')
+    add("m6-no-pdf-declared.zip", f, "M6", [META], "the only PDF re-declared as msword")
+
+    # M7 — a main document that is not released
+    f = dict(basen)
+    f[MAIN_XML] = edit(basen[MAIN_XML], 'StatusValue="Released"', 'StatusValue="InReview"')
+    add("m7-main-not-released.zip", f, "M7", [MAIN_XML], "LifeCycleStatus InReview")
+
+    # P1 — a file declared as PDF that is not one
+    f = dict(base)
+    f["B.pdf"] = b"I am not a PDF.\n"
+    add("p1-not-a-pdf.zip", f, "P1", ["B.pdf"], "PDF bytes replaced with text")
+
+    # P2 — an encrypted PDF (taken from the corpus, so this is real, not simulated)
+    f = dict(base)
+    f["B.pdf"] = (CORPUS / "pdf" / "encrypted.pdf").read_bytes()
+    add("p2-encrypted-pdf.zip", f, "P2", ["B.pdf"], "B.pdf replaced with the corpus's encrypted.pdf")
+
+    # P3 — a PDF that makes no PDF/A claim
+    f = dict(base)
+    f["B.pdf"] = (CORPUS / "pdf" / "scan.pdf").read_bytes()
+    add("p3-no-pdfa-claim.zip", f, "P3", ["B.pdf"], "B.pdf replaced with the corpus's scan.pdf")
+
+    (OUT / "MANIFEST.json").write_text(json.dumps({
+        "_about": "The violating half of each rule's fixture pair. Each is one deliberate change to a corpus container.",
+        "_conforming": {"document": "corpus/examples/container/documentcontainer.zip",
+                        "documentation": "corpus/examples/container/documentationcontainer.zip"},
+        "fixtures": made,
+    }, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    print(f"built {len(made)} fixtures in {OUT.relative_to(ROOT)}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
