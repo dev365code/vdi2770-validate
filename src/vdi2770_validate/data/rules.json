@@ -1,6 +1,6 @@
 {
   "_schema": 1,
-  "_about": "Rules are data. Each carries where the requirement comes from, what the reference implementation calls it, and what the user should DO about it.",
+  "_about": "Rules are data. Each carries where the requirement comes from, and what the user should DO about it. Rules that correspond to something the reference implementation checks also name its message keys and codes; several — the hostile-input rules in particular — are ours alone and name nothing.",
   "_obligations": {
     "schema": "the freely published VDI XSD says so, mechanically checkable",
     "table": "a freely published table says so (IDTA 02004 Table 1)",
