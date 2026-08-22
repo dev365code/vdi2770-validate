@@ -25,7 +25,12 @@ MAX_MEMBERS = 10_000
 MAX_MEMBER_BYTES = 512 * 1024 * 1024
 MAX_TOTAL_BYTES = 2 * 1024 * 1024 * 1024
 MAX_RATIO = 200
-MAX_DEPTH = 2
+# How many container levels we will open. This is a budget for untrusted input,
+# not a statement about VDI 2770 — the reference project's own vdi2770_excel.zip
+# is a documentation container holding documentation containers holding document
+# containers, so three levels occur in practice. Anything below the budget is
+# reported rather than opened.
+MAX_CONTAINER_LEVELS = 3
 
 
 class Kind(Enum):
@@ -156,7 +161,7 @@ def read(data: bytes, path: str, depth: int = 0) -> Container:
         except (KeyError, zipfile.BadZipFile, RuntimeError) as e:
             c.defects.append(Defect("metadata-unreadable", c.where.child(member=wanted), str(e)))
 
-    if depth < MAX_DEPTH:
+    if depth + 1 < MAX_CONTAINER_LEVELS:
         for m in c.members:
             if m.name.lower().endswith(".zip"):
                 try:
@@ -169,7 +174,8 @@ def read(data: bytes, path: str, depth: int = 0) -> Container:
         for m in c.members:
             if m.name.lower().endswith(".zip"):
                 c.defects.append(Defect("nesting-too-deep", c.where.child(member=m.name),
-                                        f"deeper than {MAX_DEPTH} levels"))
+                                        f"this tool opens {MAX_CONTAINER_LEVELS} container "
+                                        f"levels; this one is deeper"))
     return c
 
 

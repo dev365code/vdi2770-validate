@@ -32,7 +32,7 @@ failure — files that never claimed at all.
 | **IEC 61355 classification** | Needs a code list we do not have and may not be free to bundle. |
 | **IEC 61406 identification links** | A self-contained URL-grammar problem with its own corpus needs. Named for a later milestone, not forgotten. |
 | **Rendering PDF reports** | Not a validator's job. |
-| **Multi-level nesting beyond two containers** | Flagged rather than walked. |
+| **Container nesting beyond three levels** | Reported rather than opened. Three levels occur in real containers; deeper is a budget, not a verdict. |
 
 ## Known limits of what *is* in scope
 

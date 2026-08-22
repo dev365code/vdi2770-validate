@@ -26,7 +26,9 @@ class Obligation(enum.Enum):
 
     SCHEMA = "schema"          # the published XSD says so, mechanically
     PUBLISHED_TABLE = "table"  # a freely published table says so (IDTA 02004)
-    CONTAINER = "container"    # container mechanics we can check on our own
+    CONTAINER = "container"    # mechanics of ZIP and XML, true without VDI 2770
+    REFERENCE = "reference"    # observed in the MIT reference implementation;
+                               # NOT verified against the guideline, which is paywalled
     OURS = "ours"              # our own judgement; must carry `whyOurs`
 
 

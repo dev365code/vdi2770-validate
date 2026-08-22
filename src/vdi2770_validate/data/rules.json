@@ -4,7 +4,8 @@
   "_obligations": {
     "schema": "the freely published VDI XSD says so, mechanically checkable",
     "table": "a freely published table says so (IDTA 02004 Table 1)",
-    "container": "container mechanics we can check without reading the guideline",
+    "container": "mechanics of ZIP and XML that hold without knowing VDI 2770 at all",
+    "reference": "observed in the MIT reference implementation, which is itself a reading of the paywalled guideline. We have not verified it against the guideline text and do not claim to. Every rule with this obligation names the message keys it was observed at, in refKeys.",
     "ours": "our own judgement; carries whyOurs"
   },
   "_oracle": {
@@ -15,143 +16,369 @@
     "note": "A weak oracle: measured defects exist in it. refKeys use module:key because 13 displayed codes are ambiguous."
   },
   "rules": [
-    {"id":"Z1","layer":"container","severity":"error","obligation":"container",
-     "title":"The file is not a readable ZIP archive",
-     "remedy":"A VDI 2770 container is a ZIP archive. Rebuild it with a standard ZIP tool and check the file was not truncated in transfer.",
-     "refKeys":["processor:ZU_MESSAGE_002","processor:ZU_MESSAGE_003"],"refCodes":["ZU_002","ZU_003"]},
-
-    {"id":"Z2","layer":"container","severity":"error","obligation":"container",
-     "title":"The archive is empty",
-     "remedy":"Add the metadata file and the documents. An empty archive cannot be classified as either container kind.",
-     "refKeys":["processor:REP_MESSAGE_002"],"refCodes":["REP_002"]},
-
-    {"id":"Z3","layer":"container","severity":"error","obligation":"container",
-     "title":"The archive is neither a document container nor a documentation container",
-     "remedy":"Put VDI2770_Metadata.xml at the root of a document container, or VDI2770_Main.xml at the root of a documentation container. Both names are case-sensitive and must not sit inside a folder.",
-     "refKeys":["processor:REP_EXCEPTION_004","processor:REP_MESSAGE_035"],"refCodes":["REP_004","REP_035"]},
-
-    {"id":"Z4","layer":"container","severity":"error","obligation":"ours",
-     "title":"A member name would escape the extraction directory",
-     "whyOurs":"The reference implementation extracts to a temporary directory. We never extract, so we can refuse hostile names outright instead of inheriting the risk.",
-     "remedy":"Rebuild the archive with plain relative names. Absolute paths, parent-directory segments and backslash separators are not acceptable in a container that will be unpacked by the recipient.",
-     "refKeys":[],"refCodes":[]},
-
-    {"id":"Z5","layer":"container","severity":"error","obligation":"ours",
-     "title":"The archive exceeds this tool's limits for untrusted input",
-     "whyOurs":"Supplier archives arrive from outside. A validator must not be a way to exhaust the machine that runs it.",
-     "remedy":"Split the delivery into several containers, or report the archive to whoever produced it if the size looks unintentional.",
-     "refKeys":["processor:ZU_EXCEPTION_004"],"refCodes":["ZU_004"]},
-
-    {"id":"Z6","layer":"container","severity":"warning","obligation":"ours",
-     "title":"Containers are nested more deeply than expected",
-     "whyOurs":"VDI 2770 nests one level: document containers inside a documentation container. Anything deeper is unusual enough to flag rather than silently walk.",
-     "remedy":"Flatten the delivery so document containers sit directly inside the documentation container.",
-     "refKeys":[],"refCodes":[]},
-
-    {"id":"Z7","layer":"container","severity":"error","obligation":"container",
-     "title":"The documentation container has no VDI2770_Main.pdf",
-     "remedy":"Add the main document as VDI2770_Main.pdf at the root of the documentation container, next to VDI2770_Main.xml.",
-     "refKeys":["processor:REP_MESSAGE_025"],"refCodes":["REP_025"]},
-
-    {"id":"Z8","layer":"container","severity":"warning","obligation":"container",
-     "title":"The documentation container holds no document containers",
-     "remedy":"Add the document containers this handover is supposed to deliver. A documentation container with only a main document delivers no documents.",
-     "refKeys":[],"refCodes":[]},
-
-    {"id":"Z9","layer":"container","severity":"warning","obligation":"container",
-     "title":"The archive contains folder entries",
-     "remedy":"Store the members flat, at the root of the archive. Metadata refers to files by name, so a file inside a folder is not the file the metadata names.",
-     "refKeys":["processor:ZU_MESSAGE_001"],"refCodes":["ZU_001"]},
-
-    {"id":"X1","layer":"schema","severity":"error","obligation":"schema",
-     "title":"The metadata file is not well-formed XML",
-     "remedy":"Open the file in an XML editor and fix the reported position. Nothing else can be checked until the file parses.",
-     "refKeys":["core:XmlReader_EX3"],"refCodes":[]},
-
-    {"id":"X2","layer":"schema","severity":"error","obligation":"schema",
-     "basis":"VDI2770_Schema_2019-08-23.xsd",
-     "title":"The metadata file does not conform to the published VDI 2770 schema",
-     "remedy":"Correct the element or value at the reported line so it matches the schema VDI publishes for VDI 2770. The schema is bundled with this tool.",
-     "refKeys":["processor:REP_MESSAGE_023"],"refCodes":["REP_023"]},
-
-    {"id":"X3","layer":"schema","severity":"error","obligation":"ours",
-     "title":"The metadata file tries to expand an entity",
-     "whyOurs":"A metadata file is data. Entity expansion lets it read local files or reach a host, which no handover document has any reason to do.",
-     "remedy":"Remove the DOCTYPE and entity declarations. Write the values directly.",
-     "refKeys":[],"refCodes":[]},
-
-    {"id":"F1","layer":"files","severity":"error","obligation":"container",
-     "title":"A file named in the metadata is not in the container",
-     "remedy":"Add the missing file to the container, or remove its DigitalFile entry from the metadata. The two must agree.",
-     "refKeys":["processor:REP_MESSAGE_007"],"refCodes":["REP_007"]},
-
-    {"id":"F2","layer":"files","severity":"warning","obligation":"container",
-     "title":"A file in the container is not named in the metadata",
-     "remedy":"Declare the file as a DigitalFile in the metadata, or remove it from the container. An undeclared file is invisible to the recipient's system.",
-     "refKeys":["processor:REP_MESSAGE_006"],"refCodes":["REP_006"]},
-
-    {"id":"F3","layer":"files","severity":"warning","obligation":"container",
-     "title":"The declared file format disagrees with the file name",
-     "remedy":"Make FileFormat and the file extension agree — application/pdf with .pdf, application/zip with .zip.",
-     "refKeys":["core:DigitalFile_VAL2","core:DigitalFile_VAL3"],"refCodes":["DF_002","DF_003"]},
-
-    {"id":"M1","layer":"metadata","severity":"error","obligation":"table",
-     "title":"The document carries no VDI 2770 classification",
-     "remedy":"Add a DocumentClassification whose ClassificationSystem is VDI2770:2018 and whose ClassId is one of the twelve published classes.",
-     "refKeys":["core:Document_VAL2"],"refCodes":["D_002"]},
-
-    {"id":"M2","layer":"metadata","severity":"error","obligation":"table",
-     "basis":"IDTA 02004 v2.0.1 Table 1",
-     "title":"The class id is not one of the published VDI 2770 classes",
-     "remedy":"Use one of: 01-01, 02-01, 02-02, 02-03, 02-04, 03-01, 03-02, 03-03, 03-04, 03-05, 03-06, 04-01.",
-     "refKeys":["core:DocumentClassification_VAL2"],"refCodes":["DC_002"]},
-
-    {"id":"M3","layer":"metadata","severity":"warning","obligation":"table",
-     "basis":"IDTA 02004 v2.0.1 Table 1",
-     "title":"The German class name does not belong to this class id",
-     "remedy":"Use the German name published for this class id, or correct the class id if the name is the one you meant.",
-     "refKeys":["core:DocumentClassification_VAL3"],"refCodes":["DC_003"]},
-
-    {"id":"M4","layer":"metadata","severity":"info","obligation":"ours",
-     "title":"The English class name matches neither published rendering",
-     "whyOurs":"The two freely published sources give different English names for five of the twelve classes, so an English name alone cannot decide conformance. We report which renderings exist and never fail a document on this basis.",
-     "remedy":"Either published spelling is defensible until the disagreement is resolved. Prefer the IDTA 02004 spelling if the container is destined for an Asset Administration Shell.",
-     "refKeys":["core:DocumentClassification_VAL4"],"refCodes":["DC_004"]},
-
-    {"id":"M5","layer":"metadata","severity":"error","obligation":"schema",
-     "title":"The language code is not an ISO 639 code",
-     "remedy":"Write the language as a two-letter ISO 639-1 code, or a three-letter ISO 639-2 code where no two-letter code exists. Regional forms such as de-DE do not belong here.",
-     "refKeys":["core:DocumentVersion_VAL7","core:DocumentDescription_VAL2"],"refCodes":["DV_007","DD_002"]},
-
-    {"id":"M6","layer":"metadata","severity":"error","obligation":"container",
-     "title":"The document version declares no PDF file",
-     "remedy":"Add the document as a PDF and declare it with FileFormat application/pdf. Other formats may accompany it but cannot replace it.",
-     "refKeys":["core:DocumentVersion_VAL3"],"refCodes":["DV_003"]},
-
-    {"id":"M7","layer":"metadata","severity":"error","obligation":"container",
-     "title":"The main document is not released",
-     "remedy":"Set the main document's LifeCycleStatus to Released before handing the container over. A main document under review is not a delivery.",
-     "refKeys":["core:MainDocument_VAL9"],"refCodes":["MD_009"]},
-
-    {"id":"P1","layer":"pdf","severity":"error","obligation":"container",
-     "title":"A file declared as PDF is not a PDF",
-     "remedy":"Replace the file with a real PDF, or correct the declared FileFormat.",
-     "refKeys":["processor:PV_EXCEPTION_010"],"refCodes":["PV_010"]},
-
-    {"id":"P2","layer":"pdf","severity":"error","obligation":"container",
-     "title":"The PDF is encrypted",
-     "remedy":"Remove the encryption or the password. A document the recipient cannot open has not been handed over.",
-     "refKeys":["processor:REP_MESSAGE_040"],"refCodes":["REP_040"]},
-
-    {"id":"P3","layer":"pdf","severity":"error","obligation":"container",
-     "title":"The PDF makes no PDF/A claim",
-     "remedy":"Produce the file as PDF/A and make sure the exporter writes the pdfaid identification into the XMP metadata. A PDF that never claimed PDF/A certainly is not one.",
-     "refKeys":["processor:PV_EXCEPTION_004"],"refCodes":["PV_004"]},
-
-    {"id":"P4","layer":"pdf","severity":"info","obligation":"ours",
-     "title":"The PDF claims a PDF/A level; this tool did not verify the claim",
-     "whyOurs":"Verifying PDF/A conformance needs a full PDF/A validator. Reporting a claim as a verdict would be a lie, so we report it as a claim and say so every time.",
-     "remedy":"Run a PDF/A validator such as veraPDF if you need the claim verified. This tool only confirms that a claim is present and well-formed.",
-     "refKeys":["processor:REP_MESSAGE_015"],"refCodes":["REP_015"]}
+    {
+      "id": "Z1",
+      "layer": "container",
+      "severity": "error",
+      "obligation": "container",
+      "title": "The file is not a readable ZIP archive",
+      "remedy": "A VDI 2770 container is a ZIP archive. Rebuild it with a standard ZIP tool and check the file was not truncated in transfer.",
+      "refKeys": [
+        "processor:ZU_MESSAGE_002",
+        "processor:ZU_MESSAGE_003"
+      ],
+      "refCodes": [
+        "ZU_002",
+        "ZU_003"
+      ]
+    },
+    {
+      "id": "Z2",
+      "layer": "container",
+      "severity": "error",
+      "obligation": "container",
+      "title": "The archive is empty",
+      "remedy": "Add the metadata file and the documents. An empty archive cannot be classified as either container kind.",
+      "refKeys": [
+        "processor:REP_MESSAGE_002"
+      ],
+      "refCodes": [
+        "REP_002"
+      ]
+    },
+    {
+      "id": "Z3",
+      "layer": "container",
+      "severity": "error",
+      "obligation": "container",
+      "title": "The archive is neither a document container nor a documentation container",
+      "remedy": "Put VDI2770_Metadata.xml at the root of a document container, or VDI2770_Main.xml at the root of a documentation container. Both names are case-sensitive and must not sit inside a folder.",
+      "refKeys": [
+        "processor:REP_EXCEPTION_004",
+        "processor:REP_MESSAGE_035"
+      ],
+      "refCodes": [
+        "REP_004",
+        "REP_035"
+      ]
+    },
+    {
+      "id": "Z4",
+      "layer": "container",
+      "severity": "error",
+      "obligation": "ours",
+      "title": "A member name would escape the extraction directory",
+      "whyOurs": "The reference implementation extracts to a temporary directory. We never extract, so we can refuse hostile names outright instead of inheriting the risk.",
+      "remedy": "Rebuild the archive with plain relative names. Absolute paths, parent-directory segments and backslash separators are not acceptable in a container that will be unpacked by the recipient.",
+      "refKeys": [],
+      "refCodes": []
+    },
+    {
+      "id": "Z5",
+      "layer": "container",
+      "severity": "error",
+      "obligation": "ours",
+      "title": "The archive exceeds this tool's limits for untrusted input",
+      "whyOurs": "Supplier archives arrive from outside. A validator must not be a way to exhaust the machine that runs it.",
+      "remedy": "Split the delivery into several containers, or report the archive to whoever produced it if the size looks unintentional.",
+      "refKeys": [
+        "processor:ZU_EXCEPTION_004"
+      ],
+      "refCodes": [
+        "ZU_004"
+      ]
+    },
+    {
+      "id": "Z6",
+      "layer": "container",
+      "severity": "warning",
+      "obligation": "ours",
+      "title": "Containers are nested deeper than this tool will open",
+      "whyOurs": "A budget for untrusted input, not a claim about the standard. Three container levels occur in the reference project's own examples, so we open three and report what is below rather than walking it.",
+      "remedy": "Check the delivery is what you meant to send. If the nesting is genuine, unpack the outer archive and check the inner containers separately.",
+      "refKeys": [],
+      "refCodes": []
+    },
+    {
+      "id": "Z7",
+      "layer": "container",
+      "severity": "error",
+      "obligation": "reference",
+      "title": "The documentation container has no VDI2770_Main.pdf",
+      "remedy": "Add the main document as VDI2770_Main.pdf at the root of the documentation container, next to VDI2770_Main.xml.",
+      "refKeys": [
+        "processor:REP_MESSAGE_025"
+      ],
+      "refCodes": [
+        "REP_025"
+      ]
+    },
+    {
+      "id": "Z8",
+      "layer": "container",
+      "severity": "warning",
+      "obligation": "ours",
+      "title": "The documentation container holds no document containers",
+      "remedy": "Add the document containers this handover is supposed to deliver. A documentation container with only a main document delivers no documents.",
+      "refKeys": [],
+      "refCodes": [],
+      "whyOurs": "The reference implementation has no rule for this. A documentation container whose only content is its own main document delivers nothing, which is worth saying out loud even though nobody else says it — hence a warning, not an error."
+    },
+    {
+      "id": "Z9",
+      "layer": "container",
+      "severity": "warning",
+      "obligation": "reference",
+      "title": "The archive contains folder entries",
+      "remedy": "Store the members flat, at the root of the archive. Metadata refers to files by name, so a file inside a folder is not the file the metadata names.",
+      "refKeys": [
+        "processor:ZU_MESSAGE_001"
+      ],
+      "refCodes": [
+        "ZU_001"
+      ]
+    },
+    {
+      "id": "X1",
+      "layer": "schema",
+      "severity": "error",
+      "obligation": "schema",
+      "title": "The metadata file is not well-formed XML",
+      "remedy": "Open the file in an XML editor and fix the reported position. Nothing else can be checked until the file parses.",
+      "refKeys": [
+        "core:XmlReader_EX3"
+      ],
+      "refCodes": []
+    },
+    {
+      "id": "X2",
+      "layer": "schema",
+      "severity": "error",
+      "obligation": "schema",
+      "basis": "VDI2770_Schema_2019-08-23.xsd",
+      "title": "The metadata file does not conform to the published VDI 2770 schema",
+      "remedy": "Correct the element or value at the reported line so it matches the schema VDI publishes for VDI 2770. The schema is bundled with this tool.",
+      "refKeys": [
+        "processor:REP_MESSAGE_023"
+      ],
+      "refCodes": [
+        "REP_023"
+      ]
+    },
+    {
+      "id": "X3",
+      "layer": "schema",
+      "severity": "error",
+      "obligation": "ours",
+      "title": "The metadata file tries to expand an entity",
+      "whyOurs": "A metadata file is data. Entity expansion lets it read local files or reach a host, which no handover document has any reason to do.",
+      "remedy": "Remove the DOCTYPE and entity declarations. Write the values directly.",
+      "refKeys": [],
+      "refCodes": []
+    },
+    {
+      "id": "F1",
+      "layer": "files",
+      "severity": "error",
+      "obligation": "container",
+      "title": "A file named in the metadata is not in the container",
+      "remedy": "Add the missing file to the container, or remove its DigitalFile entry from the metadata. The two must agree.",
+      "refKeys": [
+        "processor:REP_MESSAGE_007"
+      ],
+      "refCodes": [
+        "REP_007"
+      ]
+    },
+    {
+      "id": "F2",
+      "layer": "files",
+      "severity": "warning",
+      "obligation": "container",
+      "title": "A file in the container is not named in the metadata",
+      "remedy": "Declare the file as a DigitalFile in the metadata, or remove it from the container. An undeclared file is invisible to the recipient's system.",
+      "refKeys": [
+        "processor:REP_MESSAGE_006"
+      ],
+      "refCodes": [
+        "REP_006"
+      ]
+    },
+    {
+      "id": "F3",
+      "layer": "files",
+      "severity": "warning",
+      "obligation": "container",
+      "title": "The declared file format disagrees with the file name",
+      "remedy": "Make FileFormat and the file extension agree — application/pdf with .pdf, application/zip with .zip.",
+      "refKeys": [
+        "core:DigitalFile_VAL2",
+        "core:DigitalFile_VAL3"
+      ],
+      "refCodes": [
+        "DF_002",
+        "DF_003"
+      ]
+    },
+    {
+      "id": "M1",
+      "layer": "metadata",
+      "severity": "error",
+      "obligation": "reference",
+      "title": "The document carries no VDI 2770 classification",
+      "remedy": "Add a DocumentClassification whose ClassificationSystem is VDI2770:2018 and whose ClassId is one of the twelve published classes.",
+      "refKeys": [
+        "core:Document_VAL2"
+      ],
+      "refCodes": [
+        "D_002"
+      ]
+    },
+    {
+      "id": "M2",
+      "layer": "metadata",
+      "severity": "error",
+      "obligation": "table",
+      "basis": "IDTA 02004 v2.0.1 Table 1",
+      "title": "The class id is not one of the published VDI 2770 classes",
+      "remedy": "Use one of: 01-01, 02-01, 02-02, 02-03, 02-04, 03-01, 03-02, 03-03, 03-04, 03-05, 03-06, 04-01.",
+      "refKeys": [
+        "core:DocumentClassification_VAL2"
+      ],
+      "refCodes": [
+        "DC_002"
+      ]
+    },
+    {
+      "id": "M3",
+      "layer": "metadata",
+      "severity": "warning",
+      "obligation": "table",
+      "basis": "IDTA 02004 v2.0.1 Table 1",
+      "title": "The German class name does not belong to this class id",
+      "remedy": "Use the German name published for this class id, or correct the class id if the name is the one you meant.",
+      "refKeys": [
+        "core:DocumentClassification_VAL3"
+      ],
+      "refCodes": [
+        "DC_003"
+      ]
+    },
+    {
+      "id": "M4",
+      "layer": "metadata",
+      "severity": "info",
+      "obligation": "ours",
+      "title": "The English class name matches neither published rendering",
+      "whyOurs": "The two freely published sources give different English names for five of the twelve classes, so an English name alone cannot decide conformance. We report which renderings exist and never fail a document on this basis.",
+      "remedy": "Either published spelling is defensible until the disagreement is resolved. Prefer the IDTA 02004 spelling if the container is destined for an Asset Administration Shell.",
+      "refKeys": [
+        "core:DocumentClassification_VAL4"
+      ],
+      "refCodes": [
+        "DC_004"
+      ]
+    },
+    {
+      "id": "M5",
+      "layer": "metadata",
+      "severity": "error",
+      "obligation": "reference",
+      "title": "The language code is not an ISO 639 code",
+      "remedy": "Write the language as a two-letter ISO 639-1 code, or a three-letter ISO 639-2 code where no two-letter code exists. Regional forms such as de-DE do not belong here.",
+      "refKeys": [
+        "core:DocumentVersion_VAL7",
+        "core:DocumentDescription_VAL2"
+      ],
+      "refCodes": [
+        "DV_007",
+        "DD_002"
+      ]
+    },
+    {
+      "id": "M6",
+      "layer": "metadata",
+      "severity": "error",
+      "obligation": "reference",
+      "title": "The document version declares no PDF file",
+      "remedy": "Add the document as a PDF and declare it with FileFormat application/pdf. Other formats may accompany it but cannot replace it.",
+      "refKeys": [
+        "core:DocumentVersion_VAL3"
+      ],
+      "refCodes": [
+        "DV_003"
+      ]
+    },
+    {
+      "id": "M7",
+      "layer": "metadata",
+      "severity": "error",
+      "obligation": "reference",
+      "title": "The main document is not released",
+      "remedy": "Set the main document's LifeCycleStatus to Released before handing the container over. A main document under review is not a delivery.",
+      "refKeys": [
+        "core:MainDocument_VAL9"
+      ],
+      "refCodes": [
+        "MD_009"
+      ]
+    },
+    {
+      "id": "P1",
+      "layer": "pdf",
+      "severity": "error",
+      "obligation": "container",
+      "title": "A file declared as PDF is not a PDF",
+      "remedy": "Replace the file with a real PDF, or correct the declared FileFormat.",
+      "refKeys": [
+        "processor:PV_EXCEPTION_010"
+      ],
+      "refCodes": [
+        "PV_010"
+      ]
+    },
+    {
+      "id": "P2",
+      "layer": "pdf",
+      "severity": "error",
+      "obligation": "container",
+      "title": "The PDF is encrypted",
+      "remedy": "Remove the encryption or the password. A document the recipient cannot open has not been handed over.",
+      "refKeys": [
+        "processor:REP_MESSAGE_040"
+      ],
+      "refCodes": [
+        "REP_040"
+      ]
+    },
+    {
+      "id": "P3",
+      "layer": "pdf",
+      "severity": "error",
+      "obligation": "reference",
+      "title": "The PDF makes no PDF/A claim",
+      "remedy": "Produce the file as PDF/A and make sure the exporter writes the pdfaid identification into the XMP metadata. A PDF that never claimed PDF/A certainly is not one.",
+      "refKeys": [
+        "processor:PV_EXCEPTION_004"
+      ],
+      "refCodes": [
+        "PV_004"
+      ]
+    },
+    {
+      "id": "P4",
+      "layer": "pdf",
+      "severity": "info",
+      "obligation": "ours",
+      "title": "The PDF claims a PDF/A level; this tool did not verify the claim",
+      "whyOurs": "Verifying PDF/A conformance needs a full PDF/A validator. Reporting a claim as a verdict would be a lie, so we report it as a claim and say so every time.",
+      "remedy": "Run a PDF/A validator such as veraPDF if you need the claim verified. This tool only confirms that a claim is present and well-formed.",
+      "refKeys": [
+        "processor:REP_MESSAGE_015"
+      ],
+      "refCodes": [
+        "REP_015"
+      ]
+    }
   ]
 }

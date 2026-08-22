@@ -27,10 +27,34 @@ def test_our_own_judgements_say_why():
             assert r.why_ours, f"{r.id} claims its own authority without explaining it"
 
 
-def test_schema_backed_rules_name_the_schema():
+def test_rules_observed_in_the_reference_say_where():
+    """`reference` means we saw the behaviour in someone else's implementation
+    and did not check it against the standard. The evidence is the message key,
+    so a rule may not claim it without naming one."""
     for r in rules().values():
-        if r.basis:
-            assert (ROOT / "src" / "vdi2770_validate" / "data" / r.basis).exists() or " " in r.basis
+        if r.obligation is Obligation.REFERENCE:
+            assert r.ref_keys, f"{r.id} claims to follow the reference but names no message key"
+
+
+def test_a_basis_can_actually_be_looked_up():
+    """`basis` is the receipt for a rule. It must name either a file we ship or
+    a published edition precise enough to find — "a space in the string" is not
+    a check, which is what this used to be."""
+    data = ROOT / "src" / "vdi2770_validate" / "data"
+    for r in rules().values():
+        if not r.basis:
+            continue
+        if (data / r.basis).exists():
+            continue
+        assert re.match(r"^IDTA \d{5} v\d+\.\d+(\.\d+)? Table \d+$", r.basis), (
+            f"{r.id} basis {r.basis!r} names neither a bundled file nor a citable edition")
+
+
+def test_every_published_table_citation_is_the_same_edition():
+    """Two rules citing two different editions of the same table would mean one
+    of them is stale."""
+    cited = {r.basis for r in rules().values() if r.basis.startswith("IDTA")}
+    assert len(cited) <= 1, f"rules cite more than one edition: {sorted(cited)}"
 
 
 def test_class_table_is_keyed_on_what_the_sources_agree_about():
