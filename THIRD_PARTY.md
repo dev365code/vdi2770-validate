@@ -6,16 +6,17 @@ whether we changed it.
 | Component | Origin | Licence | Modified? |
 |---|---|---|---|
 | `src/vdi2770_validate/data/VDI2770_Schema_2019-08-23.xsd` | VDI, from the [VDI 2770 guideline programme page](https://www.vdi.de/richtlinien/programme-zu-vdi-richtlinien/vdi-2770) | **No licence stated by the publisher** — see below | **No — byte-for-byte verbatim** |
-| `src/vdi2770_validate/data/document-classes.json` | Table 1 of IDTA 02004 "Handover Documentation" v2.0.1, as published in [admin-shell-io/submodel-templates](https://github.com/admin-shell-io/submodel-templates) | **CC BY 4.0**, © Industrial Digital Twin Association | **Yes** — the twelve rows were extracted and reformatted as JSON; no wording changed |
-| `corpus/examples/` (51 files) | [DigitalDataChainConsortium/vdi2770](https://github.com/DigitalDataChainConsortium/vdi2770) @ `e47c13c`, `examples/` | **MIT**, © 2021 Johannes Schmidt | **No — byte-for-byte verbatim, SHA-256 per file in `corpus/MANIFEST.json`** |
+| `src/vdi2770_validate/data/document-classes.json` | Table 1 of IDTA 02004 "Handover Documentation" v2.0.1, as published in [admin-shell-io/submodel-templates](https://github.com/admin-shell-io/submodel-templates); the `ddcReference` names beside them from `Constants.java` of the reference implementation | **CC BY 4.0** © Industrial Digital Twin Association (IDTA names, IRDIs) **and MIT** © 2021 Johannes Schmidt (`ddcReference` names) | **Yes** — extracted and reformatted as JSON; no wording changed |
+| `corpus/examples/` (49 files) | [DigitalDataChainConsortium/vdi2770](https://github.com/DigitalDataChainConsortium/vdi2770) @ `e47c13c`, `examples/` | **MIT**, © 2021 Johannes Schmidt | **No — byte-for-byte verbatim, SHA-256 per file in `corpus/MANIFEST.json`** |
 | `tests/data/oracle-messages.json` | English message bundles of the same project | **MIT**, © 2021 Johannes Schmidt | **Yes** — the message strings were extracted into a JSON list; no wording changed |
-| `src/vdi2770_validate/data/rules.json` | this project | Apache-2.0 | n/a — written from scratch; rule titles marked `titleSource` where they echo the reference, remedies are all ours |
+| `src/vdi2770_validate/data/rules.json` | this project | Apache-2.0 | n/a — titles and remedies are ours, checked against the reference's messages by `tests/test_licensing.py`; its codes appear only in `refCodes`/`refKeys` as cross-references |
 | Everything else | this project | Apache-2.0 | n/a |
 | `xmlschema` (runtime dependency, not bundled) | [sissaschool/xmlschema](https://github.com/sissaschool/xmlschema) | MIT | No |
 
-The corpus and the message list are **test material**. Neither is in the wheel:
-`pyproject.toml` ships only `src/vdi2770_validate`, so nothing a user installs
-contains them.
+The corpus and the message list are **test material** and are not in the wheel —
+`pyproject.toml` ships only `src/vdi2770_validate`. The MIT-derived English and
+German class names inside `document-classes.json` **are** in the wheel, which is
+why that row names two licences.
 
 ---
 
@@ -30,10 +31,12 @@ implementations possible at all.
 redistribution rests on the evident purpose of a free publication of an
 interface definition, not on an explicit grant. We therefore:
 
-- ship the file **completely unmodified** — the copy here has SHA-256
-  `f7a704fe4bba095eaa4e95be0b9853205412301ad09c4bcffb4c5f0f666cb805`, which is
-  what the VDI download returned on 2026-08-21, so anyone can confirm it is
-  VDI's bytes and not ours;
+- ship the file **completely unmodified**. The copy here has SHA-256
+  `f7a704fe4bba095eaa4e95be0b9853205412301ad09c4bcffb4c5f0f666cb805`; a test pins
+  that, which proves the file has not drifted since it was vendored — not that it
+  is VDI's. To confirm the origin, download from the URL in NOTICE (published as
+  `VDI_2770_1_de_Deklaration_des_XML-Schemas_-_Declaration_of_the_XML_model.xsd`)
+  and compare;
 - never present it as our work, and never relicense it — Apache-2.0 covers this
   project's own code, not this file;
 - reproduce no part of the VDI 2770 guideline text, which is a separate,
@@ -41,7 +44,7 @@ interface definition, not on an explicit grant. We therefore:
   [docs/licensing.md](docs/licensing.md)).
 
 If VDI would rather this file were not redistributed, open an issue and it will
-be removed the same day; the tool would then need the schema supplied by path,
+be removed promptly; the tool would then need the schema supplied by path,
 which costs its users their offline installation but costs nobody their rights.
 
 ---

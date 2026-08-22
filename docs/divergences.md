@@ -1,10 +1,12 @@
 # Where this tool and the reference implementation disagree
 
 The reference implementation (`DigitalDataChainConsortium/vdi2770`, MIT) is
-useful evidence, not an authority. It has been unmaintained since January 2024,
-it has one contributor, and it has measured defects. So it is treated the way a
-second opinion should be treated: compared against, per verdict, with every
-disagreement written down rather than averaged away.
+useful evidence, not an authority. Its most recent commit at the time of writing
+is `e47c13c` (January 2024), and reading it closely turned up defects we reported
+back. So it is treated the way a second opinion should be treated: compared
+against, per verdict, with every disagreement written down rather than averaged
+away. It is generous work, and this project would have been much harder without
+it.
 
 Nothing here says the reference is wrong about the standard. Neither of us can
 check that — the normative text is paywalled.
@@ -38,10 +40,15 @@ Status: **unresolved**. It may become a rule with an explicit `ours` obligation.
 
 ## 3. Defects in the reference that this tool does not reproduce
 
-Found while building against it, reproduced with tests, reported upstream:
+Read from the source at `e47c13c`, reproduced by building that project and
+running tests against it, and reported upstream as
+[issue #38](https://github.com/DigitalDataChainConsortium/vdi2770/issues/38).
+Those reproductions live with that project, not here — this repository has no
+Java toolchain — so the summaries below are not checkable from a clone:
 
-- `DV_013` fires on `numberOfPages < 0`, though its message in all three languages
-  says "greater than zero" — so `0` passes there. This tool has no numberOfPages
+- `DV_013` fires on `numberOfPages < 0`, though its message says "greater than
+  zero" — so `0` passes there. (Checked in the English, German and Chinese
+  bundles; only the English one is vendored here.) This tool has no numberOfPages
   rule yet; when it gets one it will use the message's meaning.
 - `MainDocument.validate` throws `IndexOutOfBoundsException` on an empty version
   list, discarding the `MD_001` it had just recorded.
@@ -50,16 +57,18 @@ Found while building against it, reproduced with tests, reported upstream:
 
 ## 4. Codes are ambiguous, so we key on message keys
 
-Thirteen of the reference's displayed codes are emitted from more than one message
-key with different meanings — `PV_001` is both "Cannot find PDF file" and "PDF file
-is valid". Any comparison keyed on the code string is unsound for those rows and
+Some of the reference's displayed codes are emitted from more than one message key
+with different meanings — `PV_001` is both "Cannot find PDF file" and "PDF file is
+valid". (Counted in that project, not here: this repository vendors the message
+strings but not the key-to-code mapping, so the figure is not checkable from a
+clone.) Any comparison keyed on the code string is unsound for those rows and
 silently so. `rules.json` therefore carries `refKeys` (`module:key`, unambiguous)
 alongside `refCodes` (display only).
 
 ## 5. What the reference reports that we do not
 
-The reference's message catalogue is largely a log, not a finding stream: of 185
-coded messages, 78 are model validation rules and the rest are exceptions and
-progress lines (`REP_009 "DocumentId: {0}"`). We do not emit progress. A comparison
+The reference's message catalogue is largely a log, not a finding stream: most of
+its messages are exceptions and progress lines (`REP_009 "DocumentId: {0}"`, both
+in the vendored list) rather than verdicts. We do not emit progress. A comparison
 that treats those as missing findings is comparing our verdicts against its
 `printf`s.

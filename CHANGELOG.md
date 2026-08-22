@@ -16,4 +16,6 @@ First working version. Nothing has been released yet.
 - Reports what a PDF *claims* about PDF/A. Does not verify the claim, and says so
   on every line where it matters.
 - Gates: fixture pairs, firing coverage, import layering, offline, determinism,
-  and CI/local parity.
+  CI/local parity, the declared Python floor, licence notices, remedy text not
+  copied from the reference, no structural rule firing on an upstream example,
+  and the README sample being output the tool really produces.

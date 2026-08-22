@@ -1,4 +1,5 @@
-"""Rules. Nothing here may import a reader or a parser — enforced by
-tests/test_layering.py. A rule that cannot reach the parser cannot accidentally
-validate the serialisation instead of the model.
+"""Rules. No module here may import a parser — `tests/test_layering.py` fails on
+`zipfile` or an XML library. The readers' reserved file names are the one thing
+rules may take from that layer. A rule that cannot reach the parser cannot
+accidentally validate the serialisation instead of the model.
 """

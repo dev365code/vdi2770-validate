@@ -5,30 +5,38 @@ one — and if something is wrong, what to do about it.
 
 VDI 2770 is how manufacturers hand over technical documentation in the process
 industry: PDFs bundled into ZIP "document containers" with an XML metadata file,
-those bundled into a "documentation container". Plant operators require it in
-purchase orders. Getting a container rejected on intake is expensive, and until now
-there was no way to check one from a command line or a CI job.
+those bundled into a "documentation container". Operators in the process industry
+increasingly ask for it in purchase orders, and a container rejected on intake holds
+up a delivery. The reference implementation is a Java library and web service; this
+is a small offline CLI you can drop into a CI job.
 
 **Unofficial.** Not affiliated with VDI, the Digital Data Chain Consortium, or IDTA.
 Names are used descriptively.
 
 ```
-$ vdi2770-validate check manuals.zip
-manuals.zip
+$ vdi2770-validate check corpus/examples/missingdocuments/folders.zip
+  error  F1  A file named in the metadata is not in the container
+         at folders.zip!/VDI2770_Main.xml:56:2
+         'VDI2770_Main.pdf' is declared but not in the archive
+         -> Add the missing file to the container, or remove its DigitalFile entry from the metadata. The two must agree.
   error  Z7  The documentation container has no VDI2770_Main.pdf
-         at manuals.zip
-         -> Add the main document as VDI2770_Main.pdf at the root of the
-            documentation container, next to VDI2770_Main.xml.
-  warn   M3  The German class name does not belong to this class id
-         at manuals.zip!/pump-4711.zip!/VDI2770_Metadata.xml:13:1
-         'Technical INVALID specification' for class 02-01; published name is
-         'Technische Spezifikation'
-  info   P4  The PDF claims a PDF/A level; this tool did not verify the claim
-         at manuals.zip!/pump-4711.zip!/datasheet.pdf
-         claims PDF/A-3a — this tool cannot verify PDF/A conformance
+         at folders.zip
+         -> Add the main document as VDI2770_Main.pdf at the root of the documentation container, next to VDI2770_Main.xml.
+  warn   F2  A file in the container is not named in the metadata
+         at folders.zip!/456-29201/VDI2770_Metadata.xml
+         -> Declare the file as a DigitalFile in the metadata, or remove it from the container. An undeclared file is invisible to the recipient's system.
+  warn   F2  A file in the container is not named in the metadata
+         at folders.zip!/456-29201/demo.pdf
+         -> Declare the file as a DigitalFile in the metadata, or remove it from the container. An undeclared file is invisible to the recipient's system.
+  warn   F2  A file in the container is not named in the metadata
+         at folders.zip!/456-29201/demo.xlsx
+         -> Declare the file as a DigitalFile in the metadata, or remove it from the container. An undeclared file is invisible to the recipient's system.
+  warn   F2  A file in the container is not named in the metadata
 
-  1 error(s), 1 warning(s), 1 note(s)
+  … 6 more warnings of the same kind
 ```
+
+That is real output on a container that ships with this repository, so the same command works after cloning.
 
 ## What it will not tell you
 
@@ -46,17 +54,19 @@ are in [docs/scope.md](docs/scope.md).
 - **Rules are data.** [`rules.json`](src/vdi2770_validate/data/rules.json) — each
   rule carries where its requirement comes from, what the reference implementation
   calls it, and a remedy sentence.
-- **Every rule has a violating example and a conforming one**, and a rule that never
-  fires anywhere fails the build.
-- **Rules cannot reach the parser.** A test walks the import graph and fails if a
-  rule module imports `zipfile` or an XML library, so a rule cannot accidentally
-  check how a document was spelled instead of what it says.
+- **Seventeen rules have a minimal fixture pair** — a container that violates the rule
+  and a conforming one differing in as little as a single member. The rest are exercised
+  by the vendored corpus. A rule that fires nowhere fails the build.
+- **Rules cannot reach the parser.** A test fails if a rule module imports `zipfile`
+  or an XML library, so a rule cannot accidentally check how a document was spelled
+  instead of what it says. Rules may name the readers' reserved file names, nothing more.
 
 ## The classification table, and a disagreement
 
 VDI 2770 defines twelve document classes. Two sources publish that table for free —
-IDTA 02004 v2.0.1 Table 1, and the MIT reference implementation. **They agree on all
-twelve German names and disagree on five English ones** (02-03, 02-04, 03-01, 03-04,
+IDTA 02004 v2.0.1 Table 1, and the MIT reference implementation. Both renderings of
+every name are stored, so you can check rather than trust: **they agree on all twelve
+German names and disagree on five English ones** (02-03, 02-04, 03-01, 03-04,
 04-01). So matching here is keyed on the class id and the German name, and an
 English name never fails a document — it produces a note that shows both renderings.
 
@@ -71,8 +81,10 @@ Details in [docs/divergences.md](docs/divergences.md).
 ## Licensing
 
 Apache-2.0. The VDI 2770 guideline text is sold by DIN Media and was **not** read,
-quoted, or paraphrased — every rule traces to the schema VDI publishes free, to a
-freely published table, or to container mechanics, and `rules.json` says which.
+quoted, or paraphrased. Every rule names its source in `rules.json` instead: the schema
+VDI publishes free, a freely published table, ZIP and XML mechanics, the MIT reference
+implementation (observed there, not verified against the standard), or a judgement of
+our own that has to explain itself.
 See [docs/licensing.md](docs/licensing.md) and [NOTICE](NOTICE).
 
 Contributions take a `Signed-off-by` line (DCO).

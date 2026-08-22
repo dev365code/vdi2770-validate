@@ -4,8 +4,7 @@
 
 Every commit carries a `Signed-off-by` line — `git commit -s`. That is a
 [certificate of origin](https://developercertificate.org/), not a transfer of
-rights; you keep the copyright in what you write. Pull requests are checked for
-it automatically.
+rights; you keep the copyright in what you write.
 
 ## Before you open a pull request
 
@@ -14,8 +13,8 @@ python -m pip install -e ".[dev]"
 make check
 ```
 
-`make check` is the whole gate: lint, tests, the corpus is unchanged, and every
-rule still fires. CI runs exactly those commands — a test asserts that, because
+`make check` is the whole gate: lint, build the fixtures, tests, the corpus is
+unchanged, and every rule still fires. CI runs exactly those commands — a test asserts that, because
 "the same command" is not the same thing as "the same environment".
 
 ## Three rules of the road
@@ -31,10 +30,10 @@ Each exists because ignoring it would break something specific.
    `tools/make_fixtures.py`. A rule that has never been seen to fire has never
    been tested, and `make check` will say so.
 
-3. **Rules may not import a parser.** `tests/test_layering.py` walks the import
-   graph and fails if a module under `rules/` reaches `zipfile` or an XML
-   library. Rules read the model; how the document was spelled is not their
-   business.
+3. **Rules may not import a parser.** `tests/test_layering.py` fails if a module
+   under `rules/` imports `zipfile` or an XML library. (Rules do import the
+   readers' reserved file names — that exemption is written into the test.)
+   Rules read the model; how the document was spelled is not their business.
 
 ## Where the requirement came from matters
 

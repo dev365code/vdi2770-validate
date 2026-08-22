@@ -17,10 +17,14 @@ stored without lying about what it is.
 |---|---|---|
 | `schema` | the published XSD says so | `data/VDI2770_Schema_2019-08-23.xsd`, published free by VDI |
 | `table` | a freely published table says so | IDTA 02004 v2.0.1 Table 1 |
-| `container` | container mechanics anyone can check | observable from the archive |
+| `container` | ZIP and XML mechanics | true without knowing VDI 2770 |
+| `reference` | observed in the MIT reference implementation | not verified against the guideline; the rule names the message keys |
 | `ours` | our own judgement | carries `whyOurs`, always |
 
-## The three third-party artifacts
+## The bundled third-party material
+
+Full table, licence texts and modification statements are in
+[THIRD_PARTY.md](../THIRD_PARTY.md); the summary here is for orientation only.
 
 1. **The XML schema.** VDI publishes it free of charge on the VDI 2770 guideline
    programme page. Redistributed verbatim and unmodified. The download page states
