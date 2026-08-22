@@ -1,6 +1,6 @@
 {
   "_schema": 1,
-  "_about": "VDI 2770 Blatt 1:2020 document classification. Matching is keyed on classId and on the German class name, because the two freely-published sources agree on all 12 German names but disagree on 5 English ones. English names are carried for display and for explaining a mismatch, never as the sole basis for a verdict.",
+  "_about": "VDI 2770 Blatt 1:2020 document classification, as published by two sources that can be read for free. Both renderings of each name are stored so the reader can see the agreement rather than take our word for it: the German names match on all twelve, five of the English ones do not, and matching is therefore keyed on the class id and the German name.",
   "_classificationSystem": "VDI2770:2018",
   "_sources": {
     "german_and_irdi": {
@@ -23,7 +23,11 @@
   "classes": [
     {
       "classId": "01-01",
-      "nameDe": "Identifikation",
+      "nameDe": {
+        "idta02004": "Identifikation",
+        "ddcReference": "Identifikation",
+        "agree": true
+      },
       "irdi": "0173-1#07-ABU484#003",
       "nameEn": {
         "idta02004": "Identification",
@@ -34,7 +38,11 @@
     },
     {
       "classId": "02-01",
-      "nameDe": "Technische Spezifikation",
+      "nameDe": {
+        "idta02004": "Technische Spezifikation",
+        "ddcReference": "Technische Spezifikation",
+        "agree": true
+      },
       "irdi": "0173-1#07-ABU485#003",
       "nameEn": {
         "idta02004": "Technical specification",
@@ -45,7 +53,11 @@
     },
     {
       "classId": "02-02",
-      "nameDe": "Zeichnungen, Pläne",
+      "nameDe": {
+        "idta02004": "Zeichnungen, Pläne",
+        "ddcReference": "Zeichnungen, Pläne",
+        "agree": true
+      },
       "irdi": "0173-1#07-ABU486#003",
       "nameEn": {
         "idta02004": "Drawings, plans",
@@ -56,7 +68,11 @@
     },
     {
       "classId": "02-03",
-      "nameDe": "Bauteile",
+      "nameDe": {
+        "idta02004": "Bauteile",
+        "ddcReference": "Bauteile",
+        "agree": true
+      },
       "irdi": "0173-1#07-ABU487#003",
       "nameEn": {
         "idta02004": "Assemblies",
@@ -67,7 +83,11 @@
     },
     {
       "classId": "02-04",
-      "nameDe": "Zeugnisse, Zertifikate, Bescheinigungen",
+      "nameDe": {
+        "idta02004": "Zeugnisse, Zertifikate, Bescheinigungen",
+        "ddcReference": "Zeugnisse, Zertifikate, Bescheinigungen",
+        "agree": true
+      },
       "irdi": "0173-1#07-ABU488#003",
       "nameEn": {
         "idta02004": "Certificates, declarations",
@@ -78,7 +98,11 @@
     },
     {
       "classId": "03-01",
-      "nameDe": "Montage, Demontage",
+      "nameDe": {
+        "idta02004": "Montage, Demontage",
+        "ddcReference": "Montage, Demontage",
+        "agree": true
+      },
       "irdi": "0173-1#07-ABU489#003",
       "nameEn": {
         "idta02004": "Commissioning, decommissioning",
@@ -89,7 +113,11 @@
     },
     {
       "classId": "03-02",
-      "nameDe": "Bedienung",
+      "nameDe": {
+        "idta02004": "Bedienung",
+        "ddcReference": "Bedienung",
+        "agree": true
+      },
       "irdi": "0173-1#07-ABU490#003",
       "nameEn": {
         "idta02004": "Operation",
@@ -100,7 +128,11 @@
     },
     {
       "classId": "03-03",
-      "nameDe": "Allgemeine Sicherheit",
+      "nameDe": {
+        "idta02004": "Allgemeine Sicherheit",
+        "ddcReference": "Allgemeine Sicherheit",
+        "agree": true
+      },
       "irdi": "0173-1#07-ABU491#003",
       "nameEn": {
         "idta02004": "General safety",
@@ -111,7 +143,11 @@
     },
     {
       "classId": "03-04",
-      "nameDe": "Inspektion, Wartung, Prüfung",
+      "nameDe": {
+        "idta02004": "Inspektion, Wartung, Prüfung",
+        "ddcReference": "Inspektion, Wartung, Prüfung",
+        "agree": true
+      },
       "irdi": "0173-1#07-ABU492#003",
       "nameEn": {
         "idta02004": "Inspection, maintenance, testing",
@@ -122,7 +158,11 @@
     },
     {
       "classId": "03-05",
-      "nameDe": "Instandsetzung",
+      "nameDe": {
+        "idta02004": "Instandsetzung",
+        "ddcReference": "Instandsetzung",
+        "agree": true
+      },
       "irdi": "0173-1#07-ABU493#003",
       "nameEn": {
         "idta02004": "Repair",
@@ -133,7 +173,11 @@
     },
     {
       "classId": "03-06",
-      "nameDe": "Ersatzteile",
+      "nameDe": {
+        "idta02004": "Ersatzteile",
+        "ddcReference": "Ersatzteile",
+        "agree": true
+      },
       "irdi": "0173-1#07-ABU494#003",
       "nameEn": {
         "idta02004": "Spare parts",
@@ -144,7 +188,11 @@
     },
     {
       "classId": "04-01",
-      "nameDe": "Vertragsunterlagen",
+      "nameDe": {
+        "idta02004": "Vertragsunterlagen",
+        "ddcReference": "Vertragsunterlagen",
+        "agree": true
+      },
       "irdi": "0173-1#07-ABU495#003",
       "nameEn": {
         "idta02004": "Contract documents",
@@ -153,5 +201,6 @@
         "agreeIgnoringCase": true
       }
     }
-  ]
+  ],
+  "_germanDisagreements": 0
 }

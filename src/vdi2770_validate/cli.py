@@ -3,18 +3,21 @@ from __future__ import annotations
 import argparse
 import sys
 
+from . import __version__ as VERSION  # one place, not three
 from . import report as rendering
 from .catalog import document_classes, rules
 from .model import Severity
 from .runner import check_file
 
-VERSION = "0.1.0.dev0"
-
 
 def _cmd_check(args) -> int:
     worst = 0
     for path in args.paths:
-        rep = check_file(path)
+        try:
+            rep = check_file(path)
+        except OSError as e:
+            print(f"{path}: cannot read it — {e.strerror or e}", file=sys.stderr)
+            raise SystemExit(2) from None
         print(rendering.as_json(rep) if args.json else rendering.as_text(rep, not args.quiet))
         if rep.count(Severity.ERROR):
             worst = 1
@@ -32,11 +35,17 @@ def _cmd_rules(_args) -> int:
 
 def _cmd_classes(_args) -> int:
     for cid, c in sorted(document_classes().items()):
-        en = c["nameEn"]
+        en, de = c["nameEn"], c["nameDe"]
         agree = "" if en["agree"] else "   [sources disagree]"
-        print(f"{cid}  {c['nameDe']:42} {en['idta02004']}{agree}")
+        print(f"{cid}  {de['idta02004']:42} {en['idta02004']}{agree}")
         if not en["agree"]:
-            print(f"      IDTA 02004: {en['idta02004']!r}   reference impl: {en['ddcReference']!r}")
+            print(f"      English — IDTA 02004: {en['idta02004']!r}"
+                  f"   reference impl: {en['ddcReference']!r}")
+        if not de["agree"]:
+            print(f"      German  — IDTA 02004: {de['idta02004']!r}"
+                  f"   reference impl: {de['ddcReference']!r}")
+    print("\nMatching is keyed on the class id and the German name; both sources agree on all "
+          "twelve of those.")
     return 0
 
 

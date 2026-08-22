@@ -15,15 +15,14 @@ def as_text(report: Report, show_info: bool = True) -> str:
     findings = [f for f in report.sorted() if show_info or f.severity is not Severity.INFO]
     if not findings:
         lines.append("  no findings")
-    last_rule = None
     for f in findings:
         lines.append(f"  {MARK[f.severity]}  {f.rule.id}  {f.message}")
         lines.append(f"         at {f.where}")
         if f.detail:
             lines.append(f"         {f.detail}")
-        if f.rule.id != last_rule:
-            lines.append(f"         -> {f.remedy}")
-            last_rule = f.rule.id
+        # Every finding carries its remedy. Printing it once per rule saved a few
+        # lines and quietly broke the promise the docs make.
+        lines.append(f"         -> {f.remedy}")
     counts = {s: report.count(s) for s in Severity}
     lines.append("")
     lines.append(f"  {counts[Severity.ERROR]} error(s), {counts[Severity.WARNING]} warning(s), "

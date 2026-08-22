@@ -68,6 +68,22 @@ def test_class_table_is_keyed_on_what_the_sources_agree_about():
         "the English disagreement set changed — re-verify against both sources before moving this pin")
 
 
+def test_the_german_agreement_is_recorded_not_just_asserted():
+    """Keying classification on the German name is justified by the two published
+    sources agreeing on all twelve. If only one rendering is stored, that
+    justification leaves no evidence behind and the reader has to take our word."""
+    for cid, c in sorted(document_classes().items()):
+        de = c["nameDe"]
+        assert isinstance(de, dict), (
+            f"{cid} stores one German name; store both sources so the agreement is checkable")
+        assert de["idta02004"] and de["ddcReference"]
+        assert de["agree"] is (de["idta02004"] == de["ddcReference"])
+    disagreeing = [cid for cid, c in document_classes().items() if not c["nameDe"]["agree"]]
+    assert disagreeing == [], (
+        f"the German names no longer agree for {disagreeing} — matching is keyed on them, "
+        f"so this changes the design, not just the data")
+
+
 def test_no_remedy_is_copied_from_the_reference_implementation():
     """Licensing gate. The reference's message strings are MIT and may be reused
     with attribution — but reusing them would make this tool a translation of

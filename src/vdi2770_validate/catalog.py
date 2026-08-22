@@ -38,9 +38,15 @@ def document_classes() -> Dict[str, dict]:
     return {c["classId"]: c for c in doc["classes"]}
 
 
-@lru_cache(maxsize=1)
-def german_names() -> Dict[str, str]:
-    return {cid: c["nameDe"] for cid, c in document_classes().items()}
+def german_for(class_id: str) -> Tuple[str, ...]:
+    """Both published German renderings for a class id. They agree on all twelve
+    today; accepting both means a future divergence widens the accepted set
+    instead of silently failing conformant documents."""
+    c = document_classes().get(class_id)
+    if not c:
+        return ()
+    de = c["nameDe"]
+    return tuple(dict.fromkeys([de["idta02004"], de["ddcReference"]]))
 
 
 def english_for(class_id: str) -> Tuple[str, ...]:
