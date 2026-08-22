@@ -1,0 +1,29 @@
+# Security
+
+## Why this file is not boilerplate
+
+This tool exists to open archives that arrived from outside. A supplier's
+handover package is exactly the kind of file people are told not to open, and
+this tool is often the first thing to look inside one — frequently on a plant
+network where the machine has no business reaching the internet. Hostile input
+is the working assumption, not an edge case.
+
+## What is defended, and where the proof is
+
+| Attack | What we do | Test |
+|---|---|---|
+| Path traversal (`../`, absolute paths, backslashes) | Refused as a finding. **Nothing is ever extracted to disk** — members are read into memory. | fixture `z4-path-traversal.zip` |
+| Zip bomb | Per-member size, total size, member count and compression-ratio caps; over the line becomes a finding, not an allocation. | fixture `z5-compression-ratio.zip` |
+| Deeply nested archives | Recursion stops at two container levels and reports the rest. | fixture `z6-nesting-too-deep.zip` |
+| XXE / entity expansion | The XML parser refuses entity declarations and external references outright. | fixture `x3-entity-expansion.zip` |
+| Remote schema fetch | The schema is bundled. `xsi:schemaLocation` in the document is never dereferenced. | `tests/test_offline.py` |
+| Any network access at all | Sockets are monkeypatched to raise during validation. | `tests/test_offline.py` |
+
+## Reporting a vulnerability
+
+Open a GitHub security advisory on this repository, or a normal issue if the
+problem is not sensitive. There is no bug bounty. A reproduction archive helps
+enormously — if it cannot be shared, a description of the structure will do.
+
+Please do not report findings that amount to "a malformed container produces a
+confusing message". Those are welcome, but as ordinary issues.
