@@ -16,7 +16,7 @@ stored without lying about what it is.
 | Value | Meaning | Source |
 |---|---|---|
 | `schema` | the published XSD says so | `data/VDI2770_Schema_2019-08-23.xsd`, published free by VDI |
-| `table` | a freely published table says so | IDTA 02004 v2.0 Table 1 |
+| `table` | a freely published table says so | IDTA 02004 v2.0.1 Table 1 |
 | `container` | container mechanics anyone can check | observable from the archive |
 | `ours` | our own judgement | carries `whyOurs`, always |
 
@@ -28,9 +28,11 @@ stored without lying about what it is.
    about it. A request for an explicit licence statement is worth making.
 
 2. **The document class table.** Transcribed from IDTA 02004 "Handover
-   Documentation" v2.0 (June 2025) Table 1, published free by the Industrial Digital
-   Twin Association; the same submodel template is published under CC-BY-4.0 in
-   `admin-shell-io/submodel-templates`. Attributed in NOTICE.
+   Documentation" v2.0.1 (November 2025) Table 1, published by the Industrial
+   Digital Twin Association in `admin-shell-io/submodel-templates` under
+   **CC BY 4.0**. The twelve rows were extracted and reformatted as JSON — a
+   modification, and stated as one. Full attribution in
+   [THIRD_PARTY.md](../THIRD_PARTY.md).
 
 3. **The conformance corpus.** Copied from the MIT-licensed reference
    implementation `DigitalDataChainConsortium/vdi2770`, Copyright (C) 2021

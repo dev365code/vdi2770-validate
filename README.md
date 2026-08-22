@@ -55,7 +55,7 @@ are in [docs/scope.md](docs/scope.md).
 ## The classification table, and a disagreement
 
 VDI 2770 defines twelve document classes. Two sources publish that table for free —
-IDTA 02004 v2.0 Table 1, and the MIT reference implementation. **They agree on all
+IDTA 02004 v2.0.1 Table 1, and the MIT reference implementation. **They agree on all
 twelve German names and disagree on five English ones** (02-03, 02-04, 03-01, 03-04,
 04-01). So matching here is keyed on the class id and the German name, and an
 English name never fails a document — it produces a note that shows both renderings.

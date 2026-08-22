@@ -19,12 +19,11 @@ Third-party material bundled with this project
 
 2. VDI 2770 document class table — src/vdi2770_validate/data/document-classes.json
 
-   Transcribed from IDTA 02004 "Handover Documentation", Version 2.0,
-   June 2025, Table 1 ("DocumentClassification according to VDI 2770
-   Blatt 1: 2020"), published free of charge by the Industrial Digital Twin
-   Association. The same submodel template is published in
-   github.com/admin-shell-io/submodel-templates under CC-BY-4.0.
-   Attribution: Industrial Digital Twin Association (IDTA), IDTA 02004 v2.0.
+   Table 1 of IDTA 02004 "Handover Documentation", Version 2.0.1 (November 2025),
+   Industrial Digital Twin Association e.V., published in
+   github.com/admin-shell-io/submodel-templates under CC BY 4.0.
+   Modified: the twelve rows were extracted and reformatted as JSON.
+   https://creativecommons.org/licenses/by/4.0/
 
 3. Reference message catalogue — tests/data/oracle-messages.json
 
@@ -42,3 +41,5 @@ Third-party material bundled with this project
 The text of the VDI 2770 guideline itself (VDI 2770 Blatt 1:2020-04) is sold
 by DIN Media and is NOT included, quoted, or paraphrased anywhere in this
 project. See docs/licensing.md.
+
+Full provenance, licence texts and modification statements: THIRD_PARTY.md

@@ -4,10 +4,12 @@
   "_classificationSystem": "VDI2770:2018",
   "_sources": {
     "german_and_irdi": {
-      "doc": "IDTA 02004 Handover Documentation, Version 2.0, June 2025, Table 1",
-      "publisher": "Industrial Digital Twin Association",
-      "url": "https://industrialdigitaltwin.org/wp-content/uploads/2025/07/IDTA-02004-2-0_Submodel_Handover-Documentation.pdf",
-      "licence": "free publication; same template in admin-shell-io/submodel-templates under CC-BY-4.0"
+      "doc": "IDTA 02004 Handover Documentation, Version 2.0.1, November 2025, Table 1",
+      "publisher": "Industrial Digital Twin Association e.V.",
+      "url": "https://github.com/admin-shell-io/submodel-templates",
+      "licence": "CC BY 4.0",
+      "modification": "the twelve rows were extracted and reformatted as JSON; no wording altered",
+      "note": "Table 1 is unchanged from v2.0; all twelve rows were compared against the v2.0.1 text."
     },
     "english_second_opinion": {
       "repo": "DigitalDataChainConsortium/vdi2770",

@@ -26,6 +26,11 @@ dev = ["pytest==8.3.4", "ruff==0.16.3"]
 [project.scripts]
 vdi2770-validate = "vdi2770_validate.cli:main"
 
+[tool.setuptools]
+# The wheel bundles VDI's schema and a table derived from an IDTA publication,
+# so the notices have to travel with it.
+license-files = ["LICENSE", "NOTICE", "THIRD_PARTY.md"]
+
 [tool.setuptools.packages.find]
 where = ["src"]
 

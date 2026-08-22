@@ -101,13 +101,13 @@
      "refKeys":["core:Document_VAL2"],"refCodes":["D_002"]},
 
     {"id":"M2","layer":"metadata","severity":"error","obligation":"table",
-     "basis":"IDTA 02004 v2.0 Table 1",
+     "basis":"IDTA 02004 v2.0.1 Table 1",
      "title":"The class id is not one of the published VDI 2770 classes",
      "remedy":"Use one of: 01-01, 02-01, 02-02, 02-03, 02-04, 03-01, 03-02, 03-03, 03-04, 03-05, 03-06, 04-01.",
      "refKeys":["core:DocumentClassification_VAL2"],"refCodes":["DC_002"]},
 
     {"id":"M3","layer":"metadata","severity":"warning","obligation":"table",
-     "basis":"IDTA 02004 v2.0 Table 1",
+     "basis":"IDTA 02004 v2.0.1 Table 1",
      "title":"The German class name does not belong to this class id",
      "remedy":"Use the German name published for this class id, or correct the class id if the name is the one you meant.",
      "refKeys":["core:DocumentClassification_VAL3"],"refCodes":["DC_003"]},
