@@ -1,0 +1,9 @@
+The files under corpus/examples/ are copied verbatim from the `examples/`
+directory of https://github.com/DigitalDataChainConsortium/vdi2770
+
+    MIT License
+    Copyright (C) 2021 Johannes Schmidt
+
+They are used here as test fixtures. Provenance and per-file hashes are
+recorded in MANIFEST.json; `python tools/vendor_corpus.py --check` verifies
+that nothing has drifted.

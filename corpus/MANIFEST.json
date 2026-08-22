@@ -1,0 +1,207 @@
+{
+  "_upstream": {
+    "repo": "DigitalDataChainConsortium/vdi2770",
+    "commit": "e47c13c1925abc3ed4698cb5ed9e73b5eb544353",
+    "path": "examples/",
+    "licence": "MIT, Copyright (C) 2021 Johannes Schmidt"
+  },
+  "_note": "Copied verbatim. Not modified. Used as fixtures under the MIT licence.",
+  "files": {
+    ".gitignore": {
+      "sha256": "abeaefa0aa27da2e4730cfd6fdfc3280e0164c58903a291f4b29a1ebd06cdd14",
+      "bytes": 14
+    },
+    "Invalid1.pdf": {
+      "sha256": "d07aae75416d52d0499d64b9f94121c9f06745315ed08b93a1b9e8e40654de25",
+      "bytes": 96124
+    },
+    "Invalid2.pdf": {
+      "sha256": "95a7c998d13dbe57be030caa08cb54ca37768ce32a21a1540c8617bb6274b824",
+      "bytes": 142610
+    },
+    "InvalidName.xml": {
+      "sha256": "1586abb15b54d119873b40647dcec38c370d7d4a35fdae415046a53612174c00",
+      "bytes": 2171
+    },
+    "InvalidXMLName.zip": {
+      "sha256": "e38160b16e96a202f55ae4768f84626cbef5906f2713ba9d691f15d24bf6f962",
+      "bytes": 404718
+    },
+    "PDFA1b_File.pdf": {
+      "sha256": "6bad233e2e908e538b6cfff6f33d6bb03846ecf6ed2073ba01c0752387289f94",
+      "bytes": 33655
+    },
+    "PDFA2b_File.pdf": {
+      "sha256": "d3496594a236883d870551e8d5cb843b5eb7e81f59eac0c25243aa55c85408b1",
+      "bytes": 23350
+    },
+    "PDFA3b_File.pdf": {
+      "sha256": "77636dac6f6a638321c8ece9533c0c73b5ab00f36e44d6113335080cfc3b9655",
+      "bytes": 23428
+    },
+    "VDI2770_Main.xml": {
+      "sha256": "1586abb15b54d119873b40647dcec38c370d7d4a35fdae415046a53612174c00",
+      "bytes": 2171
+    },
+    "Valid.pdf": {
+      "sha256": "9254e6063ca784c289dc51759a75a3e3778760eaccba25da61052394e4e1ed79",
+      "bytes": 87434
+    },
+    "container/certificate-pdfa-a.zip": {
+      "sha256": "01cc189b8d9b5a03f4775a4d45baa78e3452b491239b6f8e63f76c55b2db7ef7",
+      "bytes": 290542
+    },
+    "container/certificate-pdfa-b.zip": {
+      "sha256": "b44f6469aa34f6b8ed78cddf7b0cd6a34852d2d53fbd8d9b05a18e7b1c6264b7",
+      "bytes": 210361
+    },
+    "container/document-invalid-pdfa-b.zip": {
+      "sha256": "a6bb1652bb6b3fb4e790c4305c9471821387c8560bad7a6738d7c3e0e081591c",
+      "bytes": 210360
+    },
+    "container/documentationcontainer.zip": {
+      "sha256": "bfa721bdccaabd1cab0f4e985c96903e1766ebe3148bb628d40697bd14fa2562",
+      "bytes": 300169
+    },
+    "container/documentcontainer-invalid.zip": {
+      "sha256": "42f48809765f6798f6551835cce5ce18d499c4080d6f1531876c7ccb8df5f22f",
+      "bytes": 108186
+    },
+    "container/documentcontainer.zip": {
+      "sha256": "1eb37688f8483dd3f70c778f25710c0b8d5c2bb94dfdf9e702520190355ec02e",
+      "bytes": 108215
+    },
+    "container/missingdocuments.zip": {
+      "sha256": "762d367bd36180ee93c7e58f42f1711420539034cbfc32cde6ef439ba3d1a9e7",
+      "bytes": 191687
+    },
+    "container/morethanonepdfcontainer.zip": {
+      "sha256": "3fffa834c8226352e5743a1e8538374d521a023fa263401939cc923150772bf3",
+      "bytes": 328558
+    },
+    "container/objectreferences.zip": {
+      "sha256": "368e77017dea0532f5a71fd755d373a316b75f178618c8771193eea2c8e6422f",
+      "bytes": 404755
+    },
+    "container/vdi2770_demo.zip": {
+      "sha256": "6ba7bd40f5fa59f7a00fd3f5869ad980fb0b64c9cbf16b336efc26f6112468a5",
+      "bytes": 404736
+    },
+    "container/vdi2770_excel.zip": {
+      "sha256": "ba767ea933d5a590fb5afc3de558fe8b594c2345bbcb252bdec6e02ece9be383",
+      "bytes": 971647
+    },
+    "demo_invalid_doc_type_names.zip": {
+      "sha256": "e12b974a3a074512b15d2fe680817e7cd2f1671759f0dba9fd2809a1e9cb3300",
+      "bytes": 404905
+    },
+    "demo_vdi.zip": {
+      "sha256": "478fee3d7fe53dc455efeeabc9c6fb4a413b4394774520c0e6a619dbe5e8d3e8",
+      "bytes": 404736
+    },
+    "empty.zip": {
+      "sha256": "8739c76e681f900923b900c9df0ef75cf421d39cabb54650c4b9ad19b6a76d85",
+      "bytes": 22
+    },
+    "folders/456-29201/VDI2770_Metadata.xml": {
+      "sha256": "b7410ab60c3ee7ecf73faf11b2deaed120c55e9aa057b61bb6152a48c1d30fbb",
+      "bytes": 2164
+    },
+    "folders/456-29201/demo.pdf": {
+      "sha256": "9dd28aae7046d7e4a63ccf1c357020a576b6a5d9b78e7a317cccc90c5b7eb6e7",
+      "bytes": 103929
+    },
+    "folders/456-29201/demo.xlsx": {
+      "sha256": "2d96a5c6bf7d46f9badd9a1fda5c37a319431cfeb29469e93311142fa74aac25",
+      "bytes": 8581
+    },
+    "folders/AB393/VDI2770_Metadata.xml": {
+      "sha256": "da7332dc370c59d61d27f625b16f128626876e1f2133c10b683d4f5992990ad7",
+      "bytes": 2369
+    },
+    "folders/AB393/demo.docx": {
+      "sha256": "61f6230798e31b344cebcef2c92ce35f2516420ded18de8aa757d54758f7b973",
+      "bytes": 11735
+    },
+    "folders/AB393/demo.pdf": {
+      "sha256": "9dd28aae7046d7e4a63ccf1c357020a576b6a5d9b78e7a317cccc90c5b7eb6e7",
+      "bytes": 103929
+    },
+    "folders/VDI2770_Main.pdf": {
+      "sha256": "ffe3825f8802f319799b5124385ccb62e8d975068e19dfad3538341102b08efc",
+      "bytes": 201435
+    },
+    "folders/VDI2770_Main.xml": {
+      "sha256": "e7b62fd58d29c2d0b3242651662f6cc5a7d51961d0e235a56c57f57b2d35381d",
+      "bytes": 2176
+    },
+    "issues/issue16container.zip": {
+      "sha256": "47a48d968ff375cdaf039f6f0ff6b207254e8d5d53ccef00485f8b357c0f2738",
+      "bytes": 108224
+    },
+    "missing_Maindocument.zip": {
+      "sha256": "9c7e18932b8e31c550761aeaf383941585606e9e820900057dba6029b311e2e7",
+      "bytes": 403882
+    },
+    "missing_Metadata.zip": {
+      "sha256": "3074d3bc1537b24a0724d22b487e857ea6eee7363bb41c64176894a8694df002",
+      "bytes": 403928
+    },
+    "missingdocuments/VDI2770_Main.pdf": {
+      "sha256": "ffe3825f8802f319799b5124385ccb62e8d975068e19dfad3538341102b08efc",
+      "bytes": 201435
+    },
+    "missingdocuments/VDI2770_Main.xml": {
+      "sha256": "285ae7d6b07bdd630d65f4b6ce081369209123b64b26efafa535b73640186ba4",
+      "bytes": 2128
+    },
+    "missingdocuments/folders.zip": {
+      "sha256": "eac59ccde5534e83c3bd6121d1e49e0729b972c2fb918d270b4067079d1cad46",
+      "bytes": 214340
+    },
+    "pdf/encrypted.pdf": {
+      "sha256": "37115489625e99c686f19b82a3b3413ae8945ede1e194a6f0767b65f84fc55bf",
+      "bytes": 13386
+    },
+    "pdf/password.pdf": {
+      "sha256": "1fb2ea274ee9e3f38e81d25379c097b61f12293c76cb0b8ec90dda7ae531a630",
+      "bytes": 13972
+    },
+    "pdf/scan.pdf": {
+      "sha256": "0d136233fd9a41a870afd5e0eb8c670252957adfe9304ed7d3b2c868d5d9dcc5",
+      "bytes": 140163
+    },
+    "statistics.csv": {
+      "sha256": "76be0c4bd5b4884f7fb158a5c410af1509d42b4785cd6f0c721db7ac786dbc66",
+      "bytes": 1479
+    },
+    "xml/Datasheet.xml": {
+      "sha256": "e655009e5990b0947844d4c67548a96c3d4ff5dd035e94718196d557665f5d9b",
+      "bytes": 3559
+    },
+    "xml/Invalid1.xml": {
+      "sha256": "af73ae46f895487b064274fd98edaf8c0c2e4509f2c5565324be84aba66dc865",
+      "bytes": 3462
+    },
+    "xml/Invalid2.xml": {
+      "sha256": "25ddb4064a917fe73908a59b23f44ce8e6eee16e3c2f4990da15d83b10c969d4",
+      "bytes": 3547
+    },
+    "xml/InvalidEmpty.xml": {
+      "sha256": "e147023dca8ee30d0b1903eae103c50e600a29fb7b6f85897456d25855ccfc4b",
+      "bytes": 1897
+    },
+    "xml/Maindocument.xml": {
+      "sha256": "d5fbd8622858d7733ab614502a390a3596a8c14d3d665794feefe039e049d3f3",
+      "bytes": 4968
+    },
+    "xml/MissingXmlNs.xml": {
+      "sha256": "6181cb47ae3749ab952646d3c836c3cc9f8f229b4455ec0b2e365f43158ee19f",
+      "bytes": 3371
+    },
+    "xml/validation.xml": {
+      "sha256": "603edb4b8adeea1feb6ce6f42738ff55a041e159d107b36c6aac6b5ddad94898",
+      "bytes": 4361
+    }
+  }
+}
