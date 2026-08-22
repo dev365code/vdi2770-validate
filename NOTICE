@@ -26,7 +26,15 @@ Third-party material bundled with this project
    github.com/admin-shell-io/submodel-templates under CC-BY-4.0.
    Attribution: Industrial Digital Twin Association (IDTA), IDTA 02004 v2.0.
 
-3. Conformance corpus — corpus/
+3. Reference message catalogue — tests/data/oracle-messages.json
+
+   The English validation messages of the same reference implementation,
+   reproduced so the licensing gate in tests/test_catalogue.py can check that no
+   remedy text in this project was copied from them. Test data only; nothing in
+   the shipped package reads it.
+   MIT License, Copyright (C) 2021 Johannes Schmidt.
+
+4. Conformance corpus — corpus/
 
    Copied from github.com/DigitalDataChainConsortium/vdi2770 (examples/),
    MIT License, Copyright (C) 2021 Johannes Schmidt. See corpus/NOTICE.

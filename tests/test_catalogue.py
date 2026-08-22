@@ -45,17 +45,23 @@ def test_class_table_is_keyed_on_what_the_sources_agree_about():
 
 
 def test_no_remedy_is_copied_from_the_reference_implementation():
-    """Licensing gate. The reference's message strings are MIT and may be
-    referenced with attribution; our remedy text must be our own."""
-    codes = ROOT.parent / "vdi2770-recon" / "out" / "codes.json"
-    if not codes.exists():
-        return  # the recon workspace is not part of the distribution
-    entries = json.loads(codes.read_text(encoding="utf-8"))["entries"]
-    theirs = {(e.get("message_en") or "").strip().lower() for e in entries}
+    """Licensing gate. The reference's message strings are MIT and may be reused
+    with attribution — but reusing them would make this tool a translation of
+    someone else's reading rather than an independent one.
+
+    The strings are vendored under tests/data so this runs everywhere, including
+    on a fresh clone. A gate that silently skips is decoration."""
+    oracle = ROOT / "tests" / "data" / "oracle-messages.json"
+    assert oracle.exists(), "the licensing gate cannot run without tests/data/oracle-messages.json"
+    theirs = {m.strip().lower() for m in json.loads(oracle.read_text(encoding="utf-8"))["messages"]}
     theirs.discard("")
+    assert len(theirs) > 100, "the vendored message set looks truncated"
     for r in rules().values():
         mine = r.remedy.strip().lower()
         assert mine not in theirs, f"{r.id} remedy is copied verbatim from the reference"
         for t in theirs:
             if len(t) > 25:
                 assert t not in mine, f"{r.id} remedy embeds the reference's message {t!r}"
+        title = r.title.strip().lower()
+        assert not (len(title) > 25 and title in theirs), (
+            f"{r.id} title is copied verbatim; mark it or write your own")
