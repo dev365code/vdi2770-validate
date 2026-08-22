@@ -50,6 +50,17 @@ def check(container) -> Iterator[Finding]:
                       detail=f"{len(dirs)} folder entr{'y' if len(dirs) == 1 else 'ies'}: "
                              + ", ".join(sorted(dirs)[:5]))
 
+    if container.duplicate_names:
+        r = rule("Z10")
+        for name in container.duplicate_names:
+            yield Finding(r, r.title, container.where.child(member=name, subject=name))
+
+    if container.kind is Kind.DOCUMENT:
+        for m in container.members:
+            if m.name.lower().endswith(".zip"):
+                r = rule("Z11")
+                yield Finding(r, r.title, container.where.child(member=m.name, subject=m.name))
+
     if container.kind is Kind.DOCUMENTATION:
         if MAIN_PDF not in container.file_names:
             r = rule("Z7")

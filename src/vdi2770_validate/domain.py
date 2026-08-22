@@ -66,13 +66,13 @@ def build(root: Node, base: Location) -> Document:
     classifications = []
     for c in root.find_all("DocumentClassification"):
         names = tuple(
-            (nm.attrib.get("Language", ""), nm.text.strip())
+            (nm.attrib.get("Language", "").strip(), nm.text.strip())
             for nm in c.find_all("ClassName")
         )
         cid = c.text_of("ClassId")
         classifications.append(Classification(
             class_id=cid,
-            system=c.attrib.get("ClassificationSystem", ""),
+            system=c.attrib.get("ClassificationSystem", "").strip(),
             names=names,
             src=_loc(base, c, cid or None),
         ))
@@ -83,14 +83,14 @@ def build(root: Node, base: Location) -> Document:
             DigitalFile(
                 # the file name is the element's text; the media type is an attribute
                 file_name=f.text.strip(),
-                file_format=f.attrib.get("FileFormat", ""),
+                file_format=f.attrib.get("FileFormat", "").strip(),
                 src=_loc(base, f, f.text.strip() or None),
             )
             for f in v.find_all("DigitalFile")
         )
         descriptions = tuple(
             Description(
-                language=d.attrib.get("Language", ""),
+                language=d.attrib.get("Language", "").strip(),
                 title=d.text_of("Title"),
                 src=_loc(base, d),
             )
@@ -102,7 +102,7 @@ def build(root: Node, base: Location) -> Document:
             languages=tuple(n.text.strip() for n in v.find_all("Language")),
             descriptions=descriptions,
             files=files,
-            life_cycle_status=(lcs.attrib.get("StatusValue", "") if lcs else ""),
+            life_cycle_status=(lcs.attrib.get("StatusValue", "").strip() if lcs else ""),
             src=_loc(base, v, v.text_of("DocumentVersionId") or None),
         ))
 

@@ -16,7 +16,13 @@ def check(container, document) -> Iterator[Finding]:
     declared = {f.file_name for f in document.all_files if f.file_name}
 
     for f in document.all_files:
-        if f.file_name and f.file_name not in present:
+        if not f.file_name:
+            r = rule("F4")
+            yield Finding(r, r.title, f.src.child(container=container.path,
+                                                  member=container.metadata_name),
+                          detail=f"declared as {f.file_format!r} with no file name")
+            continue
+        if f.file_name not in present:
             rejected = container.rejected.get(f.file_name)
             detail = (f"{f.file_name!r} is in the archive but was refused: {rejected}"
                       if rejected else

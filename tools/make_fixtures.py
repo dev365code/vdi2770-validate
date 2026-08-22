@@ -30,6 +30,14 @@ def members(path: Path):
     return {n: zf.read(n) for n in zf.namelist()}
 
 
+def write_bytes(files: dict, compress=zipfile.ZIP_DEFLATED) -> bytes:
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", compress) as z:
+        for n, data in files.items():
+            z.writestr(n, data)
+    return buf.getvalue()
+
+
 def write(name: str, files: dict, *, compress=zipfile.ZIP_DEFLATED) -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     buf = io.BytesIO()
@@ -159,6 +167,39 @@ def main() -> int:
                    '        <DigitalFile FileFormat="application/pdf">bomb.pdf</DigitalFile>')
     add("z5b-declared-bomb.zip", f, "Z5", ["bomb.pdf", META],
         "a rejected member that the metadata declares as a PDF")
+
+    # F4 — the metadata promises a document and names nothing
+    f = dict(base)
+    f.pop("B.pdf")
+    f[META] = edit(base[META], '<DigitalFile FileFormat="application/pdf">B.pdf</DigitalFile>',
+                   '<DigitalFile FileFormat="application/pdf"></DigitalFile>')
+    add("f4-nameless-file.zip", f, "F4", [META, "B.pdf"],
+        "the only PDF removed and its DigitalFile emptied — the evasion this rule exists for")
+
+    # M8 — a class name tagged with a language we do not check
+    f = dict(base)
+    f[META] = edit(base[META], '<ClassName Language="de">Technische Spezifikation</ClassName>',
+                   '<ClassName Language="">COMPLETE NONSENSE</ClassName>')
+    add("m8-unlabelled-class-name.zip", f, "M8", [META],
+        "the German class name relabelled with an empty language")
+
+    # Z10 — two members with one name
+    OUT.mkdir(parents=True, exist_ok=True)
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        for n, d in base.items():
+            z.writestr(n, d)
+        z.writestr(META, b"<Document/>")
+    (OUT / "z10-duplicate-member.zip").write_bytes(buf.getvalue())
+    made["z10-duplicate-member.zip"] = {
+        "rule": "Z10", "basedOn": "documentcontainer.zip", "changed": [META],
+        "note": "VDI2770_Metadata.xml stored twice; readers disagree about which wins"}
+
+    # Z11 — a container smuggled inside a document container
+    f = dict(base)
+    f["stowaway.zip"] = write_bytes(base)
+    add("z11-container-in-document.zip", f, "Z11", ["stowaway.zip"],
+        "a document container carrying another container")
 
     # P3 — a PDF that makes no PDF/A claim
     f = dict(base)

@@ -33,6 +33,28 @@
       ]
     },
     {
+      "id": "Z10",
+      "layer": "container",
+      "severity": "error",
+      "obligation": "ours",
+      "title": "Two members of the archive have the same name",
+      "whyOurs": "ZIP allows it and readers disagree about which one wins, so the container can show one thing to this tool and another to whoever unpacks it. Nothing good is ever delivered this way.",
+      "remedy": "Rebuild the archive with one entry per name. If two files genuinely differ, give them different names and declare both.",
+      "refKeys": [],
+      "refCodes": []
+    },
+    {
+      "id": "Z11",
+      "layer": "container",
+      "severity": "error",
+      "obligation": "ours",
+      "title": "A document container carries another container inside it",
+      "whyOurs": "Document containers hold a document's files. A container inside one is either a mistake or a way to carry something past a check that only looks at declared files.",
+      "remedy": "Move the inner container up into the documentation container, where containers belong.",
+      "refKeys": [],
+      "refCodes": []
+    },
+    {
       "id": "Z2",
       "layer": "container",
       "severity": "error",
@@ -139,44 +161,6 @@
       ]
     },
     {
-      "id": "X1",
-      "layer": "schema",
-      "severity": "error",
-      "obligation": "schema",
-      "title": "The metadata file is not well-formed XML",
-      "remedy": "Open the file in an XML editor and fix the reported position. Nothing else can be checked until the file parses.",
-      "refKeys": [
-        "core:XmlReader_EX3"
-      ],
-      "refCodes": []
-    },
-    {
-      "id": "X2",
-      "layer": "schema",
-      "severity": "error",
-      "obligation": "schema",
-      "basis": "VDI2770_Schema_2019-08-23.xsd",
-      "title": "The metadata file does not conform to the published VDI 2770 schema",
-      "remedy": "Correct the element or value at the reported line so it matches the schema VDI publishes for VDI 2770. The schema is bundled with this tool.",
-      "refKeys": [
-        "processor:REP_MESSAGE_023"
-      ],
-      "refCodes": [
-        "REP_023"
-      ]
-    },
-    {
-      "id": "X3",
-      "layer": "schema",
-      "severity": "error",
-      "obligation": "ours",
-      "title": "The metadata file tries to expand an entity",
-      "whyOurs": "A metadata file is data. Entity expansion lets it read local files or reach a host, which no handover document has any reason to do.",
-      "remedy": "Remove the DOCTYPE and entity declarations. Write the values directly.",
-      "refKeys": [],
-      "refCodes": []
-    },
-    {
       "id": "F1",
       "layer": "files",
       "severity": "error",
@@ -218,6 +202,20 @@
       "refCodes": [
         "DF_002",
         "DF_003"
+      ]
+    },
+    {
+      "id": "F4",
+      "layer": "files",
+      "severity": "error",
+      "obligation": "container",
+      "title": "A declared file has no name",
+      "remedy": "Give the DigitalFile element the file's name as its text, or remove the element. An empty name means the metadata promises a document and names nothing.",
+      "refKeys": [
+        "core:DigitalFile_VAL4"
+      ],
+      "refCodes": [
+        "DF_004"
       ]
     },
     {
@@ -324,6 +322,17 @@
       ]
     },
     {
+      "id": "M8",
+      "layer": "metadata",
+      "severity": "warning",
+      "obligation": "ours",
+      "title": "A class name carries no language this tool can check",
+      "whyOurs": "We check German and English class names against the published table. A name tagged with neither — or with nothing at all — is not wrong, but it is unchecked, and silently unchecked is how an empty attribute turns the check off.",
+      "remedy": "Tag the class name with the language it is written in — de or en if you want it checked against the published table.",
+      "refKeys": [],
+      "refCodes": []
+    },
+    {
       "id": "P1",
       "layer": "pdf",
       "severity": "error",
@@ -379,6 +388,44 @@
       "refCodes": [
         "REP_015"
       ]
+    },
+    {
+      "id": "X1",
+      "layer": "schema",
+      "severity": "error",
+      "obligation": "schema",
+      "title": "The metadata file is not well-formed XML",
+      "remedy": "Open the file in an XML editor and fix the reported position. Nothing else can be checked until the file parses.",
+      "refKeys": [
+        "core:XmlReader_EX3"
+      ],
+      "refCodes": []
+    },
+    {
+      "id": "X2",
+      "layer": "schema",
+      "severity": "error",
+      "obligation": "schema",
+      "basis": "VDI2770_Schema_2019-08-23.xsd",
+      "title": "The metadata file does not conform to the published VDI 2770 schema",
+      "remedy": "Correct the element or value at the reported line so it matches the schema VDI publishes for VDI 2770. The schema is bundled with this tool.",
+      "refKeys": [
+        "processor:REP_MESSAGE_023"
+      ],
+      "refCodes": [
+        "REP_023"
+      ]
+    },
+    {
+      "id": "X3",
+      "layer": "schema",
+      "severity": "error",
+      "obligation": "ours",
+      "title": "The metadata file tries to expand an entity",
+      "whyOurs": "A metadata file is data. Entity expansion lets it read local files or reach a host, which no handover document has any reason to do.",
+      "remedy": "Remove the DOCTYPE and entity declarations. Write the values directly.",
+      "refKeys": [],
+      "refCodes": []
     }
   ]
 }

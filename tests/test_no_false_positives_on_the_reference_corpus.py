@@ -21,7 +21,7 @@ DELIBERATELY_BROKEN = {
 
 # Rules that describe the *shape* of a container. A rule about content may
 # legitimately disagree with an upstream example; a rule about shape may not.
-STRUCTURAL = {"Z1", "Z2", "Z3", "Z6", "Z7", "Z9"}
+STRUCTURAL = {"Z1", "Z2", "Z3", "Z6", "Z7", "Z9", "Z10", "Z11"}
 
 CONTAINERS = sorted(p for p in CORPUS.rglob("*.zip") if p.name not in DELIBERATELY_BROKEN)
 

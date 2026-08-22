@@ -3,8 +3,6 @@ all — which is how `classes` came to crash while `make check` stayed green.
 """
 import json
 
-import pytest
-
 from conftest import CLEAN_DOCUMENT, FIXTURES
 from vdi2770_validate.cli import main
 
@@ -65,6 +63,14 @@ def test_classes_prints_twelve_and_shows_both_renderings(capsys):
 
 
 def test_a_missing_file_is_reported_not_a_traceback(capsys):
-    with pytest.raises(SystemExit) as e:
-        main(["check", "no-such-file.zip"])
-    assert e.value.code == 2
+    assert main(["check", "no-such-file.zip"]) == 2
+    assert "cannot read it" in capsys.readouterr().err
+
+
+def test_one_unreadable_path_does_not_stop_the_rest(capsys):
+    """A CI job sweeping a supplier drop folder must not stop at the first dud."""
+    code = main(["check", "no-such-file.zip", str(CLEAN_DOCUMENT)])
+    out = capsys.readouterr()
+    assert code == 1                       # something was unreadable, but we kept going
+    assert "cannot read it" in out.err
+    assert "0 error(s)" in out.out         # the good one was still checked

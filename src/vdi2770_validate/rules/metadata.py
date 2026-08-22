@@ -45,6 +45,11 @@ def check(container, document, is_main: bool) -> Iterator[Finding]:
                     yield Finding(r, r.title, c.src.child(container=container.path,
                                                           member=container.metadata_name),
                                   detail=f"{text!r} for class {c.class_id}; published name is {published}")
+            elif not (low.startswith("de") or low.startswith("en")):
+                r = rule("M8")
+                yield Finding(r, r.title, c.src.child(container=container.path,
+                                                      member=container.metadata_name),
+                              detail=f"{text!r} is tagged {lang!r}, which this tool does not check")
             elif low.startswith("en") and text not in want_en:
                 r = rule("M4")
                 both = " / ".join(repr(w) for w in want_en)

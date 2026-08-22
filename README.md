@@ -54,7 +54,7 @@ are in [docs/scope.md](docs/scope.md).
 - **Rules are data.** [`rules.json`](src/vdi2770_validate/data/rules.json) — each
   rule carries where its requirement comes from, a remedy sentence, and — where the
   reference implementation checks the same thing — the message keys it uses.
-- **Seventeen rules have a minimal fixture pair** — a container that violates the rule
+- **20 of 30 rules have a minimal fixture pair** — a container that violates the rule
   and a conforming one differing in as little as a single member. The rest are exercised
   by the vendored corpus. A rule that fires nowhere fails the build.
 - **Rules cannot reach the parser.** A test fails if a rule module imports `zipfile`

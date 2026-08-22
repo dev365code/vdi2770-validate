@@ -7,6 +7,7 @@ reported path through our own tree to recover the position.
 """
 from __future__ import annotations
 
+import io
 import re
 from typing import List, Optional
 
@@ -49,7 +50,16 @@ def validate(data: bytes, tree: Node) -> List[dict]:
         return [{"line": None, "column": None, "path": "", "reason": f"cannot load bundled schema: {e}"}]
 
     out: List[dict] = []
-    for err in schema.iter_errors(data.decode("utf-8", "replace")):
+    try:
+        # Hand it the bytes, not a decoded string: the document declares its own
+        # encoding and decoding it as UTF-8 "with replacement" silently hands the
+        # schema a different document than the one the model layer read.
+        errors = list(schema.iter_errors(io.BytesIO(data)))
+    except Exception as e:                      # noqa: BLE001 - hostile input, any failure
+        return [{"line": None, "column": None, "path": "",
+                 "reason": f"the schema check could not complete: "
+                           f"{type(e).__name__}: {str(e).strip().splitlines()[0][:200]}"}]
+    for err in errors:
         path = getattr(err, "path", "") or ""
         node = _resolve(tree, path) if path else None
         reason = (getattr(err, "reason", None) or str(err)).strip().splitlines()[0]

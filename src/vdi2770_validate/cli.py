@@ -12,15 +12,21 @@ from .runner import check_file
 
 def _cmd_check(args) -> int:
     worst = 0
+    unreadable = 0
     for path in args.paths:
         try:
             rep = check_file(path)
         except OSError as e:
+            # One bad path must not stop the rest: a CI job sweeping a supplier
+            # drop folder would silently skip everything after the first dud.
             print(f"{path}: cannot read it — {e.strerror or e}", file=sys.stderr)
-            raise SystemExit(2) from None
+            unreadable += 1
+            continue
         print(rendering.as_json(rep) if args.json else rendering.as_text(rep, not args.quiet))
         if rep.count(Severity.ERROR):
             worst = 1
+    if unreadable:
+        return 2 if unreadable == len(args.paths) else max(worst, 1)
     return worst
 
 

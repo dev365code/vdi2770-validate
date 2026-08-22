@@ -53,6 +53,7 @@ class Container:
     path: str
     kind: Kind = Kind.UNKNOWN
     members: Tuple[Member, ...] = ()
+    duplicate_names: Tuple[str, ...] = ()
     metadata_name: Optional[str] = None      # the member the metadata was read from
     metadata_bytes: Optional[bytes] = None
     children: List[Container] = field(default_factory=list)
@@ -151,6 +152,12 @@ def read(data: bytes, path: str, depth: int = 0) -> Container:
         members.append(Member(i.filename, i.file_size, i.compress_size, i.is_dir()))
 
     c.members = tuple(members)
+    seen, dupes = set(), []
+    for m in c.members:
+        if m.name in seen and m.name not in dupes:
+            dupes.append(m.name)
+        seen.add(m.name)
+    c.duplicate_names = tuple(dupes)
     c.kind, c.near_misses = _classify(c.file_names)
 
     wanted = MAIN_XML if c.kind is Kind.DOCUMENTATION else METADATA_XML if c.kind is Kind.DOCUMENT else None
