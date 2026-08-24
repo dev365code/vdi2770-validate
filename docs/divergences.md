@@ -37,6 +37,32 @@ name, which both sources agree on for all twelve.
 
 This will be revisited if IDTA states which rendering is normative.
 
+## 1a. Why neither English rendering is trusted
+
+The German names are the yardstick here, and they can be: both published sources
+give the same twelve. Measured against them, each English rendering departs on
+two of the four rows where they differ.
+
+| ClassId | German (both agree) | IDTA 02004 Table 1 | reference implementation | closer to the German |
+|---|---|---|---|---|
+| 02-03 | Bauteile | Assemblies | Components | reference (*Bauteile* are parts; assemblies are *Baugruppen*) |
+| 02-04 | Zeugnisse, Zertifikate, Bescheinigungen | Certificates, declarations | Certificates | IDTA (the German names three things) |
+| 03-01 | Montage, Demontage | Commissioning, decommissioning | Assembly, disassembly | reference (commissioning is *Inbetriebnahme*) |
+| 03-04 | Inspektion, Wartung, Prüfung | Inspection, maintenance, testing | Inspection, maintenance | IDTA (*Prüfung* is dropped) |
+
+Two each. That is why matching is keyed on the class id and the German name, and
+why an English name produces a note here rather than a verdict: we have no basis
+for preferring either, and the one source that would settle it — the English
+edition of the guideline — is behind the same paywall as everything else.
+
+What is known about provenance, and it is not much: the reference
+implementation's `Constants.java` describes its English names as "defined in VDI
+2770 guideline", and its author wrote it to support the VDI standardisation
+working group. IDTA has used its own rendering consistently since 02004 v1.2
+(2023-03), through v2.0.1 (2025-11), and in 02035-2 (2026-02). Both look
+deliberate. A question has been put to IDTA; this section changes if it is
+answered.
+
 ## 1b. Class names are matched to their class id, not to the whole table
 
 **Reference**: `DC_003`/`DC_004` ask whether the name is *one of the twelve*, in
