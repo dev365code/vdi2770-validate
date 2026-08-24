@@ -4,8 +4,10 @@
 
     box = vdi2770.read_container_file("manuals.zip")
     for c in box.walk():
-        doc = vdi2770.build_document(vdi2770.parse_xml(c.metadata_bytes), c.at)
-        print(doc.id, [k.class_id for k in doc.classifications])
+        if c.metadata_bytes is None:
+            continue
+        doc = vdi2770.build_document(vdi2770.parse_xml(c.metadata_bytes), c.where)
+        print(c.path, doc.ids, [k.class_id for k in doc.classifications])
 
 Three properties this library holds to, each of them tested rather than
 promised:
@@ -54,7 +56,7 @@ from .zipread import (
 from .zipread import read as read_container
 from .zipread import read_file as read_container_file
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 __all__ = [
     "Classification", "Container", "Defect", "Description", "DigitalFile",

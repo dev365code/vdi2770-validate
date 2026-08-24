@@ -96,18 +96,33 @@ def test_an_entity_declaration_is_refused_even_without_an_external_reference():
 
 def test_every_rule_count_in_prose_is_the_real_one():
     """0.1.0 shipped a changelog that said 32 rules in one line and 33 in another.
-    The catalogue is the only thing that knows, so it decides."""
+
+    Two things this has to get right. It must read *every* document, not three
+    named ones -- the first version missed the defect register, which said "32 of
+    32" for a catalogue of 33. And it must leave released changelog sections
+    alone: "33 rules" under `## 0.1.0` is what was true then, and rewriting it to
+    match today would be falsifying the record rather than fixing a number.
+    """
     import re
 
     from conftest import ROOT
     from vdi2770_validate.catalog import rules
 
     real = len(rules())
-    for name in ("README.md", "CHANGELOG.md", "docs/scope.md"):
-        p = ROOT / name
-        if not p.exists():
-            continue
+    docs = [ROOT / "README.md", ROOT / "THIRD_PARTY.md", *sorted((ROOT / "docs").glob("*.md")),
+            ROOT / "packages" / "vdi2770" / "README.md"]
+    assert len(docs) >= 6, f"only found {len(docs)} documents to check"
+
+    def current_section(text):
+        heads = [m.start() for m in re.finditer(r"^## ", text, re.M)]
+        return text[:heads[1]] if len(heads) > 1 else text
+
+    changelog = ROOT / "CHANGELOG.md"
+    targets = [(d, d.read_text(encoding="utf-8")) for d in docs if d.exists()]
+    targets.append((changelog, current_section(changelog.read_text(encoding="utf-8"))))
+
+    for path, text in targets:
         # A quoted count is someone being quoted -- usually this changelog quoting
         # the wrong number it once printed. Only unquoted claims are claims.
-        for n in re.findall(r'(?<!")\b(\d+) rules?\b(?!")', p.read_text(encoding="utf-8")):
-            assert int(n) == real, f"{name} says {n} rules; the catalogue has {real}"
+        for n in re.findall(r'(?<!")\b(\d+) rules?\b(?!")', text):
+            assert int(n) == real, f"{path.name} says {n} rules; the catalogue has {real}"

@@ -186,3 +186,22 @@ def test_the_pdf_reader_reports_a_claim_and_never_a_verdict():
 def test_a_file_that_is_not_a_pdf_says_so_without_guessing():
     facts = vdi2770.read_pdf(b"MZ\x90\x00not a pdf at all")
     assert facts.is_pdf is False and facts.pdfa_claim is None
+
+
+def test_the_module_docstring_example_actually_runs(tmp_path, monkeypatch):
+    """`help(vdi2770)` shipped an example using `c.at` and `doc.id`, neither of
+    which exists. It was the first thing a new user would type."""
+    import re
+    import textwrap
+
+    block = re.search(r"\n\n((?:    .*\n|\n)+?)\nThree properties", vdi2770.__doc__)
+    assert block, "the docstring no longer starts with an example; update this test"
+    code = textwrap.dedent(block.group(1))
+    assert "read_container_file" in code
+
+    box = io.BytesIO()
+    with zipfile.ZipFile(box, "w") as z:
+        z.writestr("VDI2770_Metadata.xml", META)
+    (tmp_path / "manuals.zip").write_bytes(box.getvalue())
+    monkeypatch.chdir(tmp_path)
+    exec(compile(code, "<vdi2770 docstring>", "exec"), {})

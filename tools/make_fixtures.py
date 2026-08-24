@@ -183,6 +183,19 @@ def main() -> int:
     add("m8-unlabelled-class-name.zip", f, "M8", [META],
         "the German class name relabelled with an empty language")
 
+    # Z12 — a member listed in the directory that cannot be decompressed.
+    # Written by hand: no ZIP writer produces a broken CRC on purpose.
+    OUT.mkdir(parents=True, exist_ok=True)
+    raw = bytearray(write_bytes(dict(base)))
+    info = zipfile.ZipFile(io.BytesIO(bytes(raw))).getinfo("B.pdf")
+    start = info.header_offset + 30 + len(info.filename) + 1000
+    for k in range(start, start + 40):
+        raw[k] ^= 0xFF
+    (OUT / "z12-unreadable-member.zip").write_bytes(bytes(raw))
+    made["z12-unreadable-member.zip"] = {
+        "rule": "Z12", "basedOn": "documentcontainer.zip", "changed": ["B.pdf"],
+        "note": "forty bytes of B.pdf's deflate stream flipped -- the shape of a truncated transfer"}
+
     # Z10 — two members with one name
     OUT.mkdir(parents=True, exist_ok=True)
     buf = io.BytesIO()

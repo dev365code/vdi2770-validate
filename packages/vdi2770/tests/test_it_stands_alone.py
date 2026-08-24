@@ -50,11 +50,16 @@ def test_the_library_cannot_reach_the_validator():
 
 
 def test_the_readers_do_not_know_rule_ids():
-    """A reader that names a rule id is deciding policy on the caller's behalf."""
+    """A reader that names a rule id is deciding policy on the caller's behalf.
+
+    Unquoted too: the version of this test that only looked for `"P3"` missed a
+    comment saying `P3, which is an error-severity rule` -- which was both a rule
+    id in the reader and, by then, the wrong severity."""
+    pattern = re.compile(r"\b(?:Z|X|M|F|P)\d{1,2}\b")
     for f in sorted(SRC.glob("*.py")):
-        text = f.read_text(encoding="utf-8")
-        for rid in ("Z1", "Z3", "X2", "M1", "P4", "F1"):
-            assert f'"{rid}"' not in text, f"{f.name} hard-codes rule id {rid}"
+        for n, line in enumerate(f.read_text(encoding="utf-8").splitlines(), 1):
+            hit = pattern.search(line)
+            assert not hit, f"{f.name}:{n} names rule id {hit.group(0)!r}: {line.strip()}"
 
 
 def test_the_declared_public_surface_is_the_real_one():

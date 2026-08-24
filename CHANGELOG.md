@@ -1,5 +1,72 @@
 # Changelog
 
+## 0.3.0 — 2026-08-24
+
+Two independent audits — one of what every rule *claims*, one trying to make the
+tool give a wrong answer — found thirteen defects. Six are fixed here. The three
+that mattered most were containers this tool passed with exit 0 that `unzip -t`
+refuses, and legitimate deliveries it failed.
+
+**It said nothing about archives that are broken**
+
+- **New rule `Z12`** — a member listed in the directory that cannot be
+  decompressed. A truncated transfer (broken CRC) and a member with a password
+  both produced "no findings", exit 0: the bytes came back empty and every later
+  layer read that as "not declared". These are the commonest defects a handover
+  archive has, and this tool certified them clean.
+
+**It failed deliveries that were fine**
+
+- `Z5` no longer treats a high compression ratio as hostile below 8 MiB. An
+  uncompressed TIFF scan of a line drawing expands ~220× and lands at one
+  megabyte; a 104 KB archive was refused with "exceeds this tool's limits for
+  untrusted input" and the unactionable remedy "split the delivery".
+- `Z4` no longer calls `5:1.pdf` an absolute path. The drive-letter test looked
+  only for a colon in the second position; a gear ratio is not a drive.
+- `F1`/`F2` compare filenames under Unicode NFC. macOS writes decomposed names
+  into a ZIP while metadata authored elsewhere is composed, so the report used to
+  say the same visible name was both missing and undeclared.
+- `Z2` no longer says "the archive is empty" when the archive has members we
+  refused to read, and no longer swallows `Z3` when it does.
+- `M2` no longer tells you to pick a valid class id when the `ClassId` element is
+  absent. There is nothing to correct; `X2` reports the missing element.
+
+**Seven rules were wearing the wrong provenance**
+
+`container` means "true without knowing VDI 2770 at all" — the strongest thing
+this project claims about a rule. It had become the default for anything not
+obviously schema or table. `Z3`, `F1`, `F2`, `F3`, `F4` and `P1` all rest on VDI
+reserved filenames or the VDI metadata model, and are now `reference`; `X1` was
+`schema`, but well-formedness is XML 1.0 and the schema cannot speak until it
+holds, so it is now `container`. A test lists the three remaining `container`
+rules with a written reason each, and fails if a fourth appears unexplained.
+
+The count moves in the honest direction: fourteen rules now rest on behaviour
+read out of someone else's Java and never checked against the guideline, where
+the release notes for 0.1.0 implied none did.
+
+**Measured, at last**
+
+`docs/divergences.md` said "comparing all nineteen corpus containers against
+captured output is on the board and not done". It is done: 42 containers through
+the reference implementation at its pinned commit, and `tools/oracle/` carries
+what is needed to repeat it. Every reference message key the catalogue cites
+exists in that project and agrees with the code it is paired with — 0 defects on
+30 citations. Two things the sweep found: the reference **crashes** on a
+path-traversal archive rather than reporting it (zip4j blocks the traversal, so
+this is a robustness gap and not a vulnerability), and it extracts every
+container to a temporary folder on disk before validating, which this tool
+never does.
+
+**Still open**, recorded rather than quietly dropped: seven verified defects,
+listed in the defect register — a declared `application/zip` payload is judged as
+if it were a container, `Z9` misses subdirectories that carry no explicit folder
+entry, `M9` treats one id string in two `DomainId`s as a repeat, an undeclared
+`VDI2770_Main.pdf` is never content-checked, `Z8` contradicts `Z6` at four levels
+of nesting, `M5` skips an empty `Language` attribute, and `P3` misses a PDF/A
+claim bound to a prefix other than `pdfaid`.
+
+
 ## 0.2.0 — 2026-08-24
 
 The readers moved out into their own package. `vdi2770` is now a dependency-free
@@ -42,7 +109,9 @@ refusals there are the honest part.
   files versus actual members, metadata model, and PDF claims — each with a
   remedy sentence and each traceable to the schema VDI publishes free, to a
   freely published table, to container mechanics, or to a stated judgement of
-  our own.
+  our own. *(Corrected in 0.3.0: this list left out `reference` — behaviour read
+  out of the reference implementation and never checked against the guideline —
+  which eight of those rules carried, and fourteen carry now.)*
 - Document classification matched on class id and German name. The two freely
   published sources disagree on five of twelve English names, so an English name
   never decides a verdict here; it produces a note showing both renderings.

@@ -45,6 +45,11 @@ def check(container, document, is_main: bool) -> Iterator[Finding]:
 
     known = document_classes()
     for c in vdi:
+        if not c.class_id:
+            # The element is absent, not wrong. M2's remedy is "use one of these
+            # twelve values", which is no help when there is nothing to correct;
+            # the schema layer reports the missing element, and it is right.
+            continue
         if c.class_id not in known:
             r = rule("M2")
             yield Finding(r, r.title, c.src.child(container=container.path,

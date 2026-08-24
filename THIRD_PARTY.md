@@ -9,7 +9,7 @@ whether we changed it.
 | `src/vdi2770_validate/data/document-classes.json` | Table 1 of IDTA 02004 "Handover Documentation" v2.0.1, as published in [admin-shell-io/submodel-templates](https://github.com/admin-shell-io/submodel-templates); the `ddcReference` names beside them from `Constants.java` of the reference implementation | **CC BY 4.0** © Industrial Digital Twin Association (IDTA names, IRDIs) **and MIT** © 2021 Johannes Schmidt (`ddcReference` names) | **Yes** — extracted and reformatted as JSON; no wording changed |
 | `corpus/examples/` (49 files) | [DigitalDataChainConsortium/vdi2770](https://github.com/DigitalDataChainConsortium/vdi2770) @ `e47c13c`, `examples/` | **MIT**, © 2021 Johannes Schmidt | **No — byte-for-byte verbatim, SHA-256 per file in `corpus/MANIFEST.json`** |
 | `tests/data/oracle-messages.json` | English message bundles of the same project | **MIT**, © 2021 Johannes Schmidt | **Yes** — the message strings were extracted into a JSON list; no wording changed |
-| `src/vdi2770_validate/data/rules.json` | this project | Apache-2.0 | n/a — titles and remedies are ours, checked against the reference's messages by `tests/test_licensing.py`; its codes appear only in `refCodes`/`refKeys` as cross-references |
+| `src/vdi2770_validate/data/rules.json` | this project | Apache-2.0 | n/a — titles and remedies are ours, checked against the reference's messages by `tests/test_catalogue.py::test_no_remedy_is_copied_from_the_reference_implementation`; its codes appear only in `refCodes`/`refKeys` as cross-references |
 | Everything else | this project | Apache-2.0 | n/a |
 | `xmlschema` (runtime dependency, not bundled) | [sissaschool/xmlschema](https://github.com/sissaschool/xmlschema) | MIT | No |
 

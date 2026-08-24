@@ -72,7 +72,7 @@
       "id": "Z3",
       "layer": "container",
       "severity": "error",
-      "obligation": "container",
+      "obligation": "reference",
       "title": "The archive is neither a document container nor a documentation container",
       "remedy": "Put VDI2770_Metadata.xml at the root of a document container, or VDI2770_Main.xml at the root of a documentation container. Both names are case-sensitive and must not sit inside a folder.",
       "refKeys": [
@@ -164,7 +164,7 @@
       "id": "F1",
       "layer": "files",
       "severity": "error",
-      "obligation": "container",
+      "obligation": "reference",
       "title": "A file named in the metadata is not in the container",
       "remedy": "Add the missing file to the container, or remove its DigitalFile entry from the metadata. The two must agree.",
       "refKeys": [
@@ -178,7 +178,7 @@
       "id": "F2",
       "layer": "files",
       "severity": "warning",
-      "obligation": "container",
+      "obligation": "reference",
       "title": "A file in the container is not named in the metadata",
       "remedy": "Declare the file as a DigitalFile in the metadata, or remove it from the container. An undeclared file is invisible to the recipient's system.",
       "refKeys": [
@@ -192,7 +192,7 @@
       "id": "F3",
       "layer": "files",
       "severity": "warning",
-      "obligation": "container",
+      "obligation": "reference",
       "title": "The declared file format disagrees with the file name",
       "remedy": "Make FileFormat and the file extension agree — application/pdf with .pdf, application/zip with .zip.",
       "refKeys": [
@@ -208,7 +208,7 @@
       "id": "F4",
       "layer": "files",
       "severity": "error",
-      "obligation": "container",
+      "obligation": "reference",
       "title": "A declared file has no name",
       "remedy": "Give the DigitalFile element the file's name as its text, or remove the element. An empty name means the metadata promises a document and names nothing.",
       "refKeys": [
@@ -361,7 +361,7 @@
       "id": "P1",
       "layer": "pdf",
       "severity": "error",
-      "obligation": "container",
+      "obligation": "reference",
       "title": "A file declared as PDF is not a PDF",
       "remedy": "Replace the file with a real PDF, or correct the declared FileFormat.",
       "refKeys": [
@@ -430,7 +430,7 @@
       "id": "X1",
       "layer": "schema",
       "severity": "error",
-      "obligation": "schema",
+      "obligation": "container",
       "title": "The metadata file is not well-formed XML",
       "remedy": "Open the file in an XML editor and fix the reported position. Nothing else can be checked until the file parses.",
       "refKeys": [
@@ -463,6 +463,18 @@
       "remedy": "Remove the DOCTYPE and entity declarations. Write the values directly.",
       "refKeys": [],
       "refCodes": []
+    },
+    {
+      "id": "Z12",
+      "layer": "container",
+      "severity": "error",
+      "obligation": "container",
+      "title": "A file in the container could not be read",
+      "remedy": "Re-create the archive and send it again. A member with a broken CRC is usually a truncated transfer; a member that needs a password has not been handed over, because the recipient cannot open it.",
+      "refKeys": [],
+      "refCodes": [],
+      "basis": "",
+      "whyOurs": ""
     }
   ]
 }

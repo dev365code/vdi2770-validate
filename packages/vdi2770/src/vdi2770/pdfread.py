@@ -22,7 +22,9 @@ _CONF_AT = re.compile(rb"pdfaid[:\s]*conformance\s*[=>]\s*[\"']?([ABUabu])", re.
 _STREAM = re.compile(rb"stream\r?\n")
 
 # A PDF/A identification lives in the XMP metadata. Matching the words anywhere
-# in the file means a comment can silence P3, which is an error-severity rule.
+# in the file means a comment could suppress a caller's PDF/A finding, so the
+# search is scoped to XMP packets. (This package names no caller's rule ids: it
+# reports what it found and lets whoever holds the rules decide.)
 _XMP = re.compile(rb"<\?xpacket\s+begin.*?<\?xpacket\s+end.*?\?>"
                   rb"|<x:xmpmeta[\s>].*?</x:xmpmeta>"
                   rb"|<rdf:RDF[\s>].*?</rdf:RDF>", re.I | re.S)

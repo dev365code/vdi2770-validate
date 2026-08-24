@@ -25,6 +25,11 @@ MAX_MEMBERS = 10_000
 MAX_MEMBER_BYTES = 512 * 1024 * 1024
 MAX_TOTAL_BYTES = 2 * 1024 * 1024 * 1024
 MAX_RATIO = 200
+# ...but only once the expansion is big enough to matter. An uncompressed TIFF
+# scan of a line drawing expands 200x and lands at one megabyte; refusing that
+# protects nothing and leaves the sender with no remedy. The absolute ceilings
+# below are what actually bound the damage.
+MIN_SUSPICIOUS_BYTES = 8 * 1024 * 1024
 # The metadata is parsed into a tree and then handed to a schema validator, both
 # of which cost several times the text. The per-member cap is sized for PDFs and
 # is far too generous for something we are going to expand twice.
@@ -83,7 +88,12 @@ class Container:
 
 
 def _unsafe(name: str) -> Optional[str]:
-    if name.startswith("/") or (len(name) > 1 and name[1] == ":"):
+    # A Windows drive is a single ASCII letter, a colon, then a separator.
+    # Testing only for the colon condemned `5:1.pdf` -- a gear ratio -- as an
+    # absolute path, with two errors and a security-flavoured accusation.
+    drive = (len(name) > 2 and name[0].isascii() and name[0].isalpha()
+             and name[1] == ":" and name[2] in "/\\")
+    if name.startswith("/") or drive:
         return "absolute path"
     parts = name.replace("\\", "/").split("/")
     if ".." in parts:
@@ -143,7 +153,8 @@ def read(data: bytes, path: str, depth: int = 0) -> Container:
                                     f"{i.file_size} bytes"))
             c.rejected[i.filename] = f"larger than this tool will read ({i.file_size} bytes)"
             continue
-        if i.compress_size > 0 and i.file_size // max(i.compress_size, 1) > MAX_RATIO:
+        if (i.compress_size > 0 and i.file_size > MIN_SUSPICIOUS_BYTES
+                and i.file_size // max(i.compress_size, 1) > MAX_RATIO):
             c.defects.append(Defect("suspicious-compression", c.where.child(member=i.filename),
                                     f"expands {i.file_size // max(i.compress_size, 1)}x"))
             c.rejected[i.filename] = (
@@ -154,6 +165,27 @@ def read(data: bytes, path: str, depth: int = 0) -> Container:
             c.defects.append(Defect("archive-too-large", c.where, f"over {MAX_TOTAL_BYTES} bytes"))
             break
         members.append(Member(i.filename, i.file_size, i.compress_size, i.is_dir()))
+
+    # A member that is listed but cannot be decompressed -- a bad CRC from a
+    # truncated transfer, a password on one file -- used to pass silently: the
+    # bytes came back as None and every later layer read that as "not declared".
+    # `unzip -t` refuses these archives; so do we.
+    readable = []
+    for m in members:
+        if m.is_dir:
+            readable.append(m)
+            continue
+        try:
+            with zf.open(m.name) as fh:
+                while fh.read(1 << 20):
+                    pass
+        except Exception as e:                     # zlib, RuntimeError, BadZipFile
+            c.defects.append(Defect("member-unreadable", c.where.child(member=m.name),
+                                    f"{type(e).__name__}: {e}"))
+            c.rejected[m.name] = f"present in the archive but could not be read ({e})"
+            continue
+        readable.append(m)
+    members = readable
 
     c.members = tuple(members)
     seen, dupes = set(), []

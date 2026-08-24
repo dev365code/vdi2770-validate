@@ -17,7 +17,7 @@ DEFECT_TO_RULE = {
     "nesting-too-deep": "Z6",
     "metadata-unreadable": "Z3",
     "metadata-too-large": "Z5",
-    "member-unreadable": "Z1",
+    "member-unreadable": "Z12",
 }
 
 
@@ -34,7 +34,11 @@ def check(container) -> Iterator[Finding]:
     if container.kind is Kind.UNREADABLE:
         return
 
-    if not container.members:
+    # "Empty" has to mean empty. `members` is the survivors list -- the reader
+    # drops anything that blew a budget or carried an unsafe name -- so an archive
+    # whose only member we refused would otherwise be reported as having nothing
+    # in it, with a remedy telling the user to add files they already sent.
+    if not container.members and not container.rejected:
         r = rule("Z2")
         yield Finding(r, r.title, container.where)
         return

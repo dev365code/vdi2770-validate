@@ -111,3 +111,45 @@ def test_an_unknown_class_id_has_no_published_names():
     from vdi2770_validate.catalog import english_for, german_for
     assert english_for("99-99") == ()
     assert german_for("99-99") == ()
+
+
+# The `container` obligation is the strongest thing this project claims: "true
+# without knowing VDI 2770 at all". An audit found six rules wearing it that are
+# entirely VDI conventions -- reserved filenames, the metadata model, a byte scan
+# of a PDF. The tag had become the default for anything that was not obviously
+# schema or table. Listing them here makes the claim a decision someone made.
+CONTAINER_RULES = {
+    "Z1": "a file that is not a readable ZIP is not one; zipfile decides, not VDI",
+    "Z2": "an archive with no members has no members",
+    "X1": "well-formedness is XML 1.0. The VDI schema cannot speak until this holds",
+    "Z12": "a member whose CRC fails or that needs a password cannot be decompressed; zlib decides",
+}
+
+
+def test_the_container_obligation_is_never_a_default():
+    from vdi2770_validate.catalog import rules
+    from vdi2770_validate.model import Obligation
+
+    actual = {rid for rid, r in rules().items() if r.obligation is Obligation.CONTAINER}
+    assert actual == set(CONTAINER_RULES), (
+        "`container` claims a rule holds without VDI 2770 at all. Adding one means "
+        "writing down why here.\n"
+        f"  claiming it but unlisted: {sorted(actual - set(CONTAINER_RULES))}\n"
+        f"  listed but no longer claiming it: {sorted(set(CONTAINER_RULES) - actual)}")
+    for rid, why in CONTAINER_RULES.items():
+        assert len(why) > 20, f"{rid}: give an actual reason"
+
+
+def test_a_container_rule_does_not_lean_on_a_vdi_reserved_name():
+    """The mechanical half of the same claim: a rule that only fires because a
+    file is called VDI2770_Main.xml is not describing ZIP mechanics."""
+    from vdi2770_validate.catalog import rules
+    from vdi2770_validate.model import Obligation
+
+    reserved = ("VDI2770_Metadata.xml", "VDI2770_Main.xml", "VDI2770_Main.pdf")
+    for rid, r in rules().items():
+        if r.obligation is not Obligation.CONTAINER:
+            continue
+        text = " ".join((r.title, r.remedy, r.basis, r.why_ours))
+        found = [n for n in reserved if n in text]
+        assert not found, f"{rid} claims `container` but names {found}"

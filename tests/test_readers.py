@@ -76,7 +76,9 @@ def test_something_that_is_not_a_pdf_says_so():
 def test_a_rejected_member_cannot_be_read_by_a_later_layer():
     """Regression: the caps in read() are worthless if something downstream can
     re-open the archive and decompress a member the reader threw out."""
-    payload = b"0" * (4 * 1024 * 1024)
+    # Above MIN_SUSPICIOUS_BYTES: below it the ratio is not treated as hostile,
+    # because a megabyte of anything exhausts nothing.
+    payload = b"0" * (16 * 1024 * 1024)
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
         z.writestr("VDI2770_Metadata.xml", b"<x/>")
