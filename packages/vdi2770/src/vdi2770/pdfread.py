@@ -1,4 +1,4 @@
-"""Three facts about a PDF, read by scanning bytes.
+"""Four facts about a PDF, read by scanning bytes.
 
 We deliberately do not use a PDF parsing library. We need the header, whether
 the file is encrypted, and what PDF/A level it *claims* in its XMP packet —

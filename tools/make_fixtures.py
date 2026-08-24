@@ -183,6 +183,16 @@ def main() -> int:
     add("m8-unlabelled-class-name.zip", f, "M8", [META],
         "the German class name relabelled with an empty language")
 
+    # X4 — metadata the schema checker will not follow to the end. `xmlschema`
+    # stops at a thousand levels; nothing in the XSD forbids the depth, so this
+    # is our checker giving up rather than the document being wrong.
+    f = dict(base)
+    f[META] = (b'<?xml version="1.0" encoding="utf-8"?>\n'
+               b'<Document xmlns="http://www.vdi.de/schemas/vdi2770">'
+               + b"<a>" * 1001 + b"</a>" * 1001 + b"</Document>")
+    add("x4-too-deep.zip", f, "X4", [META],
+        "the metadata replaced with a thousand and one levels of nesting")
+
     # Z12 — a member listed in the directory that cannot be decompressed.
     # Written by hand: no ZIP writer produces a broken CRC on purpose.
     OUT.mkdir(parents=True, exist_ok=True)

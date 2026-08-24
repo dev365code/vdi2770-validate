@@ -1,5 +1,25 @@
 # Changelog
 
+## Unreleased
+
+- **`X0` blamed this tool for the container's doing.** Two different failures
+  wore one flag: the bundled schema failing to load, which is ours, and
+  `iter_errors` giving up part-way through somebody's document, which is not.
+  The second was reported as *"The schema check could not run — check the
+  installation … re-install with pip"*, so a metadata file nested a thousand
+  levels deep was told to reinstall the tool. New rule **`X4`** says what
+  actually happened, and its remedy points at the document while `X0`'s keeps
+  pointing at the installation. Neither can say the other's thing now — a test
+  holds both apart. `tools/rule_coverage.py` justifies `X0` as "only fires when
+  this tool's own installation is broken, which no container can cause"; that
+  sentence is true again.
+- Corrections to earlier entries, found by re-reading them against the code: the
+  0.3.0 notes said three `container` rules where there were four and 42
+  containers where the recorded sweep says 43, `docs/divergences.md` said thirty
+  reference citations where the catalogue carries 28, and the reader's README
+  listed six budgets and left out the three added the same day.
+
+
 ## 0.5.1 — 2026-08-24
 
 **0.5.0 did not deliver its own fix.** The quadratic scan lives in the reader,
@@ -203,8 +223,8 @@ this project claims about a rule. It had become the default for anything not
 obviously schema or table. `Z3`, `F1`, `F2`, `F3`, `F4` and `P1` all rest on VDI
 reserved filenames or the VDI metadata model, and are now `reference`; `X1` was
 `schema`, but well-formedness is XML 1.0 and the schema cannot speak until it
-holds, so it is now `container`. A test lists the three remaining `container`
-rules with a written reason each, and fails if a fourth appears unexplained.
+holds, so it is now `container`. A test lists the four remaining `container`
+rules with a written reason each, and fails if a fifth appears unexplained.
 
 The count moves in the honest direction: fourteen rules now rest on behaviour
 read out of someone else's Java and never checked against the guideline, where
@@ -213,7 +233,7 @@ the release notes for 0.1.0 implied none did.
 **Measured, at last**
 
 `docs/divergences.md` said "comparing all nineteen corpus containers against
-captured output is on the board and not done". It is done: 42 containers through
+captured output is on the board and not done". It is done: 43 containers through
 the reference implementation at its pinned commit, and `tools/oracle/` carries
 what is needed to repeat it. Every reference message key the catalogue cites
 exists in that project and agrees with the code it is paired with — 0 defects on

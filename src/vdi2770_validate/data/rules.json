@@ -475,6 +475,18 @@
       "refCodes": [],
       "basis": "",
       "whyOurs": ""
+    },
+    {
+      "id": "X4",
+      "layer": "schema",
+      "severity": "error",
+      "obligation": "ours",
+      "title": "The schema check could not finish on this metadata",
+      "whyOurs": "The document did something the schema checker would not follow to the end — nesting past its depth limit, for instance. We cannot say the metadata conforms and we cannot say it does not, so we say what happened instead. It is an error because a report that quietly skipped the check would be worse than no report.",
+      "remedy": "Simplify the metadata so the checker can reach the end of it — the reported reason says what stopped it. If the file is genuinely this shape, check it against the schema with a validator of your own: the limit that gave up belongs to this tool, not to VDI 2770.",
+      "refKeys": [],
+      "refCodes": [],
+      "basis": ""
     }
   ]
 }

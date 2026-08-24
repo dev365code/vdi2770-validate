@@ -17,8 +17,9 @@ def check(container, parse_error, schema_errors) -> Iterator[Finding]:
         return
 
     for err in schema_errors:
-        if err.get("broken"):
-            r = rule("X0")
+        blame = err.get("broken")
+        if blame:
+            r = rule("X0" if blame == "install" else "X4")
             yield Finding(r, r.title, container.where.child(member=container.metadata_name),
                           detail=err.get("reason"))
             continue

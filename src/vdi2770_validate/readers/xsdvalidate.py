@@ -48,7 +48,7 @@ def validate(data: bytes, tree: Node) -> List[dict]:
     try:
         schema = _schema()
     except Exception as e:                       # noqa: BLE001 - any failure is ours
-        return [{"broken": True, "line": None, "column": None, "path": "",
+        return [{"broken": "install", "line": None, "column": None, "path": "",
                  "reason": f"the bundled schema could not be loaded: {e}"}]
 
     out: List[dict] = []
@@ -58,7 +58,11 @@ def validate(data: bytes, tree: Node) -> List[dict]:
         # schema a different document than the one the model layer read.
         errors = list(schema.iter_errors(io.BytesIO(data)))
     except Exception as e:                      # noqa: BLE001 - hostile input, any failure
-        return [{"broken": True, "line": None, "column": None, "path": "",
+        # The comment above says it: this is the document's doing, not ours. It
+        # shared a flag with the branch above and was reported as a broken
+        # installation, so a container nested a thousand levels deep was told to
+        # re-install the tool.
+        return [{"broken": "document", "line": None, "column": None, "path": "",
                  "reason": f"the schema check could not complete: "
                            f"{type(e).__name__}: {str(e).strip().splitlines()[0][:200]}"}]
     for err in errors:

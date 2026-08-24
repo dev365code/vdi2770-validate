@@ -1,6 +1,6 @@
 {
   "_note": "Not a target. A rule listed here has never been seen to fire; that is a gap, not an achievement.",
-  "rules": 34,
+  "rules": 35,
   "fired": [
     "F1",
     "F2",
@@ -23,6 +23,7 @@
     "X1",
     "X2",
     "X3",
+    "X4",
     "Z1",
     "Z10",
     "Z11",

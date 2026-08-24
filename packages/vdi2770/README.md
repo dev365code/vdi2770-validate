@@ -93,10 +93,12 @@ silently truncating the tree.
 
 ## Supported
 
-Python 3.9 and up. The budgets — member count, member size, total size,
-compression ratio, metadata size, nesting depth — are module constants in
-`vdi2770.zipread`, so you can read them, and they are deliberately not
-arguments, so a caller cannot turn them off by accident.
+Python 3.9 and up. The budgets are module constants in `vdi2770.zipread` — per
+archive: `MAX_MEMBERS`, `MAX_MEMBER_BYTES`, `MAX_TOTAL_BYTES`, `MAX_RATIO` with
+its `MIN_SUSPICIOUS_BYTES` floor, `MAX_METADATA_BYTES`, `MAX_CONTAINER_LEVELS`;
+across one read: `MAX_CONTAINERS`, `MAX_TOTAL_METADATA_BYTES`. `vdi2770.pdfread`
+has four of its own for the PDF scan. You can read them all, and they are
+deliberately not arguments, so a caller cannot turn them off by accident.
 
 ## Unofficial
 

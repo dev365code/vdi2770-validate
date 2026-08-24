@@ -23,7 +23,7 @@ you need to repeat it, including the two things that will bite you.
 What the sweep settled:
 
 - **Every message key this catalogue cites exists in that project, and agrees
-  with the code it is paired with.** Thirty citations across the rules, nothing
+  with the code it is paired with.** Twenty-eight citations across the rules, nothing
   missing, nothing mismatched. The `refKeys`/`refCodes` split earns its keep:
   thirteen of the reference's displayed codes are emitted from more than one key
   with different meanings, so a comparison keyed on the code alone is unsound.
