@@ -151,7 +151,7 @@
       "layer": "container",
       "severity": "warning",
       "obligation": "reference",
-      "title": "The archive contains folder entries",
+      "title": "The archive stores files in folders",
       "remedy": "Store the members flat, at the root of the archive. Metadata refers to files by name, so a file inside a folder is not the file the metadata names.",
       "refKeys": [
         "processor:ZU_MESSAGE_001"

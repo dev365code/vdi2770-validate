@@ -56,12 +56,23 @@ def check(container, declared=frozenset(), is_declared_payload=False) -> Iterato
         detail = "; ".join(f"{k}: {v}" for k, v in sorted(container.near_misses.items())) or None
         yield Finding(r, r.title, container.where, detail=detail)
 
-    dirs = [m.name for m in container.members if m.is_dir]
-    if dirs:
+    # A directory entry is optional in the ZIP format, so testing for one made
+    # this rule fire or not depending on which library wrote the archive rather
+    # than on the archive's shape. A folder exists if a member sits in one.
+    folders = set()
+    for m in container.members:
+        if m.is_dir:
+            folders.add(m.name if m.name.endswith("/") else m.name + "/")
+        stem = m.name.rstrip("/")
+        if "/" in stem:
+            folders.add(stem.rsplit("/", 1)[0] + "/")
+    if folders:
         r = rule("Z9")
+        named = sorted(folders)
         yield Finding(r, r.title, container.where,
-                      detail=f"{len(dirs)} folder entr{'y' if len(dirs) == 1 else 'ies'}: "
-                             + ", ".join(sorted(dirs)[:5]))
+                      detail=f"{len(named)} folder{'' if len(named) == 1 else 's'}: "
+                             + ", ".join(named[:5])
+                             + (", ..." if len(named) > 5 else ""))
 
     if container.duplicate_names:
         r = rule("Z10")

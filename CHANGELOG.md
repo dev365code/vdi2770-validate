@@ -33,6 +33,13 @@ Working through the seven defects the audits left open, one at a time.
   documentation container only — inside a document container it is just a file
   with a confusing name, and inventing a requirement there would be worse than
   the gap.
+- **A folder is a folder whether or not the ZIP says so.** `Z9` tested
+  `ZipInfo.is_dir()`, which is a trailing slash on a member name, and directory
+  entries are optional in the format — so whether the rule fired depended on
+  which library wrote the archive rather than on the archive's shape. A container
+  that put every file in `docs/` passed clean; adding one empty `anhang/` entry
+  to the same layout did not. It now reports the folders the member paths imply,
+  and names them.
 - **One note per file, not per declaration.** A metadata file naming the same PDF
   in three document versions printed three identical `P4` lines about one file.
 - **A decomposed filename is scanned, not silently skipped.** Reconciling NFD and
