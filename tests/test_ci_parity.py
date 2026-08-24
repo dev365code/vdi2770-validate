@@ -54,3 +54,41 @@ def test_ci_actually_exercises_the_oldest_python_we_promise():
     versions = re.findall(r'"([0-9.]+)"', matrix.group(1))
     assert floor.group(1) in versions, (
         f"pyproject promises Python {floor.group(1)} but CI never runs it: {versions}")
+
+
+def ci_commands():
+    """The commands CI actually runs, not the text of the file.
+
+    Searching the raw YAML for a command string passes when the step is
+    commented out, which is one keystroke away from a CI that runs nothing.
+    """
+    out, in_block, indent = [], False, 0
+    for raw in CI.read_text(encoding="utf-8").splitlines():
+        stripped = raw.strip()
+        if in_block:
+            if stripped and (len(raw) - len(raw.lstrip())) > indent:
+                if not stripped.startswith("#"):
+                    out.append(stripped.split("#")[0].strip())
+                continue
+            in_block = False
+        m = re.match(r"^(\s*)-?\s*run:\s*(.*)$", raw)
+        if m:
+            indent = len(m.group(1))
+            value = m.group(2).strip()
+            if value in ("|", ">", "|-", ">-"):
+                in_block = True
+            elif value and not value.startswith("#"):
+                out.append(value.split("#")[0].strip())
+    return [c for c in out if c]
+
+
+def test_ci_runs_the_command_not_merely_mentions_it():
+    """A commented-out step used to satisfy the substring check."""
+    commands = ci_commands()
+    assert commands, "no run: steps found in the workflow"
+    for cmd in recipe_commands():
+        core = cmd.replace("$(PYTHON)", "python").strip()
+        if core.startswith("rm "):
+            continue
+        assert any(core in c for c in commands), (
+            f"CI never runs: {core}\n  it runs: {commands}")
