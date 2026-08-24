@@ -1,6 +1,10 @@
 # Changelog
 
-## Unreleased
+## 0.6.0 — 2026-08-24
+
+What a later audit found over the earlier work.
+No new coverage: every item is a wrong answer replaced with a true one, or a test
+that could not fail replaced with one that can.
 
 - **`X0` blamed this tool for the container's doing.** Two different failures
   wore one flag: the bundled schema failing to load, which is ours, and

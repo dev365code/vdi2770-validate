@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "vdi2770-validate"
-version = "0.6.0.dev0"
+version = "0.6.0"
 description = "Offline conformance checker for VDI 2770 containers — every finding comes with a remedy"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -23,7 +23,7 @@ classifiers = [
 # this was tested against, not the start of its minor line: `~=0.3.0` let pip
 # install 0.3.0 beside vdi2770-validate 0.5.0, and the fix 0.5.0 exists for is in
 # the reader. A range that merely permits the fixed version does not deliver it.
-dependencies = ["vdi2770~=0.3.1", "xmlschema==4.2.0"]
+dependencies = ["vdi2770~=0.4.0", "xmlschema==4.2.0"]
 
 [project.optional-dependencies]
 dev = ["pytest==8.3.4", "ruff==0.16.3"]
