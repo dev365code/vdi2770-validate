@@ -1,8 +1,11 @@
 # Changelog
 
-## Unreleased
+## 0.4.0 — 2026-08-24
 
-Working through the seven defects the audits left open, one at a time.
+All seven defects the audits left open, fixed one at a time. Verdicts on the 43
+recorded corpus and fixture containers are unchanged throughout — checked at the
+level of finding counts, not just which rules fired, because several of these
+changes are the kind a set comparison cannot see.
 
 - **A declared `application/zip` payload is no longer judged as a container.**
   The reader opens every member ending in `.zip` because it has no metadata and
