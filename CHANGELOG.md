@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.5.1 — 2026-08-24
+
+**0.5.0 did not deliver its own fix.** The quadratic scan lives in the reader,
+and the dependency was `vdi2770~=0.3.0` — a range that *permits* the fixed 0.3.1
+without *requiring* it. Installing `vdi2770-validate==0.5.0` from a clean
+environment pulled `vdi2770` 0.3.0 and reproduced the hang: 0.65 seconds for a
+64 KiB input, still quadratic. Verified by installing it, not by reading the
+metadata.
+
+The floor is the reader version these tests ran against, and a test now checks
+that rather than only checking the pin accepts it.
+
+If you installed 0.5.0, upgrade — or check with
+`pip show vdi2770` that the reader is 0.3.1 or later.
+
+
 ## 0.5.0 — 2026-08-24
 
 Released promptly rather than batched: the first item is a way to make the tool

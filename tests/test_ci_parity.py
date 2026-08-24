@@ -139,3 +139,13 @@ def test_the_sdk_in_this_repository_satisfies_the_pin_that_depends_on_it():
     assert pin.specifier.contains(here, prereleases=here.is_prerelease), (
         f"the reader in this repository is {here} and the validator asks for "
         f"{pin}. `pip install -e .` will go to PyPI and fail.")
+
+    # Accepting the reader beside it is not enough: the range has to *require* it.
+    # `vdi2770~=0.3.0` accepted 0.3.1 and pip installed 0.3.0, so vdi2770-validate
+    # 0.5.0 shipped with the reader whose fix was the entire reason for the
+    # release. The floor is the version this was tested against.
+    floors = [s.version for s in pin.specifier if s.operator in ("~=", ">=", "==")]
+    assert floors, f"{pin} has no lower bound; any older reader satisfies it"
+    assert Version(max(floors, key=Version)) == here, (
+        f"the reader here is {here} but the pin's floor is {max(floors, key=Version)}. "
+        f"A user can install an older reader than the one these tests ran against.")
