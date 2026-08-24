@@ -30,7 +30,8 @@
       "refCodes": [
         "ZU_002",
         "ZU_003"
-      ]
+      ],
+      "about": "container"
     },
     {
       "id": "Z10",
@@ -41,7 +42,8 @@
       "whyOurs": "ZIP allows it and readers disagree about which one wins, so the container can show one thing to this tool and another to whoever unpacks it. Nothing good is ever delivered this way.",
       "remedy": "Rebuild the archive with one entry per name. If two files genuinely differ, give them different names and declare both.",
       "refKeys": [],
-      "refCodes": []
+      "refCodes": [],
+      "about": "container"
     },
     {
       "id": "Z11",
@@ -52,7 +54,8 @@
       "whyOurs": "Document containers hold a document's files. A container inside one is either a mistake or a way to carry something past a check that only looks at declared files.",
       "remedy": "Move the inner container up into the documentation container, where containers belong.",
       "refKeys": [],
-      "refCodes": []
+      "refCodes": [],
+      "about": "container"
     },
     {
       "id": "Z2",
@@ -66,7 +69,8 @@
       ],
       "refCodes": [
         "REP_002"
-      ]
+      ],
+      "about": "container"
     },
     {
       "id": "Z3",
@@ -82,7 +86,8 @@
       "refCodes": [
         "REP_004",
         "REP_035"
-      ]
+      ],
+      "about": "container"
     },
     {
       "id": "Z4",
@@ -93,7 +98,8 @@
       "whyOurs": "The reference implementation extracts to a temporary directory. We never extract, so we can refuse hostile names outright instead of inheriting the risk.",
       "remedy": "Rebuild the archive with plain relative names. Absolute paths, parent-directory segments and backslash separators are not acceptable in a container that will be unpacked by the recipient.",
       "refKeys": [],
-      "refCodes": []
+      "refCodes": [],
+      "about": "container"
     },
     {
       "id": "Z5",
@@ -108,18 +114,20 @@
       ],
       "refCodes": [
         "ZU_004"
-      ]
+      ],
+      "about": "tool"
     },
     {
       "id": "Z6",
       "layer": "container",
-      "severity": "warning",
+      "severity": "error",
       "obligation": "ours",
       "title": "Containers are nested deeper than this tool will open",
-      "whyOurs": "A budget for untrusted input, not a claim about the standard. Three container levels occur in the reference project's own examples, so we open three and report what is below rather than walking it.",
+      "whyOurs": "A budget for untrusted input, not a claim about the standard — three container levels occur in the reference project's own examples, so we open three and report the fourth. It is an error for the reason X0 and X4 give: we did not look, and a report that passes what it did not look at is worse than no report. Raise the level if your deliveries are deeper; do not read exit 0 as 'checked'.",
       "remedy": "Check the delivery is what you meant to send. If the nesting is genuine, unpack the outer archive and check the inner containers separately.",
       "refKeys": [],
-      "refCodes": []
+      "refCodes": [],
+      "about": "tool"
     },
     {
       "id": "Z7",
@@ -133,7 +141,8 @@
       ],
       "refCodes": [
         "REP_025"
-      ]
+      ],
+      "about": "container"
     },
     {
       "id": "Z8",
@@ -144,7 +153,8 @@
       "remedy": "Add the document containers this handover is supposed to deliver. A documentation container with only a main document delivers no documents.",
       "refKeys": [],
       "refCodes": [],
-      "whyOurs": "The reference implementation has no rule for this. A documentation container whose only content is its own main document delivers nothing, which is worth saying out loud even though nobody else says it — hence a warning, not an error."
+      "whyOurs": "The reference implementation has no rule for this. A documentation container whose only content is its own main document delivers nothing, which is worth saying out loud even though nobody else says it — hence a warning, not an error.",
+      "about": "container"
     },
     {
       "id": "Z9",
@@ -158,7 +168,8 @@
       ],
       "refCodes": [
         "ZU_001"
-      ]
+      ],
+      "about": "container"
     },
     {
       "id": "F1",
@@ -172,7 +183,8 @@
       ],
       "refCodes": [
         "REP_007"
-      ]
+      ],
+      "about": "container"
     },
     {
       "id": "F2",
@@ -186,7 +198,8 @@
       ],
       "refCodes": [
         "REP_006"
-      ]
+      ],
+      "about": "container"
     },
     {
       "id": "F3",
@@ -202,7 +215,8 @@
       "refCodes": [
         "DF_002",
         "DF_003"
-      ]
+      ],
+      "about": "container"
     },
     {
       "id": "F4",
@@ -216,7 +230,8 @@
       ],
       "refCodes": [
         "DF_004"
-      ]
+      ],
+      "about": "container"
     },
     {
       "id": "M1",
@@ -230,7 +245,8 @@
       ],
       "refCodes": [
         "D_002"
-      ]
+      ],
+      "about": "container"
     },
     {
       "id": "M10",
@@ -244,7 +260,8 @@
       ],
       "refCodes": [
         "DI_002"
-      ]
+      ],
+      "about": "container"
     },
     {
       "id": "M2",
@@ -259,7 +276,8 @@
       ],
       "refCodes": [
         "DC_002"
-      ]
+      ],
+      "about": "container"
     },
     {
       "id": "M3",
@@ -274,7 +292,8 @@
       ],
       "refCodes": [
         "DC_003"
-      ]
+      ],
+      "about": "container"
     },
     {
       "id": "M4",
@@ -289,7 +308,8 @@
       ],
       "refCodes": [
         "DC_004"
-      ]
+      ],
+      "about": "container"
     },
     {
       "id": "M5",
@@ -305,7 +325,8 @@
       "refCodes": [
         "DV_007",
         "DD_002"
-      ]
+      ],
+      "about": "container"
     },
     {
       "id": "M6",
@@ -319,7 +340,8 @@
       ],
       "refCodes": [
         "DV_003"
-      ]
+      ],
+      "about": "container"
     },
     {
       "id": "M7",
@@ -333,7 +355,8 @@
       ],
       "refCodes": [
         "MD_009"
-      ]
+      ],
+      "about": "container"
     },
     {
       "id": "M8",
@@ -344,7 +367,8 @@
       "whyOurs": "We check German and English class names against the published table. A name tagged with neither — or with nothing at all — is not wrong, but it is unchecked, and silently unchecked is how an empty attribute turns the check off.",
       "remedy": "Tag the class name with the language it is written in — de or en if you want it checked against the published table.",
       "refKeys": [],
-      "refCodes": []
+      "refCodes": [],
+      "about": "container"
     },
     {
       "id": "M9",
@@ -355,7 +379,8 @@
       "whyOurs": "The reference implementation checks that exactly one identifier is primary; it does not check for repeats. Two identifiers that agree on both domain and value are a copy-paste or a merge that went wrong, and the recipient's system will store one and lose the other.",
       "remedy": "Remove the repeated DocumentId, or correct it if two different identifiers were intended. Two DocumentIds carrying the same text under different DomainIds are fine — that is two registrations of one document, not a repeat.",
       "refKeys": [],
-      "refCodes": []
+      "refCodes": [],
+      "about": "container"
     },
     {
       "id": "P1",
@@ -369,7 +394,8 @@
       ],
       "refCodes": [
         "PV_010"
-      ]
+      ],
+      "about": "container"
     },
     {
       "id": "P2",
@@ -384,7 +410,8 @@
       "refCodes": [
         "REP_040"
       ],
-      "whyOurs": "We look for the indirect reference the trailer is required to use, which is a strong signal — but it is a byte pattern, not a parse of the document structure, so it can be wrong in either direction. A signal that can be wrong should not fail someone's build on its own."
+      "whyOurs": "We look for the indirect reference the trailer is required to use, which is a strong signal — but it is a byte pattern, not a parse of the document structure, so it can be wrong in either direction. A signal that can be wrong should not fail someone's build on its own.",
+      "about": "container"
     },
     {
       "id": "P3",
@@ -398,7 +425,8 @@
       ],
       "refCodes": [
         "PV_004"
-      ]
+      ],
+      "about": "container"
     },
     {
       "id": "P4",
@@ -413,7 +441,8 @@
       ],
       "refCodes": [
         "REP_015"
-      ]
+      ],
+      "about": "container"
     },
     {
       "id": "X0",
@@ -424,7 +453,8 @@
       "whyOurs": "This is about us, not about the container. It is an error because a report that silently skipped the schema check would be worse than no report — but the container may be perfectly fine, and the remedy is ours to carry out, not the reader's.",
       "remedy": "Check the installation: this tool needs its `xmlschema` dependency and the schema file bundled beside it. Re-install with `pip install vdi2770-validate`, and open an issue if it persists — nothing is wrong with your container that this message can tell you about.",
       "refKeys": [],
-      "refCodes": []
+      "refCodes": [],
+      "about": "tool"
     },
     {
       "id": "X1",
@@ -436,7 +466,8 @@
       "refKeys": [
         "core:XmlReader_EX3"
       ],
-      "refCodes": []
+      "refCodes": [],
+      "about": "container"
     },
     {
       "id": "X2",
@@ -451,7 +482,8 @@
       ],
       "refCodes": [
         "REP_023"
-      ]
+      ],
+      "about": "container"
     },
     {
       "id": "X3",
@@ -462,7 +494,8 @@
       "whyOurs": "A metadata file is data. Entity expansion lets it read local files or reach a host, which no handover document has any reason to do.",
       "remedy": "Remove the DOCTYPE and entity declarations. Write the values directly.",
       "refKeys": [],
-      "refCodes": []
+      "refCodes": [],
+      "about": "container"
     },
     {
       "id": "Z12",
@@ -474,7 +507,8 @@
       "refKeys": [],
       "refCodes": [],
       "basis": "",
-      "whyOurs": ""
+      "whyOurs": "",
+      "about": "container"
     },
     {
       "id": "X4",
@@ -486,7 +520,8 @@
       "remedy": "Simplify the metadata so the checker can reach the end of it — the reported reason says what stopped it. If the file is genuinely this shape, check it against the schema with a validator of your own: the limit that gave up belongs to this tool, not to VDI 2770.",
       "refKeys": [],
       "refCodes": [],
-      "basis": ""
+      "basis": "",
+      "about": "tool"
     }
   ]
 }

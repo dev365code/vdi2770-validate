@@ -4,7 +4,7 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import Dict, Tuple
 
-from .model import Obligation, Rule, Severity
+from .model import About, Obligation, Rule, Severity
 from .resources import load_json
 
 
@@ -18,6 +18,7 @@ def rules() -> Dict[str, Rule]:
             title=r["title"],
             severity=Severity(r["severity"]),
             obligation=Obligation(r["obligation"]),
+            about=About(r["about"]),
             layer=r["layer"],
             remedy=r["remedy"],
             basis=r.get("basis", ""),

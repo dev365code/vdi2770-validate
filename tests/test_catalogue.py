@@ -182,3 +182,51 @@ def test_every_defect_the_reader_can_emit_maps_to_a_rule():
     known = set(rules())
     wrong = sorted({r for r in DEFECT_TO_RULE.values() if r not in known})
     assert not wrong, f"mapped to rule ids that do not exist: {wrong}"
+
+
+# Rules that fire because *this tool* stopped. Nothing in one of these is a
+# statement about the archive somebody sent, and until `about` existed a consumer
+# reading the JSON had no field that said so.
+TOOL_RULES = {
+    "X0": "the bundled schema would not load — a broken installation of ours",
+    "X4": "the schema checker would not follow this document to the end",
+    "Z5": "the archive is over a budget this tool sets for untrusted input",
+    "Z6": "the tree is deeper than this tool opens",
+}
+
+
+def test_a_rule_about_this_tool_says_so():
+    from vdi2770_validate.catalog import rules
+    from vdi2770_validate.model import About
+
+    actual = {rid for rid, r in rules().items() if r.about is About.TOOL}
+    assert actual == set(TOOL_RULES), (
+        "`about: tool` means the finding exists because this tool stopped.\n"
+        f"  claiming it but unlisted: {sorted(actual - set(TOOL_RULES))}\n"
+        f"  listed but not claiming it: {sorted(set(TOOL_RULES) - actual)}")
+
+
+def test_every_rule_about_this_tool_is_an_error():
+    """One policy, not four arguments. `X0` and `X4` argued error — "a report
+    that silently skipped the check would be worse than no report" — while `Z6`
+    argued warning for the same situation: "a budget, not a claim about the
+    standard". Both are good arguments and only one can be the policy. If we did
+    not look, exit 0 would be telling somebody we did."""
+    from vdi2770_validate.catalog import rules
+    from vdi2770_validate.model import About, Severity
+
+    for rid, r in sorted(rules().items()):
+        if r.about is About.TOOL:
+            assert r.severity is Severity.ERROR, (
+                f"{rid} says this tool stopped and reports it as {r.severity.value}")
+
+
+def test_a_rule_about_this_tool_explains_itself():
+    from vdi2770_validate.catalog import rules
+    from vdi2770_validate.model import About
+
+    for rid, r in sorted(rules().items()):
+        if r.about is About.TOOL:
+            assert r.why_ours, f"{rid} is about us and does not say why"
+            assert "this tool" in (r.title + r.remedy + r.why_ours).lower(), (
+                f"{rid} never tells the reader the limit is ours")

@@ -126,3 +126,23 @@ def test_every_rule_count_in_prose_is_the_real_one():
         # the wrong number it once printed. Only unquoted claims are claims.
         for n in re.findall(r'(?<!")\b(\d+) rules?\b(?!")', text):
             assert int(n) == real, f"{path.name} says {n} rules; the catalogue has {real}"
+
+
+def test_the_json_says_who_each_finding_is_about():
+    """A machine reading the report has to be able to separate "your container is
+    wrong" from "the validator declined to look". Both are errors, deliberately,
+    so severity cannot carry that and the field has to."""
+    import json
+
+    from conftest import FIXTURES
+    from vdi2770_validate import report as rendering
+    from vdi2770_validate.runner import check_file
+
+    payload = json.loads(rendering.as_json(check_file(str(FIXTURES / "z6-nesting-too-deep.zip"))))
+    findings = payload["findings"]
+    assert findings, "the fixture stopped producing findings"
+    for f in findings:
+        assert f["about"] in ("container", "tool"), f
+    kinds = {f["rule"]: f["about"] for f in findings}
+    assert kinds.get("Z6") == "tool", kinds
+    assert any(v == "container" for v in kinds.values()), kinds

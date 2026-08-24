@@ -19,8 +19,8 @@ from typing import Optional, Tuple
 from vdi2770.model import Defect, Location
 from vdi2770.zipread import MAIN_PDF, MAIN_XML, METADATA_XML, Kind
 
-__all__ = ["Defect", "Finding", "Kind", "Location", "MAIN_PDF", "MAIN_XML",
-           "METADATA_XML", "Obligation", "Report", "Rule", "Severity"]
+__all__ = ["About", "Defect", "Finding", "Kind", "Location", "MAIN_PDF",
+           "MAIN_XML", "METADATA_XML", "Obligation", "Report", "Rule", "Severity"]
 
 
 class Severity(enum.Enum):
@@ -31,6 +31,19 @@ class Severity(enum.Enum):
     @property
     def rank(self) -> int:
         return {"error": 0, "warning": 1, "info": 2}[self.value]
+
+
+class About(enum.Enum):
+    """Who the finding is about.
+
+    Four rules fire because this tool stopped — a broken installation, a document
+    the schema checker would not finish, an archive over a budget, a tree deeper
+    than we open. Nothing in those is a statement about what the sender packed,
+    and a consumer reading the JSON could not tell them from the rest.
+    """
+
+    CONTAINER = "container"
+    TOOL = "tool"
 
 
 class Obligation(enum.Enum):
@@ -52,6 +65,7 @@ class Rule:
     title: str
     severity: Severity
     obligation: Obligation
+    about: About
     layer: str
     remedy: str
     basis: str = ""

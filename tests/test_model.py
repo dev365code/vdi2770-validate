@@ -1,9 +1,10 @@
 """The value types carry the things a report needs a year later."""
-from vdi2770_validate.model import Finding, Location, Obligation, Report, Rule, Severity
+from vdi2770_validate.model import About, Finding, Location, Obligation, Report, Rule, Severity
 
 
 def a_rule(rid="Z1", sev=Severity.ERROR):
     return Rule(id=rid, title="t", severity=sev, obligation=Obligation.CONTAINER,
+                about=About.CONTAINER,
                 layer="container", remedy="Do the thing that fixes it, in a full sentence.")
 
 

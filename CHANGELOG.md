@@ -5,6 +5,16 @@
 A shape review read the whole repository as a newcomer would. These are the
 boundary findings; the user-facing ones are above in the same section.
 
+- **One severity policy for "this tool stopped", and a field that says so.**
+  Four rules fire because the validator declined — a broken installation, a
+  document the schema checker would not finish, an archive over a budget, a tree
+  deeper than we open. Three were errors arguing *"a report that silently skipped
+  the check would be worse than no report"*; `Z6` was a warning arguing the
+  opposite for the same situation. Both are good arguments and only one can be
+  the policy: if we did not look, exit 0 would be telling somebody we did. **`Z6`
+  is an error now.** Every finding also carries `about: "container" | "tool"` in
+  the JSON, because both kinds are errors on purpose and severity therefore
+  cannot carry the distinction a CI consumer needs.
 - **The reader stopped writing remedies.** `near_misses` carried the sentence
   *"it must sit at the root of the archive"* — a normative claim about VDI 2770,
   authored inside the package whose first line is that it decides nothing. It

@@ -47,6 +47,9 @@ def as_json(report: Report) -> str:
                 "severity": f.severity.value,
                 "layer": f.rule.layer,
                 "obligation": f.rule.obligation.value,
+                # Whether this is about the archive or about the validator
+                # stopping. A CI consumer had no way to tell them apart.
+                "about": f.rule.about.value,
                 "message": f.message,
                 "detail": f.detail,
                 "remedy": f.remedy,
