@@ -54,3 +54,31 @@ def test_a_release_workflow_exists_and_is_triggered_by_a_tag():
     assert "tags:" in text
     assert "id-token" in text, "Trusted Publishing needs id-token: write"
     assert "password:" not in text, "a long-lived token would defeat Trusted Publishing"
+
+
+def test_every_released_tag_has_a_changelog_section():
+    """A tag is a version somebody can install; a version somebody can install
+    with nothing written about it is a version nobody can reason about.
+
+    The other direction is deliberately not checked: a section may exist before
+    its tag, which is what `## Unreleased` is for. And this reads git, so it
+    skips where there is no repository — inside an sdist there are no tags to
+    check and a gate that raises there is a gate that breaks the sdist.
+    """
+    import re
+    import subprocess
+
+    found = subprocess.run(["git", "tag", "-l"], cwd=ROOT, capture_output=True, text=True)
+    if found.returncode != 0:
+        import pytest
+        pytest.skip("not a git checkout")
+
+    tags = {t[1:] for t in found.stdout.split() if re.fullmatch(r"v\d+\.\d+\.\d+", t)}
+    if not tags:
+        import pytest
+        pytest.skip("nothing released yet")
+
+    text = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+    documented = {h.split()[0].lstrip("v") for h in re.findall(r"^## (\S+)", text, re.M)}
+    missing = sorted(tags - documented, key=lambda v: [int(p) for p in v.split(".")])
+    assert not missing, f"released with no changelog section: {missing}"
