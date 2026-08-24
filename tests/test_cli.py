@@ -74,3 +74,25 @@ def test_one_unreadable_path_does_not_stop_the_rest(capsys):
     assert code == 1                       # something was unreadable, but we kept going
     assert "cannot read it" in out.err
     assert "0 error(s)" in out.out         # the good one was still checked
+
+
+def test_a_clean_container_says_so(capsys):
+    """The output for a container with nothing wrong was never asserted — the
+    one shape every happy user sees."""
+    _, out = run(capsys, ["check", str(FIXTURES / "z10-duplicate-member.zip"), "--quiet"])
+    _, clean = run(capsys, ["check", str(CLEAN_DOCUMENT), "--quiet"])
+    assert "no findings" in clean
+    assert "0 error(s), 0 warning(s)" in clean
+
+
+def test_the_module_entry_point_works():
+    """`python -m vdi2770_validate` had no coverage at all."""
+    import subprocess
+    import sys
+
+    from conftest import ROOT
+    r = subprocess.run([sys.executable, "-m", "vdi2770_validate", "--version"],
+                       capture_output=True, text=True,
+                       env={"PYTHONPATH": str(ROOT / "src"), "PATH": "/usr/bin:/bin"})
+    assert r.returncode == 0, r.stderr
+    assert r.stdout.strip()

@@ -105,3 +105,9 @@ def test_no_remedy_is_copied_from_the_reference_implementation():
         title = r.title.strip().lower()
         assert not (len(title) > 25 and title in theirs), (
             f"{r.id} title is copied verbatim; mark it or write your own")
+
+
+def test_an_unknown_class_id_has_no_published_names():
+    from vdi2770_validate.catalog import english_for, german_for
+    assert english_for("99-99") == ()
+    assert german_for("99-99") == ()

@@ -53,18 +53,6 @@ class Node:
         n = self.find(tag)
         return n.text.strip() if n else ""
 
-    def path(self) -> str:
-        parts, n = [], self
-        while n is not None:
-            parts.append(n.tag)
-            n = n.parent
-        return "/" + "/".join(reversed(parts))
-
-    def walk(self):
-        yield self
-        for c in self.children:
-            yield from c.walk()
-
 
 def parse(data: bytes) -> Node:
     """Parse VDI 2770 metadata bytes. Raises XmlError with a line number."""
@@ -80,6 +68,13 @@ def parse(data: bytes) -> Node:
         raise UnsafeXml("the document references an external entity; this is refused",
                         p.CurrentLineNumber, p.CurrentColumnNumber)
 
+    # Order matters, and it is worth writing down: expat calls EntityDeclHandler
+    # for *any* entity declaration — internal, external or parameter — before the
+    # entity is ever referenced, so in this configuration the external handler
+    # below can never be reached. It is kept as the second line it would become
+    # if the first were ever relaxed to allow harmless internal entities.
+    # A DOCTYPE naming an external subset and nothing else fires neither handler;
+    # expat does not fetch it, because parameter-entity parsing is off by default.
     p.EntityDeclHandler = refuse_entity
     p.ExternalEntityRefHandler = refuse_external
 

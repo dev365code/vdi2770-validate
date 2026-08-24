@@ -87,3 +87,18 @@ def test_a_rejected_member_cannot_be_read_by_a_later_layer():
     assert zipread.member_bytes(raw, "bomb.bin", allowed=set(c.file_names)) is None
     # and without the allow-list it is still bounded by the per-member cap
     assert zipread.member_bytes(raw, "VDI2770_Metadata.xml", allowed=set(c.file_names)) == b"<x/>"
+
+
+def test_an_unreadable_nested_member_is_a_defect_not_a_crash():
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        z.writestr("VDI2770_Main.xml", b"<x/>")
+        z.writestr("broken.zip", b"PK\x03\x04 not really a zip")
+    c = zipread.read(buf.getvalue(), "x.zip")
+    assert any(ch.kind is zipread.Kind.UNREADABLE for ch in c.children)
+
+
+def test_member_bytes_refuses_what_it_cannot_find():
+    raw = zip_of({"a.txt": b"x"})
+    assert zipread.member_bytes(raw, "missing.txt", allowed={"a.txt"}) is None
+    assert zipread.member_bytes(b"not a zip", "a.txt") is None
