@@ -2,12 +2,42 @@
 
 ## Unreleased
 
+- **A malformed PDF could hang the tool.** The XMP packet scan was
+  `START.*?END` with `re.S`; with the closer absent, every opener rescanned to
+  the end of the buffer. 128 KiB of `<?xpacket begin` took 2.6 seconds and the
+  cost squared with size, so a member sized just under the compression-ratio
+  floor — which the reader accepts without a single defect — would have run for
+  hours on a file small enough to email. None of the budgets caught it: they
+  bound inflation, and this is the pass over the raw bytes. Packets are found by
+  scanning now; the same input takes 16 milliseconds.
+- **The tree budget did not cover the runner.** `MAX_CONTAINERS` and
+  `MAX_TOTAL_METADATA_BYTES` bound what the *reader* holds, and the runner then
+  kept every container's decompressed bytes in a dictionary keyed by path and
+  never dropped one. Measured: a 2 MB input with two hundred inner containers
+  reached 2,199 MB. It keeps one buffer per nesting level now — the walk is
+  pre-order, so the parent's bytes are the only ones a container needs — and the
+  same input reaches 582 MB, which is the reader's own peak. That is the third
+  half-fix of the day: the budget was right about the thing it measured.
+- **A container knows which member it came from.** `Container.member_name`
+  replaces splitting the path on the JAR separator, which got the wrong answer
+  for a member whose own name contains one — and silently, since both lookups
+  simply missed and the PDF rules were skipped without a word.
 - **A reserved name is only reserved where it is reserved.** The structural
   exemption that keeps `F2` quiet about `VDI2770_Main.xml`, `VDI2770_Metadata.xml`
   and `VDI2770_Main.pdf` named all three in every container, so a stray
   `VDI2770_Main.pdf` inside a *document* container — a name that means nothing
   there — was never reported as undeclared. The exemption now follows the
   container's kind.
+- **The reader package carries a NOTICE.** Apache-2.0 asks for it to travel with
+  the distribution; the validator shipped one from its first release and
+  `vdi2770` shipped only a LICENSE, because its `license-files` named only that.
+  Its NOTICE says what is true of it and not of its sibling: nothing third-party
+  is bundled here at all. (`vdi2770` 0.3.1.)
+- **The differential-oracle evidence is accounted for.** `docs/oracle-sweep.json`
+  is derived from running someone else's MIT-licensed software, and was in
+  neither NOTICE nor THIRD_PARTY.md. It is in both now, and a test asserts every
+  string in it is an identifier rather than their message text — which is the
+  property that keeps the attribution small and true.
 - **Both spellings of a filename, in both directions.** Yesterday's NFD/NFC
   reconciliation normalised `present` and `declared` and missed the `F1` lookup
   itself, so a container whose *metadata* was decomposed and whose *archive* was

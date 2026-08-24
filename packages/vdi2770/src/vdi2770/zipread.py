@@ -82,6 +82,10 @@ class Container:
     # rejected" rather than the untrue "not in the archive".
     rejected: Dict[str, str] = field(default_factory=dict)
     depth: int = 0
+    # Which member of the parent this was read from. The name is right here;
+    # a caller reconstructing it by splitting `path` on the JAR separator gets
+    # it wrong for a member whose own name contains one.
+    member_name: Optional[str] = None
 
     @property
     def where(self) -> Location:
@@ -260,7 +264,9 @@ def read(data: bytes, path: str, depth: int = 0, _budget: Optional[_Budget] = No
                         "container-budget-exhausted", c.where.child(member=m.name),
                         f"this read has already opened {MAX_CONTAINERS} containers"))
                     break
-                c.children.append(read(inner, f"{path}!/{m.name}", depth + 1, budget))
+                child = read(inner, f"{path}!/{m.name}", depth + 1, budget)
+                child.member_name = m.name
+                c.children.append(child)
     else:
         for m in c.members:
             if m.name.lower().endswith(".zip"):

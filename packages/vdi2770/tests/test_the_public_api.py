@@ -205,3 +205,36 @@ def test_the_module_docstring_example_actually_runs(tmp_path, monkeypatch):
     (tmp_path / "manuals.zip").write_bytes(box.getvalue())
     monkeypatch.chdir(tmp_path)
     exec(compile(code, "<vdi2770 docstring>", "exec"), {})
+
+
+def test_an_unterminated_xmp_opener_does_not_cost_quadratic_time():
+    """`<?xpacket begin` repeated with no closer used to make every opener rescan
+    the whole buffer. 128 KiB took 2.6 seconds and the cost squared with size, so
+    a member sized just under the compression-ratio floor — which the reader
+    accepts without a single defect — would have run for hours on a file small
+    enough to email. The budgets did not catch it: they bound inflation, and this
+    is the pass over the raw bytes.
+
+    Timing is a blunt instrument in a test, so this asserts a ceiling loose
+    enough to survive a slow machine and tight enough that quadratic cannot pass:
+    the old code needed about eleven seconds for this input.
+    """
+    import time
+
+    evil = b"%PDF-1.7\n" + (b"<?xpacket begin='" * (256 * 1024 // 17))
+    start = time.perf_counter()
+    facts = vdi2770.read_pdf(evil)
+    elapsed = time.perf_counter() - start
+
+    assert facts.is_pdf and facts.pdfa_claim is None
+    assert elapsed < 1.0, f"took {elapsed:.1f}s for a {len(evil) // 1024} KiB scan"
+
+
+def test_a_real_packet_is_still_found_after_a_broken_one():
+    """The scan gives up on a kind once an opener has no closer. A file whose
+    xpacket is malformed but whose xmpmeta is intact must still be read."""
+    good = (b"<x:xmpmeta xmlns:x='adobe:ns:meta/'>"
+            b"<rdf:Description xmlns:pdfaid='http://www.aiim.org/pdfa/ns/id/'>"
+            b"<pdfaid:part>2</pdfaid:part><pdfaid:conformance>B</pdfaid:conformance>"
+            b"</rdf:Description></x:xmpmeta>")
+    assert vdi2770.read_pdf(b"%PDF-1.7\n<?xpacket begin='no end here'\n" + good).pdfa_claim == "2b"

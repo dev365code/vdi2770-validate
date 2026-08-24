@@ -31,7 +31,14 @@ def _facts_for(raw: bytes, accepted):
 def check_bytes(data: bytes, name: str) -> Report:
     report = Report(target=name)
     root = zipread.read(data, name)
-    raw_by_path = {root.path: data}
+    # One entry per level, not one per container. `walk()` is pre-order, so when
+    # a container at depth d is reached the entry at d-1 is its parent -- nothing
+    # at that depth is written between them. The previous version kept every
+    # container's bytes in a dict keyed by path and never dropped any: a 2 MB
+    # input with two hundred inner containers held 1.6 GB, which is the same
+    # amplification the reader's tree budget was added to bound, reached through
+    # a door the budget does not watch.
+    raw_at_depth = {0: data}
 
     # walk() is pre-order, so a container's parent has always been through this
     # loop before the container itself. That is what lets a rule ask "did my
@@ -77,12 +84,13 @@ def check_bytes(data: bytes, name: str) -> Report:
         for f in r_metadata.check(c, document, is_main):
             report.add(f)
 
-        raw = raw_by_path.get(c.path)
-        if raw is None:
-            parent_path, _, member = c.path.rpartition("!/")
-            parent_raw = raw_by_path.get(parent_path)
-            raw = zipread.member_bytes(parent_raw, member) if parent_raw else None
-            raw_by_path[c.path] = raw
+        if c.depth == 0:
+            raw = data
+        else:
+            parent_raw = raw_at_depth.get(c.depth - 1)
+            raw = (zipread.member_bytes(parent_raw, c.member_name)
+                   if parent_raw is not None and c.member_name else None)
+        raw_at_depth[c.depth] = raw
         if raw is not None:
             for f in r_pdf.check(c, document, _facts_for(raw, set(c.file_names))):
                 report.add(f)

@@ -28,9 +28,17 @@ _STREAM = re.compile(rb"stream\r?\n")
 # in the file means a comment could suppress a caller's PDF/A finding, so the
 # search is scoped to XMP packets. (This package names no caller's rule ids: it
 # reports what it found and lets whoever holds the rules decide.)
-_XMP = re.compile(rb"<\?xpacket\s+begin.*?<\?xpacket\s+end.*?\?>"
-                  rb"|<x:xmpmeta[\s>].*?</x:xmpmeta>"
-                  rb"|<rdf:RDF[\s>].*?</rdf:RDF>", re.I | re.S)
+# Found by scanning, not by a backtracking regex. What was here before was
+# `START.*?END` with re.S, and when END is absent every START rescans to the end
+# of the input: 128 KiB of `<?xpacket begin` took 2.6 seconds, quadratic, so a
+# member sized just under the compression-ratio floor would have taken hours.
+# None of the budgets caught it -- they bound inflation, and this is the raw pass.
+_PACKET_KINDS = (
+    (re.compile(rb"<\?xpacket\s+begin", re.I), b"<?xpacket end", b"?>"),
+    (re.compile(rb"<x:xmpmeta[\s>]", re.I), b"</x:xmpmeta>", None),
+    (re.compile(rb"<rdf:RDF[\s>]", re.I), b"</rdf:rdf>", None),
+)
+MAX_XMP_PACKETS = 64      # per haystack; a file needs one
 
 # The trailer references the encryption dictionary indirectly — that is what the
 # format requires. `/Encrypt` on its own appears in comments, content streams and
@@ -73,6 +81,34 @@ def _haystacks(data: bytes):
         yield out
 
 
+def _packets(hay: bytes):
+    """The XMP packets in one haystack, in linear time.
+
+    An unterminated opener ends the search for that kind outright: if there is no
+    closing marker after this opener there is none after any later one either, so
+    there is nothing to gain by trying them all -- which is exactly what the old
+    pattern did, once per opener, over the whole buffer.
+    """
+    low = hay.lower()
+    for start_re, end_lit, tail in _PACKET_KINDS:
+        pos = seen = 0
+        while seen < MAX_XMP_PACKETS:
+            begin = start_re.search(hay, pos)
+            if begin is None:
+                break
+            end = low.find(end_lit, begin.end())
+            if end < 0:
+                break
+            stop = end + len(end_lit)
+            if tail is not None:
+                closer = low.find(tail, stop)
+                if closer < 0:
+                    break
+                stop = closer + len(tail)
+            yield hay[begin.start():stop]
+            pos, seen = stop, seen + 1
+
+
 def _claim_in(xmp: bytes) -> Optional[str]:
     """The PDF/A part and conformance level a single XMP packet claims, if any.
 
@@ -108,8 +144,8 @@ def read(data: bytes) -> PdfFacts:
     encrypted = _ENCRYPT_REF.search(data) is not None
     claim = None
     for hay in _haystacks(data):
-        for packet in _XMP.finditer(hay):
-            claim = _claim_in(packet.group(0))
+        for packet in _packets(hay):
+            claim = _claim_in(packet)
             if claim:
                 break
         if claim:
