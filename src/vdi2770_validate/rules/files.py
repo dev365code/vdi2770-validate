@@ -1,15 +1,10 @@
 """File-set rules (F): does the metadata agree with what is actually in the ZIP?"""
 from __future__ import annotations
 
-import unicodedata
 from typing import Iterator
 
 from ..catalog import rule
-from ..model import Finding
-
-
-def _nfc(name: str) -> str:
-    return unicodedata.normalize("NFC", name)
+from ..model import Finding, nfc
 
 EXTENSION_FOR = {"application/pdf": ".pdf", "application/zip": ".zip"}
 
@@ -21,8 +16,8 @@ def check(container, document) -> Iterator[Finding]:
     # the ZIP; metadata authored anywhere else is composed. The two spellings are
     # canonically equivalent and print identically, so the report used to say the
     # same name was both missing and undeclared.
-    present  = {_nfc(n) for n in container.file_names}
-    declared = {_nfc(f.file_name) for f in document.all_files if f.file_name}
+    present  = {nfc(n) for n in container.file_names}
+    declared = {nfc(f.file_name) for f in document.all_files if f.file_name}
 
     for f in document.all_files:
         if not f.file_name:

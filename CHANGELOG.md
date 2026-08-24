@@ -1,5 +1,22 @@
 # Changelog
 
+## Unreleased
+
+Working through the seven defects the audits left open, one at a time.
+
+- **A declared `application/zip` payload is no longer judged as a container.**
+  The reader opens every member ending in `.zip` because it has no metadata and
+  cannot know better; the rules do have the metadata and now use it. A parts list
+  attached as `teileliste.zip` used to earn `Z3` — "neither a document container
+  nor a documentation container" — which it had never claimed to be, while `F3`'s
+  own remedy blesses `application/zip` with `.zip` in the same breath. Inside a
+  document container it also earned `Z11`, whose own argument excuses it: that
+  rule exists because an undeclared container is "a way to carry something past a
+  check that only looks at declared files", and a declared one is not past that
+  check. An **undeclared** inner `.zip` still fires both, and a declared payload
+  that turns out to be a real container is still validated as one.
+
+
 ## 0.3.1 — 2026-08-24
 
 **A small file could exhaust the machine.** Found while drawing the architecture

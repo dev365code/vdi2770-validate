@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Iterator
 
 from ..catalog import rule
-from ..model import Finding
+from ..model import Finding, nfc
 
 DEFECT_TO_RULE = {
     "not-a-zip": "Z1",
@@ -22,7 +22,10 @@ DEFECT_TO_RULE = {
 }
 
 
-def check(container) -> Iterator[Finding]:
+def check(container, declared=frozenset(), is_declared_payload=False) -> Iterator[Finding]:
+    """`declared` is what this container's own metadata names as files.
+    `is_declared_payload` says the parent's metadata names *this* archive as a
+    file -- a parts list, a CAD bundle -- rather than expecting a container."""
     from vdi2770.zipread import MAIN_PDF, Kind
 
     for d in container.defects:
@@ -44,7 +47,11 @@ def check(container) -> Iterator[Finding]:
         yield Finding(r, r.title, container.where)
         return
 
-    if container.kind is Kind.UNKNOWN:
+    # A `.zip` the parent declared as a DigitalFile never claimed to be a
+    # container, and F3's own remedy blesses application/zip with .zip. The
+    # reader opens every .zip because it has no metadata to know better; here we
+    # do. If it turns out to be a real container it is still validated as one.
+    if container.kind is Kind.UNKNOWN and not is_declared_payload:
         r = rule("Z3")
         detail = "; ".join(f"{k}: {v}" for k, v in sorted(container.near_misses.items())) or None
         yield Finding(r, r.title, container.where, detail=detail)
@@ -63,7 +70,10 @@ def check(container) -> Iterator[Finding]:
 
     if container.kind is Kind.DOCUMENT:
         for m in container.members:
-            if m.name.lower().endswith(".zip"):
+            # Z11 exists because an undeclared container is "a way to carry
+            # something past a check that only looks at declared files". A
+            # declared one is not past that check, so its own argument excuses it.
+            if m.name.lower().endswith(".zip") and nfc(m.name) not in declared:
                 r = rule("Z11")
                 yield Finding(r, r.title, container.where.child(member=m.name, subject=m.name))
 

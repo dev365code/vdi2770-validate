@@ -7,7 +7,7 @@ from typing import Optional
 from vdi2770 import pdfread, xmlread, zipread
 from vdi2770.domain import build
 
-from .model import Report
+from .model import Report, nfc
 from .readers import xsdvalidate
 from .rules import container as r_container
 from .rules import files as r_files
@@ -33,28 +33,43 @@ def check_bytes(data: bytes, name: str) -> Report:
     root = zipread.read(data, name)
     raw_by_path = {root.path: data}
 
+    # walk() is pre-order, so a container's parent has always been through this
+    # loop before the container itself. That is what lets a rule ask "did my
+    # parent's metadata declare me as a file?" without a second pass.
+    declared_by_path = {}
+
     for c in root.walk():
-        for f in r_container.check(c):
+        parse_error = None
+        tree = None
+        document = None
+        if c.metadata_bytes is not None:
+            try:
+                tree = xmlread.parse(c.metadata_bytes)
+            except xmlread.XmlError as e:
+                parse_error = e
+            if tree is not None:
+                document = build(tree, c.where.child(member=c.metadata_name))
+
+        declared = frozenset(nfc(f.file_name) for f in document.all_files
+                             if f.file_name) if document else frozenset()
+        declared_by_path[c.path] = declared
+
+        parent_path, _, member = c.path.rpartition("!/")
+        is_payload = bool(parent_path) and nfc(member) in declared_by_path.get(
+            parent_path, frozenset())
+
+        for f in r_container.check(c, declared=declared, is_declared_payload=is_payload):
             report.add(f)
 
         if c.metadata_bytes is None:
             continue
 
-        parse_error = None
-        tree = None
-        try:
-            tree = xmlread.parse(c.metadata_bytes)
-        except xmlread.XmlError as e:
-            parse_error = e
-
         schema_errors = xsdvalidate.validate(c.metadata_bytes, tree) if tree is not None else []
         for f in r_schema.check(c, parse_error, schema_errors):
             report.add(f)
-        if tree is None:
+        if document is None:
             continue
 
-        base = c.where.child(member=c.metadata_name)
-        document = build(tree, base)
         is_main = c.metadata_name == zipread.MAIN_XML
 
         for f in r_files.check(c, document):

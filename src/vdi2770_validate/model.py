@@ -10,12 +10,24 @@ so a rule never has to know which package a value type was defined in.
 from __future__ import annotations
 
 import enum
+import unicodedata
 from dataclasses import dataclass, field
 from typing import Optional, Tuple
 
 from vdi2770.model import Defect, Location
 
-__all__ = ["Defect", "Finding", "Location", "Obligation", "Report", "Rule", "Severity"]
+__all__ = ["Defect", "Finding", "Location", "Obligation", "Report", "Rule",
+           "Severity", "nfc"]
+
+
+def nfc(name: str) -> str:
+    """One spelling for a filename, so two of them can be compared.
+
+    macOS writes decomposed names into a ZIP; metadata authored anywhere else is
+    composed. They print identically and are canonically equivalent, and the
+    report used to say the same visible name was both missing and undeclared.
+    """
+    return unicodedata.normalize("NFC", name)
 
 
 class Severity(enum.Enum):

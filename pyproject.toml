@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "vdi2770-validate"
-version = "0.3.1"
+version = "0.4.0.dev0"
 description = "Offline conformance checker for VDI 2770 containers — every finding comes with a remedy"
 readme = "README.md"
 requires-python = ">=3.9"
