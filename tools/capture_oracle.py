@@ -47,11 +47,14 @@ def their_verdicts(reference: Path, java_home: str, paths: list) -> dict:
     with tempfile.TemporaryDirectory() as tmp:
         subprocess.run([f"{java_home}/bin/javac", "-cp", ":".join(jars + [cp]), "-d", tmp,
                         str(ROOT / "tools" / "oracle" / "Sweep.java")], check=True)
+        # Run it from the temporary directory: its log4j writes `application.log`
+        # into the working directory, and one of those was committed to this
+        # repository before anybody noticed.
         raw = subprocess.run(
             [f"{java_home}/bin/java", "-Duser.language=en", "-Duser.country=US",
              "-Duser.timezone=UTC", "-Dfile.encoding=UTF-8",
              "-cp", ":".join(jars + [cp, tmp]), "Sweep", *[str(p) for p in paths]],
-            capture_output=True, text=True, check=True).stdout
+            cwd=tmp, capture_output=True, text=True, check=True).stdout
     out = {}
     for entry in json.loads(raw):
         per = {}

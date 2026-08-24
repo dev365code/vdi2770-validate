@@ -95,3 +95,20 @@ def test_the_readme_names_every_defect_kind_the_code_can_emit():
     missing = emitted - documented
     assert not missing, f"the code emits {missing}, which the README does not name"
 
+
+
+def test_the_notice_travels_with_this_package_too():
+    """Apache-2.0 asks for the NOTICE to go with the distribution. The validator
+    shipped one from the first release; this package shipped only a LICENSE,
+    because its `license-files` named only that. The two are separate
+    distributions of one project and the attribution belongs in both."""
+    notice = HERE / "NOTICE"
+    assert notice.exists(), "this package has no NOTICE"
+    text = notice.read_text(encoding="utf-8")
+    assert text.startswith("vdi2770\n"), "the NOTICE names the wrong package"
+    assert "Apache License" in text
+    toml = (HERE / "pyproject.toml").read_text(encoding="utf-8")
+    assert '"NOTICE"' in toml, "the NOTICE exists but the wheel would not carry it"
+    assert "None." in text, (
+        "this package bundles nothing third-party; the NOTICE should say so "
+        "rather than repeating the validator's list")

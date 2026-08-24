@@ -15,7 +15,8 @@ failure — files that never claimed at all.
 - Telling a document container from a documentation container, and saying why an
   archive is neither.
 - Checking the metadata against the XML schema VDI publishes free of charge.
-- Checking that files named in the metadata are in the archive, and the reverse.
+- Checking that files named in the metadata are in the archive, and the reverse,
+  and that what is in the archive can actually be decompressed.
 - Checking document classification against the twelve published classes.
 - Reading, but never verifying, a PDF's PDF/A claim; reporting encryption.
 - One remedy sentence per finding, in both the text and the JSON output. A
@@ -34,6 +35,7 @@ failure — files that never claimed at all.
 | **IEC 61406 identification links** | A self-contained URL-grammar problem with its own corpus needs. Named for a later milestone, not forgotten. |
 | **Rendering PDF reports** | Not a validator's job. |
 | **Container nesting beyond three levels** | Reported rather than opened. Three levels occur in real containers; deeper is a budget, not a verdict. |
+| **More than a thousand containers, or 64 MiB of metadata, in one read** | Same answer: reported, not opened. Every other limit bounds one archive; these two bound the tree, because a few hundred kilobytes of nested containers could otherwise ask for more memory than the machine has. |
 
 ## Known limits of what *is* in scope
 
@@ -50,9 +52,16 @@ failure — files that never claimed at all.
   fool it either way.
 - **A PDF/A claim can be missed**: the claim is read from XMP packets found by
   scanning bytes and inflating a bounded stretch after each stream marker. A claim
-  stored beyond what that scan reaches produces `P3` — "makes no PDF/A claim" — on a
-  file that does make one. It cannot be *faked* by writing the words outside an XMP
-  packet; that was possible once and is tested against now.
+  stored beyond what that scan reaches produces `P3`, whose title says exactly what
+  happened — *this scan found no PDF/A claim in the file* — rather than the thing it
+  would be wrong to say, that the file makes none. The prefix bound to the PDF/A
+  namespace no longer matters, which used to be a second way to miss one. It cannot
+  be *faked* by writing the words outside an XMP packet; that was possible once and
+  is tested against now.
+- **Every byte is read**: to say a member is deliverable we decompress it, the
+  way `unzip -t` does. Measured at about 1.1 GB/s on real PDF content, so a
+  container at the 2 GiB ceiling costs roughly two seconds. Nothing is held: the
+  bytes are discarded as they are read.
 - **The guideline text**: VDI 2770 Blatt 1:2020-04 is sold by DIN Media. It was not
   read. Every rule here names its source in `rules.json`: the free schema, a freely
   published table, ZIP and XML mechanics, the MIT reference implementation, or a

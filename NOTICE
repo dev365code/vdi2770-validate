@@ -38,6 +38,13 @@ Third-party material bundled with this project
    Copied from github.com/DigitalDataChainConsortium/vdi2770 (examples/),
    MIT License, Copyright (C) 2021 Johannes Schmidt. See corpus/NOTICE.
 
+5. Differential oracle evidence — docs/oracle-sweep.json
+
+   What the same reference implementation reported for each container in the
+   corpus, recorded as message codes only. Derived from MIT-licensed software,
+   Copyright (C) 2021 Johannes Schmidt. Repository material; not in either
+   package. A test asserts it holds identifiers and no message text.
+
 The text of the VDI 2770 guideline itself (VDI 2770 Blatt 1:2020-04) is sold
 by DIN Media and is NOT included, quoted, or paraphrased anywhere in this
 project. See docs/licensing.md.

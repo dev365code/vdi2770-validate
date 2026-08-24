@@ -57,7 +57,7 @@ from .zipread import (
 from .zipread import read as read_container
 from .zipread import read_file as read_container_file
 
-__version__ = "0.3.0"
+__version__ = "0.3.1"
 
 __all__ = [
     "Classification", "Container", "Defect", "Description", "DigitalFile",

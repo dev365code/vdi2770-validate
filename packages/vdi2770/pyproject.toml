@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "vdi2770"
-version = "0.3.0"
+version = "0.3.1"
 description = "Read a VDI 2770 handover-documentation container safely — no dependencies, no disk, no network"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -34,7 +34,7 @@ Source = "https://github.com/dev365code/vdi2770-validate"
 Issues = "https://github.com/dev365code/vdi2770-validate/issues"
 
 [tool.setuptools]
-license-files = ["LICENSE"]
+license-files = ["LICENSE", "NOTICE"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

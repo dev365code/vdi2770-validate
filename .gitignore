@@ -14,3 +14,7 @@ dist/
 /tests/fixtures/
 .coverage
 htmlcov/
+# The reference implementation's log4j writes application.log into whatever
+# directory it is started from. tools/capture_oracle.py now starts it somewhere
+# else, and this is the second line of defence — one of these ended up committed.
+*.log

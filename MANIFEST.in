@@ -11,5 +11,8 @@ recursive-include .github *.yml
 # The SDK lives in this repository too, and the root suite imports it.
 # An sdist without it would run a suite that cannot import half of itself.
 recursive-include packages *.py *.toml *.md *.in
-include packages/vdi2770/LICENSE packages/vdi2770/src/vdi2770/py.typed
+# Extensionless names need naming: the recursive-include patterns above are
+# by suffix, and LICENSE and NOTICE have none. The sdist gate caught the
+# NOTICE being missing here, which is exactly what it is for.
+include packages/vdi2770/LICENSE packages/vdi2770/NOTICE packages/vdi2770/src/vdi2770/py.typed
 prune tests/fixtures

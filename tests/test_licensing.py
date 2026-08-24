@@ -82,3 +82,72 @@ def test_unofficial_is_stated_where_a_reader_will_see_it():
     assert "Unofficial" in readme or "unofficial" in readme
     assert "not affiliated" in readme.lower()
     assert "not affiliated" in THIRD_PARTY.lower()
+
+
+def test_the_oracle_evidence_records_identifiers_and_not_their_prose():
+    """`docs/oracle-sweep.json` is produced by running someone else's MIT-licensed
+    software over our containers. Codes are identifiers; their message strings are
+    their prose, and this project vendors exactly one bounded list of those with
+    the licence attached. A change to the capture that started recording `text`
+    would quietly widen what we redistribute, so the shape is asserted rather
+    than trusted."""
+    import json
+    import re
+
+    path = ROOT / "docs" / "oracle-sweep.json"
+    assert path.name in THIRD_PARTY, "the evidence file is not listed in THIRD_PARTY.md"
+
+    strings = []
+
+    def walk(node):
+        if isinstance(node, dict):
+            for v in node.values():
+                walk(v)
+        elif isinstance(node, list):
+            for v in node:
+                walk(v)
+        elif isinstance(node, str):
+            strings.append(node)
+
+    walk(json.loads(path.read_text(encoding="utf-8"))["containers"])
+    assert strings, "the evidence file recorded nothing"
+    allowed = re.compile(r"^(?:[A-Z]{1,4}_\d{3}|[A-Z]\d{1,2}|«uncoded»)$")
+    strays = sorted({s for s in strings if not allowed.match(s)})
+    assert not strays, f"not identifiers: {strays[:5]}"
+
+
+def test_the_oracle_harness_is_accounted_for():
+    assert "Sweep.java" in THIRD_PARTY
+    harness = (ROOT / "tools" / "oracle" / "Sweep.java").read_text(encoding="utf-8")
+    assert "de.vdi.vdi2770" in harness, "the harness no longer imports theirs; update the note"
+    assert "Copyright (C) 2021" not in harness, "their source must not be pasted into ours"
+
+
+def test_no_foreign_log_or_build_output_is_tracked():
+    """Running the differential oracle drops the reference implementation's log4j
+    output into the working directory, and `git add -A` committed one: 59 KB of
+    somebody else's log, with absolute paths from the machine that ran it, in a
+    repository that accounts for every other byte it carries from them.
+
+    It never reached a published artifact — MANIFEST.in lists what ships — but it
+    was in the repository, and this is cheaper than remembering."""
+    import subprocess
+
+    # Inside an sdist there is no repository, and the question is the same one:
+    # does this distribution carry a stray. Asking git when git is there keeps
+    # ignored files out of the answer; walking the tree covers the sdist, where
+    # only shipped files exist anyway. (A `git ls-files` with no fallback is what
+    # broke the sdist gate the first time this test was written.)
+    found = subprocess.run(["git", "ls-files"], cwd=ROOT, capture_output=True, text=True)
+    if found.returncode == 0:
+        names = found.stdout.split()
+    else:
+        skip = {".git", "__pycache__", ".pytest_cache", ".ruff_cache", "build", "dist"}
+        names = [str(p.relative_to(ROOT)) for p in ROOT.rglob("*")
+                 if p.is_file() and not skip & set(p.relative_to(ROOT).parts)]
+    assert names, "nothing to inspect"
+
+    strays = [f for f in names
+              if f.endswith((".log", ".jar", ".class", ".orig", ".rej"))
+              or f.split("/")[0] == "target"]
+    assert not strays, f"build or log output is carried: {strays}"
