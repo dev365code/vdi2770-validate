@@ -92,3 +92,23 @@ def test_ci_runs_the_command_not_merely_mentions_it():
             continue
         assert any(core in c for c in commands), (
             f"CI never runs: {core}\n  it runs: {commands}")
+
+
+def test_make_check_depends_on_every_gate():
+    """`make check` is what a contributor runs. A target the Makefile defines but
+    `check` does not depend on runs only in CI, which is how a green local tree
+    pushed a red build: the sdist gate existed, and `check` never called it."""
+    targets, prereqs = [], []
+    for line in MAKEFILE.splitlines():
+        m = re.match(r"^([a-zA-Z0-9_-]+):\s*(.*)$", line)
+        if not m:
+            continue
+        targets.append(m.group(1))
+        if m.group(1) == "check":
+            prereqs = m.group(2).split()
+    assert prereqs, "the Makefile has no `check` target"
+    exempt = {"check", "clean"}
+    missing = [t for t in targets if t not in exempt and t not in prereqs]
+    assert not missing, (
+        f"`make check` does not run: {missing}. Either add them, or add them to the "
+        f"exemption above with a reason.")

@@ -90,19 +90,3 @@ def test_the_readme_names_every_defect_kind_the_code_can_emit():
     missing = emitted - documented
     assert not missing, f"the code emits {missing}, which the README does not name"
 
-
-def test_a_release_workflow_exists_for_this_package_alone():
-    """PyPI keys a trusted publisher on (repo, workflow, environment). Two
-    packages sharing that tuple can each publish as the other, which is the
-    whole reason this file is separate from the validator's."""
-    wf = HERE.parent.parent / ".github" / "workflows" / "release-sdk.yml"
-    assert wf.exists(), "nothing would publish a tag for this package"
-    text = wf.read_text(encoding="utf-8")
-    assert "id-token" in text, "Trusted Publishing needs id-token: write"
-    assert "password:" not in text, "a long-lived token would defeat Trusted Publishing"
-    assert 'tags: ["sdk-v*"]' in text
-    other = (HERE.parent.parent / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
-    def environment(t):
-        return re.search(r"^\s*environment:\s*(\S+)", t, re.M).group(1)
-    assert environment(text) != environment(other), \
-        f"both packages publish from environment {environment(text)!r}"

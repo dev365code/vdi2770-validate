@@ -6,7 +6,7 @@ XMLSCHEMA_VERSION := 4.2.0
 
 .PHONY: check lint test fixtures corpus coverage-check sdist-runs-its-own-tests clean
 
-check: lint fixtures test corpus coverage-check
+check: lint fixtures test corpus coverage-check sdist-runs-its-own-tests
 
 lint:
 	$(PYTHON) -m ruff check src tests tools packages
