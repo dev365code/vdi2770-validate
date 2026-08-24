@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Iterator
 
 from ..catalog import rule
-from ..model import Finding
+from ..model import MAIN_PDF, Finding, Kind
 from ..names import nfc
 
 DEFECT_TO_RULE = {
@@ -27,8 +27,6 @@ def check(container, declared=frozenset(), is_declared_payload=False) -> Iterato
     """`declared` is what this container's own metadata names as files.
     `is_declared_payload` says the parent's metadata names *this* archive as a
     file -- a parts list, a CAD bundle -- rather than expecting a container."""
-    from vdi2770.zipread import MAIN_PDF, Kind
-
     for d in container.defects:
         rid = DEFECT_TO_RULE.get(d.kind)
         if rid is None:
@@ -54,7 +52,16 @@ def check(container, declared=frozenset(), is_declared_payload=False) -> Iterato
     # do. If it turns out to be a real container it is still validated as one.
     if container.kind is Kind.UNKNOWN and not is_declared_payload:
         r = rule("Z3")
-        detail = "; ".join(f"{k}: {v}" for k, v in sorted(container.near_misses.items())) or None
+        # The reader records what nearly matched; the sentence is ours to write,
+        # because "it must sit at the root" is a claim about VDI 2770.
+        said = {
+            "in-a-subfolder": "{wanted} found at {found!r} — it must sit at the root of the archive",
+            "case-differs": "{wanted} found as {found!r} — the name is case-sensitive",
+        }
+        detail = "; ".join(
+            said[kind].format(wanted=wanted, found=found)
+            for wanted, (kind, found) in sorted(container.near_misses.items())
+            if kind in said) or None
         yield Finding(r, r.title, container.where, detail=detail)
 
     # A directory entry is optional in the ZIP format, so testing for one made

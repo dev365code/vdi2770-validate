@@ -113,3 +113,4 @@ def test_the_notice_travels_with_this_package_too():
     assert "None." in text, (
         "this package bundles nothing third-party; the NOTICE should say so "
         "rather than repeating the validator's list")
+

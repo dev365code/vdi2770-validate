@@ -153,3 +153,32 @@ def test_a_container_rule_does_not_lean_on_a_vdi_reserved_name():
         text = " ".join((r.title, r.remedy, r.basis, r.why_ours))
         found = [n for n in reserved if n in text]
         assert not found, f"{rid} claims `container` but names {found}"
+
+
+def test_every_defect_the_reader_can_emit_maps_to_a_rule():
+    """`DEFECT_TO_RULE` is the reader-to-rules interface and nothing checked it.
+
+    The lookup is `.get(kind)` followed by `continue`, so a defect kind the reader
+    grows is dropped in silence and the container passes with nothing said about
+    it. The SDK already gates its kinds against its README; this is the same
+    gate pointed the other way.
+    """
+    import re
+
+    from conftest import ROOT
+    from vdi2770_validate.catalog import rules
+    from vdi2770_validate.rules.container import DEFECT_TO_RULE
+
+    source = (ROOT / "packages" / "vdi2770" / "src" / "vdi2770" / "zipread.py")
+    emitted = set(re.findall(r'Defect\(\s*\n?\s*"([a-z-]+)"', source.read_text(encoding="utf-8")))
+    assert len(emitted) >= 10, f"only found {sorted(emitted)}; has the reader moved?"
+
+    unmapped = sorted(emitted - set(DEFECT_TO_RULE))
+    assert not unmapped, f"the reader emits {unmapped} and no rule reports them"
+
+    stale = sorted(set(DEFECT_TO_RULE) - emitted)
+    assert not stale, f"DEFECT_TO_RULE maps {stale}, which the reader no longer emits"
+
+    known = set(rules())
+    wrong = sorted({r for r in DEFECT_TO_RULE.values() if r not in known})
+    assert not wrong, f"mapped to rule ids that do not exist: {wrong}"

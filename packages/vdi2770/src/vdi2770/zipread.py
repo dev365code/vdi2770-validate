@@ -22,6 +22,17 @@ MAIN_PDF = "VDI2770_Main.pdf"
 
 # Untrusted-input budget. Generous for real handover documentation, hostile to
 # archives that are trying to be expensive.
+def nfc(name: str) -> str:
+    """One canonical spelling for a member name.
+
+    macOS stores names decomposed and writes them that way into a ZIP; metadata
+    authored anywhere else is composed. Canonicalising archive names belongs to
+    whoever reads archives, and there was a second copy of this line in the
+    validator until it did.
+    """
+    return unicodedata.normalize("NFC", name)
+
+
 MAX_MEMBERS = 10_000
 MAX_MEMBER_BYTES = 512 * 1024 * 1024
 MAX_TOTAL_BYTES = 2 * 1024 * 1024 * 1024
@@ -78,7 +89,9 @@ class Container:
     metadata_bytes: Optional[bytes] = None
     children: List[Container] = field(default_factory=list)
     defects: List[Defect] = field(default_factory=list)
-    near_misses: Dict[str, str] = field(default_factory=dict)
+    # reserved name -> (kind, the name that nearly matched). Kinds:
+    # `in-a-subfolder`, `case-differs`.
+    near_misses: Dict[str, Tuple[str, str]] = field(default_factory=dict)
     # Members we refused, and why. Kept so the report can say "present but
     # rejected" rather than the untrue "not in the archive".
     rejected: Dict[str, str] = field(default_factory=dict)
@@ -118,11 +131,17 @@ def _unsafe(name: str) -> Optional[str]:
     return None
 
 
-def _classify(names: Tuple[str, ...]) -> Tuple[Kind, Dict[str, str]]:
+def _classify(names: Tuple[str, ...]) -> Tuple[Kind, Dict[str, Tuple[str, str]]]:
     """The reference implementation matches these names exactly and
-    case-sensitively, with no path component. We do the same, but we also
-    record what *nearly* matched so the report can say why it did not."""
-    near: Dict[str, str] = {}
+    case-sensitively, with no path component. We do the same, but we also record
+    what *nearly* matched so a caller can say why it did not.
+
+    A kind and the name that nearly matched, not a sentence. The sentence this
+    used to hold -- "it must sit at the root of the archive" -- is a normative
+    claim about VDI 2770, written inside the package whose first line is that it
+    decides nothing.
+    """
+    near: Dict[str, Tuple[str, str]] = {}
     exact = set(names)
     for wanted in (MAIN_XML, METADATA_XML, MAIN_PDF):
         if wanted in exact:
@@ -130,9 +149,9 @@ def _classify(names: Tuple[str, ...]) -> Tuple[Kind, Dict[str, str]]:
         for n in names:
             base = n.rsplit("/", 1)[-1]
             if base == wanted and "/" in n:
-                near[wanted] = f"found at {n!r} — it must sit at the root of the archive"
+                near[wanted] = ("in-a-subfolder", n)
             elif base.lower() == wanted.lower() and base != wanted:
-                near[wanted] = f"found as {base!r} — the name is case-sensitive"
+                near[wanted] = ("case-differs", base)
     if MAIN_XML in exact:
         return Kind.DOCUMENTATION, near
     if METADATA_XML in exact:
@@ -233,7 +252,7 @@ def read(data: bytes, path: str, depth: int = 0, _budget: Optional[_Budget] = No
     # spellings are named, because the reader cannot know which was meant.
     first_seen, dupes = {}, []
     for m in c.members:
-        key = unicodedata.normalize("NFC", m.name)
+        key = nfc(m.name)
         earlier = first_seen.get(key)
         if earlier is None:
             first_seen[key] = m.name

@@ -14,12 +14,14 @@ made the verdict depend on which came last in the archive.
 """
 from __future__ import annotations
 
-import unicodedata
 from typing import Dict, List, Mapping, Optional, Sequence, Tuple
 
+# Canonicalising a member name belongs to whoever reads archives. There were two
+# copies of that one line, in two packages, which is precisely the failure this
+# module was created to stop.
+from vdi2770 import nfc
 
-def nfc(name: str) -> str:
-    return unicodedata.normalize("NFC", name)
+__all__ = ["Members", "nfc"]
 
 
 class Members:

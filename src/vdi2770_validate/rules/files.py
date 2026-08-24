@@ -4,15 +4,13 @@ from __future__ import annotations
 from typing import Iterator
 
 from ..catalog import rule
-from ..model import Finding
+from ..model import MAIN_PDF, MAIN_XML, METADATA_XML, Finding, Kind
 from ..names import Members
 
 EXTENSION_FOR = {"application/pdf": ".pdf", "application/zip": ".zip"}
 
 
 def check(container, document) -> Iterator[Finding]:
-    from vdi2770.zipread import MAIN_PDF, MAIN_XML, METADATA_XML, Kind
-
     # Names are reconciled in one place, for every comparison in this module and
     # the PDF one. See names.py for the two ways of getting this wrong that are
     # already behind it.

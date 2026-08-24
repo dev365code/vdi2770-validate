@@ -82,7 +82,21 @@ def test_a_documentation_container_is_recognised_and_walked():
 def test_a_name_that_nearly_matched_is_reported_rather_than_ignored():
     box = container({"vdi2770_metadata.xml": META})
     assert box.kind is vdi2770.Kind.UNKNOWN
-    assert "case-sensitive" in box.near_misses[vdi2770.METADATA_XML]
+    kind, found = box.near_misses[vdi2770.METADATA_XML]
+    assert (kind, found) == ("case-differs", "vdi2770_metadata.xml"), (kind, found)
+
+    buried = io.BytesIO()
+    with zipfile.ZipFile(buried, "w") as z:
+        z.writestr("docs/VDI2770_Metadata.xml", META)
+    box = vdi2770.read_container(buried.getvalue(), "sub.zip")
+    assert box.near_misses[vdi2770.METADATA_XML] == ("in-a-subfolder", "docs/VDI2770_Metadata.xml")
+
+    # Both branches, because only one of them was checked and a mutation putting
+    # "it must sit at the root" back into the other walked straight through. A
+    # package whose first line is that it decides nothing may not say "must".
+    for kind, found in box.near_misses.values():
+        assert " " not in kind, f"{kind!r} is a sentence, not a kind"
+        assert "must" not in (kind + found).lower()
 
 
 # -- the three properties ----------------------------------------------------

@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import Iterator
 
 from ..catalog import rule
-from ..model import Finding
+from ..model import MAIN_PDF, Finding, Kind
 from ..names import Members
 
 UNVERIFIED = "this tool cannot verify PDF/A conformance"
@@ -19,8 +19,6 @@ def _targets(container, document):
     reserved, whether or not any metadata says so -- an undeclared one used to be
     scanned by nobody, so an eighteen-byte text file passed with exit 0.
     """
-    from vdi2770.zipread import MAIN_PDF, Kind
-
     # Same reconciliation as the F rules, from the same place. Keeping a private
     # copy here is how the two came to disagree: this one answered a name that
     # matched two members by taking whichever came last, so a valid declared PDF

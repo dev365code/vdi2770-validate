@@ -28,7 +28,7 @@ def test_container_names_are_case_sensitive_and_must_sit_at_the_root():
     c = zipread.read(zip_of({"sub/VDI2770_Metadata.xml": b"<x/>"}), "x.zip")
     assert c.kind is zipread.Kind.UNKNOWN
     assert "VDI2770_Metadata.xml" in c.near_misses
-    assert "root of the archive" in c.near_misses["VDI2770_Metadata.xml"]
+    assert c.near_misses["VDI2770_Metadata.xml"][0] == "in-a-subfolder"
 
 
 def test_a_file_that_is_not_a_zip_is_a_defect_not_a_crash():

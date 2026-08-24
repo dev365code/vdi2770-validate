@@ -9,7 +9,10 @@ from pathlib import Path
 from conftest import ROOT
 
 SRC = ROOT / "src" / "vdi2770_validate"
-FORBIDDEN_IN_RULES = {"zipfile", "xml", "xmlschema", "io", "re"}
+# `vdi2770` too: model.py re-exports the vocabulary a rule needs, and reaching
+# past it for `Kind` and the reserved filenames made that module's docstring
+# three-quarters true.
+FORBIDDEN_IN_RULES = {"zipfile", "xml", "xmlschema", "io", "re", "vdi2770"}
 
 
 def imports_of(path: Path):
@@ -47,3 +50,33 @@ def test_readers_do_not_know_rule_ids():
         text = f.read_text(encoding="utf-8")
         for rid in ("Z1", "Z3", "X2", "M1", "P4"):
             assert f'"{rid}"' not in text, f"{f.name} hard-codes rule id {rid}"
+
+
+def test_unicode_canonicalisation_is_defined_once_in_the_project():
+    """`nfc` belongs to whoever reads archives. There were two copies of that one
+    line in two packages — and `names.py`, which holds the second one's caller,
+    exists because every place that compares a name has to do it the same way."""
+    import subprocess
+
+    hits = subprocess.run(
+        ["grep", "-rn", "unicodedata.normalize", "src", "packages/vdi2770/src"],
+        cwd=ROOT, capture_output=True, text=True).stdout.strip().splitlines()
+    assert len(hits) == 1, "more than one definition of canonical form:\n  " + "\n  ".join(hits)
+    assert hits[0].startswith("packages/vdi2770/src/vdi2770/zipread.py"), hits[0]
+
+
+def test_the_reader_package_tests_stay_inside_the_reader_package():
+    """Three gates have now been written in the SDK's suite that read files above
+    it — a workflow, a repository-wide grep — and each one broke the sdist check,
+    because an sdist contains the package and nothing else.
+
+    A claim about the repository belongs in the repository's suite. This is the
+    rule, enforced, so it stops being learned one incident at a time.
+    """
+    sdk_tests = ROOT / "packages" / "vdi2770" / "tests"
+    for f in sorted(sdk_tests.glob("*.py")):
+        text = f.read_text(encoding="utf-8")
+        for bad in ("HERE.parent.parent", '".github"', "packages/vdi2770", "ROOT /"):
+            assert bad not in text, (
+                f"{f.name} reaches outside the package ({bad!r}); "
+                f"put that assertion in the repository's own suite")

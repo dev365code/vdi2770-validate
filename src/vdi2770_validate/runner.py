@@ -1,5 +1,10 @@
-"""Put the readers and the rules together. This is the only module that knows
-both sides exist."""
+"""Put the readers and the rules together.
+
+The only module that *orchestrates* both sides. Two others touch the reader for
+narrower reasons: `model.py` re-exports its vocabulary so the rules need not, and
+`readers/xsdvalidate.py` walks its node tree to put a line number on a schema
+complaint. Nothing else in this package imports it, and a test enforces that for
+the rules."""
 from __future__ import annotations
 
 from typing import Optional

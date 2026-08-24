@@ -1,5 +1,33 @@
 # Changelog
 
+## Unreleased
+
+A shape review read the whole repository as a newcomer would. These are the
+boundary findings; the user-facing ones are above in the same section.
+
+- **The reader stopped writing remedies.** `near_misses` carried the sentence
+  *"it must sit at the root of the archive"* — a normative claim about VDI 2770,
+  authored inside the package whose first line is that it decides nothing. It
+  reports `(kind, name)` now and `Z3` writes the sentence; the output a user sees
+  is unchanged. (`vdi2770` 0.5.0, breaking: `near_misses` values are tuples.)
+- **`model.py` really is the single vocabulary a rule imports.** Its docstring
+  said so while three rule modules reached past it for `Kind` and the reserved
+  filenames in function-local imports, which the layering test had no opinion
+  about. It re-exports them, the rules import them from there, and `vdi2770` is
+  on the forbidden list.
+- **One definition of canonical form.** Canonicalising a member name belongs to
+  whoever reads archives; there was a second copy of that line in the validator,
+  inside the module created because every place that compares a name has to do it
+  the same way. `vdi2770.nfc` is public and a test fails on a second definition.
+- **`DEFECT_TO_RULE` is gated.** It is the reader-to-rules interface, the lookup
+  is `.get()` followed by `continue`, and nothing checked it — so a defect kind
+  the reader grew would have been dropped in silence.
+- **A gate that reads outside its own distribution is now caught by a gate.**
+  Three times a check written in the reader package's suite reached up to the
+  repository and broke the sdist test. The rule — a claim about the repository
+  belongs to the repository's suite — is enforced rather than relearned.
+
+
 ## 0.6.0 — 2026-08-24
 
 What a later audit found over the earlier work.

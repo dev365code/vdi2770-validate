@@ -3,9 +3,12 @@
 Nothing in this module knows about ZIP files, XML, or PDF. Rules are written
 against the model; the readers are not reachable from here.
 
-`Location` and `Defect` live in the `vdi2770` reader library and are re-exported
-here on purpose: this module is meant to be the single vocabulary a rule imports,
-so a rule never has to know which package a value type was defined in.
+`Location`, `Defect`, `Kind` and the three reserved filenames live in the
+`vdi2770` reader library and are re-exported here on purpose: this module is the
+single vocabulary a rule imports, so a rule never has to know which package a
+value came from. It was three-quarters true for a while -- the rules reached past
+it for `Kind` and the filenames, in function-local imports, and the layering test
+had no opinion about that.
 """
 from __future__ import annotations
 
@@ -14,9 +17,10 @@ from dataclasses import dataclass, field
 from typing import Optional, Tuple
 
 from vdi2770.model import Defect, Location
+from vdi2770.zipread import MAIN_PDF, MAIN_XML, METADATA_XML, Kind
 
-__all__ = ["Defect", "Finding", "Location", "Obligation", "Report", "Rule",
-           "Severity"]
+__all__ = ["Defect", "Finding", "Kind", "Location", "MAIN_PDF", "MAIN_XML",
+           "METADATA_XML", "Obligation", "Report", "Rule", "Severity"]
 
 
 class Severity(enum.Enum):
