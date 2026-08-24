@@ -43,9 +43,20 @@ interface definition, not on an explicit grant. We therefore:
   **paid** document sold by DIN Media and was not consulted (see
   [docs/licensing.md](docs/licensing.md)).
 
-If VDI would rather this file were not redistributed, open an issue and it will
-be removed promptly; the tool would then need the schema supplied by path,
-which costs its users their offline installation but costs nobody their rights.
+If VDI would rather this file were not redistributed, open an issue. What can
+actually be done, stated honestly rather than generously:
+
+- the file is removed from this repository the same day, and from every release
+  published after that;
+- releases already on a package index are yanked, which hides them from
+  resolvers but **does not delete them** — a pinned version still installs, and
+  mirrors may already hold copies. Published bytes cannot be recalled by anyone,
+  including us;
+- the tool then needs the schema supplied by path, which costs its users their
+  offline installation and costs nobody their rights.
+
+That third point is why a release is a heavier commitment than a repository, and
+why this is written down before the first one rather than after.
 
 ---
 

@@ -7,7 +7,7 @@ import json
 
 import pytest
 
-from conftest import CLEAN_DOCUMENT, CLEAN_DOCUMENTATION, FIXTURES
+from conftest import CLEAN_DOCUMENT, CLEAN_DOCUMENTATION, FIXTURES, ROOT
 from vdi2770_validate.catalog import rules
 from vdi2770_validate.runner import check_file
 
@@ -44,7 +44,15 @@ def test_clean_containers_have_no_errors():
 
 
 def test_every_rule_has_a_fixture_or_a_reason():
-    covered = {m["rule"] for m in MANIFEST.values()}
+    """A rule needs a violating container, or a corpus example, or a written
+    reason why no container can cause it."""
+    import sys
+    sys.path.insert(0, str(ROOT / "tools"))
+    from rule_coverage import CANNOT_FIRE
     from tools_shim import corpus_fired
-    missing = sorted(set(rules()) - covered - corpus_fired())
+    covered = {m["rule"] for m in MANIFEST.values()}
+    missing = sorted(set(rules()) - covered - corpus_fired() - set(CANNOT_FIRE))
     assert not missing, f"rules with neither a fixture nor a corpus example: {missing}"
+    for rule_id, why in CANNOT_FIRE.items():
+        assert rule_id in rules(), f"{rule_id} is excused but does not exist"
+        assert len(why) > 40, f"{rule_id} is excused without a real reason"

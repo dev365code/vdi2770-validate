@@ -46,8 +46,9 @@ def validate(data: bytes, tree: Node) -> List[dict]:
     """Return one dict per schema complaint: {line, column, path, reason}."""
     try:
         schema = _schema()
-    except Exception as e:                       # pragma: no cover - build error
-        return [{"line": None, "column": None, "path": "", "reason": f"cannot load bundled schema: {e}"}]
+    except Exception as e:                       # noqa: BLE001 - any failure is ours
+        return [{"broken": True, "line": None, "column": None, "path": "",
+                 "reason": f"the bundled schema could not be loaded: {e}"}]
 
     out: List[dict] = []
     try:
@@ -56,7 +57,7 @@ def validate(data: bytes, tree: Node) -> List[dict]:
         # schema a different document than the one the model layer read.
         errors = list(schema.iter_errors(io.BytesIO(data)))
     except Exception as e:                      # noqa: BLE001 - hostile input, any failure
-        return [{"line": None, "column": None, "path": "",
+        return [{"broken": True, "line": None, "column": None, "path": "",
                  "reason": f"the schema check could not complete: "
                            f"{type(e).__name__}: {str(e).strip().splitlines()[0][:200]}"}]
     for err in errors:

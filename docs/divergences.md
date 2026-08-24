@@ -11,6 +11,18 @@ it.
 Nothing here says the reference is wrong about the standard. Neither of us can
 check that — the normative text is paywalled.
 
+## How much of this was measured
+
+Honestly: not much of it. The reference implementation was built and its test
+suite run, and one container — `demo_invalid_doc_type_names.zip` — was compared
+verdict for verdict, where the two agree on both findings and both locations.
+Everything else below is **read from the reference's source**, not observed by
+running it.
+
+Comparing all nineteen corpus containers against captured output is on the board
+and not done. Until it is, read every "the reference does X" here as "its source
+says X", and hold this document to that lower standard.
+
 ## 1. English class names decide nothing here
 
 **Reference**: `DC_004` is an ERROR when an English `ClassName` is not in its own
@@ -35,10 +47,10 @@ lowercases both sides.
 **Here**: `M3` asks whether the name is *the one published for this class id*,
 and compares exactly.
 
-So this tool is stricter, in two ways that both fire on real documents:
-`ClassId 02-01` labelled `Bauteile` (the correct German name — of a different
-class) passes there and is `M3` here, and `technische spezifikation` passes
-there in non-strict mode and is `M3` here.
+So this tool is stricter in two ways. `ClassId 02-01` labelled `Bauteile` (the
+correct German name — of a different class) is `M3` here, and
+`technische spezifikation` is `M3` here; both were run. That the reference
+accepts them is **read from its source**, not measured — see the note below.
 
 We think matching the pair is the more useful check — a name that belongs to
 another class is exactly the mistake worth catching — but it is a divergence,
@@ -51,9 +63,10 @@ containers; it produces none on the reference project's own examples.
 ## 2. PDF/A conformance level policy is not implemented
 
 **Reference**: `REP_038` — outside the certificate class `02-04`, only PDF/A-*a*
-levels are accepted; a PDF/A-*b* file is an error in strict mode.
-**Here**: not implemented. `corpus/examples/container/document-invalid-pdfa-b.zip`
-gets one error from the reference and none from this tool.
+levels are accepted; a PDF/A-*b* file is an error in strict mode. That is read
+from its source and from its own test, which asserts exactly one error on
+`document-invalid-pdfa-b.zip`; we have not run it ourselves on that file.
+**Here**: not implemented — that container produces no error, which we did run.
 
 Why: the rule as implemented there depends on a policy reading we cannot trace to
 the free schema or to a freely published table. `P4` reports the claimed level, so

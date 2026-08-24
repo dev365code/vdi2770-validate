@@ -1,0 +1,10 @@
+# The sdist must be able to run its own tests, or a downstream packager building
+# from it gets a green build that never ran the gate. This is the same class of
+# error as a check that reads a path outside the repository: "the gate exists"
+# and "the gate runs" differ only in someone else's environment.
+include LICENSE NOTICE THIRD_PARTY.md CHANGELOG.md CONTRIBUTING.md SECURITY.md Makefile
+recursive-include tests *.py *.json
+recursive-include tools *.py
+recursive-include corpus *
+recursive-include docs *.md *.json
+prune tests/fixtures

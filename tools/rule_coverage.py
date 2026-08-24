@@ -28,7 +28,11 @@ FIXTURES = ROOT / "tests" / "fixtures"
 # Rules that cannot fire on any container we can construct offline, with the reason.
 # Kept separate from "not covered yet" on purpose: merging a settled question into
 # an open list makes the open list unreadable.
-CANNOT_FIRE: dict = {}
+CANNOT_FIRE: dict = {
+    "X0": ("only fires when this tool's own installation is broken, which no container can "
+           "cause. Exercised by tests/test_tool_limits_are_not_verdicts.py, which breaks the "
+           "installation deliberately."),
+}
 
 
 def observe() -> Counter:
