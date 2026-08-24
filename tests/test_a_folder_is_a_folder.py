@@ -60,8 +60,12 @@ def test_a_flat_container_says_nothing(tmp_path):
 
 
 def test_a_nested_folder_names_both_levels(tmp_path):
+    """It said "both levels" and checked one. `a/b/B.pdf` puts the file in `a/b/`
+    and also in `a/`, and the rule derived only the last component — so a
+    two-level layout was reported as "1 folder"."""
     meta = META.replace(">B.pdf<", ">a/b/B.pdf<")
     p = build(tmp_path, "deep.zip", [
         ("VDI2770_Metadata.xml", meta), ("a/b/B.pdf", PDF), ("B.docx", DOCX)])
     detail = z9(p)[0].detail or ""
-    assert "a/b/" in detail, detail
+    assert "a/b/" in detail and "a/, " in detail + ", ", detail
+    assert detail.startswith("2 folders:"), detail

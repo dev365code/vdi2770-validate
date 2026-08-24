@@ -38,13 +38,31 @@ BUDGETS = {
     "MAX_RATIO": (10, 10_000),
     "MAX_METADATA_BYTES": (1 << 20, 256 << 20),
     "MAX_CONTAINER_LEVELS": (2, 8),
+    # Added after the table was written, and left out of it until an audit asked
+    # why the docstring above says every budget is pinned.
+    "MIN_SUSPICIOUS_BYTES": (1 << 20, 64 << 20),
+    "MAX_CONTAINERS": (100, 100_000),
+    "MAX_TOTAL_METADATA_BYTES": (8 << 20, 1 << 30),
 }
 PDF_BUDGETS = {
     "MAX_STREAM_SCAN": (1 << 10, 8 << 20),
     "MAX_INFLATED_PER_STREAM": (1 << 20, 64 << 20),
     "MAX_INFLATED_TOTAL": (1 << 20, 256 << 20),
     "MAX_STREAMS": (16, 100_000),
+    "MAX_XMP_PACKETS": (4, 4096),
+    "MAX_PDFA_PREFIXES": (1, 64),
 }
+
+
+def test_every_budget_constant_is_in_one_of_those_tables():
+    """The tables were written by hand and then the code grew three more caps.
+    A budget nobody pinned is a budget that can be raised to 10**18 in a commit
+    that looks like a tidy-up."""
+    for module, table in ((zipread, BUDGETS), (pdfread, PDF_BUDGETS)):
+        declared = {n for n in vars(module)
+                    if n.startswith(("MAX_", "MIN_")) and isinstance(getattr(module, n), int)}
+        missing = sorted(declared - set(table))
+        assert not missing, f"{module.__name__} has unpinned budgets: {missing}"
 
 
 @pytest.mark.parametrize("name,bounds", sorted(BUDGETS.items()))
@@ -106,6 +124,14 @@ def test_pdf_scanning_stops_after_the_stream_budget(monkeypatch):
     body = b"%PDF-1.7\n" + one * 20
     inflated = list(pdfread._haystacks(body))[1:]        # drop the raw bytes
     assert len(inflated) <= 2
+    # A ceiling on its own passes when `_haystacks` yields nothing at all, which
+    # is the one way this budget could stop protecting anything. Exactly one gets
+    # through here, not two: `MAX_STREAMS` bounds attempts, and the stream marker
+    # also matches inside `endstream`, so every other attempt is a false start
+    # that fails to inflate. That is the budget doing what its docstring says —
+    # "the number of streams we will even try" — and worth knowing before
+    # somebody reads the constant as a count of real streams.
+    assert inflated, "the budget stopped everything, including the first stream"
 
 
 # --- hostile names -----------------------------------------------------------

@@ -64,9 +64,12 @@ def check(container, declared=frozenset(), is_declared_payload=False) -> Iterato
     for m in container.members:
         if m.is_dir:
             folders.add(m.name if m.name.endswith("/") else m.name + "/")
-        stem = m.name.rstrip("/")
-        if "/" in stem:
-            folders.add(stem.rsplit("/", 1)[0] + "/")
+        # Every folder on the path, not just the last one: `a/b/x.pdf` puts the
+        # file in `a/b/` and also in `a/`, and a rule that reports one of them
+        # calls a two-level layout "1 folder".
+        parts = m.name.rstrip("/").split("/")[:-1]
+        for depth in range(1, len(parts) + 1):
+            folders.add("/".join(parts[:depth]) + "/")
     if folders:
         r = rule("Z9")
         named = sorted(folders)

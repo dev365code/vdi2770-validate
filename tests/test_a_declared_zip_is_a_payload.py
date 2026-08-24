@@ -85,7 +85,8 @@ def test_an_undeclared_non_container_in_a_documentation_container_still_fires(tm
     p = build(tmp_path, "junk_inside.zip", [
         ("VDI2770_Main.xml", MAINXML), ("VDI2770_Main.pdf", MAINPDF),
         ("documentcontainer.zip", DOC_BYTES), ("junk.zip", PAYLOAD)])
-    assert ("Z3", None) in {(r, m) for r, m in fired(p)} or "Z3" in ids(p), f"{fired(p)}"
+    # `or "Z3" in ids(p)` used to sit here and swallowed the whole assertion.
+    assert ("Z3", None) in fired(p), f"{sorted(fired(p))}"
 
 
 def test_a_declared_payload_that_is_a_real_container_is_still_validated(tmp_path):

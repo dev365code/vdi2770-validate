@@ -76,13 +76,30 @@ def test_one_unreadable_path_does_not_stop_the_rest(capsys):
     assert "0 error(s)" in out.out         # the good one was still checked
 
 
-def test_a_clean_container_says_so(capsys):
-    """The output for a container with nothing wrong was never asserted — the
-    one shape every happy user sees."""
-    _, out = run(capsys, ["check", str(FIXTURES / "z10-duplicate-member.zip"), "--quiet"])
-    _, clean = run(capsys, ["check", str(CLEAN_DOCUMENT), "--quiet"])
-    assert "no findings" in clean
-    assert "0 error(s), 0 warning(s)" in clean
+def test_a_conforming_container_still_leaves_one_note(capsys):
+    """The shape every happy user sees, and it is not "no findings".
+
+    A conforming document container declares a PDF — `M6` requires one per
+    version — and every PDF produces either `P3` (no PDF/A claim) or `P4` (a
+    claim this tool will not verify). So a report with nothing at all in it is
+    unreachable for a valid container, and pinning "no findings" against the
+    clean corpus document is how a test came to assert that line printed above a
+    summary reading "1 note(s)".
+    """
+    code, out = run(capsys, ["check", str(CLEAN_DOCUMENT)])
+    assert code == 0
+    assert "info   P4" in out, out
+    assert "0 error(s), 0 warning(s), 1 note(s)" in out, out
+    assert "no findings" not in out, out
+
+
+def test_hidden_notes_are_not_reported_as_nothing(capsys):
+    """`--quiet` drops the notes; it does not make them stop existing, and the
+    summary line right underneath still counts them."""
+    _, out = run(capsys, ["check", str(CLEAN_DOCUMENT), "--quiet"])
+    assert "no findings" not in out, out
+    assert "1 note(s) not shown" in out, out
+    assert "0 error(s), 0 warning(s), 1 note(s)" in out, out
 
 
 def test_the_module_entry_point_works():

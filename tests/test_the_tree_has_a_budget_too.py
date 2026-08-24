@@ -9,7 +9,6 @@ megabytes of metadata was a permitted input: about 156 GiB, from a file small
 enough to email.
 """
 import io
-import resource
 import zipfile
 
 from vdi2770.zipread import MAX_TOTAL_METADATA_BYTES, read
@@ -62,12 +61,28 @@ def test_an_ordinary_nested_container_is_untouched():
 
 
 def test_the_measured_amplification_stays_in_three_figures_of_megabytes():
-    """The number that matters to whoever runs this in a plant."""
-    before = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-    read(nest(300, 1024 * 1024), "amp.zip")
-    after = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-    grew_mb = (after - before) / (1024 * 1024)      # ru_maxrss is bytes on macOS
-    assert grew_mb < 200, f"grew {grew_mb:.0f} MB reading a sub-megabyte file"
+    """The number that matters to whoever runs this in a plant.
+
+    The first version of this could not fail, in two independent ways.
+    `ru_maxrss` is a process high-water mark that never comes back down, so
+    inside the full suite it was already above anything this could add; and on
+    Linux it is in kilobytes, not bytes, so the threshold on the only platform CI
+    runs was a thousand times looser than it reads. Demonstrated by mutation:
+    with the budget removed the test failed alone and passed in the suite.
+
+    `tracemalloc` measures what this code allocates, on both platforms, and
+    resets when it is stopped.
+    """
+    import tracemalloc
+
+    data = nest(300, 1024 * 1024)
+    tracemalloc.start()
+    try:
+        read(data, "amp.zip")
+        peak_mb = tracemalloc.get_traced_memory()[1] / (1024 * 1024)
+    finally:
+        tracemalloc.stop()
+    assert peak_mb < 200, f"allocated {peak_mb:.0f} MB reading a sub-megabyte file"
 
 
 def test_the_number_of_containers_is_bounded_on_its_own():

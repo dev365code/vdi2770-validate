@@ -13,6 +13,26 @@
   holds both apart. `tools/rule_coverage.py` justifies `X0` as "only fires when
   this tool's own installation is broken, which no container can cause"; that
   sentence is true again.
+- **The report no longer contradicts itself.** `--quiet` hides the notes, and
+  the "no findings" line then printed above a summary reading "1 note(s)". It
+  says how many were not shown. A test had pinned both halves of that; replacing
+  it turned up something worth knowing — a report with nothing at all in it is
+  unreachable for a conforming container, because `M6` requires a PDF per version
+  and every PDF yields `P3` or `P4`.
+- **`Z9` names every folder on the path**, not only the last one. `a/b/x.pdf`
+  puts the file in `a/b/` and in `a/`, and the rule called that "1 folder".
+- **Four tests that could not fail.** The amplification measurement used
+  `ru_maxrss`, a process high-water mark that never comes down — inside the full
+  suite it was already above anything the test could add — and on Linux it is in
+  kilobytes, so on the only platform CI runs the threshold was a thousand times
+  looser than it read. It uses `tracemalloc` now, and the mutation it was written
+  for fails both alone and in the suite. Alongside: a dead `or` clause that
+  swallowed its own assertion, a "both levels" test that checked one, and a
+  stream-budget test with a ceiling and no floor.
+- **Every budget constant is pinned, and a test says so.** Three caps were added
+  after the table was written and never joined it, while the file's docstring
+  claimed each one is pinned separately. The table is now checked against the
+  modules rather than maintained by memory.
 - **`Z8` knew three of the six ways the reader stops descending.** The guard
   listed defect kinds and missed the three rejections that drop a `.zip` before
   the descent loop sees it — an unsafe name, an oversized member, a suspicious

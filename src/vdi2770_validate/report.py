@@ -14,7 +14,11 @@ def as_text(report: Report, show_info: bool = True) -> str:
     lines: List[str] = [f"{report.target}"]
     findings = [f for f in report.sorted() if show_info or f.severity is not Severity.INFO]
     if not findings:
-        lines.append("  no findings")
+        # "no findings" over a summary line reading "1 note(s)" is the report
+        # contradicting itself, and a test pinned both halves of it.
+        hidden = len(report.findings)
+        lines.append(f"  no errors or warnings ({hidden} note(s) not shown)" if hidden
+                     else "  no findings")
     for f in findings:
         lines.append(f"  {MARK[f.severity]}  {f.rule.id}  {f.message}")
         lines.append(f"         at {f.where}")
