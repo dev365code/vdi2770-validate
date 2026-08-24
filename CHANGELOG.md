@@ -33,6 +33,18 @@ Working through the seven defects the audits left open, one at a time.
   documentation container only — inside a document container it is just a file
   with a confusing name, and inventing a requirement there would be worse than
   the gap.
+- **An empty value no longer switches a check off.** `M5` fired on an empty
+  `<Language/>` element and stayed silent on an empty `Language=""` attribute —
+  the guard was `if d.language`, which is the shape `M8`'s own `whyOurs` warns
+  about. The reader now distinguishes an absent attribute (`None`) from a present
+  empty one (`""`), so the absent case stays with the schema layer where it
+  belongs and the empty one is reported.
+- **A namespace prefix is arbitrary.** A PDF/A identification is identified by
+  its URI; `pa:part` bound to `http://www.aiim.org/pdfa/ns/id/` says exactly what
+  `pdfaid:part` says. The scan matched the literal token, so a file from a
+  conforming exporter read as having no claim and `P3` told its author to fix
+  something that was already right. The prefix now comes from the packet's own
+  declaration — and a prefix bound to some other URI is still not a claim.
 - **A refusal to look is no longer reported as an absence.** `Z8` said a
   documentation container held no document containers while `Z6`, one line above,
   named the one it had found inside it. `Z8` tested for absent children, and the

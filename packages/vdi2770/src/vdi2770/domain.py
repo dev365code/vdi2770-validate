@@ -29,7 +29,10 @@ class DigitalFile:
 
 @dataclass(frozen=True)
 class Description:
-    language: str
+    # None when the attribute is absent, "" when it is present and empty. A
+    # caller that collapses the two cannot tell "this value is wrong" from
+    # "there is no value", and will say the first when it means the second.
+    language: Optional[str]
     title: str
     src: Location = Location()
 
@@ -114,7 +117,8 @@ def build(root: Node, base: Location) -> Document:
         )
         descriptions = tuple(
             Description(
-                language=d.attrib.get("Language", "").strip(),
+                language=(None if "Language" not in d.attrib
+                          else d.attrib["Language"].strip()),
                 title=d.text_of("Title"),
                 src=_loc(base, d),
             )

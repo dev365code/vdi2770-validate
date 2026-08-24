@@ -91,7 +91,11 @@ def check(container, document, is_main: bool) -> Iterator[Finding]:
                                                       member=container.metadata_name),
                               detail=f"Language {lang!r}")
         for d in v.descriptions:
-            if d.language and not _iso_ok(d.language):
+            # `and d.language` here let an empty attribute switch the check
+            # off, which is the shape M8's own whyOurs warns about. `is not
+            # None` keeps the absent case with the schema layer, where it
+            # belongs, and brings the empty one back.
+            if d.language is not None and not _iso_ok(d.language):
                 r = rule("M5")
                 yield Finding(r, r.title, d.src.child(container=container.path,
                                                       member=container.metadata_name),

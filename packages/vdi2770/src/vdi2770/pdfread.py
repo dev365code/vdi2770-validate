@@ -15,10 +15,13 @@ import zlib
 from dataclasses import dataclass
 from typing import Optional
 
-_PART_EL = re.compile(rb"<pdfaid:part>\s*(\d)\s*</pdfaid:part>", re.I)
-_CONF_EL = re.compile(rb"<pdfaid:conformance>\s*([ABUabu])\s*</pdfaid:conformance>", re.I)
-_PART_AT = re.compile(rb"pdfaid[:\s]*part\s*[=>]\s*[\"']?(\d)", re.I)
-_CONF_AT = re.compile(rb"pdfaid[:\s]*conformance\s*[=>]\s*[\"']?([ABUabu])", re.I)
+# A PDF/A identification is identified by its namespace URI. The prefix bound to
+# that URI is a local choice -- `pa:part` says exactly what `pdfaid:part` says --
+# so the prefix is read out of the packet rather than assumed.
+_PDFA_NS = re.compile(
+    rb"""xmlns:([A-Za-z_][\w.\-]{0,63})\s*=\s*["']http://www\.aiim\.org/pdfa/ns/id/["']""",
+    re.I)
+MAX_PDFA_PREFIXES = 4     # one is normal; a packet listing hundreds gets four tries
 _STREAM = re.compile(rb"stream\r?\n")
 
 # A PDF/A identification lives in the XMP metadata. Matching the words anywhere
@@ -70,6 +73,34 @@ def _haystacks(data: bytes):
         yield out
 
 
+def _claim_in(xmp: bytes) -> Optional[str]:
+    """The PDF/A part and conformance level a single XMP packet claims, if any.
+
+    Prefixes come from the packet's own namespace declarations. `pdfaid` is tried
+    when the packet declares none, because a producer may bind it on an ancestor
+    the packet regex did not capture -- but a prefix bound to some *other* URI is
+    not a claim, and matching any prefix at all would turn an unrelated schema
+    with a `part` element into one.
+    """
+    prefixes = []
+    for m in _PDFA_NS.finditer(xmp):
+        if m.group(1) not in prefixes:
+            prefixes.append(m.group(1))
+        if len(prefixes) >= MAX_PDFA_PREFIXES:
+            break
+    for pfx in prefixes or [b"pdfaid"]:
+        p = re.escape(pfx)
+        part = (re.search(rb"<" + p + rb":part>\s*(\d)\s*</" + p + rb":part>", xmp, re.I)
+                or re.search(p + rb"[:\s]*part\s*[=>]\s*[\"']?(\d)", xmp, re.I))
+        if not part:
+            continue
+        conf = (re.search(rb"<" + p + rb":conformance>\s*([ABUabu])\s*</" + p + rb":conformance>",
+                          xmp, re.I)
+                or re.search(p + rb"[:\s]*conformance\s*[=>]\s*[\"']?([ABUabu])", xmp, re.I))
+        return part.group(1).decode() + (conf.group(1).decode().lower() if conf else "?")
+    return None
+
+
 def read(data: bytes) -> PdfFacts:
     if not data.startswith(b"%PDF-"):
         return PdfFacts(is_pdf=False)
@@ -78,13 +109,9 @@ def read(data: bytes) -> PdfFacts:
     claim = None
     for hay in _haystacks(data):
         for packet in _XMP.finditer(hay):
-            xmp = packet.group(0)
-            part = _PART_EL.search(xmp) or _PART_AT.search(xmp)
-            if not part:
-                continue
-            conf = _CONF_EL.search(xmp) or _CONF_AT.search(xmp)
-            claim = part.group(1).decode() + (conf.group(1).decode().lower() if conf else "?")
-            break
+            claim = _claim_in(packet.group(0))
+            if claim:
+                break
         if claim:
             break
     return PdfFacts(is_pdf=True, header=header, encrypted=encrypted, pdfa_claim=claim)
