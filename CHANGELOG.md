@@ -15,6 +15,19 @@ Working through the seven defects the audits left open, one at a time.
   check that only looks at declared files", and a declared one is not past that
   check. An **undeclared** inner `.zip` still fires both, and a declared payload
   that turns out to be a real container is still validated as one.
+- **An identifier is `(domain, value)`, not a bare string.** The schema makes
+  `DomainId` required — an id belongs to whoever runs that domain — and `M9`
+  compared the text alone, so the same drawing number registered by an OEM and by
+  its supplier read as a repeat. The remedy said "remove the repeated DocumentId",
+  which would have destroyed a real registration; a warning whose advice is
+  harmful is worse than silence. The reader now carries `Document.identifiers`
+  (`vdi2770.DocumentId`, with the domain and the source position); `Document.ids`
+  stays as a view of the values alone. Findings point at the repeated element
+  rather than at the top of the document.
+- A test now checks that the reader version in this repository satisfies the
+  range the validator declares for it. Getting that wrong sends `pip` to PyPI for
+  a package that only exists in the working tree — it happened once while writing
+  the change above, and only running the install caught it.
 
 
 ## 0.3.1 — 2026-08-24
