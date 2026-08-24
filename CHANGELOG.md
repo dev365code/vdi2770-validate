@@ -1,6 +1,9 @@
 # Changelog
 
-## Unreleased
+## 0.5.0 — 2026-08-24
+
+Released promptly rather than batched: the first item is a way to make the tool
+run for hours on a small file, and it is in 0.4.0.
 
 - **A malformed PDF could hang the tool.** The XMP packet scan was
   `START.*?END` with `re.S`; with the closer absent, every opener rescanned to
