@@ -24,6 +24,22 @@ Working through the seven defects the audits left open, one at a time.
   (`vdi2770.DocumentId`, with the domain and the source position); `Document.ids`
   stays as a view of the values alone. Findings point at the repeated element
   rather than at the top of the document.
+- **The main document is looked at.** `VDI2770_Main.pdf` is the file a
+  documentation container is built around, and three rules each handed it to the
+  next: `Z7` is satisfied by the name, `F2` exempts it as structural, and the P
+  rules only looked at files the metadata declares. Declaring some other PDF is
+  schema-legal, so an eighteen-byte text file called `VDI2770_Main.pdf` passed
+  with exit 0. The reserved name is now a declaration in its own right, in a
+  documentation container only — inside a document container it is just a file
+  with a confusing name, and inventing a requirement there would be worse than
+  the gap.
+- **One note per file, not per declaration.** A metadata file naming the same PDF
+  in three document versions printed three identical `P4` lines about one file.
+- **A decomposed filename is scanned, not silently skipped.** Reconciling NFD and
+  NFC in the F rules alone turned out to be worse than not doing it: `F1` stopped
+  reporting the file as missing while the P rules went on failing to find it, so
+  a Mac-zipped delivery with an umlaut in a filename had its PDFs checked by
+  nobody. Both layers resolve names the same way now.
 - A test now checks that the reader version in this repository satisfies the
   range the validator declares for it. Getting that wrong sends `pip` to PyPI for
   a package that only exists in the working tree — it happened once while writing

@@ -362,8 +362,8 @@
       "layer": "pdf",
       "severity": "error",
       "obligation": "reference",
-      "title": "A file declared as PDF is not a PDF",
-      "remedy": "Replace the file with a real PDF, or correct the declared FileFormat.",
+      "title": "A file that should be a PDF is not one",
+      "remedy": "Replace the file with a real PDF, or correct the declared FileFormat if the file was never meant to be one. For VDI2770_Main.pdf there is no second option: the name is reserved and the recipient's system will open it as a PDF.",
       "refKeys": [
         "processor:PV_EXCEPTION_010"
       ],
