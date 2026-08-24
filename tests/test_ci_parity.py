@@ -149,3 +149,31 @@ def test_the_sdk_in_this_repository_satisfies_the_pin_that_depends_on_it():
     assert Version(max(floors, key=Version)) == here, (
         f"the reader here is {here} but the pin's floor is {max(floors, key=Version)}. "
         f"A user can install an older reader than the one these tests ran against.")
+
+
+def test_ci_runs_every_python_either_package_advertises():
+    """A classifier on PyPI is a promise to whoever reads it before installing.
+
+    The existing floor test reads the validator's `requires-python` and nothing
+    else, so the reader package advertised `Programming Language :: Python ::
+    3.13` while CI ran 3.9 and 3.12 and no interpreter ever confirmed it.
+    """
+    matrix = re.search(r"python-version:\s*\[(.*?)\]", CI.read_text(encoding="utf-8"))
+    assert matrix, "CI declares no python-version matrix"
+    tested = set(re.findall(r'"([0-9.]+)"', matrix.group(1)))
+
+    for name in ("pyproject.toml", "packages/vdi2770/pyproject.toml"):
+        text = (ROOT / name).read_text(encoding="utf-8")
+        block = re.search(r"^classifiers = \[(.*?)^\]", text, re.M | re.S)
+        assert block, f"{name} declares no classifiers"
+        advertised = set(re.findall(r"Programming Language :: Python :: (\d+\.\d+)",
+                                    block.group(1)))
+        missing = sorted(advertised - tested)
+        assert not missing, (
+            f"{name} advertises Python {missing} and CI runs {sorted(tested)}. "
+            f"Either run it or stop claiming it.")
+
+        floor = re.search(r'requires-python\s*=\s*">=([0-9.]+)"', text)
+        assert floor and floor.group(1) in tested, (
+            f"{name} promises Python {floor.group(1) if floor else '?'} "
+            f"and CI never runs it")
