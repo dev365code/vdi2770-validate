@@ -25,6 +25,29 @@ name, which both sources agree on for all twelve.
 
 This will be revisited if IDTA states which rendering is normative.
 
+## 1b. Class names are matched to their class id, not to the whole table
+
+**Reference**: `DC_003`/`DC_004` ask whether the name is *one of the twelve*, in
+any position — `Constants.isCategoryName` tests membership of the values
+collection and ignores the `ClassId` entirely. Outside strict mode it also
+lowercases both sides.
+
+**Here**: `M3` asks whether the name is *the one published for this class id*,
+and compares exactly.
+
+So this tool is stricter, in two ways that both fire on real documents:
+`ClassId 02-01` labelled `Bauteile` (the correct German name — of a different
+class) passes there and is `M3` here, and `technische spezifikation` passes
+there in non-strict mode and is `M3` here.
+
+We think matching the pair is the more useful check — a name that belongs to
+another class is exactly the mistake worth catching — but it is a divergence,
+not an implementation of `DC_003`, and `refKeys` should be read as "this is the
+neighbouring check", not "this is the same check".
+
+Status: **deliberate**. Revisit if it produces false positives on real
+containers; it produces none on the reference project's own examples.
+
 ## 2. PDF/A conformance level policy is not implemented
 
 **Reference**: `REP_038` — outside the certificate class `02-04`, only PDF/A-*a*
