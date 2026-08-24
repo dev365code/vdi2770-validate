@@ -16,10 +16,18 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 
+# Two distributions come out of this repository, and a packager may build either.
+# The SDK is checked first: if it cannot stand up alone, the validator's own
+# green result would be borrowed from a source tree that happens to be nearby.
+DISTRIBUTIONS = [
+    (ROOT / "packages" / "vdi2770", []),
+    (ROOT, ["tools/make_fixtures.py"]),
+]
 
-def main() -> int:
+
+def check(project: Path, before: list) -> int:
     with tempfile.TemporaryDirectory() as tmp:
-        build = subprocess.run([sys.executable, "-m", "build", "--sdist", "--outdir", tmp, str(ROOT)],
+        build = subprocess.run([sys.executable, "-m", "build", "--sdist", "--outdir", tmp, str(project)],
                                capture_output=True, text=True)
         if build.returncode:
             print(build.stdout[-2000:], build.stderr[-2000:], file=sys.stderr)
@@ -34,12 +42,23 @@ def main() -> int:
         unpacked = next(p for p in Path(tmp).iterdir() if p.is_dir())
         # Fixtures are generated, so the sdist carries the generator, not the
         # output — build them there exactly as `make check` does here.
-        for step in (["tools/make_fixtures.py"], ["-m", "pytest", "-q"]):
+        for step in ([*before], ["-m", "pytest", "-q"]):
+            if not step:
+                continue
             r = subprocess.run([sys.executable, *step], cwd=unpacked)
             if r.returncode:
-                print(f"the sdist cannot run its own tests: {step}", file=sys.stderr)
+                print(f"{project.name}: the sdist cannot run its own tests: {step}",
+                      file=sys.stderr)
                 return 1
-    print("sdist runs its own tests")
+    print(f"{project.name}: sdist runs its own tests")
+    return 0
+
+
+def main() -> int:
+    for project, before in DISTRIBUTIONS:
+        rc = check(project, before)
+        if rc:
+            return rc
     return 0
 
 

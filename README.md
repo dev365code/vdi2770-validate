@@ -54,12 +54,28 @@ are in [docs/scope.md](docs/scope.md).
 - **Rules are data.** [`rules.json`](src/vdi2770_validate/data/rules.json) — each
   rule carries where its requirement comes from, a remedy sentence, and — where the
   reference implementation checks the same thing — the message keys it uses.
-- **22 of 32 rules have a minimal fixture pair** — a container that violates the rule
+- **22 of 33 rules have a minimal fixture pair** — a container that violates the rule
   and a conforming one differing in as little as a single member. The rest are exercised
   by the vendored corpus. A rule that fires nowhere fails the build.
 - **Rules cannot reach the parser.** A test fails if a rule module imports `zipfile`
   or an XML library, so a rule cannot accidentally check how a document was spelled
   instead of what it says. Rules may name the readers' reserved file names, nothing more.
+
+## Two packages
+
+The reader lives in [`vdi2770`](https://pypi.org/project/vdi2770/), a separate
+package with no dependencies: it opens a container, refuses what it should refuse,
+and hands back a typed model with a line number on every node. It decides nothing.
+
+This package is that library plus a rule set. The split is not cosmetic — a test
+fails if the reader can so much as import the rules — and it exists because a rule
+set is an opinion. If your customer's supplement disagrees with ours, or you want
+the parsed model for something other than a verdict, take the reader and leave the
+opinion behind:
+
+```bash
+pip install vdi2770
+```
 
 ## The classification table, and a disagreement
 

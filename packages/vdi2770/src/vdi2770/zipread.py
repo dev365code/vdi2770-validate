@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Dict, List, Optional, Set, Tuple
 
-from ..model import Defect, Location
+from .model import Defect, Location
 
 METADATA_XML = "VDI2770_Metadata.xml"
 MAIN_XML = "VDI2770_Main.xml"

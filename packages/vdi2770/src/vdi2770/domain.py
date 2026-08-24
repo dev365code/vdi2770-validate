@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from typing import Optional, Tuple
 
 from .model import Location
-from .readers.xmlread import Node
+from .xmlread import Node
 
 
 @dataclass(frozen=True)

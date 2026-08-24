@@ -11,7 +11,7 @@ import zipfile
 import pytest
 
 from conftest import CLEAN_DOCUMENT
-from vdi2770_validate.readers import pdfread, zipread
+from vdi2770 import pdfread, zipread
 from vdi2770_validate.runner import check_bytes
 
 BASE = {n: zipfile.ZipFile(CLEAN_DOCUMENT).read(n)

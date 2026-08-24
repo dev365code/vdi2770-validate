@@ -11,8 +11,9 @@ import io
 import re
 from typing import List, Optional
 
+from vdi2770.xmlread import Node
+
 from ..resources import schema_path
-from .xmlread import Node
 
 _SEG = re.compile(r"^(?:\{(?P<ns>[^}]*)\})?(?P<tag>[^\[/]+)(?:\[(?P<idx>\d+)\])?$")
 

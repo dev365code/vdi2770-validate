@@ -22,7 +22,7 @@ DEFECT_TO_RULE = {
 
 
 def check(container) -> Iterator[Finding]:
-    from ..readers.zipread import MAIN_PDF, Kind
+    from vdi2770.zipread import MAIN_PDF, Kind
 
     for d in container.defects:
         rid = DEFECT_TO_RULE.get(d.kind)

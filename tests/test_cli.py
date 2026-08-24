@@ -87,12 +87,14 @@ def test_a_clean_container_says_so(capsys):
 
 def test_the_module_entry_point_works():
     """`python -m vdi2770_validate` had no coverage at all."""
+    import os
     import subprocess
     import sys
 
     from conftest import ROOT
     r = subprocess.run([sys.executable, "-m", "vdi2770_validate", "--version"],
                        capture_output=True, text=True,
-                       env={"PYTHONPATH": str(ROOT / "src"), "PATH": "/usr/bin:/bin"})
+                       env={"PYTHONPATH": os.pathsep.join([str(ROOT / "src"), str(ROOT / "packages" / "vdi2770" / "src")]),
+                            "PATH": "/usr/bin:/bin"})
     assert r.returncode == 0, r.stderr
     assert r.stdout.strip()

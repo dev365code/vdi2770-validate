@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.2.0 — 2026-08-24
+
+The readers moved out into their own package. `vdi2770` is now a dependency-free
+library that reads a container and hands you a typed model; `vdi2770-validate` is
+that library plus a rule set. Nothing about the verdicts changed — the same 207
+tests pass on both sides of the move, and the reference corpus produces byte-identical
+output.
+
+Why bother: a rule set is an opinion, and opinions should be replaceable. Anyone
+who wants to check a container against *their* customer's supplement, or feed the
+parsed model into an AAS submodel builder, should not have to take our 33 rules
+with them to do it.
+
+- New package `vdi2770` (Apache-2.0, no dependencies) — `read_container`,
+  `parse_xml`, `build_document`, `read_pdf`, and the value types.
+- `vdi2770-validate` now depends on `vdi2770~=0.1.0`. The CLI, the rules and the
+  output are unchanged.
+- Moved, not copied: there is one implementation of each reader, in the SDK.
+- Fixed: the 0.1.0 changelog said "32 rules" in a bullet and "33 rules" a
+  paragraph above it. The catalogue had 33. A test now holds that number so the
+  two cannot drift again.
+
+**If you import from `vdi2770_validate.readers` or `vdi2770_validate.domain`,**
+those paths are gone; import from `vdi2770` instead. The CLI is unaffected.
+
 ## 0.1.0 — 2026-08-24
 
 First release. It reads a VDI 2770 container and tells you what is wrong with
@@ -13,7 +38,7 @@ of VDI 2770. The scope is small and written down in docs/scope.md, and the
 refusals there are the honest part.
 
 - Reads VDI 2770 document and documentation containers without extracting them.
-- 32 rules across five layers — container shape, schema conformance, declared
+- 33 rules across five layers — container shape, schema conformance, declared
   files versus actual members, metadata model, and PDF claims — each with a
   remedy sentence and each traceable to the schema VDI publishes free, to a
   freely published table, to container mechanics, or to a stated judgement of

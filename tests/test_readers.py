@@ -5,7 +5,7 @@ import zipfile
 import pytest
 
 from conftest import CLEAN_DOCUMENT, CLEAN_DOCUMENTATION
-from vdi2770_validate.readers import pdfread, xmlread, zipread
+from vdi2770 import pdfread, xmlread, zipread
 
 
 def zip_of(files):

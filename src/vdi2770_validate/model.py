@@ -2,12 +2,20 @@
 
 Nothing in this module knows about ZIP files, XML, or PDF. Rules are written
 against the model; the readers are not reachable from here.
+
+`Location` and `Defect` live in the `vdi2770` reader library and are re-exported
+here on purpose: this module is meant to be the single vocabulary a rule imports,
+so a rule never has to know which package a value type was defined in.
 """
 from __future__ import annotations
 
 import enum
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, field
 from typing import Optional, Tuple
+
+from vdi2770.model import Defect, Location
+
+__all__ = ["Defect", "Finding", "Location", "Obligation", "Report", "Rule", "Severity"]
 
 
 class Severity(enum.Enum):
@@ -31,32 +39,6 @@ class Obligation(enum.Enum):
                                # NOT verified against the guideline, which is paywalled
     OURS = "ours"              # our own judgement; must carry `whyOurs`
 
-
-@dataclass(frozen=True, order=True)
-class Location:
-    """Where a finding is. `container` uses the JAR convention so it stays
-    greppable: outer.zip!/inner.zip!/VDI2770_Metadata.xml"""
-
-    container: str = ""
-    member: Optional[str] = None
-    line: Optional[int] = None
-    column: Optional[int] = None
-    xpath: Optional[str] = None      # schema layer only
-    subject: Optional[str] = None    # model identity: document id, file name, class id
-
-    def child(self, **kw) -> Location:
-        return replace(self, **kw)
-
-    def __str__(self) -> str:
-        parts = [self.container or "<input>"]
-        if self.member:
-            parts.append(self.member)
-        s = "!/".join(parts)
-        if self.line is not None:
-            s += f":{self.line}"
-            if self.column is not None:
-                s += f":{self.column}"
-        return s
 
 
 @dataclass(frozen=True)
@@ -94,15 +76,6 @@ class Finding:
         return (self.severity.rank, self.rule.id, w.container, w.member or "",
                 w.line if w.line is not None else -1, w.subject or "", self.message)
 
-
-@dataclass(frozen=True)
-class Defect:
-    """Something a reader could not do. Readers never invent rule ids; the
-    container rules are the single place a Defect becomes a Finding."""
-
-    kind: str
-    where: Location
-    detail: str = ""
 
 
 @dataclass

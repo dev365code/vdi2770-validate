@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "vdi2770-validate"
-version = "0.1.0"
+version = "0.2.0"
 description = "Offline conformance checker for VDI 2770 containers — every finding comes with a remedy"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -18,7 +18,10 @@ classifiers = [
   "Programming Language :: Python :: 3",
   "Topic :: Software Development :: Quality Assurance",
 ]
-dependencies = ["xmlschema==4.2.0"]
+# The readers were lifted out into `vdi2770`, which has no dependencies of its
+# own; this package is that library plus a rule set. Pinned to the 0.1 line
+# because pre-1.0 the minor number is where the breaking changes live.
+dependencies = ["vdi2770~=0.1.0", "xmlschema==4.2.0"]
 
 [project.optional-dependencies]
 dev = ["pytest==8.3.4", "ruff==0.16.3"]
@@ -40,7 +43,7 @@ vdi2770_validate = ["data/*.json", "data/*.xsd"]
 [tool.ruff]
 line-length = 110
 target-version = "py39"
-src = ["src", "tests", "tools"]
+src = ["src", "tests", "tools", "packages/vdi2770/src", "packages/vdi2770/tests"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B", "C4", "SIM"]
@@ -55,5 +58,6 @@ ignore = [
 "tools/*.py" = ["E402"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["tests", "packages/vdi2770/tests"]
+pythonpath = ["src", "packages/vdi2770/src"]
 addopts = "-q"

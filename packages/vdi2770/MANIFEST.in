@@ -1,0 +1,5 @@
+# setuptools ships the package source by default and nothing else. The tests
+# are the reason to trust the package, so they travel with it.
+include LICENSE README.md
+recursive-include tests *.py
+recursive-include src *.py py.typed

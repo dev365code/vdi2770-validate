@@ -9,7 +9,7 @@ XMLSCHEMA_VERSION := 4.2.0
 check: lint fixtures test corpus coverage-check
 
 lint:
-	$(PYTHON) -m ruff check src tests tools
+	$(PYTHON) -m ruff check src tests tools packages
 
 test:
 	$(PYTHON) -m pytest

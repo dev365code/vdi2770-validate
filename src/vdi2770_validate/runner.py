@@ -4,9 +4,11 @@ from __future__ import annotations
 
 from typing import Optional
 
-from .domain import build
+from vdi2770 import pdfread, xmlread, zipread
+from vdi2770.domain import build
+
 from .model import Report
-from .readers import pdfread, xmlread, xsdvalidate, zipread
+from .readers import xsdvalidate
 from .rules import container as r_container
 from .rules import files as r_files
 from .rules import metadata as r_metadata

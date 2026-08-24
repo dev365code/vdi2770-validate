@@ -10,7 +10,7 @@ EXTENSION_FOR = {"application/pdf": ".pdf", "application/zip": ".zip"}
 
 
 def check(container, document) -> Iterator[Finding]:
-    from ..readers.zipread import MAIN_PDF, MAIN_XML, METADATA_XML
+    from vdi2770.zipread import MAIN_PDF, MAIN_XML, METADATA_XML
 
     present = set(container.file_names)
     declared = {f.file_name for f in document.all_files if f.file_name}

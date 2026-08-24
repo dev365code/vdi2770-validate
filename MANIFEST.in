@@ -8,4 +8,8 @@ recursive-include tools *.py
 recursive-include corpus *
 recursive-include docs *.md *.json
 recursive-include .github *.yml
+# The SDK lives in this repository too, and the root suite imports it.
+# An sdist without it would run a suite that cannot import half of itself.
+recursive-include packages *.py *.toml *.md *.in
+include packages/vdi2770/LICENSE packages/vdi2770/src/vdi2770/py.typed
 prune tests/fixtures

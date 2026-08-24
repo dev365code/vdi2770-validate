@@ -87,8 +87,27 @@ def test_a_promised_severity_cannot_be_changed_quietly(rule_id, expected):
 def test_an_entity_declaration_is_refused_even_without_an_external_reference():
     """The fixture uses an external entity, so the declaration handler — the
     thing SECURITY.md actually describes — had no coverage."""
-    from vdi2770_validate.readers.xmlread import UnsafeXml, parse
+    from vdi2770.xmlread import UnsafeXml, parse
     internal_only = (b"<!DOCTYPE r [<!ENTITY a 'aaaaaaaaaa'>]>"
                      b"<r xmlns='http://www.vdi.de/schemas/vdi2770'>&a;</r>")
     with pytest.raises(UnsafeXml):
         parse(internal_only)
+
+
+def test_every_rule_count_in_prose_is_the_real_one():
+    """0.1.0 shipped a changelog that said 32 rules in one line and 33 in another.
+    The catalogue is the only thing that knows, so it decides."""
+    import re
+
+    from conftest import ROOT
+    from vdi2770_validate.catalog import rules
+
+    real = len(rules())
+    for name in ("README.md", "CHANGELOG.md", "docs/scope.md"):
+        p = ROOT / name
+        if not p.exists():
+            continue
+        # A quoted count is someone being quoted -- usually this changelog quoting
+        # the wrong number it once printed. Only unquoted claims are claims.
+        for n in re.findall(r'(?<!")\b(\d+) rules?\b(?!")', p.read_text(encoding="utf-8")):
+            assert int(n) == real, f"{name} says {n} rules; the catalogue has {real}"

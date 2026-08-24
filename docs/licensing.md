@@ -42,6 +42,14 @@ Full table, licence texts and modification statements are in
    implementation `DigitalDataChainConsortium/vdi2770`, Copyright (C) 2021
    Johannes Schmidt. Verbatim, hash-pinned, attributed in `corpus/NOTICE`.
 
+## The reader package carries none of this
+
+`vdi2770`, the reader library in `packages/`, bundles no third-party material at
+all — no schema, no table, no vendored corpus. It is Apache-2.0 and that is the
+whole story, which is one more reason the split was worth doing: the package most
+likely to be embedded in someone else's product is the one with nothing attached
+to it. The schema and the IDTA-derived table stay here, with the notices.
+
 ## The remedy-text gate
 
 The reference implementation's message strings are MIT and may be reused with

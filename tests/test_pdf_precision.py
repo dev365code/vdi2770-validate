@@ -6,7 +6,7 @@ severity, the guess has to be a good deal better than a substring.
 import pytest
 
 from conftest import CORPUS
-from vdi2770_validate.readers import pdfread
+from vdi2770 import pdfread
 
 VALID = (CORPUS / "Valid.pdf").read_bytes()
 ENCRYPTED = (CORPUS / "pdf" / "encrypted.pdf").read_bytes()
