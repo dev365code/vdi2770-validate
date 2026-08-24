@@ -31,7 +31,13 @@ def _cmd_check(args) -> int:
 
 
 def _cmd_rules(_args) -> int:
-    for r in sorted(rules().values(), key=lambda r: (r.layer, r.id)):
+    # Natural order, not lexical: sorting the ids as strings printed
+    # Z1, Z10, Z11, Z12, Z2 to anybody running `rules`.
+    def in_order(r):
+        letters = r.id.rstrip("0123456789")
+        return (r.layer, letters, int(r.id[len(letters):] or 0))
+
+    for r in sorted(rules().values(), key=in_order):
         print(f"{r.id:4} {r.severity.value:7} {r.layer:10} {r.title}")
         print(f"     basis={r.obligation.value}"
               + (f" refs={','.join(r.ref_codes)}" if r.ref_codes else ""))

@@ -31,4 +31,4 @@ sdist-runs-its-own-tests:
 	$(PYTHON) tools/check_sdist.py
 
 clean:
-	rm -rf .pytest_cache .ruff_cache build dist tests/fixtures **/__pycache__
+	rm -rf .pytest_cache .ruff_cache build dist tests/fixtures **/__pycache__ packages/vdi2770/build packages/vdi2770/dist

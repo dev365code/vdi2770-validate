@@ -16,7 +16,8 @@ for c in box.walk():
     if c.metadata_bytes is None:
         continue
     doc = vdi2770.build_document(vdi2770.parse_xml(c.metadata_bytes), c.where)
-    print(c.path, doc.ids, [k.class_id for k in doc.classifications])
+    print(c.path, [(i.domain_id, i.id) for i in doc.identifiers],
+          [k.class_id for k in doc.classifications])
 ```
 
 ```

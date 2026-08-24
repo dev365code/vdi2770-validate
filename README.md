@@ -13,6 +13,10 @@ is a small offline CLI you can drop into a CI job.
 **Unofficial.** Not affiliated with VDI, the Digital Data Chain Consortium, or IDTA.
 Names are used descriptively.
 
+```bash
+pip install vdi2770-validate
+```
+
 ```
 $ vdi2770-validate check corpus/examples/missingdocuments/folders.zip
   error  F1  A file named in the metadata is not in the container
