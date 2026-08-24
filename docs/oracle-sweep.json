@@ -1,0 +1,1210 @@
+{
+  "_note": "Written by tools/capture_oracle.py. Codes only; see the docstring.",
+  "reference": {
+    "repo": "DigitalDataChainConsortium/vdi2770",
+    "license": "MIT",
+    "commit": "e47c13c1925abc3ed4698cb5ed9e73b5eb544353",
+    "locale": "en_US, UTC, UTF-8 — the implementation picks its message bundle from Locale.getDefault()"
+  },
+  "containers": {
+    "InvalidXMLName.zip": {
+      "reference": {
+        "ERROR": [
+          "REP_004",
+          "REP_035"
+        ],
+        "INFO": [
+          "REP_036",
+          "ZU_005"
+        ]
+      },
+      "ours": {
+        "error": [
+          "Z3"
+        ],
+        "info": [
+          "P4"
+        ]
+      }
+    },
+    "certificate-pdfa-a.zip": {
+      "reference": {
+        "INFO": [
+          "D_003",
+          "REP_003",
+          "REP_005",
+          "REP_008",
+          "REP_009",
+          "REP_010",
+          "REP_011",
+          "REP_012",
+          "REP_015",
+          "REP_020",
+          "REP_028",
+          "REP_030",
+          "REP_031",
+          "REP_032",
+          "REP_036",
+          "REP_041",
+          "REP_043",
+          "ZU_005"
+        ]
+      },
+      "ours": {
+        "info": [
+          "P4"
+        ]
+      }
+    },
+    "certificate-pdfa-b.zip": {
+      "reference": {
+        "INFO": [
+          "D_003",
+          "REP_003",
+          "REP_005",
+          "REP_008",
+          "REP_009",
+          "REP_010",
+          "REP_011",
+          "REP_012",
+          "REP_015",
+          "REP_020",
+          "REP_028",
+          "REP_030",
+          "REP_031",
+          "REP_032",
+          "REP_036",
+          "REP_041",
+          "REP_043",
+          "ZU_005"
+        ]
+      },
+      "ours": {
+        "info": [
+          "P4"
+        ]
+      }
+    },
+    "demo_invalid_doc_type_names.zip": {
+      "reference": {
+        "ERROR": [
+          "DC_003",
+          "DC_004"
+        ],
+        "INFO": [
+          "D_003",
+          "REP_003",
+          "REP_005",
+          "REP_008",
+          "REP_009",
+          "REP_010",
+          "REP_011",
+          "REP_012",
+          "REP_015",
+          "REP_020",
+          "REP_028",
+          "REP_030",
+          "REP_031",
+          "REP_032",
+          "REP_036",
+          "REP_041",
+          "REP_043",
+          "ZU_005"
+        ]
+      },
+      "ours": {
+        "info": [
+          "M4",
+          "P4"
+        ],
+        "warning": [
+          "M3"
+        ]
+      }
+    },
+    "demo_vdi.zip": {
+      "reference": {
+        "INFO": [
+          "D_003",
+          "REP_003",
+          "REP_005",
+          "REP_008",
+          "REP_009",
+          "REP_010",
+          "REP_011",
+          "REP_012",
+          "REP_015",
+          "REP_020",
+          "REP_028",
+          "REP_030",
+          "REP_031",
+          "REP_032",
+          "REP_036",
+          "REP_041",
+          "REP_043",
+          "ZU_005"
+        ]
+      },
+      "ours": {
+        "info": [
+          "P4"
+        ]
+      }
+    },
+    "document-invalid-pdfa-b.zip": {
+      "reference": {
+        "ERROR": [
+          "REP_038"
+        ],
+        "INFO": [
+          "D_003",
+          "REP_003",
+          "REP_005",
+          "REP_008",
+          "REP_009",
+          "REP_010",
+          "REP_011",
+          "REP_012",
+          "REP_015",
+          "REP_020",
+          "REP_028",
+          "REP_030",
+          "REP_031",
+          "REP_032",
+          "REP_036",
+          "REP_041",
+          "REP_043",
+          "ZU_005"
+        ]
+      },
+      "ours": {
+        "info": [
+          "P4"
+        ]
+      }
+    },
+    "documentationcontainer.zip": {
+      "reference": {
+        "INFO": [
+          "D_003",
+          "REP_003",
+          "REP_005",
+          "REP_008",
+          "REP_009",
+          "REP_010",
+          "REP_011",
+          "REP_012",
+          "REP_015",
+          "REP_020",
+          "REP_028",
+          "REP_030",
+          "REP_031",
+          "REP_032",
+          "REP_036",
+          "REP_041",
+          "REP_043",
+          "ZU_005"
+        ]
+      },
+      "ours": {
+        "info": [
+          "P4"
+        ]
+      }
+    },
+    "documentcontainer-invalid.zip": {
+      "reference": {
+        "INFO": [
+          "REP_003",
+          "REP_005",
+          "REP_008",
+          "REP_009",
+          "REP_010",
+          "REP_011",
+          "REP_015",
+          "REP_020",
+          "REP_028",
+          "REP_036",
+          "REP_041",
+          "REP_043",
+          "ZU_005"
+        ],
+        "WARN": [
+          "REP_018"
+        ]
+      },
+      "ours": {
+        "info": [
+          "P4"
+        ]
+      }
+    },
+    "documentcontainer.zip": {
+      "reference": {
+        "INFO": [
+          "REP_003",
+          "REP_005",
+          "REP_008",
+          "REP_009",
+          "REP_010",
+          "REP_011",
+          "REP_015",
+          "REP_020",
+          "REP_028",
+          "REP_036",
+          "REP_041",
+          "REP_043",
+          "ZU_005"
+        ]
+      },
+      "ours": {
+        "info": [
+          "P4"
+        ]
+      }
+    },
+    "empty.zip": {
+      "reference": {
+        "ERROR": [
+          "REP_004",
+          "REP_035"
+        ],
+        "INFO": [
+          "REP_036",
+          "ZU_005"
+        ]
+      },
+      "ours": {
+        "error": [
+          "Z2"
+        ]
+      }
+    },
+    "f3-format-extension.zip": {
+      "reference": {
+        "ERROR": [
+          "DF_002",
+          "DV_012"
+        ],
+        "INFO": [
+          "REP_003",
+          "REP_005",
+          "REP_008",
+          "REP_009",
+          "REP_010",
+          "REP_011",
+          "REP_020",
+          "REP_028",
+          "REP_036",
+          "ZU_005"
+        ],
+        "WARN": [
+          "REP_006",
+          "REP_018"
+        ]
+      },
+      "ours": {
+        "error": [
+          "P1"
+        ],
+        "warning": [
+          "F2",
+          "F3"
+        ]
+      }
+    },
+    "f4-nameless-file.zip": {
+      "reference": {
+        "ERROR": [
+          "DF_004",
+          "REP_014"
+        ],
+        "INFO": [
+          "REP_003",
+          "REP_005",
+          "REP_008",
+          "REP_009",
+          "REP_010",
+          "REP_011",
+          "REP_020",
+          "REP_028",
+          "REP_036",
+          "ZU_005"
+        ]
+      },
+      "ours": {
+        "error": [
+          "F4"
+        ]
+      }
+    },
+    "folders.zip": {
+      "reference": {
+        "ERROR": [
+          "REP_007",
+          "REP_025"
+        ],
+        "INFO": [
+          "D_003",
+          "REP_003",
+          "REP_005",
+          "REP_008",
+          "REP_009",
+          "REP_010",
+          "REP_011",
+          "REP_012",
+          "REP_015",
+          "REP_020",
+          "REP_028",
+          "REP_030",
+          "REP_031",
+          "REP_032",
+          "REP_036",
+          "REP_041",
+          "REP_043",
+          "ZU_005"
+        ],
+        "WARN": [
+          "ZU_001"
+        ]
+      },
+      "ours": {
+        "error": [
+          "F1",
+          "Z7"
+        ],
+        "warning": [
+          "F2",
+          "Z8",
+          "Z9"
+        ]
+      }
+    },
+    "issue16container.zip": {
+      "reference": {
+        "INFO": [
+          "REP_003",
+          "REP_005",
+          "REP_008",
+          "REP_009",
+          "REP_010",
+          "REP_011",
+          "REP_015",
+          "REP_020",
+          "REP_028",
+          "REP_036",
+          "REP_041",
+          "REP_043",
+          "ZU_005"
+        ]
+      },
+      "ours": {
+        "info": [
+          "P4"
+        ]
+      }
+    },
+    "m1-no-vdi-classification.zip": {
+      "reference": {
+        "ERROR": [
+          "D_002"
+        ],
+        "INFO": [
+          "REP_003",
+          "REP_005",
+          "REP_008",
+          "REP_009",
+          "REP_010",
+          "REP_011",
+          "REP_015",
+          "REP_020",
+          "REP_028",
+          "REP_036",
+          "REP_041",
+          "REP_043",
+          "ZU_005"
+        ]
+      },
+      "ours": {
+        "error": [
+          "M1"
+        ],
+        "info": [
+          "P4"
+        ]
+      }
+    },
+    "m10-empty-document-id.zip": {
+      "reference": {
+        "ERROR": [
+          "DI_002"
+        ],
+        "INFO": [
+          "REP_003",
+          "REP_005",
+          "REP_008",
+          "REP_009",
+          "REP_010",
+          "REP_011",
+          "REP_015",
+          "REP_020",
+          "REP_028",
+          "REP_036",
+          "REP_041",
+          "REP_043",
+          "ZU_005"
+        ]
+      },
+      "ours": {
+        "error": [
+          "M10"
+        ],
+        "info": [
+          "P4"
+        ]
+      }
+    },
+    "m2-unknown-class-id.zip": {
+      "reference": {
+        "ERROR": [
+          "DC_002"
+        ],
+        "INFO": [
+          "REP_003",
+          "REP_005",
+          "REP_008",
+          "REP_009",
+          "REP_010",
+          "REP_011",
+          "REP_015",
+          "REP_020",
+          "REP_028",
+          "REP_036",
+          "REP_041",
+          "REP_043",
+          "ZU_005"
+        ]
+      },
+      "ours": {
+        "error": [
+          "M2"
+        ],
+        "info": [
+          "P4"
+        ]
+      }
+    },
+    "m5-bad-language-code.zip": {
+      "reference": {
+        "ERROR": [
+          "DV_004",
+          "DV_007"
+        ],
+        "INFO": [
+          "REP_003",
+          "REP_005",
+          "REP_008",
+          "REP_009",
+          "REP_010",
+          "REP_011",
+          "REP_015",
+          "REP_020",
+          "REP_028",
+          "REP_036",
+          "REP_041",
+          "REP_043",
+          "ZU_005"
+        ]
+      },
+      "ours": {
+        "error": [
+          "M5"
+        ],
+        "info": [
+          "P4"
+        ]
+      }
+    },
+    "m6-no-pdf-declared.zip": {
+      "reference": {
+        "ERROR": [
+          "DV_003"
+        ],
+        "INFO": [
+          "REP_003",
+          "REP_005",
+          "REP_008",
+          "REP_009",
+          "REP_010",
+          "REP_011",
+          "REP_015",
+          "REP_020",
+          "REP_028",
+          "REP_036",
+          "REP_041",
+          "REP_043",
+          "ZU_005"
+        ],
+        "WARN": [
+          "REP_018"
+        ]
+      },
+      "ours": {
+        "error": [
+          "M6"
+        ]
+      }
+    },
+    "m7-main-not-released.zip": {
+      "reference": {
+        "ERROR": [
+          "MD_009"
+        ],
+        "INFO": [
+          "D_003",
+          "REP_003",
+          "REP_005",
+          "REP_008",
+          "REP_009",
+          "REP_010",
+          "REP_011",
+          "REP_012",
+          "REP_015",
+          "REP_020",
+          "REP_028",
+          "REP_030",
+          "REP_031",
+          "REP_032",
+          "REP_036",
+          "REP_041",
+          "REP_043",
+          "ZU_005"
+        ]
+      },
+      "ours": {
+        "error": [
+          "M7"
+        ],
+        "info": [
+          "P4"
+        ]
+      }
+    },
+    "m8-unlabelled-class-name.zip": {
+      "reference": {
+        "ERROR": [
+          "TS_002"
+        ],
+        "INFO": [
+          "REP_003",
+          "REP_005",
+          "REP_008",
+          "REP_009",
+          "REP_010",
+          "REP_011",
+          "REP_015",
+          "REP_020",
+          "REP_028",
+          "REP_036",
+          "REP_041",
+          "REP_043",
+          "ZU_005"
+        ]
+      },
+      "ours": {
+        "info": [
+          "P4"
+        ],
+        "warning": [
+          "M8"
+        ]
+      }
+    },
+    "m9-repeated-document-id.zip": {
+      "reference": {
+        "INFO": [
+          "REP_003",
+          "REP_005",
+          "REP_008",
+          "REP_009",
+          "REP_010",
+          "REP_011",
+          "REP_015",
+          "REP_020",
+          "REP_028",
+          "REP_036",
+          "REP_041",
+          "REP_043",
+          "ZU_005"
+        ]
+      },
+      "ours": {
+        "info": [
+          "P4"
+        ],
+        "warning": [
+          "M9"
+        ]
+      }
+    },
+    "missing_Maindocument.zip": {
+      "reference": {
+        "ERROR": [
+          "REP_004",
+          "REP_035"
+        ],
+        "INFO": [
+          "REP_036",
+          "ZU_005"
+        ]
+      },
+      "ours": {
+        "error": [
+          "Z3"
+        ],
+        "info": [
+          "P4"
+        ]
+      }
+    },
+    "missing_Metadata.zip": {
+      "reference": {
+        "ERROR": [
+          "D_004"
+        ],
+        "INFO": [
+          "D_003",
+          "REP_003",
+          "REP_005",
+          "REP_008",
+          "REP_009",
+          "REP_010",
+          "REP_011",
+          "REP_012",
+          "REP_015",
+          "REP_020",
+          "REP_028",
+          "REP_030",
+          "REP_032",
+          "REP_036",
+          "REP_041",
+          "REP_043",
+          "ZU_005"
+        ],
+        "WARN": [
+          "REP_006"
+        ]
+      },
+      "ours": {
+        "error": [
+          "Z3"
+        ],
+        "info": [
+          "P4"
+        ]
+      }
+    },
+    "missingdocuments.zip": {
+      "reference": {
+        "ERROR": [
+          "D_004"
+        ],
+        "INFO": [
+          "D_003",
+          "REP_003",
+          "REP_005",
+          "REP_008",
+          "REP_009",
+          "REP_010",
+          "REP_011",
+          "REP_012",
+          "REP_015",
+          "REP_020",
+          "REP_028",
+          "REP_036",
+          "REP_041",
+          "REP_043",
+          "ZU_005"
+        ]
+      },
+      "ours": {
+        "info": [
+          "P4"
+        ],
+        "warning": [
+          "Z8"
+        ]
+      }
+    },
+    "morethanonepdfcontainer.zip": {
+      "reference": {
+        "INFO": [
+          "D_003",
+          "REP_003",
+          "REP_005",
+          "REP_008",
+          "REP_009",
+          "REP_010",
+          "REP_011",
+          "REP_012",
+          "REP_015",
+          "REP_017",
+          "REP_020",
+          "REP_028",
+          "REP_030",
+          "REP_031",
+          "REP_032",
+          "REP_036",
+          "REP_041",
+          "REP_043",
+          "ZU_005"
+        ]
+      },
+      "ours": {
+        "info": [
+          "P4"
+        ],
+        "warning": [
+          "P3"
+        ]
+      }
+    },
+    "objectreferences.zip": {
+      "reference": {
+        "INFO": [
+          "D_003",
+          "REP_003",
+          "REP_005",
+          "REP_008",
+          "REP_009",
+          "REP_010",
+          "REP_011",
+          "REP_012",
+          "REP_015",
+          "REP_020",
+          "REP_028",
+          "REP_030",
+          "REP_031",
+          "REP_036",
+          "REP_041",
+          "REP_043",
+          "ZU_005"
+        ],
+        "WARN": [
+          "D_010"
+        ]
+      },
+      "ours": {
+        "info": [
+          "P4"
+        ]
+      }
+    },
+    "p1-not-a-pdf.zip": {
+      "reference": {
+        "INFO": [
+          "REP_003",
+          "REP_005",
+          "REP_008",
+          "REP_009",
+          "REP_010",
+          "REP_011",
+          "REP_020",
+          "REP_028",
+          "REP_036",
+          "ZU_005"
+        ],
+        "WARN": [
+          "REP_018"
+        ]
+      },
+      "ours": {
+        "error": [
+          "P1"
+        ]
+      }
+    },
+    "p2-encrypted-pdf.zip": {
+      "reference": {
+        "ERROR": [
+          "REP_017",
+          "REP_040"
+        ],
+        "INFO": [
+          "REP_003",
+          "REP_005",
+          "REP_008",
+          "REP_009",
+          "REP_010",
+          "REP_011",
+          "REP_020",
+          "REP_028",
+          "REP_036",
+          "ZU_005"
+        ]
+      },
+      "ours": {
+        "warning": [
+          "P2",
+          "P3"
+        ]
+      }
+    },
+    "p3-no-pdfa-claim.zip": {
+      "reference": {
+        "ERROR": [
+          "REP_017"
+        ],
+        "INFO": [
+          "REP_003",
+          "REP_005",
+          "REP_008",
+          "REP_009",
+          "REP_010",
+          "REP_011",
+          "REP_020",
+          "REP_028",
+          "REP_036",
+          "REP_041",
+          "REP_043",
+          "ZU_005"
+        ]
+      },
+      "ours": {
+        "warning": [
+          "P3"
+        ]
+      }
+    },
+    "vdi2770_demo.zip": {
+      "reference": {
+        "INFO": [
+          "D_003",
+          "REP_003",
+          "REP_005",
+          "REP_008",
+          "REP_009",
+          "REP_010",
+          "REP_011",
+          "REP_012",
+          "REP_015",
+          "REP_020",
+          "REP_028",
+          "REP_030",
+          "REP_031",
+          "REP_032",
+          "REP_036",
+          "REP_041",
+          "REP_043",
+          "ZU_005"
+        ]
+      },
+      "ours": {
+        "info": [
+          "P4"
+        ]
+      }
+    },
+    "vdi2770_excel.zip": {
+      "reference": {
+        "INFO": [
+          "D_003",
+          "REP_003",
+          "REP_005",
+          "REP_008",
+          "REP_009",
+          "REP_010",
+          "REP_011",
+          "REP_012",
+          "REP_015",
+          "REP_020",
+          "REP_028",
+          "REP_030",
+          "REP_031",
+          "REP_032",
+          "REP_036",
+          "REP_041",
+          "REP_043",
+          "RO_001",
+          "ZU_005"
+        ]
+      },
+      "ours": {
+        "info": [
+          "P4"
+        ]
+      }
+    },
+    "x1-malformed-xml.zip": {
+      "reference": {
+        "ERROR": [
+          "REP_023",
+          "REP_039"
+        ],
+        "INFO": [
+          "REP_003",
+          "REP_005",
+          "REP_036",
+          "ZU_005"
+        ],
+        "WARN": [
+          "REP_016",
+          "REP_027",
+          "REP_028"
+        ]
+      },
+      "ours": {
+        "error": [
+          "X1"
+        ]
+      }
+    },
+    "x2-schema-violation.zip": {
+      "reference": {
+        "ERROR": [
+          "REP_023",
+          "REP_039"
+        ],
+        "INFO": [
+          "REP_003",
+          "REP_005",
+          "REP_036",
+          "ZU_005"
+        ],
+        "WARN": [
+          "REP_016",
+          "REP_027",
+          "REP_028"
+        ]
+      },
+      "ours": {
+        "error": [
+          "X2"
+        ],
+        "info": [
+          "P4"
+        ]
+      }
+    },
+    "x3-entity-expansion.zip": {
+      "reference": {
+        "ERROR": [
+          "REP_023",
+          "REP_039"
+        ],
+        "INFO": [
+          "REP_003",
+          "REP_005",
+          "REP_036",
+          "ZU_005"
+        ],
+        "WARN": [
+          "REP_016",
+          "REP_027",
+          "REP_028"
+        ]
+      },
+      "ours": {
+        "error": [
+          "X3"
+        ]
+      }
+    },
+    "z1-not-a-zip.zip": {
+      "reference": {
+        "ERROR": [
+          "ZU_003"
+        ]
+      },
+      "ours": {
+        "error": [
+          "Z1"
+        ]
+      }
+    },
+    "z10-duplicate-member.zip": {
+      "reference": {
+        "ERROR": [
+          "REP_023",
+          "REP_039"
+        ],
+        "INFO": [
+          "REP_003",
+          "REP_005",
+          "REP_036",
+          "ZU_005"
+        ],
+        "WARN": [
+          "REP_016",
+          "REP_027",
+          "REP_028"
+        ]
+      },
+      "ours": {
+        "error": [
+          "M1",
+          "X2",
+          "Z10"
+        ],
+        "warning": [
+          "F2"
+        ]
+      }
+    },
+    "z11-container-in-document.zip": {
+      "reference": {
+        "INFO": [
+          "REP_003",
+          "REP_005",
+          "REP_008",
+          "REP_009",
+          "REP_010",
+          "REP_011",
+          "REP_015",
+          "REP_020",
+          "REP_028",
+          "REP_036",
+          "REP_041",
+          "REP_043",
+          "ZU_005"
+        ]
+      },
+      "ours": {
+        "error": [
+          "Z11"
+        ],
+        "info": [
+          "P4"
+        ]
+      }
+    },
+    "z12-unreadable-member.zip": {
+      "reference": {
+        "EXCEPTION": [
+          "«uncoded»"
+        ]
+      },
+      "ours": {
+        "error": [
+          "F1",
+          "Z12"
+        ]
+      }
+    },
+    "z4-path-traversal.zip": {
+      "reference": {
+        "EXCEPTION": [
+          "«uncoded»"
+        ]
+      },
+      "ours": {
+        "error": [
+          "Z4"
+        ],
+        "info": [
+          "P4"
+        ]
+      }
+    },
+    "z5-compression-ratio.zip": {
+      "reference": {
+        "INFO": [
+          "REP_003",
+          "REP_005",
+          "REP_008",
+          "REP_009",
+          "REP_010",
+          "REP_011",
+          "REP_015",
+          "REP_020",
+          "REP_028",
+          "REP_036",
+          "REP_041",
+          "REP_043",
+          "ZU_005"
+        ],
+        "WARN": [
+          "REP_006"
+        ]
+      },
+      "ours": {
+        "error": [
+          "Z5"
+        ],
+        "info": [
+          "P4"
+        ]
+      }
+    },
+    "z5b-declared-bomb.zip": {
+      "reference": {
+        "INFO": [
+          "REP_003",
+          "REP_005",
+          "REP_008",
+          "REP_009",
+          "REP_010",
+          "REP_011",
+          "REP_015",
+          "REP_020",
+          "REP_028",
+          "REP_036",
+          "REP_041",
+          "REP_043",
+          "ZU_005"
+        ],
+        "WARN": [
+          "REP_018"
+        ]
+      },
+      "ours": {
+        "error": [
+          "F1",
+          "Z5"
+        ],
+        "info": [
+          "P4"
+        ]
+      }
+    },
+    "z6-nesting-too-deep.zip": {
+      "reference": {
+        "ERROR": [
+          "REP_007"
+        ],
+        "INFO": [
+          "D_003",
+          "REP_003",
+          "REP_005",
+          "REP_008",
+          "REP_009",
+          "REP_010",
+          "REP_011",
+          "REP_012",
+          "REP_015",
+          "REP_020",
+          "REP_028",
+          "REP_030",
+          "REP_031",
+          "REP_032",
+          "REP_036",
+          "REP_041",
+          "REP_043",
+          "ZU_005"
+        ]
+      },
+      "ours": {
+        "error": [
+          "F1",
+          "Z11"
+        ],
+        "info": [
+          "P4"
+        ],
+        "warning": [
+          "Z6"
+        ]
+      }
+    }
+  }
+}

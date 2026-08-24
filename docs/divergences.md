@@ -13,15 +13,28 @@ check that — the normative text is paywalled.
 
 ## How much of this was measured
 
-Honestly: not much of it. The reference implementation was built and its test
-suite run, and one container — `demo_invalid_doc_type_names.zip` — was compared
-verdict for verdict, where the two agree on both findings and both locations.
-Everything else below is **read from the reference's source**, not observed by
-running it.
+It is measured now. Every container in `corpus/` and `tests/fixtures/` — 43 of
+them — was put through the reference implementation at its pinned commit
+`e47c13c`, with the locale forced to `en_US`, and the result is checked in at
+[`docs/oracle-sweep.json`](oracle-sweep.json). `tools/capture_oracle.py --check`
+re-runs it and fails if either side has moved. `tools/oracle/README.md` says what
+you need to repeat it, including the two things that will bite you.
 
-Comparing all nineteen corpus containers against captured output is on the board
-and not done. Until it is, read every "the reference does X" here as "its source
-says X", and hold this document to that lower standard.
+What the sweep settled:
+
+- **Every message key this catalogue cites exists in that project, and agrees
+  with the code it is paired with.** Thirty citations across the rules, nothing
+  missing, nothing mismatched. The `refKeys`/`refCodes` split earns its keep:
+  thirteen of the reference's displayed codes are emitted from more than one key
+  with different meanings, so a comparison keyed on the code alone is unsound.
+- **Six containers where it reports an error and we do not**, and **six where we
+  do and it does not**. Neither list is a surprise — they are the severity
+  policies in §1 and §2 below, and our own budget rules — but they were assumed
+  before and are counted now.
+- **It throws rather than reports on two of our fixtures.** More on that in §3.
+
+The remaining "read from its source" claims in this document are marked where
+they appear.
 
 ## 1. English class names decide nothing here
 
@@ -41,7 +54,7 @@ This will be revisited if IDTA states which rendering is normative.
 
 The German names are the yardstick here, and they can be: both published sources
 give the same twelve. Measured against them, each English rendering departs on
-two of the four rows where they differ.
+two of the four rows where they differ by wording. (The fifth, 04-01, differs only in case — see the defect register — so it has no German yardstick to lose against and is left out of the table below.)
 
 | ClassId | German (both agree) | IDTA 02004 Table 1 | reference implementation | closer to the German |
 |---|---|---|---|---|
@@ -116,6 +129,22 @@ Java toolchain — so the summaries below are not checkable from a clone:
   list, discarding the `MD_001` it had just recorded.
 - `MainDocument` overrides only the two-argument `validate`, so main-document rules
   are skipped entirely when it is validated through the three-argument entry point.
+
+Two more, this time observed in the sweep rather than read:
+
+- **A path-traversal member ends the run with an unhandled `ProcessorException`,
+  so the container gets no report at all.** This is *not* a vulnerability: the
+  refusal comes from zip4j (`illegal file name that breaks out of the target
+  directory`), which does its job. It is a robustness gap — the other three
+  members of that archive are never looked at, and the caller sees a stack trace
+  instead of a finding. Our `Z4` reports it and carries on.
+- **A member with a broken CRC does the same.** Same shape: the failure is real,
+  the handling turns one bad member into no answer. Our `Z12` reports it.
+
+One structural difference, not a defect on either side: the reference extracts
+every container to a temporary folder on disk before validating
+(`ZipUtils.unzipToTemperaryFolder`). This tool never writes to disk, which is
+asserted by a test rather than promised.
 
 ## 4. Codes are ambiguous, so we key on message keys
 

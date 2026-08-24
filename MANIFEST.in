@@ -4,7 +4,7 @@
 # and "the gate runs" differ only in someone else's environment.
 include LICENSE NOTICE THIRD_PARTY.md CHANGELOG.md CONTRIBUTING.md SECURITY.md Makefile
 recursive-include tests *.py *.json
-recursive-include tools *.py
+recursive-include tools *.py *.java *.md
 recursive-include corpus *
 recursive-include docs *.md *.json
 recursive-include .github *.yml
