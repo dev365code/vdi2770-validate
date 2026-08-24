@@ -148,8 +148,12 @@ class _Budget:
     metadata_bytes: int = 0
 
     def take_container(self) -> bool:
+        # Do not count what was refused: the counter appears in the message, and
+        # incrementing past the cap made it climb on every archive that hit it.
+        if self.containers >= MAX_CONTAINERS:
+            return False
         self.containers += 1
-        return self.containers <= MAX_CONTAINERS
+        return True
 
     def take_metadata(self, n: int) -> bool:
         if self.metadata_bytes + n > MAX_TOTAL_METADATA_BYTES:
@@ -253,8 +257,8 @@ def read(data: bytes, path: str, depth: int = 0, _budget: Optional[_Budget] = No
             if not budget.take_metadata(declared):
                 c.defects.append(Defect(
                     "container-budget-exhausted", c.where.child(member=wanted),
-                    f"this read has already held {MAX_TOTAL_METADATA_BYTES} bytes of "
-                    f"metadata across {budget.containers} containers"))
+                    f"reading it would take this read past {MAX_TOTAL_METADATA_BYTES} "
+                    f"bytes of metadata, held across {budget.containers} containers"))
                 c.rejected[wanted] = "not read: the tree's metadata budget was exhausted"
                 raise KeyError(wanted)
             c.metadata_bytes = zf.read(wanted)
@@ -262,28 +266,32 @@ def read(data: bytes, path: str, depth: int = 0, _budget: Optional[_Budget] = No
         except (KeyError, zipfile.BadZipFile, RuntimeError) as e:
             c.defects.append(Defect("metadata-unreadable", c.where.child(member=wanted), str(e)))
 
+    inner_zips = [m for m in c.members if m.name.lower().endswith(".zip")]
     if depth + 1 < MAX_CONTAINER_LEVELS:
-        for m in c.members:
-            if m.name.lower().endswith(".zip"):
-                try:
-                    inner = zf.read(m.name)
-                except (RuntimeError, zipfile.BadZipFile) as e:
-                    c.defects.append(Defect("member-unreadable", c.where.child(member=m.name), str(e)))
-                    continue
-                if not budget.take_container():
-                    c.defects.append(Defect(
-                        "container-budget-exhausted", c.where.child(member=m.name),
-                        f"this read has already opened {MAX_CONTAINERS} containers"))
-                    break
-                child = read(inner, f"{path}!/{m.name}", depth + 1, budget)
-                child.member_name = m.name
-                c.children.append(child)
+        for i, m in enumerate(inner_zips):
+            try:
+                inner = zf.read(m.name)
+            except (RuntimeError, zipfile.BadZipFile) as e:
+                c.defects.append(Defect("member-unreadable", c.where.child(member=m.name), str(e)))
+                continue
+            if not budget.take_container():
+                # Say how many, not just where it stopped. Breaking with one
+                # defect read as "this single archive was skipped" while the rest
+                # of the siblings went unmentioned.
+                skipped = len(inner_zips) - i
+                c.defects.append(Defect(
+                    "container-budget-exhausted", c.where.child(member=m.name),
+                    f"this read has opened {MAX_CONTAINERS} containers, its limit; "
+                    f"{skipped} more in this archive were not opened"))
+                break
+            child = read(inner, f"{path}!/{m.name}", depth + 1, budget)
+            child.member_name = m.name
+            c.children.append(child)
     else:
-        for m in c.members:
-            if m.name.lower().endswith(".zip"):
-                c.defects.append(Defect("nesting-too-deep", c.where.child(member=m.name),
-                                        f"this tool opens {MAX_CONTAINER_LEVELS} container "
-                                        f"levels; this one is deeper"))
+        for m in inner_zips:
+            c.defects.append(Defect("nesting-too-deep", c.where.child(member=m.name),
+                                    f"this tool opens {MAX_CONTAINER_LEVELS} container "
+                                    f"levels; this one is deeper"))
     return c
 
 

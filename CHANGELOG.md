@@ -13,6 +13,18 @@
   holds both apart. `tools/rule_coverage.py` justifies `X0` as "only fires when
   this tool's own installation is broken, which no container can cause"; that
   sentence is true again.
+- **`Z8` knew three of the six ways the reader stops descending.** The guard
+  listed defect kinds and missed the three rejections that drop a `.zip` before
+  the descent loop sees it — an unsafe name, an oversized member, a suspicious
+  compression ratio — so `Z4` or `Z5` named the archive it had refused and `Z8`
+  said on the next line that no document containers were there. It asks
+  `container.rejected` now, which is every member the reader dropped whatever the
+  reason, including reasons added later.
+- **The container budget says how many it did not open.** Stopping at the limit
+  emitted one defect naming one archive and left the remaining siblings
+  unmentioned, so a report of one skipped container was hiding several. The count
+  is in the message, and the counter behind it no longer climbs past the limit it
+  names — it was incrementing on refusals too.
 - **Absent and empty are different wherever the reader flattens a value.** The
   distinction `M5` learned was given to `Description.language` and not to
   `Classification`, so it survived twice over in the class table: an empty

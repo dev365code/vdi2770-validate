@@ -98,11 +98,16 @@ def check(container, declared=frozenset(), is_declared_payload=False) -> Iterato
         # `.zip` member it could not decompress -- in each case `children` is
         # short for reasons that have nothing to do with what the sender packed.
         # Z6 and Z12 already say what happened.
-        stopped = any(
-            d.kind == "container-budget-exhausted"
-            or (d.kind in ("nesting-too-deep", "member-unreadable")
-                and (d.where.member or "").lower().endswith(".zip"))
-            for d in container.defects)
+        # Ask the reader what it dropped rather than listing the reasons: an
+        # earlier version named three defect kinds and missed the three
+        # rejections -- unsafe name, oversized member, suspicious ratio -- that
+        # remove a `.zip` before the descent loop ever sees it. `rejected` holds
+        # every member the reader refused, whatever the reason, including ones
+        # added after this was written.
+        stopped = (
+            any(d.kind in ("nesting-too-deep", "container-budget-exhausted")
+                for d in container.defects)
+            or any(name.lower().endswith(".zip") for name in container.rejected))
         if not container.children and not stopped:
             r = rule("Z8")
             yield Finding(r, r.title, container.where)
