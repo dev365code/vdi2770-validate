@@ -72,6 +72,15 @@ def main() -> int:
             return 1
         want = json.loads(BASELINE.read_text(encoding="utf-8"))
         problems = []
+        # The baseline records how many rules there were and which ones cannot
+        # fire. Comparing only the fired set let both go stale in silence — a
+        # rule could be added, excused, and never noticed by this check.
+        if want.get("rules") != len(all_ids):
+            problems.append(f"the catalogue has {len(all_ids)} rules, the baseline says "
+                            f"{want.get('rules')}")
+        if set(want.get("cannotFire", {})) != set(CANNOT_FIRE):
+            problems.append(f"the excused set moved: baseline {sorted(want.get('cannotFire', {}))} "
+                            f"-> now {sorted(CANNOT_FIRE)}")
         regressed = sorted(set(want["fired"]) - set(fired))
         if regressed:
             problems.append(f"rules that used to fire and no longer do: {regressed}")
