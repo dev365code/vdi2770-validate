@@ -1010,6 +1010,34 @@
         ]
       }
     },
+    "x4-too-deep.zip": {
+      "reference": {
+        "ERROR": [
+          "REP_023",
+          "REP_039"
+        ],
+        "INFO": [
+          "REP_003",
+          "REP_005",
+          "REP_036",
+          "ZU_005"
+        ],
+        "WARN": [
+          "REP_016",
+          "REP_027",
+          "REP_028"
+        ]
+      },
+      "ours": {
+        "error": [
+          "M1",
+          "X4"
+        ],
+        "warning": [
+          "F2"
+        ]
+      }
+    },
     "z1-not-a-zip.zip": {
       "reference": {
         "ERROR": [

@@ -103,6 +103,12 @@ def test_hostile_metadata_produces_a_finding_not_a_traceback(label):
     m[META] = body
     ids, _ = verdict(m)          # must not raise
     assert ids, f"{label}: expected a finding"
+    # "some finding" is not enough: while the schema layer reported a document
+    # it could not finish as a broken installation, this passed on X0 — a
+    # finding that told the reader to reinstall the tool. What hostile input
+    # must produce is a finding about the input.
+    assert ids != {"X0"}, (
+        f"{label}: the only thing reported was our own installation")
 
 
 def test_a_bad_language_on_a_description_is_reported_too():

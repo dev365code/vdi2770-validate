@@ -85,19 +85,26 @@ def test_the_measured_amplification_stays_in_three_figures_of_megabytes():
     assert peak_mb < 200, f"allocated {peak_mb:.0f} MB reading a sub-megabyte file"
 
 
-def test_the_number_of_containers_is_bounded_on_its_own():
+def test_the_number_of_containers_is_bounded_on_its_own(monkeypatch):
     """The two budgets fail independently, and the first version of this file only
     exercised one: 300 inner containers tripped the metadata budget, so removing
     MAX_CONTAINERS entirely changed nothing and the suite stayed green.
 
     Tiny metadata, many containers -- the count is the only thing that can stop it.
-    """
-    from vdi2770.zipread import MAX_CONTAINERS
 
-    data = nest(MAX_CONTAINERS + 200, 50)
+    The limit is monkeypatched down rather than built up to. Sizing the archive
+    from the real constant meant raising that constant made this test *hang*
+    instead of fail, which is a worse answer than either. The size itself is
+    pinned in test_defences.py, where the rest of the budgets are.
+    """
+    from vdi2770 import zipread
+
+    limit = 40
+    monkeypatch.setattr(zipread, "MAX_CONTAINERS", limit)
+    data = nest(limit + 20, 50)
     box = read(data, "many.zip")
     opened = sum(1 for _ in box.walk())
-    assert opened <= MAX_CONTAINERS + 1, f"opened {opened} containers"
+    assert opened == limit + 1, f"opened {opened} containers, root included"
     assert retained(box) < MAX_TOTAL_METADATA_BYTES // 8, (
         "the premise is that the metadata budget is nowhere near engaging")
     kinds = {d.kind for c in box.walk() for d in c.defects}
