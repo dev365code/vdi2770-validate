@@ -16,7 +16,10 @@ def _cmd_check(args) -> int:
     for path in args.paths:
         try:
             rep = check_file(path)
-        except OSError as e:
+        except Exception as e:              # noqa: BLE001
+            # One bad path must not stop the rest, and the reader is not the
+            # only thing that can raise on hostile input. Anything unexpected
+            # is this tool's failure to read that file, not a verdict on it.
             # One bad path must not stop the rest: a CI job sweeping a supplier
             # drop folder would silently skip everything after the first dud.
             print(f"{path}: cannot read it — {e.strerror or e}", file=sys.stderr)

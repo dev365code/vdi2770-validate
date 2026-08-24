@@ -67,5 +67,7 @@ ignore = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests", "packages/vdi2770/tests"]
-pythonpath = ["src", "packages/vdi2770/src"]
+# `packages/vdi2770/tests` too: `nodisk.py` lives with the package whose
+# promise it guards, and both suites import the one copy.
+pythonpath = ["src", "packages/vdi2770/src", "packages/vdi2770/tests"]
 addopts = "-q"

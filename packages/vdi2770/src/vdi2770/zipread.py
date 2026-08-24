@@ -186,7 +186,13 @@ def read(data: bytes, path: str, depth: int = 0, _budget: Optional[_Budget] = No
     c = Container(path=path, depth=depth)
     try:
         zf = zipfile.ZipFile(io.BytesIO(data))
-    except zipfile.BadZipFile as e:
+    except Exception as e:                       # noqa: BLE001
+        # Not just BadZipFile. `_RealGetContents` raises UnicodeDecodeError when
+        # a name is flagged UTF-8 and is not — an ordinary mislabelling by older
+        # Windows writers — and NotImplementedError for a "version needed to
+        # extract" it does not know. Both escaped as a stack trace naming CPython
+        # internals, from a hand-written 119-byte file, and took the rest of a
+        # sweep with them. "Not a readable ZIP archive" is exactly what this is.
         c.kind = Kind.UNREADABLE
         c.defects.append(Defect("not-a-zip", c.where, str(e)))
         return c
@@ -290,8 +296,9 @@ def read(data: bytes, path: str, depth: int = 0, _budget: Optional[_Budget] = No
         for i, m in enumerate(inner_zips):
             try:
                 inner = zf.read(m.name)
-            except (RuntimeError, zipfile.BadZipFile) as e:
-                c.defects.append(Defect("member-unreadable", c.where.child(member=m.name), str(e)))
+            except Exception as e:               # noqa: BLE001 - see read()
+                c.defects.append(Defect("member-unreadable", c.where.child(member=m.name),
+                                        f"{type(e).__name__}: {e}"))
                 continue
             if not budget.take_container():
                 # Say how many, not just where it stopped. Breaking with one

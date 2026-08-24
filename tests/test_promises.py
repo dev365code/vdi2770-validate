@@ -5,7 +5,6 @@ every time: the reader could be made to write every member to disk, the tool
 could open a socket, the PDF/A wording could be turned into a lie, and severities
 could be flipped — all without a single test failing. These are those tests.
 """
-import builtins
 import socket
 
 import pytest
@@ -18,19 +17,24 @@ from vdi2770_validate.runner import check_file
 
 
 def test_nothing_is_written_to_disk(monkeypatch, tmp_path):
-    """README: "Nothing is extracted to disk". Nothing asserted it."""
-    real_open = builtins.open
-    writes = []
+    """README, SECURITY.md and both package READMEs: nothing is extracted to disk.
 
-    def watched(file, mode="r", *a, **k):
-        if any(ch in str(mode) for ch in ("w", "a", "x", "+")):
-            writes.append(str(file))
-        return real_open(file, mode, *a, **k)
+    This watched `builtins.open`. `io.open` is a second name bound to the same
+    function, so a reader using it wrote sixty-four bytes for every container it
+    read and the entire suite stayed green — a headline promise with a guard that
+    could be stepped around by spelling. `sys.addaudithook` sees the `open` event
+    whichever name reached it, and the `os.*` events that move bytes without
+    opening anything at all.
+    """
+    from nodisk import hook_is_working, no_disk_writes
 
-    monkeypatch.setattr(builtins, "open", watched)
-    check_file(str(CLEAN_DOCUMENTATION))
-    monkeypatch.undo()
-    assert not writes, f"the tool opened these for writing: {writes}"
+    assert hook_is_working(), "the watcher cannot see a write; it is proving nothing"
+
+    monkeypatch.chdir(tmp_path)
+    with no_disk_writes():
+        check_file(str(CLEAN_DOCUMENTATION))
+        check_file(str(FIXTURES / "z12-unreadable-member.zip"))
+    assert not list(tmp_path.iterdir()), f"left behind: {list(tmp_path.iterdir())}"
 
 
 def test_no_socket_is_even_attempted(monkeypatch):

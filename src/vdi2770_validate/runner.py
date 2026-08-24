@@ -44,14 +44,30 @@ def check_bytes(data: bytes, name: str) -> Report:
     # input with two hundred inner containers held 1.6 GB, which is the same
     # amplification the reader's tree budget was added to bound, reached through
     # a door the budget does not watch.
+    # One entry per level, not one per container, and written for *every*
+    # container before anything can skip it. `walk()` is pre-order, so the entry
+    # at d-1 is this container's parent -- but only if nothing at that depth was
+    # skipped in between. An earlier version published these after two `continue`
+    # statements, so a container with no metadata never wrote its own bytes and
+    # its children read whichever sibling subtree had been there before: the tool
+    # printed a PDF/A claim for a text file, having read a different member of a
+    # different archive. Publish first, decide later.
     raw_at_depth = {0: data}
-
-    # walk() is pre-order, so a container's parent has always been through this
-    # loop before the container itself. That is what lets a rule ask "did my
-    # parent's metadata declare me as a file?" without a second pass.
-    declared_by_path = {}
+    declared_at_depth = {}
 
     for c in root.walk():
+        if c.depth == 0:
+            raw = data
+        else:
+            parent_raw = raw_at_depth.get(c.depth - 1)
+            # `member_name` comes from the reader. Reconstructing it by splitting
+            # the path on the JAR separator got the wrong parent for a member
+            # whose own name contains one, which was a way to have `Z3`
+            # suppressed on an archive nobody declared.
+            raw = (zipread.member_bytes(parent_raw, c.member_name)
+                   if parent_raw is not None and c.member_name else None)
+        raw_at_depth[c.depth] = raw
+
         parse_error = None
         tree = None
         document = None
@@ -65,11 +81,10 @@ def check_bytes(data: bytes, name: str) -> Report:
 
         declared = frozenset(nfc(f.file_name) for f in document.all_files
                              if f.file_name) if document else frozenset()
-        declared_by_path[c.path] = declared
+        declared_at_depth[c.depth] = declared
 
-        parent_path, _, member = c.path.rpartition("!/")
-        is_payload = bool(parent_path) and nfc(member) in declared_by_path.get(
-            parent_path, frozenset())
+        is_payload = bool(c.member_name) and nfc(c.member_name) in declared_at_depth.get(
+            c.depth - 1, frozenset())
 
         for f in r_container.check(c, declared=declared, is_declared_payload=is_payload):
             report.add(f)
@@ -90,13 +105,6 @@ def check_bytes(data: bytes, name: str) -> Report:
         for f in r_metadata.check(c, document, is_main):
             report.add(f)
 
-        if c.depth == 0:
-            raw = data
-        else:
-            parent_raw = raw_at_depth.get(c.depth - 1)
-            raw = (zipread.member_bytes(parent_raw, c.member_name)
-                   if parent_raw is not None and c.member_name else None)
-        raw_at_depth[c.depth] = raw
         if raw is not None:
             for f in r_pdf.check(c, document, _facts_for(raw, set(c.file_names))):
                 report.add(f)

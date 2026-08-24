@@ -143,7 +143,15 @@ def test_reading_from_a_path_names_the_container_by_its_basename():
 def test_nothing_is_written_to_disk(tmp_path, monkeypatch):
     """Both entry points, because the one the README recommends is the one that
     opens a file, and a mutation that made it write survived when this test
-    only exercised the other."""
+    only exercised the other.
+
+    Watched at the interpreter's audit boundary rather than by replacing
+    `builtins.open`: `io.open` is a second name for the same function, and a
+    reader using it wrote sixty-four bytes per container while this passed.
+    """
+    from nodisk import hook_is_working, no_disk_writes
+
+    assert hook_is_working(), "the watcher cannot see a write; it is proving nothing"
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w") as z:
         z.writestr("VDI2770_Metadata.xml", META)
@@ -155,19 +163,14 @@ def test_nothing_is_written_to_disk(tmp_path, monkeypatch):
     work = tmp_path / "work"
     work.mkdir()
     monkeypatch.chdir(work)
-    real_open = open
 
-    def no_writing(f, mode="r", *a, **kw):
-        assert not set(mode) & set("wa+x"), f"the library opened {f} for writing"
-        return real_open(f, mode, *a, **kw)
-
-    monkeypatch.setattr("builtins.open", no_writing)
-    for box in (vdi2770.read_container(buf.getvalue(), "doc.zip"),
-                vdi2770.read_container_file(str(on_disk))):
-        vdi2770.build_document(vdi2770.parse_xml(box.metadata_bytes), box.where)
-        for _ in box.walk():
-            pass
-        vdi2770.read_pdf(vdi2770.member_bytes(buf.getvalue(), "a.pdf") or b"")
+    with no_disk_writes():
+        for box in (vdi2770.read_container(buf.getvalue(), "doc.zip"),
+                    vdi2770.read_container_file(str(on_disk))):
+            vdi2770.build_document(vdi2770.parse_xml(box.metadata_bytes), box.where)
+            for _ in box.walk():
+                pass
+            vdi2770.read_pdf(vdi2770.member_bytes(buf.getvalue(), "a.pdf") or b"")
     assert not list(work.iterdir()), f"the library left {list(work.iterdir())} behind"
 
 

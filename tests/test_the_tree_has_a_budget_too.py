@@ -109,3 +109,50 @@ def test_the_number_of_containers_is_bounded_on_its_own(monkeypatch):
         "the premise is that the metadata budget is nowhere near engaging")
     kinds = {d.kind for c in box.walk() for d in c.defects}
     assert "container-budget-exhausted" in kinds, f"stopped silently: {kinds}"
+
+
+def test_the_runner_holds_one_buffer_per_level_not_one_per_container(tmp_path):
+    """The reader's tree budget bounds what the *reader* holds. The runner then
+    kept every container's decompressed bytes in a dict keyed by path and never
+    dropped one — a 2 MB input reached 2,199 MB, the same amplification through a
+    door the budget does not watch.
+
+    That was fixed in 0.5.1 and nothing tested it: this file measures
+    `zipread.read` and never calls `check_bytes`, so reintroducing the dict left
+    the whole suite green. The comment in runner.py describing the blow-up was
+    the only thing standing between here and there.
+    """
+    import tracemalloc
+    import zipfile
+
+    from conftest import CLEAN_DOCUMENT, CLEAN_DOCUMENTATION
+    from vdi2770_validate.runner import check_bytes
+
+    docn = zipfile.ZipFile(CLEAN_DOCUMENTATION)
+    leaf = io.BytesIO()
+    with zipfile.ZipFile(leaf, "w", zipfile.ZIP_STORED) as z:   # stored: the leaf really is 4 MiB
+        z.writestr("VDI2770_Metadata.xml", zipfile.ZipFile(CLEAN_DOCUMENT).read("VDI2770_Metadata.xml"))
+        z.writestr("big.bin", b"\0" * (4 * 1024 * 1024))
+    leaf = leaf.getvalue()
+
+    outer = io.BytesIO()
+    with zipfile.ZipFile(outer, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr("VDI2770_Main.xml", docn.read("VDI2770_Main.xml"))
+        z.writestr("VDI2770_Main.pdf", docn.read("VDI2770_Main.pdf"))
+        for i in range(60):
+            z.writestr(f"d{i:03d}.zip", leaf)
+    data = outer.getvalue()
+
+    held = 60 * len(leaf) / (1024 * 1024)
+    assert held > 200, f"the premise is a tree far bigger than one level of it ({held:.0f} MB)"
+
+    tracemalloc.start()
+    try:
+        check_bytes(data, "amp.zip")
+        peak_mb = tracemalloc.get_traced_memory()[1] / (1024 * 1024)
+    finally:
+        tracemalloc.stop()
+
+    assert peak_mb < 60, (
+        f"allocated {peak_mb:.0f} MB walking a tree whose members total {held:.0f} MB; "
+        f"one buffer per level would be about {len(leaf) / 1024 / 1024:.0f}")

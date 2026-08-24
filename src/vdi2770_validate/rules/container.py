@@ -8,6 +8,9 @@ from ..catalog import rule
 from ..model import MAIN_PDF, Finding, Kind
 from ..names import nfc
 
+MAX_FOLDER_DEPTH = 32     # levels derived from one member's path
+MAX_FOLDERS = 256         # distinct folders named in one container
+
 DEFECT_TO_RULE = {
     "not-a-zip": "Z1",
     "too-many-members": "Z5",
@@ -69,14 +72,28 @@ def check(container, declared=frozenset(), is_declared_payload=False) -> Iterato
     # than on the archive's shape. A folder exists if a member sits in one.
     folders = set()
     for m in container.members:
+        if len(folders) >= MAX_FOLDERS:
+            break
         if m.is_dir:
             folders.add(m.name if m.name.endswith("/") else m.name + "/")
         # Every folder on the path, not just the last one: `a/b/x.pdf` puts the
         # file in `a/b/` and also in `a/`, and a rule that reports one of them
         # calls a two-level layout "1 folder".
-        parts = m.name.rstrip("/").split("/")[:-1]
-        for depth in range(1, len(parts) + 1):
-            folders.add("/".join(parts[:depth]) + "/")
+        #
+        # Built by growing one string, and bounded twice. Re-joining the prefix
+        # from scratch at each depth is quadratic in the name's length, and a ZIP
+        # filename field is sixteen bits: one member named `p0/` thirty-two
+        # thousand times cost 1.2 GB. Neither cap changes what a real archive
+        # reports -- a hundred distinct folders is already a strange delivery, and
+        # the finding names five of them.
+        prefix = ""
+        for part in m.name.rstrip("/").split("/")[:-1][:MAX_FOLDER_DEPTH]:
+            prefix += part + "/"
+            folders.add(prefix)
+            if len(folders) >= MAX_FOLDERS:
+                break
+        if len(folders) >= MAX_FOLDERS:
+            break
     if folders:
         r = rule("Z9")
         named = sorted(folders)
