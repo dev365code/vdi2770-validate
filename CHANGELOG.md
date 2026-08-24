@@ -33,6 +33,13 @@ Working through the seven defects the audits left open, one at a time.
   documentation container only — inside a document container it is just a file
   with a confusing name, and inventing a requirement there would be worse than
   the gap.
+- **A refusal to look is no longer reported as an absence.** `Z8` said a
+  documentation container held no document containers while `Z6`, one line above,
+  named the one it had found inside it. `Z8` tested for absent children, and the
+  reader stops populating them at three levels, at the tree's container budget,
+  and for a `.zip` member it could not decompress. It stays quiet in those three
+  cases, where `Z6` and `Z12` already say what happened, and a container that
+  genuinely holds nothing is still reported.
 - **A folder is a folder whether or not the ZIP says so.** `Z9` tested
   `ZipInfo.is_dir()`, which is a trailing slash on a member name, and directory
   entries are optional in the format — so whether the rule fired depended on

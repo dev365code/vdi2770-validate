@@ -92,6 +92,16 @@ def check(container, declared=frozenset(), is_declared_payload=False) -> Iterato
         if MAIN_PDF not in container.file_names:
             r = rule("Z7")
             yield Finding(r, r.title, container.where)
-        if not container.children:
+        # A refusal to look is not an absence. The reader stops descending at
+        # MAX_CONTAINER_LEVELS and at the tree's container budget, and it drops a
+        # `.zip` member it could not decompress -- in each case `children` is
+        # short for reasons that have nothing to do with what the sender packed.
+        # Z6 and Z12 already say what happened.
+        stopped = any(
+            d.kind == "container-budget-exhausted"
+            or (d.kind in ("nesting-too-deep", "member-unreadable")
+                and (d.where.member or "").lower().endswith(".zip"))
+            for d in container.defects)
+        if not container.children and not stopped:
             r = rule("Z8")
             yield Finding(r, r.title, container.where)
