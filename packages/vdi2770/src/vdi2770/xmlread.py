@@ -53,6 +53,17 @@ class Node:
         n = self.find(tag)
         return n.text.strip() if n else ""
 
+    def child_text(self, tag: str) -> Optional[str]:
+        """Like `text_of`, but None when the element is absent rather than "".
+
+        A caller that cannot tell those apart cannot tell "this value is wrong"
+        from "there is no value", and will report the first when it means the
+        second -- or, worse, treat a required-but-empty element as nothing to
+        say, which is how an empty ClassId passed with no finding at all.
+        """
+        n = self.find(tag)
+        return n.text.strip() if n else None
+
 
 def parse(data: bytes) -> Node:
     """Parse VDI 2770 metadata bytes. Raises XmlError with a line number."""

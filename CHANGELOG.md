@@ -13,6 +13,14 @@
   holds both apart. `tools/rule_coverage.py` justifies `X0` as "only fires when
   this tool's own installation is broken, which no container can cause"; that
   sentence is true again.
+- **Absent and empty are different wherever the reader flattens a value.** The
+  distinction `M5` learned was given to `Description.language` and not to
+  `Classification`, so it survived twice over in the class table: an empty
+  `<ClassId></ClassId>` — which the schema accepts, the element being required and
+  typed `xs:string` — switched `M2` off entirely and nothing said a word, while a
+  `ClassName` carrying no `Language` attribute at all produced `M8` *and* `X2` for
+  one defect. `Node.child_text` returns `None` for an absent element now, and the
+  class table carries the distinction the way the descriptions already did.
 - **Two Unicode spellings of one name are two files.** Reconciling NFD and NFC
   was right; doing it by mapping every member onto its canonical spelling was
   not. An archive holding both spellings kept whichever came last, so a valid

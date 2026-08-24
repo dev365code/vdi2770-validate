@@ -49,10 +49,12 @@ def check(container, document, is_main: bool) -> Iterator[Finding]:
 
     known = document_classes()
     for c in vdi:
-        if not c.class_id:
+        if c.class_id is None:
             # The element is absent, not wrong. M2's remedy is "use one of these
             # twelve values", which is no help when there is nothing to correct;
             # the schema layer reports the missing element, and it is right.
+            # An element that is present and empty is a different matter: the
+            # schema accepts it, so if we say nothing then nobody does.
             continue
         if c.class_id not in known:
             r = rule("M2")
@@ -63,6 +65,8 @@ def check(container, document, is_main: bool) -> Iterator[Finding]:
         want_de = german_for(c.class_id)
         want_en = english_for(c.class_id)
         for lang, text in c.names:
+            if lang is None:
+                continue          # no Language attribute at all; X2 says so
             low = lang.strip().lower()
             if low.startswith("de"):
                 if text not in want_de:

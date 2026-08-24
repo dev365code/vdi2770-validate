@@ -14,9 +14,13 @@ from .xmlread import Node
 
 @dataclass(frozen=True)
 class Classification:
-    class_id: str
+    # None when the element is absent, "" when present and empty. The schema
+    # requires the element and types it `xs:string`, so an empty one is a
+    # document the schema accepts and only a rule can object to.
+    class_id: Optional[str]
     system: str
-    names: Tuple[Tuple[str, str], ...]   # (language, text)
+    names: Tuple[Tuple[Optional[str], str], ...]   # (language, text); language
+    # is None when the attribute is absent -- see class_id above for why
     src: Location = Location()
 
 
@@ -93,10 +97,11 @@ def build(root: Node, base: Location) -> Document:
     classifications = []
     for c in root.find_all("DocumentClassification"):
         names = tuple(
-            (nm.attrib.get("Language", "").strip(), nm.text.strip())
+            (None if "Language" not in nm.attrib else nm.attrib["Language"].strip(),
+             nm.text.strip())
             for nm in c.find_all("ClassName")
         )
-        cid = c.text_of("ClassId")
+        cid = c.child_text("ClassId")
         classifications.append(Classification(
             class_id=cid,
             system=c.attrib.get("ClassificationSystem", "").strip(),
