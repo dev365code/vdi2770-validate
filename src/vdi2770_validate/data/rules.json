@@ -233,6 +233,20 @@
       ]
     },
     {
+      "id": "M10",
+      "layer": "metadata",
+      "severity": "error",
+      "obligation": "reference",
+      "title": "A document identifier is empty",
+      "remedy": "Give the DocumentId element the identifier as its text. An empty identifier names nothing, and the recipient has no way to refer to this document.",
+      "refKeys": [
+        "core:DocumentId_VAL2"
+      ],
+      "refCodes": [
+        "DI_002"
+      ]
+    },
+    {
       "id": "M2",
       "layer": "metadata",
       "severity": "error",
@@ -329,6 +343,17 @@
       "title": "A class name carries no language this tool can check",
       "whyOurs": "We check German and English class names against the published table. A name tagged with neither — or with nothing at all — is not wrong, but it is unchecked, and silently unchecked is how an empty attribute turns the check off.",
       "remedy": "Tag the class name with the language it is written in — de or en if you want it checked against the published table.",
+      "refKeys": [],
+      "refCodes": []
+    },
+    {
+      "id": "M9",
+      "layer": "metadata",
+      "severity": "warning",
+      "obligation": "ours",
+      "title": "The document declares the same identifier twice",
+      "whyOurs": "The reference implementation checks that exactly one identifier is primary; it does not check for repeats. Two identical identifiers are either a copy-paste or a merge that went wrong, and either way the recipient's system will store one of them and lose the other.",
+      "remedy": "Remove the repeated DocumentId, or correct it if two different identifiers were intended.",
       "refKeys": [],
       "refCodes": []
     },

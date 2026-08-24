@@ -103,3 +103,37 @@ def test_hostile_metadata_produces_a_finding_not_a_traceback(label):
     m[META] = body
     ids, _ = verdict(m)          # must not raise
     assert ids, f"{label}: expected a finding"
+
+
+def test_a_bad_language_on_a_description_is_reported_too():
+    """M5 was only ever exercised through DocumentVersion/Language; the
+    DocumentDescription branch had no coverage."""
+    ids, _ = verdict(edited('<DocumentDescription Language="de">',
+                            '<DocumentDescription Language="deutsch">'))
+    assert "M5" in ids, f"a bad description language went unreported: {sorted(ids)}"
+
+
+def test_a_schema_error_whose_path_we_cannot_resolve_still_reports():
+    """xsdvalidate walks the reported XPath through our own tree to recover a
+    line number. When that walk fails the finding must survive without one."""
+    from vdi2770_validate.readers import xmlread, xsdvalidate
+    tree = xmlread.parse(b'<Document xmlns="http://www.vdi.de/schemas/vdi2770"/>')
+    bad = BASE[META].replace(b"<ClassId>", b"<NotAThing>").replace(b"</ClassId>", b"</NotAThing>")
+    errors = xsdvalidate.validate(bad, tree)
+    assert errors, "expected the schema to complain"
+    assert all("reason" in e for e in errors)
+
+
+def test_a_repeated_document_identifier_is_reported():
+    """The model parsed DocumentId and no rule read it, so a document could
+    identify itself twice with the same value and nothing said anything."""
+    ids, _ = verdict(edited(
+        '<DocumentId DomainId="BSP-OEM">data-sheet-br-01-26</DocumentId>',
+        '<DocumentId DomainId="BSP-OEM">ts-ddd-234</DocumentId>'))
+    assert "M9" in ids, f"the duplicate identifier went unreported: {sorted(ids)}"
+
+
+def test_an_empty_document_identifier_is_reported():
+    ids, _ = verdict(edited('<DocumentId DomainId="BSP-OEM" IsPrimary="true">ts-ddd-234</DocumentId>',
+                            '<DocumentId DomainId="BSP-OEM" IsPrimary="true"></DocumentId>'))
+    assert "M10" in ids, f"the empty identifier went unreported: {sorted(ids)}"

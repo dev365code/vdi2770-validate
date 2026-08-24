@@ -5,7 +5,7 @@
 First working version. Nothing has been released yet.
 
 - Reads VDI 2770 document and documentation containers without extracting them.
-- 30 rules across five layers — container shape, schema conformance, declared
+- 32 rules across five layers — container shape, schema conformance, declared
   files versus actual members, metadata model, and PDF claims — each with a
   remedy sentence and each traceable to the schema VDI publishes free, to a
   freely published table, to container mechanics, or to a stated judgement of

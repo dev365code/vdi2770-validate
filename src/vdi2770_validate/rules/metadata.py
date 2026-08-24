@@ -15,11 +15,28 @@ RELEASED = "Released"
 
 
 def _iso_ok(code: str) -> bool:
+    """ISO 639 codes are ASCII letters. `str.isalpha()` is not — it accepts
+    Cyrillic and Hangul, so `ДЕЮ` used to pass as a three-letter code."""
     c = code.strip().lower()
-    return c in ISO_639_1 or (len(c) == 3 and c.isalpha())
+    if c in ISO_639_1:
+        return True
+    return len(c) == 3 and all("a" <= ch <= "z" for ch in c)
 
 
 def check(container, document, is_main: bool) -> Iterator[Finding]:
+    where = document.src.child(container=container.path, member=container.metadata_name)
+
+    seen = set()
+    for doc_id in document.ids:
+        if not doc_id:
+            r = rule("M10")
+            yield Finding(r, r.title, where)
+        elif doc_id in seen:
+            r = rule("M9")
+            yield Finding(r, r.title, where.child(subject=doc_id),
+                          detail=f"{doc_id!r} appears more than once")
+        seen.add(doc_id)
+
     vdi = [c for c in document.classifications if c.system == CLASSIFICATION_SYSTEM]
     if not vdi:
         r = rule("M1")

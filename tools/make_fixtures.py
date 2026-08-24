@@ -201,6 +201,19 @@ def main() -> int:
     add("z11-container-in-document.zip", f, "Z11", ["stowaway.zip"],
         "a document container carrying another container")
 
+    # M9 — the same identifier twice
+    f = dict(base)
+    f[META] = edit(base[META], '<DocumentId DomainId="BSP-OEM">data-sheet-br-01-26</DocumentId>',
+                   '<DocumentId DomainId="BSP-OEM">ts-ddd-234</DocumentId>')
+    add("m9-repeated-document-id.zip", f, "M9", [META], "the second DocumentId set to the first")
+
+    # M10 — an identifier that names nothing
+    f = dict(base)
+    f[META] = edit(base[META],
+                   '<DocumentId DomainId="BSP-OEM" IsPrimary="true">ts-ddd-234</DocumentId>',
+                   '<DocumentId DomainId="BSP-OEM" IsPrimary="true"></DocumentId>')
+    add("m10-empty-document-id.zip", f, "M10", [META], "the primary DocumentId emptied")
+
     # P3 — a PDF that makes no PDF/A claim
     f = dict(base)
     f["B.pdf"] = (CORPUS / "pdf" / "scan.pdf").read_bytes()

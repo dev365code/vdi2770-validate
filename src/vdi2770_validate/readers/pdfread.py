@@ -21,6 +21,17 @@ _PART_AT = re.compile(rb"pdfaid[:\s]*part\s*[=>]\s*[\"']?(\d)", re.I)
 _CONF_AT = re.compile(rb"pdfaid[:\s]*conformance\s*[=>]\s*[\"']?([ABUabu])", re.I)
 _STREAM = re.compile(rb"stream\r?\n")
 
+# A PDF/A identification lives in the XMP metadata. Matching the words anywhere
+# in the file means a comment can silence P3, which is an error-severity rule.
+_XMP = re.compile(rb"<\?xpacket\s+begin.*?<\?xpacket\s+end.*?\?>"
+                  rb"|<x:xmpmeta[\s>].*?</x:xmpmeta>"
+                  rb"|<rdf:RDF[\s>].*?</rdf:RDF>", re.I | re.S)
+
+# The trailer references the encryption dictionary indirectly — that is what the
+# format requires. `/Encrypt` on its own appears in comments, content streams and
+# field names, and used to be reported as an error.
+_ENCRYPT_REF = re.compile(rb"/Encrypt\s+\d+\s+\d+\s+R")
+
 MAX_STREAM_SCAN = 400_000        # compressed bytes read after each stream marker
 MAX_INFLATED_PER_STREAM = 4_000_000   # and what we will let one of them become
 MAX_STREAMS = 512                     # zlib is cheap per call; a million calls are not
@@ -61,13 +72,17 @@ def read(data: bytes) -> PdfFacts:
     if not data.startswith(b"%PDF-"):
         return PdfFacts(is_pdf=False)
     header = data[:8].decode("latin-1", "replace")
-    encrypted = b"/Encrypt" in data
+    encrypted = _ENCRYPT_REF.search(data) is not None
     claim = None
     for hay in _haystacks(data):
-        part = _PART_EL.search(hay) or _PART_AT.search(hay)
-        if not part:
-            continue
-        conf = _CONF_EL.search(hay) or _CONF_AT.search(hay)
-        claim = part.group(1).decode() + (conf.group(1).decode().lower() if conf else "?")
-        break
+        for packet in _XMP.finditer(hay):
+            xmp = packet.group(0)
+            part = _PART_EL.search(xmp) or _PART_AT.search(xmp)
+            if not part:
+                continue
+            conf = _CONF_EL.search(xmp) or _CONF_AT.search(xmp)
+            claim = part.group(1).decode() + (conf.group(1).decode().lower() if conf else "?")
+            break
+        if claim:
+            break
     return PdfFacts(is_pdf=True, header=header, encrypted=encrypted, pdfa_claim=claim)

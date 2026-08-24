@@ -43,13 +43,16 @@ failure — files that never claimed at all.
 - **Media types**: extension agreement is checked for `application/pdf` and
   `application/zip` only. We do not sniff file contents to confirm a declared type,
   except for PDFs.
-- **Encryption detection is a heuristic**: `P2` reports a PDF as encrypted when the
-  bytes contain `/Encrypt`. That is a strong signal, not a parse, and it can be
-  wrong in both directions.
-- **A PDF/A claim can be missed**: the XMP packet is found by scanning bytes and
-  inflating the first stretch after each stream marker. A claim stored unusually far
-  in, or in a way this scan does not reach, produces `P3` — "makes no PDF/A claim" —
-  on a file that does make one.
+- **Encryption is detected by pattern, not by parsing**: `P2` looks for the indirect
+  reference the format requires the trailer to use (`/Encrypt 12 0 R`). That does not
+  fire on the word appearing in a comment or a content stream, but it is still a
+  pattern match rather than a parse of the trailer, so a very unusual file could
+  fool it either way.
+- **A PDF/A claim can be missed**: the claim is read from XMP packets found by
+  scanning bytes and inflating a bounded stretch after each stream marker. A claim
+  stored beyond what that scan reaches produces `P3` — "makes no PDF/A claim" — on a
+  file that does make one. It cannot be *faked* by writing the words outside an XMP
+  packet; that was possible once and is tested against now.
 - **The guideline text**: VDI 2770 Blatt 1:2020-04 is sold by DIN Media. It was not
   read. Every rule here names its source in `rules.json`: the free schema, a freely
   published table, ZIP and XML mechanics, the MIT reference implementation, or a
