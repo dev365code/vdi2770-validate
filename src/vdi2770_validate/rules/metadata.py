@@ -24,18 +24,22 @@ def _iso_ok(code: str) -> bool:
 
 
 def check(container, document, is_main: bool) -> Iterator[Finding]:
-    where = document.src.child(container=container.path, member=container.metadata_name)
-
+    # An identifier is (domain, value): the schema makes DomainId required, and
+    # the same drawing number registered by an OEM and by its supplier is two
+    # identifiers, not one repeated. Comparing the text alone told people to
+    # delete one of them.
     seen = set()
-    for doc_id in document.ids:
-        if not doc_id:
+    for ident in document.identifiers:
+        at = ident.src.child(container=container.path, member=container.metadata_name)
+        if not ident.id:
             r = rule("M10")
-            yield Finding(r, r.title, where)
-        elif doc_id in seen:
+            yield Finding(r, r.title, at)
+        elif (ident.domain_id, ident.id) in seen:
             r = rule("M9")
-            yield Finding(r, r.title, where.child(subject=doc_id),
-                          detail=f"{doc_id!r} appears more than once")
-        seen.add(doc_id)
+            yield Finding(r, r.title, at.child(subject=ident.id),
+                          detail=f"{ident.id!r} appears more than once "
+                                 f"in domain {ident.domain_id!r}")
+        seen.add((ident.domain_id, ident.id))
 
     vdi = [c for c in document.classifications if c.system == CLASSIFICATION_SYSTEM]
     if not vdi:

@@ -351,9 +351,9 @@
       "layer": "metadata",
       "severity": "warning",
       "obligation": "ours",
-      "title": "The document declares the same identifier twice",
-      "whyOurs": "The reference implementation checks that exactly one identifier is primary; it does not check for repeats. Two identical identifiers are either a copy-paste or a merge that went wrong, and either way the recipient's system will store one of them and lose the other.",
-      "remedy": "Remove the repeated DocumentId, or correct it if two different identifiers were intended.",
+      "title": "The document declares the same identifier twice in one domain",
+      "whyOurs": "The reference implementation checks that exactly one identifier is primary; it does not check for repeats. Two identifiers that agree on both domain and value are a copy-paste or a merge that went wrong, and the recipient's system will store one and lose the other.",
+      "remedy": "Remove the repeated DocumentId, or correct it if two different identifiers were intended. Two DocumentIds carrying the same text under different DomainIds are fine — that is two registrations of one document, not a repeat.",
       "refKeys": [],
       "refCodes": []
     },

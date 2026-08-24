@@ -45,11 +45,31 @@ class DocumentVersion:
 
 
 @dataclass(frozen=True)
+class DocumentId:
+    """An identifier and the domain that issued it.
+
+    The schema makes `DomainId` required, so an identifier is the pair. The same
+    drawing number registered by an OEM and by its supplier is two identifiers,
+    not one repeated -- a caller comparing the text alone will conclude otherwise.
+    """
+
+    domain_id: str
+    id: str
+    src: Location = Location()
+
+
+@dataclass(frozen=True)
 class Document:
-    ids: Tuple[str, ...]
+    identifiers: Tuple[DocumentId, ...]
     classifications: Tuple[Classification, ...]
     versions: Tuple[DocumentVersion, ...]
     src: Location = Location()
+
+    @property
+    def ids(self) -> Tuple[str, ...]:
+        """Just the identifier strings, without their domains. Convenient, and
+        wrong to compare for equality -- see DocumentId."""
+        return tuple(i.id for i in self.identifiers)
 
     @property
     def all_files(self) -> Tuple[DigitalFile, ...]:
@@ -61,7 +81,11 @@ def _loc(base: Location, n: Node, subject: Optional[str] = None) -> Location:
 
 
 def build(root: Node, base: Location) -> Document:
-    ids = tuple(n.text.strip() for n in root.find_all("DocumentId"))
+    identifiers = tuple(
+        DocumentId(domain_id=n.attrib.get("DomainId", "").strip(),
+                   id=n.text.strip(),
+                   src=_loc(base, n, n.text.strip() or None))
+        for n in root.find_all("DocumentId"))
 
     classifications = []
     for c in root.find_all("DocumentClassification"):
@@ -106,5 +130,5 @@ def build(root: Node, base: Location) -> Document:
             src=_loc(base, v, v.text_of("DocumentVersionId") or None),
         ))
 
-    return Document(ids=ids, classifications=tuple(classifications),
+    return Document(identifiers=identifiers, classifications=tuple(classifications),
                     versions=tuple(versions), src=_loc(base, root))

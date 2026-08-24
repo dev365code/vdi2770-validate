@@ -112,3 +112,30 @@ def test_make_check_depends_on_every_gate():
     assert not missing, (
         f"`make check` does not run: {missing}. Either add them, or add them to the "
         f"exemption above with a reason.")
+
+
+def test_the_sdk_in_this_repository_satisfies_the_pin_that_depends_on_it():
+    """Two packages in one repository, and the second declares a version range
+    for the first. Nothing checked that the copy sitting right here satisfies it.
+
+    It cost a broken install already: bumping the reader to `0.3.0.dev0` while the
+    validator asked for `vdi2770~=0.3.0` sent pip to PyPI, because a pre-release
+    does not satisfy a compatible-release specifier. Locally and in CI the reader
+    is installed from the working tree, so the pin has to accept what is there.
+    """
+    from packaging.requirements import Requirement
+    from packaging.version import Version
+
+    pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    deps = re.search(r"^dependencies = \[(.*?)\]", pyproject, re.M | re.S)
+    assert deps, "the validator declares no dependencies"
+    pin = next((Requirement(m) for m in re.findall(r'"([^"]+)"', deps.group(1))
+                if Requirement(m).name == "vdi2770"), None)
+    assert pin is not None, "the validator no longer depends on the reader"
+
+    sdk = (ROOT / "packages" / "vdi2770" / "pyproject.toml").read_text(encoding="utf-8")
+    here = Version(re.search(r'^version = "([^"]+)"', sdk, re.M).group(1))
+
+    assert pin.specifier.contains(here, prereleases=here.is_prerelease), (
+        f"the reader in this repository is {here} and the validator asks for "
+        f"{pin}. `pip install -e .` will go to PyPI and fail.")

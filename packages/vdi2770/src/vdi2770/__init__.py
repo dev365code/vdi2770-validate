@@ -36,6 +36,7 @@ from .domain import (
     Description,
     DigitalFile,
     Document,
+    DocumentId,
     DocumentVersion,
 )
 from .domain import build as build_document
@@ -56,11 +57,12 @@ from .zipread import (
 from .zipread import read as read_container
 from .zipread import read_file as read_container_file
 
-__version__ = "0.2.1"
+__version__ = "0.3.0"
 
 __all__ = [
     "Classification", "Container", "Defect", "Description", "DigitalFile",
-    "Document", "DocumentVersion", "Kind", "Location", "MAIN_PDF", "MAIN_XML",
+    "Document", "DocumentId", "DocumentVersion", "Kind", "Location", "MAIN_PDF",
+    "MAIN_XML",
     "METADATA_XML", "Member", "NS", "Node", "PdfFacts", "UnsafeXml", "XmlError",
     "build_document", "member_bytes", "parse_xml", "read_container",
     "read_container_file", "read_pdf", "__version__",
