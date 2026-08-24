@@ -7,7 +7,8 @@ from typing import Optional
 from vdi2770 import pdfread, xmlread, zipread
 from vdi2770.domain import build
 
-from .model import Report, nfc
+from .model import Report
+from .names import nfc
 from .readers import xsdvalidate
 from .rules import container as r_container
 from .rules import files as r_files

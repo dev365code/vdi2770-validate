@@ -13,6 +13,22 @@
   holds both apart. `tools/rule_coverage.py` justifies `X0` as "only fires when
   this tool's own installation is broken, which no container can cause"; that
   sentence is true again.
+- **Two Unicode spellings of one name are two files.** Reconciling NFD and NFC
+  was right; doing it by mapping every member onto its canonical spelling was
+  not. An archive holding both spellings kept whichever came last, so a valid
+  declared PDF was judged by reading its junk twin, the twin was never reported
+  as undeclared, and reversing the member order flipped the verdict. `Z10` — the
+  rule for "two members whose names a reader cannot tell apart" — now covers
+  canonical equivalence, an ambiguous name resolves to nothing rather than to a
+  guess, and `F2` reports the archive's own spelling instead of the normalised
+  one, which is the only one a user can find in their ZIP listing.
+- **One place decides what a name means.** `nfc()` moved out of the model into
+  `names.py` with the resolver beside it, and the F rules, the PDF rules and the
+  runner all ask that. The two mistakes behind this are written at the top of the
+  file: applying the normalisation to two of three comparisons, and each layer
+  keeping its own copy until they disagreed. `F1` also looks up a refused member
+  under either spelling now — it was keyed by the archive's and asked in the
+  metadata's, so a file that was present and declined was reported as absent.
 - Corrections to earlier entries, found by re-reading them against the code: the
   0.3.0 notes said three `container` rules where there were four and 42
   containers where the recorded sweep says 43, `docs/divergences.md` said thirty

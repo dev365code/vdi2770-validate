@@ -8,6 +8,7 @@ rules turn into a Finding with a remedy.
 from __future__ import annotations
 
 import io
+import unicodedata
 import zipfile
 from dataclasses import dataclass, field
 from enum import Enum
@@ -221,11 +222,21 @@ def read(data: bytes, path: str, depth: int = 0, _budget: Optional[_Budget] = No
     members = readable
 
     c.members = tuple(members)
-    seen, dupes = set(), []
+    # Two members whose names differ only by Unicode normalisation are two
+    # different files that print identically, and on a composing filesystem one
+    # overwrites the other on extraction. That is the situation this rule is
+    # about, so it is found the same way an exactly repeated name is -- and both
+    # spellings are named, because the reader cannot know which was meant.
+    first_seen, dupes = {}, []
     for m in c.members:
-        if m.name in seen and m.name not in dupes:
-            dupes.append(m.name)
-        seen.add(m.name)
+        key = unicodedata.normalize("NFC", m.name)
+        earlier = first_seen.get(key)
+        if earlier is None:
+            first_seen[key] = m.name
+            continue
+        for name in (earlier, m.name):
+            if name not in dupes:
+                dupes.append(name)
     c.duplicate_names = tuple(dupes)
     c.kind, c.near_misses = _classify(c.file_names)
 

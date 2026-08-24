@@ -4,7 +4,8 @@ from __future__ import annotations
 from typing import Iterator
 
 from ..catalog import rule
-from ..model import Finding, nfc
+from ..model import Finding
+from ..names import Members
 
 UNVERIFIED = "this tool cannot verify PDF/A conformance"
 
@@ -20,18 +21,18 @@ def _targets(container, document):
     """
     from vdi2770.zipread import MAIN_PDF, Kind
 
-    # Declared names come from metadata, member names come from the archive, and
-    # macOS spells them differently. The F rules already reconcile the two; doing
-    # it here as well is what stops a file from being reported as present and
-    # then silently skipped.
-    actual = {nfc(n): n for n in container.file_names}
+    # Same reconciliation as the F rules, from the same place. Keeping a private
+    # copy here is how the two came to disagree: this one answered a name that
+    # matched two members by taking whichever came last, so a valid declared PDF
+    # was judged by reading its junk twin.
+    members = Members(container.file_names)
 
     out, seen = [], set()
     for f in document.all_files:
         fmt = f.file_format.split(";")[0].strip().lower()
         if fmt != "application/pdf" or not f.file_name:
             continue
-        member = actual.get(nfc(f.file_name))
+        member = members.resolve(f.file_name)
         if member is None or member in seen:
             continue
         seen.add(member)

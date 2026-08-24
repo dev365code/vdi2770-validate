@@ -5,7 +5,8 @@ from __future__ import annotations
 from typing import Iterator
 
 from ..catalog import rule
-from ..model import Finding, nfc
+from ..model import Finding
+from ..names import nfc
 
 DEFECT_TO_RULE = {
     "not-a-zip": "Z1",
