@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased
+
+- **A reserved name is only reserved where it is reserved.** The structural
+  exemption that keeps `F2` quiet about `VDI2770_Main.xml`, `VDI2770_Metadata.xml`
+  and `VDI2770_Main.pdf` named all three in every container, so a stray
+  `VDI2770_Main.pdf` inside a *document* container — a name that means nothing
+  there — was never reported as undeclared. The exemption now follows the
+  container's kind.
+- **Both spellings of a filename, in both directions.** Yesterday's NFD/NFC
+  reconciliation normalised `present` and `declared` and missed the `F1` lookup
+  itself, so a container whose *metadata* was decomposed and whose *archive* was
+  composed had its file reported as declared-but-missing while `F2` stayed quiet
+  about it — absent and accounted for at the same time. Only one of the two
+  directions had a test. Both do now.
+
+
 ## 0.4.0 — 2026-08-24
 
 All seven defects the audits left open, fixed one at a time. Verdicts on the 43
