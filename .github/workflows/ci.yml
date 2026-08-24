@@ -30,3 +30,7 @@ jobs:
         run: python tools/vendor_corpus.py --check
       - name: Firing coverage
         run: python tools/rule_coverage.py --check
+      - name: The sdist can run its own tests
+        run: |
+          python -m pip install build
+          python tools/check_sdist.py
