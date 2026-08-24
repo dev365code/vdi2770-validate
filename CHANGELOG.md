@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.3.1 — 2026-08-24
+
+**A small file could exhaust the machine.** Found while drawing the architecture
+to check it, which is the argument for drawing it.
+
+Every limit in the reader bounded one archive or one member. None bounded the
+container *tree*, and a documentation container may hold thousands of inner
+containers whose metadata is held for as long as the caller walks it. Measured:
+a **274 KB** input produced **265 MB** resident, and no per-archive cap came near
+engaging — the outer archive's uncompressed total was 254 KB against a 2 GiB
+limit. The only binding constraint was the ten-thousand-member cap, so ten
+thousand inner containers each carrying sixteen megabytes of metadata was a
+permitted input: roughly **156 GiB**, from a file small enough to email.
+
+Two budgets now span the whole read — `MAX_CONTAINERS` (1,000) and
+`MAX_TOTAL_METADATA_BYTES` (64 MiB) — and exhausting either is reported as a
+`container-budget-exhausted` defect rather than silently truncating the tree.
+The same 274 KB input now peaks at 95 MB. Ordinary nested containers are
+untouched.
+
+The gap was structural rather than an oversight in any one cap: each limit was
+correct about the thing it measured, and nothing measured the total. The
+amplification test that existed checked a single archive.
+
+
 ## 0.3.0 — 2026-08-24
 
 Two independent audits — one of what every rule *claims*, one trying to make the

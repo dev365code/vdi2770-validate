@@ -77,10 +77,19 @@ a PDF/A validator, and this is not one.
 
 `not-a-zip`, `too-many-members`, `unsafe-member-name`, `member-too-large`,
 `suspicious-compression`, `archive-too-large`, `metadata-too-large`,
-`metadata-unreadable`, `member-unreadable`, `nesting-too-deep`.
+`metadata-unreadable`, `member-unreadable`, `nesting-too-deep`,
+`container-budget-exhausted`.
 
 These strings are part of the public surface; a test in this package fails if the
 code grows a kind that this list does not name.
+
+The last one is the only budget that spans the whole read rather than one
+archive: a documentation container may legitimately hold hundreds of inner
+containers, and their metadata is held for as long as you walk the tree. Ten
+thousand of them, each with sixteen megabytes of metadata, is a permitted input
+under every per-archive limit and about 156 GiB of memory. `MAX_CONTAINERS` and
+`MAX_TOTAL_METADATA_BYTES` bound that; hitting either is reported rather than
+silently truncating the tree.
 
 ## Supported
 

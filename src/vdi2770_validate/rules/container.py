@@ -17,6 +17,7 @@ DEFECT_TO_RULE = {
     "nesting-too-deep": "Z6",
     "metadata-unreadable": "Z3",
     "metadata-too-large": "Z5",
+    "container-budget-exhausted": "Z5",
     "member-unreadable": "Z12",
 }
 

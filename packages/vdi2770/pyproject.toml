@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "vdi2770"
-version = "0.2.0"
+version = "0.2.1"
 description = "Read a VDI 2770 handover-documentation container safely — no dependencies, no disk, no network"
 readme = "README.md"
 requires-python = ">=3.9"

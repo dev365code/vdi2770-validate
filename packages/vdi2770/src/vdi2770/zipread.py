@@ -41,6 +41,16 @@ MAX_METADATA_BYTES = 16 * 1024 * 1024
 # reported rather than opened.
 MAX_CONTAINER_LEVELS = 3
 
+# Every limit above bounds one archive or one member. None of them bounds the
+# *tree*, and the tree is where the amplification lives: a documentation container
+# may hold ten thousand inner containers, and each inner container's metadata is
+# held for as long as the caller walks the tree. Measured, before these two
+# existed: a 274 KB file produced 265 MB resident, and no per-archive cap came
+# near engaging. At the permitted extreme it was about 156 GiB from a file small
+# enough to email.
+MAX_CONTAINERS = 1_000                            # opened across one read()
+MAX_TOTAL_METADATA_BYTES = 64 * 1024 * 1024       # held across one read()
+
 
 class Kind(Enum):
     DOCUMENTATION = "documentation container"
@@ -125,7 +135,26 @@ def _classify(names: Tuple[str, ...]) -> Tuple[Kind, Dict[str, str]]:
     return Kind.UNKNOWN, near
 
 
-def read(data: bytes, path: str, depth: int = 0) -> Container:
+@dataclass
+class _Budget:
+    """Shared across one read() and everything it descends into."""
+
+    containers: int = 0
+    metadata_bytes: int = 0
+
+    def take_container(self) -> bool:
+        self.containers += 1
+        return self.containers <= MAX_CONTAINERS
+
+    def take_metadata(self, n: int) -> bool:
+        if self.metadata_bytes + n > MAX_TOTAL_METADATA_BYTES:
+            return False
+        self.metadata_bytes += n
+        return True
+
+
+def read(data: bytes, path: str, depth: int = 0, _budget: Optional[_Budget] = None) -> Container:
+    budget = _budget if _budget is not None else _Budget()
     c = Container(path=path, depth=depth)
     try:
         zf = zipfile.ZipFile(io.BytesIO(data))
@@ -206,6 +235,13 @@ def read(data: bytes, path: str, depth: int = 0) -> Container:
                                         f"{MAX_METADATA_BYTES}"))
                 c.rejected[wanted] = f"larger than this tool will parse ({declared} bytes)"
                 raise KeyError(wanted)
+            if not budget.take_metadata(declared):
+                c.defects.append(Defect(
+                    "container-budget-exhausted", c.where.child(member=wanted),
+                    f"this read has already held {MAX_TOTAL_METADATA_BYTES} bytes of "
+                    f"metadata across {budget.containers} containers"))
+                c.rejected[wanted] = "not read: the tree's metadata budget was exhausted"
+                raise KeyError(wanted)
             c.metadata_bytes = zf.read(wanted)
             c.metadata_name = wanted
         except (KeyError, zipfile.BadZipFile, RuntimeError) as e:
@@ -219,7 +255,12 @@ def read(data: bytes, path: str, depth: int = 0) -> Container:
                 except (RuntimeError, zipfile.BadZipFile) as e:
                     c.defects.append(Defect("member-unreadable", c.where.child(member=m.name), str(e)))
                     continue
-                c.children.append(read(inner, f"{path}!/{m.name}", depth + 1))
+                if not budget.take_container():
+                    c.defects.append(Defect(
+                        "container-budget-exhausted", c.where.child(member=m.name),
+                        f"this read has already opened {MAX_CONTAINERS} containers"))
+                    break
+                c.children.append(read(inner, f"{path}!/{m.name}", depth + 1, budget))
     else:
         for m in c.members:
             if m.name.lower().endswith(".zip"):
