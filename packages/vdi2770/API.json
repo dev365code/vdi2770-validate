@@ -1,6 +1,27 @@
 {
   "format": 2,
   "surface": {
+    "ClassName": {
+      "bases": [
+        "object"
+      ],
+      "fields": {
+        "language": [
+          "Optional[str]",
+          "no-default"
+        ],
+        "src": [
+          "Location",
+          "has-default"
+        ],
+        "text": [
+          "str",
+          "no-default"
+        ]
+      },
+      "methods": [],
+      "properties": []
+    },
     "Classification": {
       "bases": [
         "object"
@@ -11,7 +32,7 @@
           "no-default"
         ],
         "names": [
-          "Tuple[Tuple[Optional[str], str], ...]",
+          "Tuple[ClassName, ...]",
           "no-default"
         ],
         "src": [
@@ -223,8 +244,12 @@
           "no-default"
         ],
         "languages": [
-          "Tuple[str, ...]",
+          "Tuple[Tagged, ...]",
           "no-default"
+        ],
+        "life_cycle_src": [
+          "Location",
+          "has-default"
         ],
         "life_cycle_status": [
           "str",
@@ -410,6 +435,23 @@
     "REFUSAL_KINDS": {
       "kind": "frozenset",
       "value": "['ambiguous-name', 'archive-too-large', 'container-budget-exhausted', 'decompression-budget-exhausted', 'member-budget-exhausted', 'member-too-large', 'member-unreadable', 'metadata-too-large', 'suspicious-compression', 'unsafe-member-name']"
+    },
+    "Tagged": {
+      "bases": [
+        "object"
+      ],
+      "fields": {
+        "code": [
+          "str",
+          "no-default"
+        ],
+        "src": [
+          "Location",
+          "has-default"
+        ]
+      },
+      "methods": [],
+      "properties": []
     },
     "UnsafeXml": {
       "bases": [

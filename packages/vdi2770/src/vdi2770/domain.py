@@ -13,14 +13,30 @@ from .xmlread import Node
 
 
 @dataclass(frozen=True)
+class ClassName:
+    """One `ClassName` element, with the line it was written on.
+
+    It was a `(language, text)` tuple, and three rules that each object to one
+    name reported the enclosing `DocumentClassification`. A classification holds
+    several names on several lines; one location for all of them answers "which
+    name" with "the block".
+    """
+
+    # None when the Language attribute is absent, "" when present and empty --
+    # see Description.language for why the two are not collapsed.
+    language: Optional[str]
+    text: str
+    src: Location = Location()
+
+
+@dataclass(frozen=True)
 class Classification:
     # None when the element is absent, "" when present and empty. The schema
     # requires the element and types it `xs:string`, so an empty one is a
     # document the schema accepts and only a rule can object to.
     class_id: Optional[str]
     system: str
-    names: Tuple[Tuple[Optional[str], str], ...]   # (language, text); language
-    # is None when the attribute is absent -- see class_id above for why
+    names: Tuple[ClassName, ...]
     src: Location = Location()
 
 
@@ -42,12 +58,30 @@ class Description:
 
 
 @dataclass(frozen=True)
+class Tagged:
+    """One `Language` element, with the line it was written on.
+
+    Same reason as `ClassName`: a `DocumentVersion` may declare several
+    languages, and a rule objecting to one of them reported the block that holds
+    them all.
+    """
+
+    code: str
+    src: Location = Location()
+
+
+@dataclass(frozen=True)
 class DocumentVersion:
     version_id: str
-    languages: Tuple[str, ...]
+    languages: Tuple[Tagged, ...]
     descriptions: Tuple[Description, ...]
     files: Tuple[DigitalFile, ...]
     life_cycle_status: str
+    # Where `LifeCycleStatus` itself is. A `DocumentVersion` is the largest
+    # element in the file -- languages, descriptions, parties, status and every
+    # digital file -- so answering "where" with its opening line answers "in this
+    # document somewhere".
+    life_cycle_src: Location = Location()
     src: Location = Location()
 
 
@@ -97,8 +131,11 @@ def build(root: Node, base: Location) -> Document:
     classifications = []
     for c in root.find_all("DocumentClassification"):
         names = tuple(
-            (None if "Language" not in nm.attrib else nm.attrib["Language"].strip(),
-             nm.text.strip())
+            ClassName(
+                language=None if "Language" not in nm.attrib else nm.attrib["Language"].strip(),
+                text=nm.text.strip(),
+                src=_loc(base, nm, nm.text.strip() or None),
+            )
             for nm in c.find_all("ClassName")
         )
         cid = c.child_text("ClassId")
@@ -132,10 +169,13 @@ def build(root: Node, base: Location) -> Document:
         lcs = v.find("LifeCycleStatus")
         versions.append(DocumentVersion(
             version_id=v.text_of("DocumentVersionId"),
-            languages=tuple(n.text.strip() for n in v.find_all("Language")),
+            languages=tuple(Tagged(code=n.text.strip(), src=_loc(base, n, n.text.strip() or None))
+                            for n in v.find_all("Language")),
             descriptions=descriptions,
             files=files,
             life_cycle_status=(lcs.attrib.get("StatusValue", "").strip() if lcs else ""),
+            life_cycle_src=(_loc(base, lcs, lcs.attrib.get("StatusValue", "").strip() or None)
+                            if lcs else _loc(base, v)),
             src=_loc(base, v, v.text_of("DocumentVersionId") or None),
         ))
 

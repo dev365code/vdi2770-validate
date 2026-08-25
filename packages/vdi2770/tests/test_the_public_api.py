@@ -48,10 +48,11 @@ def test_a_document_container_reads_end_to_end():
     assert doc.ids == ("D-1",)
     k = doc.classifications[0]
     assert k.class_id == "02-01" and k.system == "VDI2770:2018"
-    assert dict(k.names)["de"] == "Allgemeine technische Daten"
+    assert {n.language: n.text for n in k.names}["de"] == "Allgemeine technische Daten"
     v = doc.versions[0]
     assert v.version_id == "1.0" and v.life_cycle_status == "Released"
-    assert v.languages == ("de",)
+    assert tuple(t.code for t in v.languages) == ("de",)
+    assert v.languages[0].src.line, "a language element with no line is not a location"
     assert v.descriptions[0].title == "Datenblatt"
     assert v.files[0].file_name == "datenblatt.pdf"
     assert v.files[0].file_format == "application/pdf"
@@ -66,6 +67,20 @@ def test_every_node_remembers_where_it_was_written():
     assert where.subject == "02-01"
     assert str(where).startswith("doc.zip!/VDI2770_Metadata.xml:4:")
 
+    # The parts inside it, each on its own line. `ClassName.src`, `Tagged.src`
+    # and `DocumentVersion.life_cycle_src` were added so a caller could point at
+    # the element rather than the block around it -- and every test of them
+    # lived in the validator, while `check_sdist.py` makes it literal that a
+    # packager building this package alone runs *this* suite and nothing else.
+    # Pointing all three back at their parent left this suite green.
+    names = doc.classifications[0].names
+    assert [n.src.line for n in names] == [6, 7], [n.src.line for n in names]
+    assert names[0].src.line != where.line
+
+    v = doc.versions[0]
+    assert [t.src.line for t in v.languages] == [11], [t.src.line for t in v.languages]
+    assert v.life_cycle_src.line == 13, v.life_cycle_src.line
+    assert v.life_cycle_src.line != v.src.line
 
 
 def test_a_documentation_container_is_recognised_and_walked():

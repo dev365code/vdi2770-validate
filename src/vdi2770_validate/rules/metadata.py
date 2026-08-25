@@ -64,10 +64,13 @@ def check(container, document) -> Iterator[Finding]:
             continue
         want_de = german_for(c.class_id)
         want_en = english_for(c.class_id)
-        for lang, text in c.names:
+        for nm in c.names:
+            lang, text = nm.language, nm.text
             if lang is None:
                 continue          # no Language attribute at all; X2 says so
-            where = c.src.child(container=container.path, member=container.metadata_name)
+            # The name's own location, not the classification's. Several names
+            # share one block, so `c.src` gave all of them the same line.
+            where = nm.src.child(container=container.path, member=container.metadata_name)
             low = lang.strip().lower()
             if low.startswith("de"):
                 if text not in want_de:
@@ -90,12 +93,12 @@ def check(container, document) -> Iterator[Finding]:
                               detail=f"{text!r} for class {c.class_id}; published renderings are {both}")
 
     for v in document.versions:
-        for lang in v.languages:
-            if not _iso_ok(lang):
+        for tag in v.languages:
+            if not _iso_ok(tag.code):
                 r = rule("M5")
-                yield Finding(r, r.title, v.src.child(container=container.path,
-                                                      member=container.metadata_name),
-                              detail=f"Language {lang!r}")
+                yield Finding(r, r.title, tag.src.child(container=container.path,
+                                                        member=container.metadata_name),
+                              detail=f"Language {tag.code!r}")
         for d in v.descriptions:
             # `and d.language` here let an empty attribute switch the check
             # off, which is the shape M8's own whyOurs warns about. `is not
@@ -123,6 +126,6 @@ def check(container, document) -> Iterator[Finding]:
         if (container.kind is Kind.DOCUMENTATION and v.life_cycle_status
                 and v.life_cycle_status != RELEASED):
             r = rule("M7")
-            yield Finding(r, r.title, v.src.child(container=container.path,
-                                                  member=container.metadata_name),
+            yield Finding(r, r.title, v.life_cycle_src.child(container=container.path,
+                                                             member=container.metadata_name),
                           detail=f"LifeCycleStatus is {v.life_cycle_status!r}")
