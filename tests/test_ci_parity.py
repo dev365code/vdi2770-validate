@@ -18,6 +18,11 @@ OUTSIDE_CHECK = {
     "check": "the target itself; it cannot be one of its own prerequisites",
     "clean": "it deletes things and judges nothing, so running it as part of the "
              "gate would only mean the gate throws away its own inputs",
+    "oracle-fully-swept": "a release question rather than a change question. A "
+                          "container may sit unswept for as long as it takes to run "
+                          "the `oracle` workflow, and the divergence counts exclude "
+                          "it meanwhile; it stops being acceptable the moment those "
+                          "counts are published, which is what a release does",
     "mutations": "minutes rather than seconds, and it is a check *on* the suite "
                  "rather than part of it — it only tells you something new when a "
                  "gate changes",

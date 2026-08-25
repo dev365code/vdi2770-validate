@@ -5,6 +5,23 @@
 Six things that were true of the code and not of what the project said about it,
 plus the guards that make each one say so next time.
 
+- **The sweep is complete, and it runs where a JVM already is.** Two containers
+  had never been through the reference implementation, because the reference half
+  needs a JDK, Maven and a checkout of another project — three shell lines in a
+  README that only ever ran on a maintainer's laptop. It is a workflow now: a
+  pinned JDK, the reference at the commit the sweep records, the result uploaded
+  for a human to read. The first run filled both in, and settled something no
+  local run could — the other 44 verdicts came back **byte-identical** to the
+  ones captured on a laptop, which is the property the whole comparison rests on.
+  The reference reports errors on the 1.14-million-element metadata too, for its
+  own reasons; both tools reject that container.
+- **A release cannot publish counts that exclude something.** `make
+  oracle-fully-swept` asks whether every container has a reference verdict, reads
+  the recorded file and nothing else — a release must not depend on Maven Central
+  being reachable — and both release workflows run it. A container may sit
+  unswept while the divergence counts exclude it; that stops being acceptable the
+  moment those counts are published, which is what a release does.
+
 - **An empty column in the oracle sweep meant "we never asked", and the page read
   it as "it reported nothing".** `docs/divergences.md` derives its disagreement
   counts from `oracle-sweep.json`, and two containers postdate the recorded run —

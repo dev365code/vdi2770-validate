@@ -281,7 +281,26 @@
       }
     },
     "f2-undeclared-file.zip": {
-      "reference": {},
+      "reference": {
+        "INFO": [
+          "REP_003",
+          "REP_005",
+          "REP_008",
+          "REP_009",
+          "REP_010",
+          "REP_011",
+          "REP_015",
+          "REP_020",
+          "REP_028",
+          "REP_036",
+          "REP_041",
+          "REP_043",
+          "ZU_005"
+        ],
+        "WARN": [
+          "REP_006"
+        ]
+      },
       "ours": {
         "info": [
           "P4"
@@ -1048,7 +1067,23 @@
       }
     },
     "x6-too-many-elements.zip": {
-      "reference": {},
+      "reference": {
+        "ERROR": [
+          "REP_023",
+          "REP_039"
+        ],
+        "INFO": [
+          "REP_003",
+          "REP_005",
+          "REP_036",
+          "ZU_005"
+        ],
+        "WARN": [
+          "REP_016",
+          "REP_027",
+          "REP_028"
+        ]
+      },
       "ours": {
         "error": [
           "X6"
@@ -1244,9 +1279,5 @@
         ]
       }
     }
-  },
-  "_unswept": {
-    "f2-undeclared-file.zip": "postdates the recorded run; the reference half needs a JDK and the pinned checkout. Rerun tools/capture_oracle.py --reference <path> before trusting a divergence count that includes it.",
-    "x6-too-many-elements.zip": "postdates the recorded run; the reference half needs a JDK and the pinned checkout. Rerun tools/capture_oracle.py --reference <path> before trusting a divergence count that includes it."
   }
 }

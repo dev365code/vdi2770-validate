@@ -13,18 +13,27 @@ check that — the normative text is paywalled.
 
 ## How much of this was measured
 
-It is measured now. 44 of the 46 containers in `corpus/` and
+It is measured now. All 46 containers in `corpus/` and
 `tests/fixtures/` were put through the reference implementation at its pinned commit
 `e47c13c`, with the locale forced to `en_US`, and the result is checked in at
 [`docs/oracle-sweep.json`](oracle-sweep.json). `tools/capture_oracle.py --check`
-re-runs it and fails if either side has moved.
+re-runs it and fails if either side has moved, and
+[`.github/workflows/oracle.yml`](../.github/workflows/oracle.yml) is that run:
+a pinned JDK, the reference checked out at the commit above, and the result
+uploaded for a human to read. It is a URL, not three shell lines in a README.
 
-The other two postdate that run and carry our half only. They are named in the
-sweep's `_unswept` block with the reason, and **every count on this page excludes
-them** — an empty `reference` means "we never asked it", and reading that as "it
-reported nothing" would invent a disagreement with a tool that has never seen the
-container. One of them, `x6-too-many-elements.zip`, errors on our side, so it did
-exactly that until the gate below started excluding it. `tools/oracle/README.md` says what
+A container added after a sweep carries our column and an empty one for the
+reference until the next run, named in the sweep's `_unswept` block with the
+reason. **Every count on this page excludes those**, because an empty
+`reference` means "we never asked it", and reading that as "it reported nothing"
+invents a disagreement with a tool that has never seen the container. There are
+none outstanding right now.
+
+One thing the first CI run settled that no local run could: the reference's
+verdicts on the other 44 containers came back **byte-identical** to the ones
+captured on a maintainer's laptop. The pinned commit and the pinned locale really
+do produce the same answer on another machine, which is the property the whole
+comparison rests on. `tools/oracle/README.md` says what
 you need to repeat it, including the two things that will bite you.
 
 What the sweep settled:

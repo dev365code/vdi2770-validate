@@ -44,14 +44,24 @@ def test_the_oracle_sweep_covers_every_container_and_says_how_many():
         f"{sorted(set(swept['_unswept']) - set(unswept))}")
 
     prose = (ROOT / "docs" / "divergences.md").read_text(encoding="utf-8")
-    m = re.search(r"([A-Za-z0-9-]+) of the (\d+) containers in `corpus/` and\s+`tests/fixtures/`",
-                  prose)
-    assert m, "the sentence this test pins has been reworded"
-    assert int(m.group(2)) == len(here), (
-        f"divergences.md says {m.group(2)} containers; there are {len(here)}")
-    assert m.group(1).lower() == spelled(len(here) - len(unswept)), (
-        f"{len(here) - len(unswept)} of them were swept and divergences.md "
-        f"says {m.group(1)}")
+    total = re.search(r"(\d+) containers in `corpus/` and\s+`tests/fixtures/`", prose)
+    assert total, "the sentence naming how many containers exist has been reworded"
+    assert int(total.group(1)) == len(here), (
+        f"divergences.md says {total.group(1)} containers; there are {len(here)}")
+
+    # And how many of them were actually put through the reference. Two numbers,
+    # because one was doing the work of both and a container the reference has
+    # never seen was being counted as disagreeing with it.
+    measured = len(here) - len(unswept)
+    if unswept:
+        assert f"{measured} of the {len(here)} containers" in prose, (
+            f"{measured} of {len(here)} were swept and divergences.md does not say so")
+        for n in unswept:
+            assert n in prose or "_unswept" in prose, (
+                f"{n} was not swept and the page does not point a reader at which ones")
+    else:
+        assert f"All {len(here)} containers" in prose, (
+            "nothing is outstanding and the page does not say the sweep is complete")
 
 
 def test_contributing_names_every_obligation_the_catalogue_uses():

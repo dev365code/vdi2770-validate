@@ -30,6 +30,11 @@ jobs:
       # before it is anything else.
       - name: The gate must pass on the tagged tree
         run: make check
+      # And the sweep must be complete. `make check` reads our half of it; this
+      # asks whether the reference has ever seen every container. A release
+      # publishes the divergence counts, and those exclude anything unswept.
+      - name: Every container has been through the reference implementation
+        run: make oracle-fully-swept
       - name: The tag must be the version
         run: |
           tag="${GITHUB_REF_NAME#v}"

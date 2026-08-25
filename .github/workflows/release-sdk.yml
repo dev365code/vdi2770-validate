@@ -41,6 +41,12 @@ jobs:
           python -m pip install -e packages/vdi2770
           python -m pip install -e ".[dev]"
           make check
+      # And the sweep must be complete. `make check` reads our half of it; this
+      # asks whether the reference has ever seen every container. A release
+      # publishes the divergence counts, and those exclude anything unswept.
+      - name: Every container has been through the reference implementation
+        working-directory: .
+        run: make oracle-fully-swept
       - name: The tag must be the version
         run: |
           tag="${GITHUB_REF_NAME#sdk-v}"

@@ -42,6 +42,14 @@ oracle-half:
 mutations:
 	$(PYTHON) tools/mutation_table.py --run
 
+# Outside `check` because it is a release question, not a change question: a
+# container may sit unswept for as long as it takes to run the `oracle` workflow,
+# and that is fine while the divergence counts exclude it. It stops being fine
+# the moment those counts are published. Reads the recorded file only — a release
+# must not depend on Maven Central being reachable.
+oracle-fully-swept:
+	$(PYTHON) tools/capture_oracle.py --check-swept
+
 # Also outside `check`: one interpreter start per test file. It answers a
 # question a shared process cannot — whether any file passes only because of
 # what ran before it.

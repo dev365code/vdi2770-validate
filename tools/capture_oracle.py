@@ -185,12 +185,35 @@ def main() -> int:
     ap.add_argument("--java-home", default="/opt/homebrew/opt/openjdk@17")
     ap.add_argument("--check", action="store_true")
     ap.add_argument("--check-ours", action="store_true")
+    ap.add_argument("--check-swept", action="store_true",
+                    help="every container has a reference verdict (no JDK needed)")
     ap.add_argument("--write-ours", action="store_true")
     ap.add_argument("--messages", action="store_true",
                     help="re-extract tests/data/oracle-messages.json from the reference")
     ap.add_argument("--check-messages", action="store_true",
                     help="compare the vendored messages against the reference")
     a = ap.parse_args()
+
+    if a.check_swept:
+        # No JDK, no Maven, no network: this reads the recorded file and nothing
+        # else. It is the release gate, and a release must not depend on Maven
+        # Central being up — the sweep workflow keeps the file honest, and this
+        # only asks whether it is complete.
+        recorded = json.loads(OUT.read_text(encoding="utf-8"))
+        waiting = sorted(recorded.get("_unswept", {}))
+        if waiting:
+            print(f"{len(waiting)} container(s) have never been through the reference "
+                  f"implementation: {waiting}\nRun the `oracle` workflow and commit what it "
+                  f"produces. Releasing now would ship divergence counts that exclude them.",
+                  file=sys.stderr)
+            return 1
+        empty = sorted(n for n, e in recorded["containers"].items() if not e["reference"])
+        if empty:
+            print(f"{empty} have no reference verdict and are not listed in _unswept",
+                  file=sys.stderr)
+            return 1
+        print(f"every one of {len(recorded['containers'])} containers has a reference verdict")
+        return 0
 
     if a.check_ours or a.write_ours:
         return ours_only(write=a.write_ours)
