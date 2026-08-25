@@ -227,8 +227,8 @@ TABLE = [
 
     ("rules/a-refusal-to-model-is-not-a-malformed-file",
      "src/vdi2770_validate/rules/schema.py",
-     '        rid = {"UnsafeXml": "X3", "XmlTooLarge": "X6"}.get(',
-     '        rid = {"UnsafeXml": "X3"}.get(',
+     '               else "X6" if isinstance(parse_error, XmlTooLarge) else "X1")',
+     '               else "X1")',
      ["tests/test_a_document_we_would_not_build_is_not_malformed.py"],
      "bounding the tree handed well-formed metadata the verdict `not well-formed "
      "XML`, which blames the sender for our limit"),
@@ -242,7 +242,56 @@ TABLE = [
      "compatible branch was unreachable: every patch release of the reader was "
      "refused, including one that changed nothing else"),
 
-    # --- the canary -------------------------------------------------------
+    ("reader/the-tree-of-documents-has-a-ceiling-too",
+     "src/vdi2770_validate/runner.py",
+     "        if c.metadata_bytes is not None and elements >= MAX_TOTAL_ELEMENTS:",
+     "        if False:",
+     ["tests/test_a_document_we_would_not_build_is_not_malformed.py"],
+     "bounding one document did not bound the sum: 12 KiB of archive cost 74 "
+     "seconds of CPU with every reader budget green"),
+
+    ("reader/a-bad-encoding-declaration-is-the-documents-problem",
+     "packages/vdi2770/src/vdi2770/xmlread.py",
+     "    except (LookupError, ValueError) as e:",
+     "    except (LookupError,) as e:  # noqa: B014",
+     ["packages/vdi2770/tests/test_the_public_api.py"],
+     "expat raises outside ExpatError for an encoding it will not decode, so a "
+     "malformed document was reported as this tool crashing"),
+
+    ("reader/a-trailer-dictionary-ends-where-it-closes",
+     "packages/vdi2770/src/vdi2770/pdfread.py",
+     "        end = _dict_end(data, hit.end(), MAX_TRAILER_SCAN)",
+     "        end = hit.end() + 4096",
+     ["packages/vdi2770/tests/test_the_public_api.py"],
+     "a legal trailer with long /ID strings pushed /Encrypt past the window, so "
+     "an encrypted PDF was told to re-export as PDF/A"),
+
+    ("rules/a-dot-slash-prefix-is-not-a-folder",
+     "src/vdi2770_validate/rules/container.py",
+     '        segments = [seg for seg in prefix.split("/") if seg not in ("", ".")]',
+     "        segments = [prefix]",
+     ["tests/test_documents_delivered_as_folders.py"],
+     "`./VDI2770_Metadata.xml` is at the root, and Z13 said this tool had not "
+     "looked inside something it had read"),
+
+    ("gates/an-exception-nobody-can-catch-by-name",
+     "packages/vdi2770/src/vdi2770/__init__.py",
+     "from .xmlread import NS, Node, UnsafeXml, XmlError, XmlTooLarge",
+     "from .xmlread import NS, Node, UnsafeXml, XmlError",
+     ["packages/vdi2770/tests/test_it_stands_alone.py"],
+     "XmlTooLarge was raised at the boundary and not exported, so the release "
+     "fingerprint could not see it and a caller could not catch it"),
+
+    ("gates/canonical-form-is-read-not-grepped",
+     "src/vdi2770_validate/names.py",
+     "from vdi2770 import nfc",
+     "import unicodedata\n\n\ndef _nfc_again(name):\n"
+     "    return unicodedata.normalize(\"NFC\", name)\n\n\nfrom vdi2770 import nfc  # noqa: E402",
+     ["tests/test_layering.py"],
+     "the check for a second definition was a grep, so a comment naming the "
+     "function counted as one -- and a real second import did not"),
+
+    # --- the canary -------------------------------------------------------    # --- the canary -------------------------------------------------------
     ("canary/a-comment-nobody-reads",
      "src/vdi2770_validate/report.py",
      '"""Rendering.',

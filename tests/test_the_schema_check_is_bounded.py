@@ -55,21 +55,24 @@ def test_the_cost_stops_growing_once_the_budget_is_spent():
     comparison between them, so two of its three cases could not fail on the
     axis their name described, and the third was the same input as the test
     above."""
-    costs = {}
+    # Counted, not timed. This asserted on `time.monotonic()` and flaked on a
+    # loaded machine — and a wall-clock ratio is a poor way to ask this anyway,
+    # because it measures the machine as much as the code. What the budget
+    # actually bounds is how many errors are rendered, and rendering is what the
+    # cost was quadratic in.
+    rendered = {}
     for n in (2_000, 8_000, 32_000):
         body = metadata_with(n)
-        tree = xmlread.parse(body)
-        started = time.monotonic()
-        xsdvalidate.validate(body, tree)
-        costs[n] = time.monotonic() - started
+        rendered[n] = len(xsdvalidate.validate(body, xmlread.parse(body)))
 
-    # Sixteen times the violations. Parsing still grows with the document, so
-    # this is not asking for a flat line — it is asking for one that is not a
-    # curve: quadratic would be 256x.
-    grew = costs[32_000] / max(costs[2_000], 1e-6)
-    assert grew < 16, (
-        f"cost grew {grew:.1f}x for 16x the violations, which is not a budget: {costs}")
-    assert max(costs.values()) < 5, costs
+    assert len(set(rendered.values())) == 1, (
+        f"the budget is supposed to be the ceiling, and the work still grows "
+        f"with the document: {rendered}")
+    # The budget plus the one finding that says it was spent — a truncated check
+    # that reports nothing about being truncated is the failure the test below
+    # this one is about.
+    assert max(rendered.values()) == xsdvalidate.MAX_SCHEMA_ERRORS + 1, (
+        f"{rendered} against a budget of {xsdvalidate.MAX_SCHEMA_ERRORS}")
 
 
 def test_it_says_that_it_stopped():

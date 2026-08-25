@@ -129,10 +129,13 @@ def test_the_readme_names_every_budget_the_code_can_enforce():
     """
     import re
 
-    from vdi2770 import pdfread, zipread
+    from vdi2770 import pdfread, xmlread, zipread
 
     readme = (SRC.parent.parent / "README.md").read_text(encoding="utf-8")
-    for mod in (zipread, pdfread):
+    # `xmlread` was not in this loop, so the element cap this package grew
+    # was the one budget the README did not have to name — while the README
+    # says a test fails if either module grows one it does not list.
+    for mod in (zipread, pdfread, xmlread):
         names = {n for n in dir(mod) if n.startswith(("MAX_", "MIN_"))}
         assert names, f"{mod.__name__} has no budgets; this test is looking in the wrong place"
         missing = sorted(n for n in names if f"`{n}`" not in readme)
@@ -172,3 +175,38 @@ def test_the_reader_does_not_write_sentences_about_what_it_refused():
     assert isinstance(refusal, Defect), f"rejected carries {type(refusal).__name__}, not a fact"
     assert refusal.kind == "unsafe-member-name"
     assert refusal in c.defects, "the refusal and the defect are the same object"
+
+
+def test_every_exception_this_package_raises_can_be_caught_by_name():
+    """`XmlTooLarge` was raised at the module boundary and not exported, so the
+    only way to tell it from "your file is malformed" was a string compare on
+    `__class__.__name__` — which is what the validator was reduced to.
+
+    Its two siblings, `XmlError` and `UnsafeXml`, are both exported. Nothing
+    noticed the third, because `test_the_declared_public_surface_is_the_real_one`
+    checks one direction only: everything reachable is declared. The fingerprint
+    walks `__all__`, so an unexported class is invisible to the release gate
+    too — it could be renamed in a patch release and `--check` would pass.
+
+    A caller is meant to write `except vdi2770.XmlTooLarge`. This is what makes
+    that possible next time somebody adds one.
+    """
+    import importlib
+    import inspect
+    import pkgutil
+
+    import vdi2770
+
+    raised = {}
+    for info in pkgutil.iter_modules(vdi2770.__path__, "vdi2770."):
+        mod = importlib.import_module(info.name)
+        for name, obj in vars(mod).items():
+            if (inspect.isclass(obj) and issubclass(obj, Exception)
+                    and obj.__module__ == mod.__name__):
+                raised[name] = mod.__name__
+
+    assert raised, "this package raises nothing of its own; the test is looking wrongly"
+    missing = sorted(n for n in raised if n not in vdi2770.__all__)
+    assert not missing, (
+        f"raised but not exported, so a caller cannot catch it by name: "
+        f"{ {n: raised[n] for n in missing} }")

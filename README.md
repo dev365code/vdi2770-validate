@@ -46,7 +46,7 @@ veraPDF. This tool reports what a file *claims*, which catches the common failur
 files that never claimed at all. It says so on every line where it matters, and the
 JSON output is one document for the run — a list with an entry per path you
 gave, each carrying that path and `"pdfaVerified": false`. The rest of the refusals
-are in [docs/scope.md](docs/scope.md).
+are in [docs/scope.md](https://github.com/dev365code/vdi2770-validate/blob/main/docs/scope.md).
 
 ## How it is built
 
@@ -54,7 +54,7 @@ are in [docs/scope.md](docs/scope.md).
   attempts rather than waiting for one to fail — a tool that reaches out and falls
   back quietly on error would satisfy the weaker check. Nothing is extracted to disk; a supplier archive does not get to pick a
   path on your filesystem or expand an XML entity.
-- **Rules are data.** [`rules.json`](src/vdi2770_validate/data/rules.json), rendered as [docs/rules.md](docs/rules.md) — each
+- **Rules are data.** [`rules.json`](https://github.com/dev365code/vdi2770-validate/blob/main/src/vdi2770_validate/data/rules.json), rendered as [docs/rules.md](https://github.com/dev365code/vdi2770-validate/blob/main/docs/rules.md) — each
   rule carries where its requirement comes from, a remedy sentence, and — where the
   reference implementation checks the same thing — the message keys it uses.
 - **25 of 38 rules have a minimal fixture pair** — a container that violates the rule
@@ -97,7 +97,7 @@ $ vdi2770-validate classes
       English — IDTA 02004: 'Assemblies'   reference impl: 'Components'
 ```
 
-Details in [docs/divergences.md](docs/divergences.md).
+Details in [docs/divergences.md](https://github.com/dev365code/vdi2770-validate/blob/main/docs/divergences.md).
 
 ## Licensing
 
@@ -106,7 +106,7 @@ quoted, or paraphrased. Every rule names its source in `rules.json` instead: the
 VDI publishes free, a freely published table, ZIP and XML mechanics, the MIT reference
 implementation (observed there, not verified against the standard), or a judgement of
 our own that has to explain itself.
-See [docs/licensing.md](docs/licensing.md) and [NOTICE](NOTICE).
+See [docs/licensing.md](https://github.com/dev365code/vdi2770-validate/blob/main/docs/licensing.md) and [NOTICE](https://github.com/dev365code/vdi2770-validate/blob/main/NOTICE).
 
 Contributions take a `Signed-off-by` line (DCO).
 

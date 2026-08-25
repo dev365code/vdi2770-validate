@@ -44,6 +44,35 @@ def _into(report, findings, where, what: str) -> None:
                            detail=f"the {what} checks: {type(e).__name__}: {e}"))
 
 
+# The reader bounds one document; this bounds the sum of them.
+#
+# `xmlread.MAX_ELEMENTS` caps the tree built out of one metadata file. Nothing
+# capped the tree of containers: a documentation container holding forty
+# document containers, each with metadata just under that cap, is **12 KiB** on
+# disk and cost **74 seconds** of CPU, measured. Every reader budget lets it
+# through, because none of them is watching this axis -- the bytes are tiny, the
+# members are few, nothing inflates, and the trees are built and dropped one at
+# a time so memory stays flat.
+#
+# Sized against a real delivery rather than against the attack. The largest
+# metadata file in this repository's corpus has 53 elements; nine hundred
+# document containers of it -- a plant handover, and 1 MB of archive -- come to
+# about 48,000. This is ten times that, and it bounds the element-driven cost at
+# roughly eight seconds. The per-document cost that remains is real work
+# proportional to real content, and `MAX_CONTAINERS` bounds that.
+MAX_TOTAL_ELEMENTS = 500_000                 # parsed across one check_bytes()
+
+
+def _count(node) -> int:
+    """Elements in a parsed tree, iteratively -- the reader promises nothing
+    about depth, so this must not recurse."""
+    n, stack = 0, [node]
+    while stack:
+        n += 1
+        stack.extend(stack.pop().children)
+    return n
+
+
 _CRASHED = object()          # "this step raised"; distinct from a step that returned None
 
 
@@ -91,8 +120,10 @@ def check_bytes(data: bytes, name: str) -> Report:
     # package: the pin admits releases nobody in this repository has run, and a
     # crash there is the failure `_into` exists to prevent — a traceback naming
     # internals, with the rest of the batch unchecked. `_into` guarded the rules
-    # and `_step` guarded what feeds them; the three calls into the reader sat
-    # outside both.
+    # and `_step` guarded what feeds them; the two calls into the reader that can
+    # fail sat outside both. `nfc` is left alone deliberately -- it is
+    # `unicodedata.normalize` on a `str` and cannot raise, and wrapping two of
+    # its nine call sites would be an inconsistency dressed as a guard.
     # X5's remedy ends "Every other finding in this report still stands; only the
     # named check did not run" -- written for one rule crashing among thirty that
     # did not. Every other check is downstream of this one, so here there is no
@@ -126,6 +157,7 @@ def check_bytes(data: bytes, name: str) -> Report:
     # `eq=True`, so `__hash__` is None and it cannot be a dict key. Every
     # container in this walk is reachable from `root`, so no id is reused while
     # the loop runs.
+    elements = 0         # parsed across this read; see MAX_TOTAL_ELEMENTS
     raw_of = {}          # id(container) -> (depth, its own bytes or None)
     declared_of = {}     # id(container) -> the names its metadata declares
 
@@ -154,9 +186,19 @@ def check_bytes(data: bytes, name: str) -> Report:
         parse_error = None
         tree = None
         document = None
-        if c.metadata_bytes is not None:
+        if c.metadata_bytes is not None and elements >= MAX_TOTAL_ELEMENTS:
+            # Not parsed at all, and the report says so rather than reporting
+            # nothing -- a container whose metadata went unread has not passed
+            # the checks that read it.
+            r = rule("X6")
+            report.add(Finding(r, r.title, c.where.child(member=c.metadata_name),
+                               detail=f"this read has already built {elements} elements, "
+                                      f"its budget of {MAX_TOTAL_ELEMENTS}; the metadata "
+                                      f"here was not parsed"))
+        elif c.metadata_bytes is not None:
             try:
                 tree = xmlread.parse(c.metadata_bytes)
+                elements += _count(tree)
             except xmlread.XmlError as e:
                 # A malformed document is the container's problem and `X1`/`X3`
                 # say so. Anything else out of expat is ours, and `_step` below

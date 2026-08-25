@@ -452,3 +452,50 @@ def test_every_node_carries_the_namespace_it_was_written_in():
     kids = {n.tag: n.ns for n in doc.children}
     assert kids["DocumentId"] == vdi2770.NS
     assert kids["other"] == "urn:something-else", kids
+
+
+@pytest.mark.parametrize("declared", ["XXXX", "utf-7", "utf-32", "cp99999"])
+def test_an_encoding_this_parser_will_not_use_is_the_documents_problem(declared):
+    """expat raises `LookupError` for an encoding nobody has and `ValueError`
+    for one it will not decode, and neither is an `ExpatError`. Both escaped
+    `parse`, so a caller that catches `XmlError` — which is the whole contract
+    of this module — saw them as an unexpected crash.
+
+    Downstream that became "a check in this tool raised an error", `about: tool`,
+    with a remedy telling the sender nothing in their container needs changing.
+    The document declares an encoding that does not exist. That is the
+    document's problem, and it has a line number.
+    """
+    body = f'<?xml version="1.0" encoding="{declared}"?><a/>'.encode()
+    with pytest.raises(vdi2770.XmlError) as e:
+        vdi2770.parse_xml(body)
+    assert not isinstance(e.value, vdi2770.UnsafeXml), "this is malformed, not hostile"
+    assert declared.lower() in str(e.value).lower(), str(e.value)
+    assert e.value.line, "a malformed document is reported at a line"
+
+
+def test_encryption_is_found_however_long_the_trailer_dictionary_is():
+    """The scan looked at a fixed window after each `trailer` keyword, so a
+    legal dictionary whose `/ID` strings push `/Encrypt` past it read as *not
+    encrypted* — and the report then told the producer to re-export as PDF/A, a
+    remedy for a different problem, on a file it could not open.
+
+    A window is the wrong shape for a dictionary. The dictionary ends where its
+    braces balance, and that is what is read — still bounded, because a file
+    that never closes them stops at the same cap the window used to impose.
+    """
+    big = b"<" + b"A" * 6000 + b">"
+    enc = (b"%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\n"
+           b"trailer\n<< /Size 5 /Root 1 0 R /ID [" + big + b" " + big + b"]"
+           b" /Encrypt 4 0 R >>\nstartxref\n0\n%%EOF")
+    assert vdi2770.read_pdf(enc).encrypted, "the /Encrypt entry is in the trailer dictionary"
+
+    plain = enc.replace(b"/Encrypt 4 0 R ", b"")
+    assert not vdi2770.read_pdf(plain).encrypted
+
+    # And the token outside any dictionary still does not count -- the false
+    # positive this scan was narrowed to fix.
+    inside = (b"%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\n"
+              b"2 0 obj<< /Length 20 >>stream\n/Encrypt 9 0 R\nendstream endobj\n"
+              b"trailer\n<< /Size 5 /Root 1 0 R >>\nstartxref\n0\n%%EOF")
+    assert not vdi2770.read_pdf(inside).encrypted

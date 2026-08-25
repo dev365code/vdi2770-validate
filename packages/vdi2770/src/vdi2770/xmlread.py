@@ -9,6 +9,7 @@ make this process open a file or reach a host.
 """
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 from xml.parsers import expat
@@ -171,6 +172,20 @@ def parse(data: bytes) -> Node:
         raise
     except expat.ExpatError as e:
         raise XmlError(expat.ErrorString(e.code), e.lineno, e.offset) from e
+    except (LookupError, ValueError) as e:
+        # expat resolves the encoding declaration through the codec registry, and
+        # neither "no such encoding" (LookupError) nor "this parser will not
+        # decode that one" (ValueError) is an ExpatError. Both escaped, so a
+        # caller catching XmlError -- the whole contract of this module -- saw a
+        # document that declares a nonexistent encoding as an unexpected crash,
+        # and was told nothing in the container needed changing.
+        # Name what the document declared. Python says "multi-byte encodings are
+        # not supported" without saying which one, and a reader of the report has
+        # only our sentence to go on.
+        declared = re.search(rb'encoding\s*=\s*["\']([^"\']{1,64})["\']', data[:256])
+        which = declared.group(1).decode("ascii", "replace") if declared else "the one declared"
+        raise XmlError(f"the document declares an encoding this parser cannot use "
+                       f"({which}): {e}", p.CurrentLineNumber, p.CurrentColumnNumber) from e
 
     if root is None:
         raise XmlError("the file contains no XML element", 1, 0)

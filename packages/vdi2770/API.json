@@ -470,9 +470,18 @@
       ],
       "members": []
     },
+    "XmlTooLarge": {
+      "bases": [
+        "XmlError",
+        "Exception",
+        "BaseException",
+        "object"
+      ],
+      "members": []
+    },
     "__version__": {
       "kind": "str",
-      "value": "'0.6.0'"
+      "value": "'0.6.1'"
     },
     "build_document": {
       "signature": "(root: 'Node', base: 'Location') -> 'Document'"
@@ -496,5 +505,5 @@
       "signature": "(data: 'bytes') -> 'PdfFacts'"
     }
   },
-  "version": "0.6.0"
+  "version": "0.6.1"
 }

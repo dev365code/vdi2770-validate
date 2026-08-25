@@ -5,6 +5,78 @@
 Six things that were true of the code and not of what the project said about it,
 plus the guards that make each one say so next time.
 
+
+Review of this release candidate found one thing that had to
+stop it and a dozen that had to be fixed before it went out. What follows is what
+they found, not a summary written after the fact.
+
+- **Bounding one document did not bound the tree of them.** `MAX_ELEMENTS` caps
+  the elements in one metadata file; nothing capped the sum. A documentation
+  container holding forty document containers, each with metadata just under that
+  cap, is **12 KiB** on disk and cost **74 seconds** of CPU. Memory stays flat —
+  the trees are built and dropped one at a time — so every budget the reader has
+  let it through. `MAX_TOTAL_ELEMENTS` bounds the read: the same archive costs
+  **12 s**, and a legitimate nine-hundred-document handover of real corpus
+  metadata still passes untouched at 17.8 s. The attacker cannot buy more work
+  than a real customer.
+- **A malformed encoding declaration was reported as our crash.** expat resolves
+  `encoding="XXXX"` through the codec registry and raises `LookupError`, which is
+  not an `ExpatError` and escaped the parser — so the report said *"a check in
+  this tool raised an error"*, `about: tool`, and told the sender nothing in
+  their container needed changing. It is `X1` now, `about: container`, naming the
+  encoding the document declared.
+- **A window is the wrong shape for a dictionary.** `_is_encrypted` read 4 KB
+  after each `trailer` keyword, and a legal trailer whose `/ID` strings are long
+  pushes `/Encrypt` past any window you pick. Such a file read as *not*
+  encrypted, and the report then told the producer to re-export as PDF/A — a
+  remedy for a different problem, on a document this tool could not open. It
+  reads to where the dictionary closes.
+- **`Z13` called a root-level file a folder.** `./VDI2770_Metadata.xml` **is** at
+  the root; some writers spell it that way. `Z9` learned to skip a `.` segment
+  this cycle and the reader grew a `path-prefixed` near-miss kind for it — this
+  was the third place and it was missed, so a conforming container got an error
+  saying this tool had not looked inside something it had read.
+- **`XmlTooLarge` could not be caught by name.** Raised at the reader's boundary
+  and left out of `__all__`, so the validator was reduced to comparing
+  `__class__.__name__` and the release fingerprint could not see it at all — it
+  could have been renamed in a patch release with the gate green. Exported, and a
+  new gate walks every exception the package raises and fails if one of them
+  cannot be caught by name.
+- **The release gate refused every release.** Once `sdk-v0.6.0` existed, the
+  branch that noticed "the recorded version is published and the package has
+  moved past it" returned 1 with nowhere to go — a wall across the one operation
+  a release performs. It judges the move now, and takes its evidence from the tag
+  rather than from the `version` field of the file it is judging, because that
+  field is editable and pointing it at some tag that exists is exactly how you
+  make the tool compare against a past that never was.
+- **Two gates could not fail, and one flaked.** The layering check for a second
+  definition of Unicode canonical form was a `grep`, so writing the function's
+  name in a comment counted as a definition; it reads the syntax now. The
+  changelog helper raised `ValueError` on a file with no sections, missed a
+  heading on the first line, and ended a section at a `## ` inside a code fence.
+  And two budget tests asserted on `time.monotonic()` and went red on a loaded
+  machine — they count what the budget bounds instead.
+- **Packaging.** An sdist built in a tree somebody had run the suite in carried
+  pytest's cache, because `recursive-include packages ... *.md` matches
+  `.pytest_cache/README.md` — gitignored is not excluded. Six links in the README
+  are relative, and PyPI does not rewrite them, so they 404 on the project page.
+  The root package declared no specific Python versions while the reader declared
+  two.
+
+### Two new rule ids, and one changed verdict
+
+- **`Z13` — documents delivered as folders.** A folder holding
+  `VDI2770_Metadata.xml` is a document container that was not zipped. This tool
+  opens `.zip` members and nothing else, so everything inside went unchecked —
+  and the report said nothing, which told the reader it had passed. It is an
+  **error**, `about: tool`: the reference implementation does read such folders,
+  so this is our limit rather than a fault in the delivery. If you deliver that
+  way you will see a new error id on upgrade, and `F2`/`Z8` no longer fire on
+  the files inside those folders, because accusing them of being undeclared was
+  the false positive that hid this.
+- **`X6` — metadata this tool did not build a model of.** New, `about: tool`,
+  an error. See the element budgets below.
+
 - **The sweep is complete, and it runs where a JVM already is.** Two containers
   had never been through the reference implementation, because the reference half
   needs a JDK, Maven and a checkout of another project — three shell lines in a
@@ -13,8 +85,8 @@ plus the guards that make each one say so next time.
   for a human to read. The first run filled both in, and settled something no
   local run could — the other 44 verdicts came back **byte-identical** to the
   ones captured on a laptop, which is the property the whole comparison rests on.
-  The reference reports errors on the 1.14-million-element metadata too, for its
-  own reasons; both tools reject that container.
+  The reference reports errors on the over-the-cap fixture too, for its own
+  reasons; both tools reject that container.
 - **A release cannot publish counts that exclude something.** `make
   oracle-fully-swept` asks whether every container has a reference verdict, reads
   the recorded file and nothing else — a release must not depend on Maven Central
@@ -29,7 +101,7 @@ plus the guards that make each one say so next time.
   afterwards waits for the next full sweep. One of them errors on our side, so it
   was counted as a container where *"we report an error and it does not"*: a
   disagreement with a tool that has never seen the file. The counts exclude
-  unswept containers now, the page says which two and why, and the gate derives
+  unswept containers now, the page names any that are outstanding, and the gate derives
   both numbers — how many exist and how many were measured — instead of one
   doing the work of both.
 
@@ -157,13 +229,13 @@ Three ways a small file could make this tool spend without limit. Each number
 below is measured on this machine, before and after, on the same input.
 
 - **A rule can no longer flood the report.** One rule fires once per element, so
-  a 126 KB archive naming 200,000 identifiers produced 200,004 listed findings,
-  **51.6 MB of text output, 137 MB of JSON, and 1,260 MB of memory**. The listing
-  is now capped at 100 per (rule, container) — the same input prints 104 findings,
-  **26.8 KB of text, 71.7 KB of JSON, 367 MB** — and the report says
-  `... 199900 more M10 findings in flood.zip, counted below but not listed`,
+  a 116 KB archive naming 99,000 identifiers produced 99,004 listed findings and
+  tens of megabytes of output. The listing is now capped at 100 per (rule,
+  container) — that input prints 101 findings, **26.3 KB of text, 74.8 KB of
+  JSON, 179 MB** — and the report says
+  `... 98900 more M10 findings in flood99.zip, counted below but not listed`,
   with `notListed` in the JSON. **The count is not capped**: the summary still
-  reads 200,002 errors and the exit code is still 1, because a bounded listing
+  reads 99,000 errors and the exit code is still 1, because a bounded listing
   must not become a quieter verdict. What memory remains is the parse tree, which
   is bounded: measured at 18x the metadata bytes, so 0.3 GB at
   `MAX_METADATA_BYTES` and 1.2 GB across the whole tree budget.
@@ -181,7 +253,7 @@ below is measured on this machine, before and after, on the same input.
 Three gates that ask what `make check` cannot ask of itself.
 
 - **`make mutations`** takes every claim this project makes about a gate, breaks
-  the thing that gate protects, and checks the gate notices — twenty-seven rows, each
+  the thing that gate protects, and checks the gate notices — 33 rows, each
   naming the pytest selection or the tool that has to go red. The harness checks
   itself as hard as it checks the code: a row whose anchor no longer appears
   exactly once is an error rather than a pass; every apply and restore clears

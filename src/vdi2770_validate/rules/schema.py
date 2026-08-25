@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import Iterator
 
 from ..catalog import rule
-from ..model import Finding
+from ..model import Finding, UnsafeXml, XmlTooLarge
 
 
 def check(container, parse_error, schema_errors) -> Iterator[Finding]:
@@ -14,8 +14,11 @@ def check(container, parse_error, schema_errors) -> Iterator[Finding]:
         # file may not; `X6` says we declined to model it, which is ours. Mapping
         # every non-`UnsafeXml` error onto `X1` told the sender of a perfectly
         # well-formed document that it was not well-formed.
-        rid = {"UnsafeXml": "X3", "XmlTooLarge": "X6"}.get(
-            parse_error.__class__.__name__, "X1")
+        # By class, not by the class's name. The name compare was not a choice:
+        # `XmlTooLarge` was raised at the reader's boundary and not exported, so
+        # this could not write `isinstance` even though that is what it meant.
+        rid = ("X3" if isinstance(parse_error, UnsafeXml)
+               else "X6" if isinstance(parse_error, XmlTooLarge) else "X1")
         r = rule(rid)
         where = container.where.child(member=container.metadata_name,
                                       line=parse_error.line, column=parse_error.column)

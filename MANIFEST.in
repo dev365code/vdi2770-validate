@@ -16,3 +16,8 @@ recursive-include packages *.py *.toml *.md *.in *.json
 # NOTICE being missing here, which is exactly what it is for.
 include packages/vdi2770/LICENSE packages/vdi2770/NOTICE packages/vdi2770/src/vdi2770/py.typed
 prune tests/fixtures
+# `recursive-include packages ... *.md` matches `.pytest_cache/README.md`, so an
+# sdist built in a tree somebody had run the suite in carried pytest's cache.
+# Gitignored is not the same as excluded: MANIFEST.in decides what ships.
+global-exclude .pytest_cache/*
+prune packages/vdi2770/.pytest_cache

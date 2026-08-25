@@ -46,7 +46,7 @@ from .domain import build as build_document
 from .model import DEFECT_KINDS, REFUSAL_KINDS, Defect, Location
 from .pdfread import PdfFacts
 from .pdfread import read as read_pdf
-from .xmlread import NS, Node, UnsafeXml, XmlError
+from .xmlread import NS, Node, UnsafeXml, XmlError, XmlTooLarge
 from .xmlread import parse as parse_xml
 from .zipread import (
     MAIN_PDF,
@@ -61,11 +61,11 @@ from .zipread import (
 from .zipread import read as read_container
 from .zipread import read_file as read_container_file
 
-__version__ = "0.6.0"
+__version__ = "0.6.1"
 
 __all__ = ["ClassName", "Classification", "Container", "DEFECT_KINDS", "Defect", "Description",
            "DigitalFile", "Document", "DocumentId", "DocumentVersion", "Kind", "Location",
            "MAIN_PDF", "MAIN_XML", "METADATA_XML", "Member", "NS", "Node", "PdfFacts",
-           "REFUSAL_KINDS", "Tagged", "UnsafeXml", "XmlError", "__version__",
+           "REFUSAL_KINDS", "Tagged", "UnsafeXml", "XmlError", "XmlTooLarge", "__version__",
            "build_document", "member_bytes", "nfc", "parse_xml", "read_container",
            "read_container_file", "read_pdf"]

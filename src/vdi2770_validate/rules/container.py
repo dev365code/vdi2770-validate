@@ -22,8 +22,18 @@ def folders_holding_metadata(container) -> list:
     out = []
     for name in container.present:
         prefix, sep, leaf = nfc(name).rpartition("/")
-        if sep and leaf == METADATA_XML:
-            out.append(prefix + "/")
+        if not sep or leaf != METADATA_XML:
+            continue
+        # `./VDI2770_Metadata.xml` *is* at the root. Some writers spell it that
+        # way and the file has not gone anywhere, so reporting it as delivered in
+        # a folder said this tool had not looked inside something it had read.
+        # `Z9` skips a `.` segment for the same reason, two rules below, and the
+        # reader grew a `path-prefixed` near-miss kind for it; this was the third
+        # place and it was missed.
+        segments = [seg for seg in prefix.split("/") if seg not in ("", ".")]
+        if not segments:
+            continue
+        out.append("/".join(segments) + "/")
     return sorted(set(out))
 
 
@@ -252,7 +262,8 @@ def check(container, declared, is_declared_payload) -> Iterator[Finding]:
             r = rule("Z13")
             yield Finding(r, r.title, container.where,
                           detail=f"{len(as_folders)} folder"
-                                 f"{'' if len(as_folders) == 1 else 's'} hold "
+                                 f"{'' if len(as_folders) == 1 else 's'} "
+                                 f"{'holds' if len(as_folders) == 1 else 'hold'} "
                                  f"{METADATA_XML}: " + ", ".join(as_folders[:5])
                                  + (", ..." if len(as_folders) > 5 else ""))
 

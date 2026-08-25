@@ -17,10 +17,11 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
 
 from vdi2770.model import Defect, Location
+from vdi2770.xmlread import UnsafeXml, XmlTooLarge
 from vdi2770.zipread import MAIN_PDF, MAIN_XML, METADATA_XML, Kind
 
-__all__ = ["About", "Defect", "Finding", "Kind", "Location", "MAIN_PDF",
-           "MAIN_XML", "METADATA_XML", "Obligation", "Report", "Rule", "Severity"]
+__all__ = ["About", "Defect", "Finding", "Kind", "Location", "MAIN_PDF", "MAIN_XML", "METADATA_XML",
+           "Obligation", "Report", "Rule", "Severity", "UnsafeXml", "XmlTooLarge"]
 
 
 class Severity(enum.Enum):

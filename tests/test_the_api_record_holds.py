@@ -140,3 +140,44 @@ def test_the_version_itself_is_not_a_breaking_change():
     # And the thing it is for still bites.
     now["surface"].pop("nfc")
     assert fp.compatible(was, now), "removing a name in a patch release is not compatible"
+
+
+def test_a_release_past_a_published_version_is_not_a_wall():
+    """`sdk-v0.6.0` was the first baseline recorded under a tag that exists, and
+    the branch that noticed "the recorded version is published and the package
+    has moved past it" refused outright — across the one operation a release
+    performs. Every later release of the reader would have had to edit this tool.
+
+    What it may not do is take the recorded version's word for itself. The tag
+    is the evidence; this file is a copy of it, and a copy whose `version` says
+    something the tag did not publish is how you make the tool compare against a
+    past that never existed.
+    """
+    sys.path.insert(0, str(ROOT / "tools"))
+    import api_fingerprint as fp
+
+    recorded = json.loads(BASELINE.read_text(encoding="utf-8"))
+    published = fp._at_tag(recorded["version"])
+    if published is None:
+        pytest.skip(f"sdk-v{recorded['version']} is not tagged here yet")
+    assert published == recorded, (
+        "the checked-in baseline is not what its own tag published; the release "
+        "path compares against the tag and this would refuse every release")
+
+
+def test_a_baseline_that_is_not_what_its_tag_published_is_refused(tmp_path):
+    """The steering move, in the shape the release path opened for it: leave the
+    surface changed, point `version` at some tag that exists, and let the
+    compatibility check wave the move through on the strength of a minor bump
+    from a version this baseline never was."""
+    tree, _ = run(tmp_path)
+    baseline = tree / "packages" / "vdi2770" / "API.json"
+    body = json.loads(baseline.read_text(encoding="utf-8"))
+    body["version"] = "0.0.9"                       # tagged below, and a minor behind
+    subprocess.run(["git", "tag", "sdk-v0.0.9"], cwd=tree, check=True)
+    baseline.write_text(json.dumps(body, indent=2), encoding="utf-8")
+
+    done = subprocess.run([sys.executable, "tools/api_fingerprint.py", "--write"],
+                          cwd=tree, capture_output=True, text=True)
+    assert done.returncode == 1, done.stdout + done.stderr
+    assert "not what sdk-v0.0.9 published" in done.stderr, done.stderr

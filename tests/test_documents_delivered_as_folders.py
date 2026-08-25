@@ -88,3 +88,35 @@ def test_an_ordinary_documentation_container_is_untouched():
     not gain a finding from any of this."""
     rep = check_bytes(CLEAN_DOCUMENTATION.read_bytes(), "clean.zip")
     assert rep.count(Severity.ERROR) == 0, sorted(f.rule.id for f in rep.findings)
+
+
+def test_a_dot_slash_prefix_is_not_a_folder():
+    """`./VDI2770_Metadata.xml` **is** at the root. Some writers spell it that
+    way and the file has not gone anywhere.
+
+    Two other places in this release learned that: `Z9` skips a `.` segment
+    because "counting it invented one and told the sender to move a file that
+    had not gone anywhere", and the reader grew a `path-prefixed` near-miss kind
+    for the same reason. This function got neither, so it reported `Z13` — an
+    **error**, saying this tool did not look inside — about a document it had
+    read, and suppressed `Z8` while it was at it.
+    """
+    body = b"<Document xmlns='http://www.vdi.de/schemas/vdi2770'/>"
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        z.writestr("VDI2770_Main.xml", body)
+        z.writestr("VDI2770_Main.pdf", b"%PDF-1.7\n")
+        z.writestr("./VDI2770_Metadata.xml", body)
+        z.writestr("./B.pdf", b"%PDF-1.7\n")
+
+    fired = {f.rule.id for f in report(buf.getvalue()).findings}
+    assert "Z13" not in fired, f"a root-level metadata file read as a folder: {sorted(fired)}"
+
+
+def test_it_says_one_folder_in_english():
+    """`1 folder hold VDI2770_Metadata.xml` — the plural was on the noun and not
+    on the verb. A sentence a person reads is part of the finding."""
+    fired = [f for f in report(foldered()).findings if f.rule.id == "Z13"]
+    assert fired, "the fixture no longer produces Z13"
+    detail = fired[0].detail or ""
+    assert " hold " not in detail or not detail.startswith("1 "), detail

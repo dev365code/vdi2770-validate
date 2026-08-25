@@ -52,24 +52,58 @@ MAX_XMP_PACKETS = 64      # per haystack; a file needs one
 # fine. It is read from the trailer, which is where the format puts it.
 _ENCRYPT_REF = re.compile(rb"/Encrypt\s+\d+\s+\d+\s+R")
 _TRAILER = re.compile(rb"\btrailer\b")
-MAX_TRAILER_SCAN = 4096   # bytes after each `trailer` keyword
+MAX_TRAILER_SCAN = 65536  # the most of one trailer dictionary that is read
 
 
 def _is_encrypted(data: bytes) -> bool:
     """Whether a trailer dictionary references an encryption dictionary.
 
     A file may carry several trailers — incremental updates append one each — so
-    every one is looked at, each over a bounded window so a file full of the
-    word `trailer` cannot make this quadratic.
+    every one is looked at, each bounded so a file full of the word `trailer`
+    cannot make this quadratic.
+
+    Bounded by where the dictionary *ends*, not by a fixed window. A window was
+    the first shape and it was the wrong one: `/ID` holds two strings and a legal
+    file may make them long, which pushes `/Encrypt` past any window you pick.
+    Such a file read as not encrypted, and the report then told the producer to
+    re-export as PDF/A — a remedy for a different problem, on a document this
+    tool could not open. The cap remains as a backstop for a dictionary that
+    never closes.
 
     A PDF whose trailer lives in a cross-reference stream has no `trailer`
     keyword and comes back False. That is a miss and not a false alarm, and
     docs/scope.md says so rather than leaving a reader to assume otherwise.
     """
     for hit in _TRAILER.finditer(data):
-        if _ENCRYPT_REF.search(data, hit.end(), hit.end() + MAX_TRAILER_SCAN):
+        end = _dict_end(data, hit.end(), MAX_TRAILER_SCAN)
+        if _ENCRYPT_REF.search(data, hit.end(), end):
             return True
     return False
+
+
+def _dict_end(data: bytes, start: int, cap: int) -> int:
+    """Where the `<< >>` opened after `start` closes, or `start + cap`.
+
+    Iterative and single-pass: a nested dictionary is common in a trailer
+    (`/ID [<..> <..>]` is not one, but `/Root` values can be), and a scan that
+    stopped at the first `>>` would end early on any of them.
+    """
+    limit = min(len(data), start + cap)
+    i, depth = start, 0
+    while i < limit - 1:
+        pair = data[i:i + 2]
+        if pair == b"<<":
+            depth += 1
+            i += 2
+            continue
+        if pair == b">>":
+            depth -= 1
+            i += 2
+            if depth <= 0:
+                return i
+            continue
+        i += 1
+    return limit
 
 MAX_STREAM_SCAN = 400_000        # compressed bytes read after each stream marker
 MAX_INFLATED_PER_STREAM = 4_000_000   # and what we will let one of them become

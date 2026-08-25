@@ -306,7 +306,10 @@ def test_the_changelog_counts_the_mutation_rows_it_describes():
     from mutation_table import TABLE
 
     unreleased = newest_changelog_section()
-    m = re.search(r"([a-z-]+) rows, each\s*\n?\s*naming the pytest selection", unreleased)
+    # `[a-z-]+` could not match a count past twenty-nine, where `spelled` starts
+    # returning digits — so at thirty rows this gate reported "the sentence has
+    # been reworded" and no wording could satisfy it.
+    m = re.search(r"([a-z0-9-]+) rows, each\s*\n?\s*naming the pytest selection", unreleased)
     assert m, "the CHANGELOG sentence this test pins has been reworded"
     said = m.group(1)
     expected = spelled(len(TABLE))
@@ -369,7 +372,7 @@ def test_the_changelog_counts_the_rules_that_fire_because_we_declined():
     declined = [r["id"] for r in catalogue["rules"] if r["about"] == "tool"]
 
     unreleased = newest_changelog_section()
-    m = re.search(r"([A-Za-z-]+) rules fire because the validator declined", unreleased)
+    m = re.search(r"([A-Za-z0-9-]+) rules fire because the validator declined", unreleased)
     assert m, "the CHANGELOG sentence this test pins has been reworded"
     assert m.group(1).lower() == spelled(len(declined)), (
         f"{len(declined)} rules are `about: tool` ({sorted(declined)}); the "

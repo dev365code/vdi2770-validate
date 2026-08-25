@@ -32,6 +32,7 @@ import enum
 import inspect
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 from typing import Optional
@@ -158,6 +159,22 @@ def _parts(version: str) -> Optional[tuple]:
     return (int(head.group(1)), int(head.group(2)), int(head.group(3))) if head else None
 
 
+def _at_tag(version: str):
+    """The baseline as `sdk-v<version>` published it, or None.
+
+    Read from git rather than from the file being judged, because the file being
+    judged is the one somebody could have edited.
+    """
+    done = subprocess.run(["git", "show", f"sdk-v{version}:packages/vdi2770/API.json"],
+                          cwd=ROOT, capture_output=True, text=True)
+    if done.returncode:
+        return None
+    try:
+        return json.loads(done.stdout)
+    except json.JSONDecodeError:
+        return None
+
+
 def _published(version: str) -> bool:
     """Whether `sdk-v<version>` exists — whether anyone could have installed it.
 
@@ -201,11 +218,30 @@ def main() -> int:
                   f"whether the library changed.", file=sys.stderr)
         if (recorded and recorded.get("version") not in (None, now["version"])
                 and _published(recorded["version"])):
-            print(f"{BASELINE.relative_to(ROOT)} records {recorded['version']}, which is "
-                  f"published, and the package now says {now['version']}. That is a "
-                  f"release rather than a re-record: read the surface diff by hand.",
-                  file=sys.stderr)
-            return 1
+            # This is what a release looks like: the recorded version shipped,
+            # the package has moved past it. Refusing outright was a wall across
+            # the one operation a release performs -- `sdk-v0.6.0` was the first
+            # published baseline, so the first release after it had nowhere to go.
+            #
+            # But the version in this file is editable, and setting it to a value
+            # that happens to be tagged is exactly how you make the tool compare
+            # against a past that never existed. So the baseline has to *be* what
+            # that tag published, not merely claim to be: the tag is the evidence
+            # and this file is a copy of it.
+            published = _at_tag(recorded["version"])
+            if published != recorded:
+                print(f"{BASELINE.relative_to(ROOT)} says it records {recorded['version']}, "
+                      f"and that is not what sdk-v{recorded['version']} published"
+                      f"{' -- the tag has no baseline at all' if published is None else ''}. "
+                      f"Restore it from the tag; a baseline that is not the record of a "
+                      f"release cannot be compared against one.", file=sys.stderr)
+                return 1
+            why = compatible(recorded, now)
+            if why:
+                print(why, file=sys.stderr)
+                return 1
+            print(f"recording {now['version']}: {recorded['version']} is published and "
+                  f"this move is compatible with the pin that admits it.", file=sys.stderr)
         if recorded is None and a.first and _published(now["version"]):
             # "This is the first one" cannot be true of a version somebody could
             # already have installed. `rm API.json && --write --first` was the

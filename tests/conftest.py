@@ -68,8 +68,23 @@ def newest_changelog_section() -> str:
     Released sections below the top are history and must not be edited, so they
     are deliberately out of scope: work lands in a new section above them, and
     that is the one whose claims still have to be true.
+
+    Line-anchored, fence-aware, and it does not raise. The first draft sliced on
+    the substring `"\\n## "`, which missed a heading on the very first line, ended
+    a section at a `## ` inside a fenced code block, and raised `ValueError` on a
+    file with no sections at all -- beside a sibling whose docstring says a gate
+    that crashes instead of reporting is a gate nobody can read the output of.
     """
-    text = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
-    first = text.index("\n## ") + 1
-    rest = text.find("\n## ", first)
-    return text[first:(rest if rest != -1 else len(text))]
+    lines = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8").splitlines(keepends=True)
+    fenced, start = False, None
+    for n, line in enumerate(lines):
+        if line.lstrip().startswith("```"):
+            fenced = not fenced
+            continue
+        if fenced or not line.startswith("## "):
+            continue
+        if start is None:
+            start = n
+        else:
+            return "".join(lines[start:n])
+    return "".join(lines[start:]) if start is not None else ""

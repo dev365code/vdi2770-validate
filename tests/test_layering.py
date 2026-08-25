@@ -73,12 +73,26 @@ def test_readers_do_not_know_rule_ids():
 def test_unicode_canonicalisation_is_defined_once_in_the_project():
     """`nfc` belongs to whoever reads archives. There were two copies of that one
     line in two packages — and `names.py`, which holds the second one's caller,
-    exists because every place that compares a name has to do it the same way."""
-    import subprocess
+    exists because every place that compares a name has to do it the same way.
 
-    hits = subprocess.run(
-        ["grep", "-rn", "unicodedata.normalize", "src", "packages/vdi2770/src"],
-        cwd=ROOT, capture_output=True, text=True).stdout.strip().splitlines()
+    A grep is what this was, and a grep cannot tell a call from a sentence about
+    one: writing the function's name in a comment that explains why it is not
+    wrapped counted as a second definition. It reads the code now.
+    """
+    import ast
+
+    hits = []
+    for root in ("src", "packages/vdi2770/src"):
+        for path in sorted((ROOT / root).rglob("*.py")):
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+            for node in ast.walk(tree):
+                if not isinstance(node, ast.Call):
+                    continue
+                fn = node.func
+                if (isinstance(fn, ast.Attribute) and fn.attr == "normalize"
+                        and isinstance(fn.value, ast.Name) and fn.value.id == "unicodedata"):
+                    hits.append(f"{path.relative_to(ROOT)}:{node.lineno}")
+
     assert len(hits) == 1, "more than one definition of canonical form:\n  " + "\n  ".join(hits)
     assert hits[0].startswith("packages/vdi2770/src/vdi2770/zipread.py"), hits[0]
 
