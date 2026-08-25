@@ -53,6 +53,23 @@ have a class of its own.
   now. The corpus's worst real element carries three attributes and its worst
   document fifty-one, so both caps sit two orders of magnitude above anything a
   delivery can reach.
+- **One path that blocks no longer stops the sweep.** `cli` wraps each path in
+  `try/except` so a bad one cannot stop the rest — but a hang is not an
+  exception. Opening a FIFO with no writer waits forever, so a single named pipe
+  in a supplier drop folder meant the run produced a verdict on *nothing*. A
+  directory and a dead symlink were already refused by raising; the third shape
+  is refused the same way, before the open.
+- **A name the archive stores twice is told to remove the repeat.** `F1` said the
+  bytes could not be read — they read fine — and the remedy was "re-create the
+  archive and send it again", which, followed exactly, produces the same archive
+  and the same finding. The right words were already in `files.py`, behind a test
+  against a set that is always empty: the reader refuses *both* entries of a
+  repeated name, so the name never reaches `file_names`. The branch reads the
+  refusal now, which is where the reader put the answer.
+- **`Z9` and `Z13` name one folder one way.** They were spelling the same place
+  `AB393/` and `./AB393/` in the same report. What the folder list *returns*
+  still keeps the archive's prefix, because `F2` suppression matches member
+  names against it; the sentence is what changed.
 - **Text arriving in pieces has a ceiling.** The tree had a bound on elements and
   none on how many times the parser handed back character data. One character
   reference repeated cost **287 MB** from a 4.2 KiB archive, because a byte count
@@ -405,7 +422,7 @@ below is measured on this machine, before and after, on the same input.
 Three gates that ask what `make check` cannot ask of itself.
 
 - **`make mutations`** takes every claim this project makes about a gate, breaks
-  the thing that gate protects, and checks the gate notices — 46 rows, each
+  the thing that gate protects, and checks the gate notices — 49 rows, each
   naming the pytest selection or the tool that has to go red. The harness checks
   itself as hard as it checks the code: a row whose anchor no longer appears
   exactly once is an error rather than a pass; every apply and restore clears

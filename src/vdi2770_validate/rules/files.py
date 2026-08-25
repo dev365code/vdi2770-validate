@@ -49,7 +49,16 @@ def check(container, document) -> Iterator[Finding]:
             # to inflate, whose bytes are fine. It fires here rather than at the
             # member because this is the line in the metadata that named the file.
             ours = because is not None and because.kind in BUDGET_REFUSALS
-            twice = f.file_name in members.ambiguous
+            # Read from the refusal, not from `members.ambiguous`. That set is
+            # computed over `container.file_names`, and the reader refuses *both*
+            # entries of a repeated name and leaves neither there -- so it is
+            # always empty from real reader output, and this branch, which has
+            # had the right words in it all along, had never once run. The
+            # archive that stores `B.pdf` twice fell through to the bad-CRC
+            # wording and was told to re-create the archive and send it again,
+            # which reproduces the same archive and the same finding.
+            twice = (f.file_name in members.ambiguous
+                     or (because is not None and because.kind == "ambiguous-name"))
             if twice:
                 message = ("A file named in the metadata is in the container more "
                            "than once")

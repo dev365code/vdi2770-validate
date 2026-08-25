@@ -315,6 +315,30 @@ TABLE = [
      "a per-element cap alone lets a sender pay the per-element cost once for "
      "every element they care to write"),
 
+    ("runner/a-path-that-blocks-is-a-path-we-cannot-read",
+     "src/vdi2770_validate/runner.py",
+     "    if not stat.S_ISREG(os.stat(path).st_mode):",
+     "    if False:",
+     ["tests/test_defences.py"],
+     "opening a FIFO with no writer waits forever, and the handler that keeps "
+     "one bad path from stopping a sweep catches exceptions, not hangs"),
+
+    ("rules/a-repeated-name-is-not-a-bad-checksum",
+     "src/vdi2770_validate/rules/files.py",
+     '                     or (because is not None and because.kind == "ambiguous-name"))',
+     "                     or False)",
+     ["tests/test_a_member_we_cannot_read_is_not_a_pass.py"],
+     "the bytes read fine; F1 told the producer to re-create the archive and "
+     "send it again, which reproduces the same archive"),
+
+    ("rules/two-rules-name-one-folder-one-way",
+     "src/vdi2770_validate/rules/container.py",
+     '            named = [folder_path(f) + "/" for f in as_folders[:5]]',
+     "            named = list(as_folders[:5])",
+     ["tests/test_documents_delivered_as_folders.py"],
+     "`Z9` said `AB393/` and `Z13` said `./AB393/` in one report, and a reader "
+     "has to work out they are the same place"),
+
     ("gates/an-exception-nobody-can-catch-by-name",
      "packages/vdi2770/src/vdi2770/__init__.py",
      '"XmlTooLarge",',

@@ -295,11 +295,18 @@ def check(container, declared, is_declared_payload) -> Iterator[Finding]:
         as_folders = folders_holding_metadata(container)
         if as_folders:
             r = rule("Z13")
+            # Named the way `Z9` names it. The two rules were spelling one
+            # folder two ways in the same report -- `AB393/` and `./AB393/` --
+            # and a reader then has to work out that the tool is not talking
+            # about two places. The list itself keeps the archive's prefix,
+            # because `files.py` matches it against member names to suppress
+            # `F2`; it is the sentence that is rendered.
+            named = [folder_path(f) + "/" for f in as_folders[:5]]
             yield Finding(r, r.title, container.where,
                           detail=f"{len(as_folders)} folder"
                                  f"{'' if len(as_folders) == 1 else 's'} "
                                  f"{'holds' if len(as_folders) == 1 else 'hold'} "
-                                 f"{METADATA_XML}: " + ", ".join(as_folders[:5])
+                                 f"{METADATA_XML}: " + ", ".join(named)
                                  + (", ..." if len(as_folders) > 5 else ""))
 
         # (`stopped` above already covers the unreadable child, so whether this

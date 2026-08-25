@@ -7,6 +7,9 @@ complaint. Nothing else in this package imports it, and a test enforces that for
 the rules."""
 from __future__ import annotations
 
+import errno
+import os
+import stat
 from typing import Optional
 
 from vdi2770 import pdfread, xmlread, zipread
@@ -286,6 +289,15 @@ def check_bytes(data: bytes, name: str) -> Report:
 
 
 def check_file(path: str) -> Report:
+    # `os.stat` before `open`, because one kind of unreadable path does not fail
+    # -- it waits. Opening a FIFO with no writer blocks forever, and `cli` catches
+    # exceptions so that one bad path cannot stop the rest of a sweep; a hang is
+    # not an exception, so a single named pipe in a supplier drop folder meant
+    # the run produced a verdict on nothing. A directory and a dead symlink were
+    # already refused here, by raising; this refuses the third shape the same
+    # way, so the caller's handler sees what it already knows how to report.
+    if not stat.S_ISREG(os.stat(path).st_mode):
+        raise OSError(errno.EINVAL, "not a regular file", path)
     with open(path, "rb") as fh:
         data = fh.read()
     return check_bytes(data, path.rsplit("/", 1)[-1])

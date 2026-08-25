@@ -10,11 +10,12 @@ monkeypatched down to something a test can reach, and the *size* is pinned
 separately, because a mechanism that works perfectly at 10**18 protects nobody.
 """
 import io
+import os
 import zipfile
 
 import pytest
 
-from conftest import CLEAN_DOCUMENT
+from conftest import CLEAN_DOCUMENT, under_test
 from vdi2770 import pdfread, xmlread, zipread
 from vdi2770_validate import model, xsdvalidate
 from vdi2770_validate.rules import container as r_container
@@ -326,3 +327,29 @@ def test_no_module_in_either_package_holds_an_unpinned_budget():
         | set(SCHEMA_BUDGETS) | set(XML_BUDGETS) | set(RUNNER_BUDGETS)
     unpinned = {m: sorted(c - pinned) for m, c in seen.items() if c - pinned}
     assert not unpinned, f"budgets no table pins: {unpinned}"
+
+
+def test_a_path_that_never_finishes_opening_does_not_stop_the_sweep(tmp_path):
+    """A FIFO with no writer blocks `open` forever.
+
+    `cli` wraps `check_file` in `try/except` so that one bad path cannot stop
+    the rest -- but a hang is not an exception, so the whole guarantee that
+    handler exists for was defeated by one entry in a folder. A CI job sweeping
+    a supplier drop would produce a verdict on nothing.
+
+    Directories and dead symlinks were already handled; only the blocking-open
+    case escaped, because it is the only unreadable thing that does not fail.
+    """
+    import subprocess
+    import sys
+
+    pipe = tmp_path / "pipe.zip"
+    os.mkfifo(pipe)
+    good = tmp_path / "good.zip"
+    good.write_bytes(CLEAN_DOCUMENT.read_bytes())
+
+    r = subprocess.run(
+        [sys.executable, "-m", "vdi2770_validate", "check", str(pipe), str(good)],
+        capture_output=True, text=True, timeout=30, env=under_test())
+    assert "cannot read it" in r.stdout + r.stderr, r.stdout + r.stderr
+    assert "good.zip" in r.stdout, "the readable path after it was never reached"

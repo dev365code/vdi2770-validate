@@ -187,3 +187,21 @@ def test_a_folder_is_the_same_folder_however_its_members_are_spelled(meta_name, 
     assert "F2" not in fired, (
         f"{file_name} sits in the folder {meta_name} names, and was called "
         f"undeclared: {fired}")
+
+
+
+def test_two_rules_name_the_same_folder_the_same_way():
+    """`Z9` said `AB393/` and `Z13` said `./AB393/`, in one report.
+
+    They are the same folder. A reader with two findings in front of them has to
+    work out that the tool is not talking about two places, and the answer is
+    that one rule normalised the spelling for its own count and the other did
+    not. What `folders_holding_metadata` *returns* still keeps the raw prefix,
+    because `files.py` matches it against the archive's member names to suppress
+    `F2`; it is only the sentence that changes.
+    """
+    said = {f.rule.id: f.detail for f in report(foldered("./AB393")).findings
+            if f.rule.id in ("Z9", "Z13")}
+    assert set(said) == {"Z9", "Z13"}, said
+    named = {rid: detail.split(": ", 1)[1] for rid, detail in said.items()}
+    assert named["Z9"] == named["Z13"], named

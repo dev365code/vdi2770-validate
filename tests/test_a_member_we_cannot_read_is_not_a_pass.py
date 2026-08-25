@@ -4,6 +4,7 @@ Review found three containers that this tool passed with exit 0 and
 "no findings" while `unzip -t` refused them, and three legitimate deliveries it
 failed. Both directions are recorded here.
 """
+import io
 import os
 import pathlib
 import struct
@@ -14,7 +15,7 @@ import zipfile
 import pytest
 
 from conftest import CLEAN_DOCUMENT
-from vdi2770_validate.runner import check_file
+from vdi2770_validate.runner import check_bytes, check_file
 
 SRC = zipfile.ZipFile(CLEAN_DOCUMENT)
 META = SRC.read("VDI2770_Metadata.xml").decode()
@@ -126,3 +127,32 @@ def test_a_genuinely_missing_file_is_still_missing(tmp_path):
     m = META.replace(DOCX_DECL, '<DigitalFile FileFormat="application/pdf">nope.pdf</DigitalFile>')
     p = build(tmp_path, "missing.zip", [("VDI2770_Metadata.xml", m), ("B.pdf", PDF)])
     assert "F1" in ids(p)
+
+
+def test_a_declared_name_the_archive_stores_twice_is_told_to_remove_the_repeat():
+    """`F1` said the bytes could not be read. They read fine.
+
+    The archive stores `B.pdf` twice; the reader refuses both entries because the
+    name identifies neither. `F1` then took the "bad CRC" branch and told the
+    producer to *re-create the archive and send it again* -- which, done exactly
+    as instructed, produces the same archive and the same finding.
+
+    `files.py` already had the right words. They were behind
+    `f.file_name in members.ambiguous`, and that set is always empty from real
+    reader output for precisely the reason this test exists: the reader dropped
+    both entries, so the name the metadata declares is not in `file_names` at
+    all. The live signal is the refusal, so the branch reads that.
+    """
+    src = zipfile.ZipFile(CLEAN_DOCUMENT)
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        for name in src.namelist():
+            z.writestr(name, src.read(name))
+        z.writestr("B.pdf", b"%PDF-1.4 other bytes")
+
+    f1 = [f for f in check_bytes(buf.getvalue(), "dup.zip").findings
+          if f.rule.id == "F1"]
+    assert len(f1) == 1, [f.rule.id for f in check_bytes(buf.getvalue(), "d.zip").findings]
+    assert "more than once" in f1[0].message, f1[0].message
+    assert "Remove the repeat" in (f1[0].fix or ""), f1[0].fix
+    assert "not readable" not in (f1[0].fix or ""), f1[0].fix

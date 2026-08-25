@@ -39,6 +39,12 @@ class Members:
         seen: Dict[str, int] = {}
         for name in self.present:
             seen[name] = seen.get(name, 0) + 1
+        # Empty for anything the reader produces: `read` refuses both entries
+        # of a repeated name, so neither reaches `file_names`. Kept because this
+        # class reconciles whatever names it is handed and a duplicate in that
+        # input is a real ambiguity it must decline to guess at -- but a rule
+        # that wants to know whether *the archive* repeated a name has to read
+        # the refusal, which is where the reader put the answer.
         self.ambiguous = frozenset(n for n, k in seen.items() if k > 1)
         self._by_nfc: Dict[str, List[str]] = {}
         for name in self.present:
