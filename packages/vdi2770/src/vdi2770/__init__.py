@@ -61,11 +61,9 @@ from .zipread import read_file as read_container_file
 
 __version__ = "0.5.0"
 
-__all__ = [
-    "Classification", "Container", "DEFECT_KINDS", "REFUSAL_KINDS", "Defect", "Description", "DigitalFile",
-    "Document", "DocumentId", "DocumentVersion", "Kind", "Location", "MAIN_PDF",
-    "MAIN_XML",
-    "METADATA_XML", "Member", "NS", "Node", "PdfFacts", "UnsafeXml", "XmlError",
-    "build_document", "member_bytes", "nfc", "parse_xml", "read_container",
-    "read_container_file", "read_pdf", "__version__",
-]
+__all__ = ["Classification", "Container", "DEFECT_KINDS", "Defect", "Description",
+           "DigitalFile", "Document", "DocumentId", "DocumentVersion", "Kind", "Location",
+           "MAIN_PDF", "MAIN_XML", "METADATA_XML", "Member", "NS", "Node", "PdfFacts",
+           "REFUSAL_KINDS", "UnsafeXml", "XmlError", "__version__",
+           "build_document", "member_bytes", "nfc", "parse_xml", "read_container",
+           "read_container_file", "read_pdf"]

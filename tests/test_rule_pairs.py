@@ -43,11 +43,12 @@ def test_clean_containers_have_no_errors():
         assert not errs, f"{p.name} should be clean, got {[(f.rule.id, f.detail) for f in errs]}"
 
 
-def test_every_rule_has_a_fixture_or_a_reason():
+def test_every_rule_has_a_fixture_or_a_reason(monkeypatch):
     """A rule needs a violating container, or a corpus example, or a written
     reason why no container can cause it."""
-    import sys
-    sys.path.insert(0, str(ROOT / "tools"))
+    # syspath_prepend, not sys.path.insert: a test that leaves the import path
+    # altered decides what later tests can import.
+    monkeypatch.syspath_prepend(str(ROOT / "tools"))
     from rule_coverage import CANNOT_FIRE
     from tools_shim import corpus_fired
     covered = {m["rule"] for m in MANIFEST.values()}

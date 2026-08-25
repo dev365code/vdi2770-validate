@@ -21,6 +21,15 @@ stored without lying about what it is.
 | `reference` | observed in the MIT reference implementation | not verified against the guideline; the rule names the message keys |
 | `ours` | our own judgement | carries `whyOurs`, always |
 
+`obligation` and `refKeys` are independent. A rule may cite a message key from
+the reference implementation while its obligation is `ours`, and five do: the
+key records that the other project checks something in the same area, and the
+obligation records whose claim ours is. `P3` is the clearest case — the reference
+asserts the file carries no PDF/A identification; we assert only that a bounded
+scan did not find one, which is the smaller claim and the one we can stand
+behind. Reading a cited key as "so this is what VDI 2770 requires" is exactly the
+mistake the vocabulary exists to prevent.
+
 ## The bundled third-party material
 
 Full table, licence texts and modification statements are in

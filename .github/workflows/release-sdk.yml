@@ -24,19 +24,23 @@ jobs:
         run: |
           python -m pip install --upgrade pip build
           python -m pip install -e ".[dev]"
-      - name: The library's own gate must pass on the tagged tree
-        run: |
-          python -m ruff check src tests
-          python -m pytest
-      - name: And so must the validator's, against this exact tree
-        # The reason to split the package was not to split the evidence: the rule
-        # set is the largest consumer of this library, and a reader change that
-        # moves a verdict has to fail here rather than downstream.
+      # The whole gate, not the library's half. The reason to split the package
+      # was not to split the evidence: the rule set is the largest consumer of
+      # this library, and a reader change that moves a verdict has to fail here
+      # rather than downstream. This step used to run two of the nine targets there were then and
+      # never ran `tools/api_fingerprint.py` -- the gate whose entire purpose is
+      # to stop this workflow publishing a reader whose API has moved.
+      - name: The whole gate must pass on the tagged tree
+        # `working-directory: .` is load-bearing: this file sets a default of
+        # `packages/vdi2770` for every step, so without it these run from inside
+        # the library and there is no Makefile there. The step that this replaced
+        # carried the same line; dropping it made the SDK release fail before it
+        # could publish anything.
         working-directory: .
         run: |
+          python -m pip install -e packages/vdi2770
           python -m pip install -e ".[dev]"
-          python tools/make_fixtures.py
-          python -m pytest
+          make check
       - name: The tag must be the version
         run: |
           tag="${GITHUB_REF_NAME#sdk-v}"

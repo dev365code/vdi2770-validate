@@ -1,5 +1,13 @@
-"""Access to bundled data files. Kept in one place so the zipapp build has a
-single thing to get right."""
+"""Access to bundled data files, resolved in one place.
+
+The reason written here used to be "so the zipapp build has a single thing
+to get right", and there is no zipapp build -- the only mention of one in
+this repository was that sentence. It could not survive one either: the
+data is resolved as a filesystem path and read with `.read_text()`, and
+`schema_path()` hands a caller a real path, none of which works inside a
+zip. The real reason is smaller and true: one import site for the bundled
+data, which `tools/check_wheel.py` checks actually ships.
+"""
 from __future__ import annotations
 
 import json

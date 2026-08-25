@@ -10,7 +10,7 @@ recursive-include docs *.md *.json
 recursive-include .github *.yml
 # The SDK lives in this repository too, and the root suite imports it.
 # An sdist without it would run a suite that cannot import half of itself.
-recursive-include packages *.py *.toml *.md *.in
+recursive-include packages *.py *.toml *.md *.in *.json
 # Extensionless names need naming: the recursive-include patterns above are
 # by suffix, and LICENSE and NOTICE have none. The sdist gate caught the
 # NOTICE being missing here, which is exactly what it is for.

@@ -68,14 +68,27 @@ def do_check() -> int:
             bad.append(f"missing: {rel}")
         elif sha256(p) != meta["sha256"]:
             bad.append(f"changed: {rel}")
+    # `.DS_Store` is skipped when vendoring, so skipping it here too is the same
+    # rule read in the same direction. It was skipped on the way in and counted
+    # on the way out, which made opening the corpus in Finder break `make check`
+    # with no way to repair it from `--from`.
     on_disk = {p.relative_to(CORPUS / "examples").as_posix()
-               for p in (CORPUS / "examples").rglob("*") if p.is_file()}
+               for p in (CORPUS / "examples").rglob("*")
+               if p.is_file() and p.name != ".DS_Store"}
     for extra in sorted(on_disk - set(man["files"])):
         bad.append(f"untracked: {extra}")
     if bad:
         print("corpus does not match its manifest:", file=sys.stderr)
         for b in bad:
             print(f"  {b}", file=sys.stderr)
+        return 1
+    # A comparison over an empty set passes, and this is the file that would
+    # quietly become empty: the corpus directory is gitignored-adjacent,
+    # copied in by a tool, and nothing else counts it.
+    if not man["files"] or not on_disk:
+        print(f"the manifest lists {len(man['files'])} files and {len(on_disk)} are on "
+              f"disk; a comparison over an empty set passes and proves nothing",
+              file=sys.stderr)
         return 1
     print(f"corpus ok: {len(man['files'])} files match {MANIFEST.relative_to(REPO_ROOT)}")
     return 0

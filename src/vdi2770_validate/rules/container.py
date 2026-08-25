@@ -5,8 +5,27 @@ from __future__ import annotations
 from typing import Iterator
 
 from ..catalog import rule
-from ..model import MAIN_PDF, Finding, Kind
+from ..model import MAIN_PDF, METADATA_XML, Finding, Kind
 from ..names import nfc
+
+
+def folders_holding_metadata(container) -> list:
+    """Folders that hold a reserved metadata name — a document container that was
+    not zipped.
+
+    The reader opens `.zip` members and nothing else, so nothing inside one of
+    these was checked. Two rules used to speak about them anyway: `Z8` said the
+    documentation container held no document containers, and `F2` called their
+    files undeclared — both false, because the metadata that declares them is
+    the file this tool did not open.
+    """
+    out = []
+    for name in container.present:
+        prefix, sep, leaf = nfc(name).rpartition("/")
+        if sep and leaf == METADATA_XML:
+            out.append(prefix + "/")
+    return sorted(set(out))
+
 
 MAX_FOLDER_DEPTH = 32     # levels derived from one member's path
 MAX_FOLDERS = 256         # distinct folders named in one container
@@ -19,14 +38,64 @@ DEFECT_TO_RULE = {
     "archive-too-large": "Z5",
     "unsafe-member-name": "Z4",
     "nesting-too-deep": "Z6",
-    "metadata-unreadable": "Z3",
+    # Z12, not Z3: we know what kind of container this is -- the name is in the
+    # archive's directory, which is what classifies it. What we do not have is
+    # the bytes behind that name, and that is exactly what Z12 says.
+    "metadata-unreadable": "Z12",
     "metadata-too-large": "Z5",
     "container-budget-exhausted": "Z5",
+    "decompression-budget-exhausted": "Z5",
+    "member-budget-exhausted": "Z5",
     "member-unreadable": "Z12",
+    # Z10, which already says exactly this: two members of the archive have the
+    # same name. No new rule -- the reader learned to refuse both entries rather
+    # than silently reading the last one, and the rule for that was already here.
+    "ambiguous-name": "Z10",
 }
 
 
-def check(container, declared=frozenset(), is_declared_payload=False) -> Iterator[Finding]:
+# One rule, seven ways to reach it. Z5's own remedy has to fit them all and ends
+# up fitting none: "split the delivery into several containers" does nothing for
+# a single member that expands past the ratio floor, and the project's own tests
+# say so. A Finding may carry its own remedy, so each kind carries the one that
+# names what to do about *it*.
+REMEDY_FOR_DEFECT = {
+    "ambiguous-name":
+        "Rebuild the archive with one entry per name. Two entries share this one, "
+        "so nothing here can say which bytes you meant and neither was read — a "
+        "reader that guessed would show you one file and your unpacker another.",
+    "member-budget-exhausted":
+        "Split the delivery. This tool holds a record for every file named across "
+        "the whole tree of containers, and this one names more than it will hold.",
+    "too-many-members":
+        "Split the delivery: this archive lists more members than this tool will open "
+        "in one container.",
+    "member-too-large":
+        "That one member is larger than this tool will read. Send it on its own, or "
+        "check it with something that has no such limit — the rest of the container "
+        "was read normally.",
+    "suspicious-compression":
+        "That member expands far more than its stored size suggests, which is the shape "
+        "of an archive built to exhaust whoever opens it. If it is a genuine "
+        "uncompressed scan, send it separately: this tool will not inflate it.",
+    "archive-too-large":
+        "Split the delivery into several containers. This one holds more than this tool "
+        "will read in a single archive.",
+    "metadata-too-large":
+        "The metadata file is larger than this tool will parse. Split the documents "
+        "across several containers so each one's metadata is smaller.",
+    "container-budget-exhausted":
+        "Split the delivery, or run this tool on the inner containers separately. It "
+        "opens a bounded number of containers in one pass, and the ones named here were "
+        "not opened at all.",
+    "decompression-budget-exhausted":
+        "Split the delivery, or run this tool on the inner containers separately. Past "
+        "its inflation ceiling the remaining members are still listed, but nothing has "
+        "checked that they can be read.",
+}
+
+
+def check(container, declared, is_declared_payload) -> Iterator[Finding]:
     """`declared` is what this container's own metadata names as files.
     `is_declared_payload` says the parent's metadata names *this* archive as a
     file -- a parts list, a CAD bundle -- rather than expecting a container."""
@@ -35,7 +104,9 @@ def check(container, declared=frozenset(), is_declared_payload=False) -> Iterato
         if rid is None:
             continue
         r = rule(rid)
-        yield Finding(r, r.title, d.where, detail=f"{d.kind}: {d.detail}" if d.detail else d.kind)
+        yield Finding(r, r.title, d.where,
+                      detail=f"{d.kind}: {d.detail}" if d.detail else d.kind,
+                      fix=REMEDY_FOR_DEFECT.get(d.kind))
 
     if container.kind is Kind.UNREADABLE:
         return
@@ -59,10 +130,18 @@ def check(container, declared=frozenset(), is_declared_payload=False) -> Iterato
         # because "it must sit at the root" is a claim about VDI 2770.
         said = {
             "in-a-subfolder": "{wanted} found at {found!r} — it must sit at the root of the archive",
+            "path-prefixed": "{wanted} found at {found!r} — it is at the root, but the "
+                             "name carries a path in front of it and readers match the "
+                             "name exactly",
             "case-differs": "{wanted} found as {found!r} — the name is case-sensitive",
         }
         detail = "; ".join(
             said[kind].format(wanted=wanted, found=found)
+            # (Removing this `sorted` is an equivalent mutant: `near_misses` is
+            # filled by a loop over a fixed tuple of three names, so the dict's
+            # insertion order is already fixed. Kept because the reader is free
+            # to fill it some other way, and this is not where that should
+            # become a report that differs between runs.)
             for wanted, (kind, found) in sorted(container.near_misses.items())
             if kind in said) or None
         yield Finding(r, r.title, container.where, detail=detail)
@@ -88,6 +167,11 @@ def check(container, declared=frozenset(), is_declared_payload=False) -> Iterato
         # the finding names five of them.
         prefix = ""
         for part in m.name.rstrip("/").split("/")[:-1][:MAX_FOLDER_DEPTH]:
+            # `./name` is at the root. Some writers emit the prefix and it is not
+            # a folder, so counting it invented one and told the sender to move a
+            # file that had not gone anywhere.
+            if part in (".", ""):
+                continue
             prefix += part + "/"
             folders.add(prefix)
             if len(folders) >= MAX_FOLDERS:
@@ -97,14 +181,31 @@ def check(container, declared=frozenset(), is_declared_payload=False) -> Iterato
     if folders:
         r = rule("Z9")
         named = sorted(folders)
+        # "at least" when the collection stopped: the list is truncated with an
+        # ellipsis and the count was printed flat, so an archive with three
+        # hundred folders was reported as having 256. `report.py` makes the same
+        # argument about the listing cap.
+        capped = len(named) >= MAX_FOLDERS
         yield Finding(r, r.title, container.where,
-                      detail=f"{len(named)} folder{'' if len(named) == 1 else 's'}: "
+                      detail=f"{'at least ' if capped else ''}{len(named)} "
+                             f"folder{'' if len(named) == 1 else 's'}: "
                              + ", ".join(named[:5])
                              + (", ..." if len(named) > 5 else ""))
 
     if container.duplicate_names:
         r = rule("Z10")
         for name in container.duplicate_names:
+            # The reader refuses a repeated name outright now and says so with a
+            # reason and a remedy; the loop at the top of this function already
+            # turned that into Z10. Two findings for one name is the noise the
+            # test above this rule was written to prevent.
+            #
+            # Not all of these are repeats: `duplicate_names` also catches two
+            # *different* spellings that normalise to one name, and nothing
+            # refuses those -- they are two real entries.
+            refused = container.rejected.get(name)
+            if refused is not None and refused.kind == "ambiguous-name":
+                continue
             yield Finding(r, r.title, container.where.child(member=name, subject=name))
 
     if container.kind is Kind.DOCUMENT:
@@ -117,7 +218,10 @@ def check(container, declared=frozenset(), is_declared_payload=False) -> Iterato
                 yield Finding(r, r.title, container.where.child(member=m.name, subject=m.name))
 
     if container.kind is Kind.DOCUMENTATION:
-        if MAIN_PDF not in container.file_names:
+        # `present`, not `file_names`. A main document with a bad CRC is in the
+        # archive; Z12 says we could not read it. Telling the sender to add a
+        # file they already sent is the report contradicting itself.
+        if MAIN_PDF not in container.present:
             r = rule("Z7")
             yield Finding(r, r.title, container.where)
         # A refusal to look is not an absence. The reader stops descending at
@@ -134,7 +238,29 @@ def check(container, declared=frozenset(), is_declared_payload=False) -> Iterato
         stopped = (
             any(d.kind in ("nesting-too-deep", "container-budget-exhausted")
                 for d in container.defects)
-            or any(name.lower().endswith(".zip") for name in container.rejected))
-        if not container.children and not stopped:
+            or any(name.lower().endswith(".zip") for name in container.rejected)
+            # A child we opened but could not read might have been a document
+            # container. Z12 says we could not read it; saying there are none
+            # would be a second, different, and false claim.
+            or any(k.kind is Kind.UNREADABLE for k in container.children))
+        # `children` is every archive we descended into, which is not the same
+        # set as the document containers this rule is about: a declared `.zip`
+        # payload is a child too, and one of those used to silence the rule
+        # entirely. Count what the title says we are counting.
+        as_folders = folders_holding_metadata(container)
+        if as_folders:
+            r = rule("Z13")
+            yield Finding(r, r.title, container.where,
+                          detail=f"{len(as_folders)} folder"
+                                 f"{'' if len(as_folders) == 1 else 's'} hold "
+                                 f"{METADATA_XML}: " + ", ".join(as_folders[:5])
+                                 + (", ..." if len(as_folders) > 5 else ""))
+
+        # (`stopped` above already covers the unreadable child, so whether this
+        # list admits one cannot change the answer. Both are kept: one says what
+        # we count, the other says when we decline to answer.)
+        delivered = [k for k in container.children
+                     if k.kind in (Kind.DOCUMENT, Kind.DOCUMENTATION)]
+        if not delivered and not stopped and not as_folders:
             r = rule("Z8")
             yield Finding(r, r.title, container.where)

@@ -67,6 +67,7 @@ def test_every_node_remembers_where_it_was_written():
     assert str(where).startswith("doc.zip!/VDI2770_Metadata.xml:4:")
 
 
+
 def test_a_documentation_container_is_recognised_and_walked():
     inner = io.BytesIO()
     with zipfile.ZipFile(inner, "w") as z:
@@ -174,6 +175,20 @@ def test_nothing_is_written_to_disk(tmp_path, monkeypatch):
     assert not list(work.iterdir()), f"the library left {list(work.iterdir())} behind"
 
 
+def test_nothing_reaches_for_the_network():
+    """At the interpreter's boundary. The test below patches names on the
+    `socket` module, and a caller that bound the constructor at import time
+    reaches a different object — the same shape as the `io.open` hole this
+    package's disk guard was rewritten for."""
+    from nonetwork import hook_is_working, no_network
+
+    assert hook_is_working(), "the audit hook is not seeing sockets"
+    with no_network():
+        box = container({"VDI2770_Metadata.xml": META})
+        vdi2770.build_document(vdi2770.parse_xml(box.metadata_bytes), box.where)
+        vdi2770.read_pdf(b"%PDF-1.7\ntrailer<</Root 1 0 R>>\n%%EOF")
+
+
 def test_no_socket_is_opened(monkeypatch):
     import socket
 
@@ -255,3 +270,156 @@ def test_a_real_packet_is_still_found_after_a_broken_one():
             b"<pdfaid:part>2</pdfaid:part><pdfaid:conformance>B</pdfaid:conformance>"
             b"</rdf:Description></x:xmpmeta>")
     assert vdi2770.read_pdf(b"%PDF-1.7\n<?xpacket begin='no end here'\n" + good).pdfa_claim == "2b"
+
+
+def test_text_of_many_character_references_is_linear():
+    """`node.text += chunk` is quadratic through an attribute — CPython's
+    in-place-append shortcut needs a refcount-1 local and never gets one — and
+    `&#120;` makes expat deliver one callback per reference. A 198 KB archive of
+    them cost sixty seconds, with a clean verdict and nothing over budget: the
+    metadata caps bound the bytes, and the work was superlinear in the bytes.
+
+    Timed, so the ceiling is loose enough for a slow machine and tight enough
+    that quadratic cannot pass: the old code needed about five seconds here.
+    """
+    import time
+
+    body = (b'<?xml version="1.0"?><Document xmlns="http://www.vdi.de/schemas/vdi2770">'
+            b"<Summary>" + b"&#120;" * 800_000 + b"</Summary></Document>")
+    start = time.perf_counter()
+    node = vdi2770.parse_xml(body)
+    elapsed = time.perf_counter() - start
+
+    assert node.children[0].text == "x" * 800_000
+    assert elapsed < 1.5, f"took {elapsed:.1f}s to parse {len(body) // 1024} KiB"
+
+
+def test_text_split_across_callbacks_still_arrives_whole():
+    """The chunks are joined at end-element. A CDATA section, an entity-free
+    ampersand escape and a plain run all reach one element in several callbacks."""
+    body = (b'<?xml version="1.0"?><Document xmlns="http://www.vdi.de/schemas/vdi2770">'
+            b"<Summary>plain <![CDATA[and bracketed]]> and &amp; escaped</Summary>"
+            b"</Document>")
+    assert vdi2770.parse_xml(body).children[0].text == "plain and bracketed and & escaped"
+
+
+def test_a_member_the_reader_refused_cannot_be_read_by_a_later_layer():
+    """The budgets in `read_container` are worth nothing if a caller can reopen
+    the archive and inflate a member the reader threw out. `member_bytes` takes
+    the allow-list for exactly that reason.
+
+    This lived in the validator's suite, which is the wrong place for the SDK's
+    only coverage of its own defence-in-depth: a packager building this
+    distribution alone ran neither of these.
+    """
+    import io
+    import zipfile
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr("VDI2770_Metadata.xml", b"<x/>")
+        # Over MIN_SUSPICIOUS_BYTES and compressing about a thousandfold. Below
+        # that floor the ratio is not treated as hostile, because a megabyte of
+        # anything exhausts nothing.
+        z.writestr("bomb.bin", b"0" * (16 * 1024 * 1024))
+    raw = buf.getvalue()
+
+    box = vdi2770.read_container(raw, "x.zip")
+    assert "bomb.bin" in box.rejected, "the ratio cap should have refused it"
+    allowed = set(box.file_names)
+    assert vdi2770.member_bytes(raw, "bomb.bin", allowed=allowed) is None
+    assert vdi2770.member_bytes(raw, "VDI2770_Metadata.xml", allowed=allowed) == b"<x/>"
+
+
+def test_member_bytes_refuses_what_it_cannot_find():
+    import io
+    import zipfile
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        z.writestr("a.txt", b"x")
+    raw = buf.getvalue()
+    assert vdi2770.member_bytes(raw, "missing.txt", allowed={"a.txt"}) is None
+    assert vdi2770.member_bytes(b"not a zip", "a.txt") is None
+
+
+def test_a_file_that_is_not_a_zip_is_the_defect_that_says_so():
+    """Four behaviours lost their only coverage inside this distribution when the
+    validator's duplicate suite was deleted: this one, the line on an XML error,
+    the PDF facts, and an unreadable inner archive. A packager who builds
+    `vdi2770` alone runs this suite and nothing else — `tools/check_sdist.py`
+    makes that literal — so it has to hold them.
+    """
+    box = vdi2770.read_container(b"this is not a zip at all", "x.zip")
+    assert box.kind is vdi2770.Kind.UNREADABLE
+    assert [d.kind for d in box.defects] == ["not-a-zip"], [d.kind for d in box.defects]
+
+
+def test_a_malformed_document_says_where_it_went_wrong():
+    """The line number is why this package parses XML itself instead of handing
+    back an ElementTree. The success path was covered; the error path was not."""
+    with pytest.raises(vdi2770.XmlError) as caught:
+        vdi2770.parse_xml(b"<Document>\n  <Open>\n</Document>")
+    assert caught.value.line == 3, caught.value.line
+    assert caught.value.column is not None
+    # The position lives on the exception's attributes, not in its message —
+    # which is the contract a caller builds a report from.
+    assert (caught.value.line, caught.value.column) != (None, None)
+
+
+def test_the_pdf_reader_reads_the_file_rather_than_assuming():
+    """`encrypted` hard-coded to True would have passed this distribution's suite
+    in every build."""
+    plain = vdi2770.read_pdf(b"%PDF-1.7\nnothing to see here\n")
+    assert plain.is_pdf and not plain.encrypted and plain.pdfa_claim is None
+    locked = vdi2770.read_pdf(b"%PDF-1.7\ntrailer\n<< /Encrypt 12 0 R >>\n")
+    assert locked.encrypted, "an encrypted PDF was read as plain"
+
+
+def test_an_inner_archive_we_cannot_open_is_still_a_child():
+    """Dropping unreadable children from the tree passed this suite; the caller
+    would have seen a container that simply did not mention them."""
+    import io
+    import zipfile
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        z.writestr("VDI2770_Main.xml", b"<Document xmlns='http://www.vdi.de/schemas/vdi2770'/>")
+        z.writestr("broken.zip", b"PK\x03\x04 not really a zip")
+    box = vdi2770.read_container(buf.getvalue(), "x.zip")
+    unreadable = [c for c in box.children if c.kind is vdi2770.Kind.UNREADABLE]
+    assert len(unreadable) == 1, [c.kind for c in box.children]
+    assert unreadable[0].member_name == "broken.zip"
+
+
+ENCRYPT_CASES = [
+    ("a trailer that references an encryption dictionary",
+     b"%PDF-1.7\n1 0 obj<</Type/Page>>endobj\n"
+     b"trailer\n<< /Root 1 0 R /Encrypt 14 0 R >>\nstartxref\n9\n%%EOF", True),
+    ("the same token inside a content stream",
+     b"%PDF-1.7\n1 0 obj<</Type/Page>>endobj\n2 0 obj\nstream\n"
+     b"(see /Encrypt 3 0 R for details)\nendstream endobj\n"
+     b"trailer<</Root 1 0 R>>\n%%EOF", False),
+    ("the same token in a comment",
+     b"%PDF-1.7\n% /Encrypt 9 0 R was removed in revision 2\n"
+     b"trailer<</Root 1 0 R>>\n%%EOF", False),
+    ("no trailer at all",
+     b"%PDF-1.7\n1 0 obj<</Type/Page>>endobj\n%%EOF", False),
+]
+
+
+def test_every_node_carries_the_namespace_it_was_written_in():
+    """`Node.ns` is populated on every element and `NS` is exported, and nothing
+    in either package or either suite ever read either — setting `ns` to `""`
+    everywhere left the whole suite green. A published field nobody checks is a
+    claim nobody can rely on.
+    """
+    doc = vdi2770.parse_xml(
+        b"<Document xmlns='http://www.vdi.de/schemas/vdi2770'>"
+        b"<DocumentId DomainId='d'>x</DocumentId>"
+        b"<other xmlns='urn:something-else'/>"
+        b"</Document>")
+    assert doc.ns == vdi2770.NS
+    kids = {n.tag: n.ns for n in doc.children}
+    assert kids["DocumentId"] == vdi2770.NS
+    assert kids["other"] == "urn:something-else", kids

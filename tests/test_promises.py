@@ -37,6 +37,26 @@ def test_nothing_is_written_to_disk(monkeypatch, tmp_path):
     assert not list(tmp_path.iterdir()), f"left behind: {list(tmp_path.iterdir())}"
 
 
+def test_nothing_reaches_for_the_network():
+    """At the interpreter's boundary, not at a name.
+
+    The test below patches three names on the `socket` module. A caller that
+    binds the constructor at import time — `from socket import socket as _sock` —
+    reaches a different object, and connecting to a literal IP never consults
+    `getaddrinfo`. Proved: a real `connect()` to 192.0.2.1 inside `check_bytes`
+    left the whole suite green while `sys.addaudithook` recorded
+    `socket.__new__` and `socket.connect`.
+
+    This is the `io.open` lesson, which the disk promise learned and this one had
+    not. Both now watch the same boundary.
+    """
+    from nonetwork import hook_is_working, no_network
+
+    assert hook_is_working(), "the audit hook is not seeing sockets; nothing below means anything"
+    with no_network():
+        check_file(str(CLEAN_DOCUMENTATION))
+
+
 def test_no_socket_is_even_attempted(monkeypatch):
     """Patching sockets to *raise* only catches a failure that escapes. A tool
     that tries the network and falls back to the bundle would pass that and fail
@@ -150,3 +170,57 @@ def test_the_json_says_who_each_finding_is_about():
     kinds = {f["rule"]: f["about"] for f in findings}
     assert kinds.get("Z6") == "tool", kinds
     assert any(v == "container" for v in kinds.values()), kinds
+
+
+def test_security_md_cites_a_test_that_would_actually_notice():
+    """SECURITY.md pointed at `tests/test_offline.py` for "no network access at
+    all". That file patches sockets to raise, so it proves a socket failure
+    escapes — not that no socket is opened. A `create_connection` wrapped in
+    `except Exception: pass` inside `check_bytes` passes every test in it, and
+    only `test_no_socket_is_even_attempted` goes red. A table that cites the
+    weaker of two guards teaches a reader to trust the wrong one.
+    """
+    from conftest import ROOT
+
+    row = [ln for ln in (ROOT / "SECURITY.md").read_text(encoding="utf-8").splitlines()
+           if "Any network access at all" in ln]
+    assert len(row) == 1, row
+    # The strongest guard, not merely a guard. `test_offline.py` proves a socket
+    # failure escapes; `test_no_socket_is_even_attempted` counts attempts at three
+    # names; only the audit-hook test sees a caller that bound the constructor
+    # before the patch, which was a real evasion.
+    assert "test_nothing_reaches_for_the_network" in row[0], row[0]
+    assert "addaudithook" in row[0], "the row should say why this guard and not the weaker one"
+
+
+def test_every_test_security_md_cites_exists():
+    """The table's whole value is the "where the proof is" column, and one row
+    pointed at `tests/test_readers.py`, deleted the same day its contents moved
+    into the SDK's suite. A citation to a file that is not there is worse than
+    no citation: it reads as evidence.
+
+    The row above this one is guarded by name because *which* test matters
+    there. This guards every row, because whether the test exists at all is a
+    question nobody was asking.
+    """
+    import re
+
+    from conftest import ROOT
+
+    prose = (ROOT / "SECURITY.md").read_text(encoding="utf-8")
+    cited = re.findall(r"`((?:tests|packages)/[\w/]+\.py)(?:::(\w+))?`", prose)
+    assert len(cited) >= 5, f"only found {cited}; has the table been reworded?"
+    for path, func in cited:
+        f = ROOT / path
+        assert f.exists(), f"SECURITY.md cites {path}, which is not in this repository"
+        if func:
+            assert f"def {func}(" in f.read_text(encoding="utf-8"), (
+                f"SECURITY.md cites {path}::{func}, which that file does not define")
+
+    fixtures = re.findall(r"fixtures? `([\w.-]+\.zip)`", prose)
+    assert fixtures, "the table cites no fixtures"
+    import json
+    manifest = json.loads(
+        (ROOT / "tests" / "fixtures" / "MANIFEST.json").read_text(encoding="utf-8"))["fixtures"]
+    for name in fixtures:
+        assert name in manifest, f"SECURITY.md cites fixture {name}, which is not generated"

@@ -111,11 +111,17 @@ def test_the_number_of_containers_is_bounded_on_its_own(monkeypatch):
     assert "container-budget-exhausted" in kinds, f"stopped silently: {kinds}"
 
 
-def test_the_runner_holds_one_buffer_per_level_not_one_per_container(tmp_path):
+def test_the_runner_holds_one_chain_of_buffers_not_one_per_container(tmp_path):
     """The reader's tree budget bounds what the *reader* holds. The runner then
     kept every container's decompressed bytes in a dict keyed by path and never
     dropped one — a 2 MB input reached 2,199 MB, the same amplification through a
     door the budget does not watch.
+
+    The name said "one per level" while the runner keyed by depth. It keys by
+    parent identity now and prunes on leaving a subtree, which holds the same
+    one root-to-here chain; the property measured below is unchanged, and a test
+    name asserting a mechanism the code has dropped is a small lie that costs
+    the next reader a detour.
 
     That was fixed in 0.5.1 and nothing tested it: this file measures
     `zipread.read` and never calls `check_bytes`, so reintroducing the dict left

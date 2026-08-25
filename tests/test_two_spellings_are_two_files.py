@@ -122,3 +122,50 @@ def test_a_name_that_matches_two_members_and_neither_exactly_is_not_guessed(tmp_
     assert "Z10" in ids_, f"the ambiguity was not reported: {got}"
     assert "P1" not in ids_, f"one of the two was read as if it were the declared file: {got}"
     assert "F1" in ids_, f"nothing said the declared name resolves to no single file: {got}"
+
+
+def test_an_exactly_repeated_name_is_as_ambiguous_as_a_normalised_one():
+    """`Members.resolve` guards the NFC collision and short-circuits on an exact
+    match, so a name that denotes *two* entries resolves to whichever the ZIP
+    reader hands back — the last one.
+
+    Reproduced: one archive, two members both called `B.pdf`, one a real PDF/A-3a
+    and one sixteen bytes of text. Swapping their order swaps the verdict.
+
+        real first  -> P1  "A file that should be a PDF is not one"
+        junk first  -> P4  "The PDF claims a PDF/A level"  (about the text file)
+
+    Both are wrong, in opposite directions, and `runner.py`'s own comment records
+    "the tool printed a PDF/A claim for a text file" as a fixed regression. `Z10`
+    already reports the ambiguity; the P rules should decline, which is exactly
+    the argument `names.py` makes for the normalised case.
+    """
+    import io
+    import zipfile
+
+    from conftest import CLEAN_DOCUMENT
+    from vdi2770_validate.runner import check_bytes
+
+    src = zipfile.ZipFile(CLEAN_DOCUMENT)
+    real, junk = src.read("B.pdf"), b"not a pdf at all"
+
+    def built(order):
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+            for name in src.namelist():
+                if name == "B.pdf":
+                    for payload in order:
+                        z.writestr("B.pdf", payload)
+                else:
+                    z.writestr(name, src.read(name))
+        return check_bytes(buf.getvalue(), "dup.zip")
+
+    forward = {f.rule.id for f in built([real, junk]).findings}
+    backward = {f.rule.id for f in built([junk, real]).findings}
+
+    assert "Z10" in forward and "Z10" in backward, "the duplicate itself must be reported"
+    assert forward == backward, (
+        f"the verdict depends on which entry the archive stores last: "
+        f"{sorted(forward)} vs {sorted(backward)}")
+    assert not (forward & {"P1", "P4"}), (
+        f"a name that denotes two different files was judged as one: {sorted(forward)}")

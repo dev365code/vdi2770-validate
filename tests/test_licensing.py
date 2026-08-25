@@ -151,3 +151,30 @@ def test_no_foreign_log_or_build_output_is_tracked():
               if f.endswith((".log", ".jar", ".class", ".orig", ".rej"))
               or f.split("/")[0] == "target"]
     assert not strays, f"build or log output is carried: {strays}"
+
+
+def test_the_vendored_message_set_is_the_bytes_that_were_extracted():
+    """`tests/data/oracle-messages.json` is what proves no remedy of ours is a
+    translation of somebody else's. Weakening it weakens that proof, and the
+    only floor was "more than a hundred strings".
+
+    Its provenance has two halves. The half that needs the reference checkout —
+    are these really that project's messages at that commit — is
+    `tools/capture_oracle.py --check-messages`, outside `make check` for the same
+    reason the sweep is. The half that does not is here: the bytes have not moved
+    and the file agrees with itself.
+    """
+    oracle = ROOT / "tests" / "data" / "oracle-messages.json"
+    digest = hashlib.sha256(oracle.read_bytes()).hexdigest()
+    assert digest == "24b0121f4a3f00f14321f8cc1ab9e8df1930e5418e06949efe6649950cb1ec51", (
+        "the vendored message set has changed. If that was deliberate, it came from "
+        "`capture_oracle.py --messages` against the pinned commit — say so and move "
+        "this hash; if it was not, the licensing gate is now comparing against "
+        "something nobody vouched for.")
+
+    body = json.loads(oracle.read_text(encoding="utf-8"))
+    assert body["count"] == len(body["messages"]), (
+        f"the file says {body['count']} messages and carries {len(body['messages'])}")
+    assert body["_source"]["commit"] == "e47c13c1925abc3ed4698cb5ed9e73b5eb544353", (
+        "the messages and the oracle sweep must come from one commit of the reference")
+    assert len(set(body["messages"])) == len(body["messages"]), "the set has duplicates"

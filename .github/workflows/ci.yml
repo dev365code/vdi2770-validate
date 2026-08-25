@@ -33,7 +33,14 @@ jobs:
         run: python tools/vendor_corpus.py --check
       - name: Firing coverage
         run: python tools/rule_coverage.py --check
+      - name: The rule reference matches the catalogue
+        run: python tools/rules_doc.py --check
+      - name: Our half of the oracle sweep is current
+        run: python tools/capture_oracle.py --check-ours
+      - name: The reader's API matches its version
+        run: python tools/api_fingerprint.py --check
       - name: The sdist can run its own tests
         run: |
           python -m pip install build
           python tools/check_sdist.py
+          python tools/check_wheel.py

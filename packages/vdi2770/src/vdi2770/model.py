@@ -47,7 +47,7 @@ REFUSAL_KINDS = frozenset({
     "unsafe-member-name", "member-too-large", "suspicious-compression",
     "archive-too-large", "member-unreadable", "metadata-too-large",
     "container-budget-exhausted", "decompression-budget-exhausted",
-    "member-budget-exhausted",
+    "member-budget-exhausted", "ambiguous-name",
 })
 
 #: Every kind a reader in this package can emit. Part of the public surface --
@@ -60,7 +60,7 @@ DEFECT_KINDS = frozenset({
     "suspicious-compression", "archive-too-large", "metadata-too-large",
     "metadata-unreadable", "member-unreadable", "nesting-too-deep",
     "container-budget-exhausted", "decompression-budget-exhausted",
-    "member-budget-exhausted",
+    "member-budget-exhausted", "ambiguous-name",
 })
 
 

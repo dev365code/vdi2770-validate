@@ -1,7 +1,19 @@
-"""Rules are data. This module turns that data into Rule objects and nothing else."""
+"""The published data this tool loads, turned into values.
+
+Two families, both read from `data/` at import and both immutable afterwards:
+the rule catalogue (`rules`, `rule`) and the vocabulary the rules are written
+against (`document_classes`, `german_for`, `english_for`,
+`CLASSIFICATION_SYSTEM`, `ISO_639_1`).
+
+The first line used to say "and nothing else" while the second family sat
+underneath it. They change for different reasons -- a rule is added; IDTA
+republishes a table -- so this docstring is the honest version rather than a
+claim about cohesion the file did not keep. Splitting them is on the board.
+"""
 from __future__ import annotations
 
 from functools import lru_cache
+from types import MappingProxyType
 from typing import Dict, Tuple
 
 from .model import About, Obligation, Rule, Severity
@@ -26,7 +38,10 @@ def rules() -> Dict[str, Rule]:
             ref_keys=tuple(r.get("refKeys", ())),
             why_ours=r.get("whyOurs", ""),
         )
-    return out
+    # The cache hands out the same object every call, so a caller could empty
+    # the catalogue for the whole process — while this module's first line
+    # says both families are immutable after import.
+    return MappingProxyType(out)
 
 
 def rule(rule_id: str) -> Rule:
@@ -36,7 +51,7 @@ def rule(rule_id: str) -> Rule:
 @lru_cache(maxsize=1)
 def document_classes() -> Dict[str, dict]:
     doc = load_json("document-classes.json")
-    return {c["classId"]: c for c in doc["classes"]}
+    return MappingProxyType({c["classId"]: c for c in doc["classes"]})
 
 
 def german_for(class_id: str) -> Tuple[str, ...]:

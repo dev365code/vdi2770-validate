@@ -23,14 +23,13 @@ jobs:
           python -m pip install --upgrade pip build
           python -m pip install -e packages/vdi2770
           python -m pip install -e ".[dev]"
+      # `make check`, not a copy of what it runs. The copy went stale the moment
+      # the gate grew: this step listed six of nine targets, and the three it
+      # missed were the three newest -- including the one that stops the reader
+      # shipping a moved API under an old version, which is a release concern
+      # before it is anything else.
       - name: The gate must pass on the tagged tree
-        run: |
-          python -m ruff check src tests tools packages
-          python tools/make_fixtures.py
-          python -m pytest
-          python tools/vendor_corpus.py --check
-          python tools/rule_coverage.py --check
-          python tools/check_sdist.py
+        run: make check
       - name: The tag must be the version
         run: |
           tag="${GITHUB_REF_NAME#v}"

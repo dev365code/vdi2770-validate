@@ -19,25 +19,22 @@ pip install vdi2770-validate
 
 ```
 $ vdi2770-validate check corpus/examples/missingdocuments/folders.zip
+folders.zip
   error  F1  A file named in the metadata is not in the container
          at folders.zip!/VDI2770_Main.xml:56:2
          'VDI2770_Main.pdf' is declared but not in the archive
          -> Add the missing file to the container, or remove its DigitalFile entry from the metadata. The two must agree.
+  error  Z13  Documents are delivered as folders, which this tool does not open
+         at folders.zip
+         2 folders hold VDI2770_Metadata.xml: 456-29201/, AB393/
+         -> Nothing here is necessarily wrong with the container. Zip each document folder into its own .zip member if you want this tool to check it, or check those folders with something that reads them.
   error  Z7  The documentation container has no VDI2770_Main.pdf
          at folders.zip
          -> Add the main document as VDI2770_Main.pdf at the root of the documentation container, next to VDI2770_Main.xml.
-  warn   F2  A file in the container is not named in the metadata
-         at folders.zip!/456-29201/VDI2770_Metadata.xml
-         -> Declare the file as a DigitalFile in the metadata, or remove it from the container. An undeclared file is invisible to the recipient's system.
-  warn   F2  A file in the container is not named in the metadata
-         at folders.zip!/456-29201/demo.pdf
-         -> Declare the file as a DigitalFile in the metadata, or remove it from the container. An undeclared file is invisible to the recipient's system.
-  warn   F2  A file in the container is not named in the metadata
-         at folders.zip!/456-29201/demo.xlsx
-         -> Declare the file as a DigitalFile in the metadata, or remove it from the container. An undeclared file is invisible to the recipient's system.
-  warn   F2  A file in the container is not named in the metadata
 
-  … 6 more warnings of the same kind
+  … 1 more Z9 warning
+
+  3 error(s), 1 warning(s), 0 note(s)
 ```
 
 That is real output on a container that ships with this repository, so the same command works after cloning.
@@ -47,20 +44,24 @@ That is real output on a container that ships with this repository, so the same 
 **Whether a PDF really is PDF/A.** That needs a full PDF/A validator such as
 veraPDF. This tool reports what a file *claims*, which catches the common failure:
 files that never claimed at all. It says so on every line where it matters, and the
-JSON output carries `"pdfaVerified": false` on every path. The rest of the refusals
+JSON output is one document for the run — a list with an entry per path you
+gave, each carrying that path and `"pdfaVerified": false`. The rest of the refusals
 are in [docs/scope.md](docs/scope.md).
 
 ## How it is built
 
-- **Offline by design.** No network at runtime, proven by a test that makes sockets
-  raise. Nothing is extracted to disk; a supplier archive does not get to pick a
+- **Offline by design.** No network at runtime, proven by a test that counts socket
+  attempts rather than waiting for one to fail — a tool that reaches out and falls
+  back quietly on error would satisfy the weaker check. Nothing is extracted to disk; a supplier archive does not get to pick a
   path on your filesystem or expand an XML entity.
-- **Rules are data.** [`rules.json`](src/vdi2770_validate/data/rules.json) — each
+- **Rules are data.** [`rules.json`](src/vdi2770_validate/data/rules.json), rendered as [docs/rules.md](docs/rules.md) — each
   rule carries where its requirement comes from, a remedy sentence, and — where the
   reference implementation checks the same thing — the message keys it uses.
-- **24 of 35 rules have a minimal fixture pair** — a container that violates the rule
-  and a conforming one differing in as little as a single member. The rest are exercised
-  by the vendored corpus. A rule that fires nowhere fails the build.
+- **24 of 37 rules have a minimal fixture pair** — a container that violates the rule
+  and a conforming one differing in as little as a single member. A 25th has a violating
+  fixture and no counterpart, because there is no conforming version of *this file is not
+  a ZIP*. The rest are exercised by the vendored corpus. A rule that fires nowhere fails
+  the build.
 - **Rules cannot reach the parser.** A test fails if a rule module imports `zipfile`
   or an XML library, so a rule cannot accidentally check how a document was spelled
   instead of what it says. Rules may read the readers' constants — the reserved file names, the container kinds — but not call a parser.
@@ -92,8 +93,8 @@ English name never fails a document — it produces a note that shows both rende
 
 ```
 $ vdi2770-validate classes
-02-03  Bauteile    Assemblies   [sources disagree]
-      IDTA 02004: 'Assemblies'   reference impl: 'Components'
+02-03  Bauteile                                   Assemblies   [sources disagree]
+      English — IDTA 02004: 'Assemblies'   reference impl: 'Components'
 ```
 
 Details in [docs/divergences.md](docs/divergences.md).

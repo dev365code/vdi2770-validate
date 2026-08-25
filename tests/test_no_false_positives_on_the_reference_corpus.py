@@ -24,6 +24,13 @@ DELIBERATELY_BROKEN = {
 STRUCTURAL = {"Z1", "Z2", "Z3", "Z6", "Z7", "Z9", "Z10", "Z11"}
 
 CONTAINERS = sorted(p for p in CORPUS.rglob("*.zip") if p.name not in DELIBERATELY_BROKEN)
+# Nine containers of ground truth become one `s` if this list empties: pytest
+# skips a parametrised test with no cases, and a skip reads as a pass in the
+# summary line. The closest thing to ground truth this project has should not be
+# able to vanish quietly.
+assert len(CONTAINERS) >= 8, (
+    f"only {len(CONTAINERS)} reference containers found under {CORPUS}; "
+    f"this file is the false-positive check and it is looking at nothing")
 
 
 @pytest.mark.parametrize("path", CONTAINERS, ids=lambda p: p.name)

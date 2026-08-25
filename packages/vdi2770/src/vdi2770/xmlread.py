@@ -101,12 +101,24 @@ def parse(data: bytes) -> Node:
             root = node
         stack.append(node)
 
+    # Text arrives in as many callbacks as expat feels like, and `&#120;` forces
+    # one per reference. `node.text += chunk` is quadratic through an attribute
+    # -- CPython's in-place-append shortcut needs a refcount-1 local and never
+    # gets one here -- so a metadata file of character references cost sixty
+    # seconds for a 198 KB archive, with a clean verdict. Collected per open
+    # element and joined once, which is linear; the dict holds only the elements
+    # currently open, so it is O(depth).
+    chunks: Dict[int, List[str]] = {}
+
     def end(_name: str) -> None:
-        stack.pop()
+        node = stack.pop()
+        parts = chunks.pop(id(node), None)
+        if parts:
+            node.text = "".join(parts)
 
     def chars(data_: str) -> None:
         if stack:
-            stack[-1].text += data_
+            chunks.setdefault(id(stack[-1]), []).append(data_)
 
     p.StartElementHandler = start
     p.EndElementHandler = end

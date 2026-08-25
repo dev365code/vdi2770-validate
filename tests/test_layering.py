@@ -4,6 +4,7 @@ A rule that cannot import a parser cannot accidentally check how the document
 was spelled instead of what it says.
 """
 import ast
+import re
 from pathlib import Path
 
 from conftest import ROOT
@@ -43,13 +44,30 @@ def test_rules_only_reach_readers_for_constants():
             assert bad not in text, f"{f.name} calls {bad}"
 
 
+# Any rule id, quoted or not. The version that looked for five hard-coded ids in
+# quotes was the weaker half of a pair: the SDK's own copy of this check (see
+# packages/vdi2770/tests/test_it_stands_alone.py) already caught an unquoted id
+# in a comment, and that comment had the severity wrong. Two checks of the same
+# rule should not disagree about how hard they look.
+RULE_ID = re.compile(r"\b(?:Z|X|M|F|P)\d{1,2}\b")
+
+
+#: Modules that wrap a parser or an external tool. They must not know rule ids.
+#: Named, not globbed: this walked `readers/*.py`, and when that one-file
+#: directory was dissolved the glob would have matched nothing and passed. A
+#: gate that goes quiet on a rename is the failure this file is about.
+READER_MODULES = ["xsdvalidate.py"]
+
+
 def test_readers_do_not_know_rule_ids():
-    for f in sorted((SRC / "readers").glob("*.py")):
+    for name in READER_MODULES:
+        f = SRC / name
+        assert f.exists(), f"{name} has moved; this gate is looking at nothing"
         mods = imports_of(f)
         assert "catalog" not in mods and "..catalog" not in mods, f"{f.name} imports the catalogue"
-        text = f.read_text(encoding="utf-8")
-        for rid in ("Z1", "Z3", "X2", "M1", "P4"):
-            assert f'"{rid}"' not in text, f"{f.name} hard-codes rule id {rid}"
+        for n, line in enumerate(f.read_text(encoding="utf-8").splitlines(), 1):
+            hit = RULE_ID.search(line)
+            assert not hit, f"{f.name}:{n} names rule id {hit.group(0)!r}: {line.strip()}"
 
 
 def test_unicode_canonicalisation_is_defined_once_in_the_project():
@@ -80,3 +98,101 @@ def test_the_reader_package_tests_stay_inside_the_reader_package():
             assert bad not in text, (
                 f"{f.name} reaches outside the package ({bad!r}); "
                 f"put that assertion in the repository's own suite")
+
+
+def test_no_rule_module_offers_a_default_its_caller_never_uses():
+    """`rules/container.py::check` carried `declared=frozenset()` and
+    `is_declared_payload=False`. There is one caller and it passes both by
+    keyword, and no test calls the module directly — so the defaults described a
+    way of using it that nothing does, and a future caller forgetting an
+    argument would have got a silent wrong answer instead of a TypeError.
+
+    The other four rule modules take no defaults, which is what makes this a
+    stray rather than a convention.
+    """
+    import inspect
+    import sys
+
+    sys.path.insert(0, str(SRC.parent))
+    offenders = {}
+    for f in sorted((SRC / "rules").glob("*.py")):
+        if f.name == "__init__.py":
+            continue
+        module = __import__(f"vdi2770_validate.rules.{f.stem}", fromlist=["check"])
+        params = inspect.signature(module.check).parameters
+        defaulted = [n for n, p in params.items() if p.default is not inspect.Parameter.empty]
+        if defaulted:
+            offenders[f.stem] = defaulted
+    assert not offenders, (
+        f"rule modules with unused defaults: {offenders}. The runner passes every "
+        f"argument; a default here only hides a caller that forgot one.")
+
+
+def test_a_tool_measures_the_reader_in_this_tree():
+    """A tool that puts only `src` on the path imports whichever `vdi2770` is
+    installed. On a machine with the published reader that is a different library
+    than the one in the commit, so the gate reports coverage — or renders a
+    document — for code nobody is changing.
+
+    `capture_oracle.py` got this right and the others copied the shorter line.
+    """
+    tools = ROOT / "tools"
+    for f in sorted(tools.glob("*.py")):
+        source = f.read_text(encoding="utf-8")
+        if "vdi2770_validate" not in source:
+            continue
+        if 'ROOT / "src"' not in source:
+            continue
+        assert 'packages' in source and 'vdi2770' in source, (
+            f"tools/{f.name} imports the validator and does not put the reader in "
+            f"this tree ahead of an installed one")
+
+
+def test_a_rule_module_holds_no_reference_to_a_parser():
+    """The checks above read the source: `ast.Import` sees `import zipfile`, and
+    a grep sees three literal call spellings. Neither sees
+
+        _zr = __import__("importlib").import_module("vdi2770.zipread")
+
+    which is a builtin and a string, so widening the forbidden list cannot close
+    it. Reproduced: two such lines in `rules/metadata.py` left the layering file
+    green.
+
+    So this asks the module rather than its text. After import, a rule module's
+    namespace must contain no parser and no reader — whatever spelling put it
+    there.
+    """
+    import importlib
+    import types
+
+    # A whole module is the thing that must not be here: holding `zipread` gives
+    # a rule every function on it. Individual values are allowed — `Kind` and
+    # `nfc` are the constants and the one helper `model.py` re-exports, which
+    # `test_rules_only_reach_readers_for_constants` is about and the docs
+    # describe. What a rule may not have is a door.
+    forbidden = {"zipfile", "xml", "xmlschema", "io", "re", "importlib",
+                 "vdi2770", "vdi2770.zipread", "vdi2770.xmlread", "vdi2770.pdfread",
+                 "vdi2770.domain"}
+    parsers = {"parse", "read", "read_file", "build", "member_bytes", "validate",
+               "read_pdf", "parse_xml", "read_container", "read_container_file"}
+    for f in sorted((SRC / "rules").glob("*.py")):
+        if f.name == "__init__.py":
+            continue
+        module = importlib.import_module(f"vdi2770_validate.rules.{f.stem}")
+        for name, value in vars(module).items():
+            if name.startswith("__"):
+                continue
+            if isinstance(value, types.ModuleType):
+                assert value.__name__ not in forbidden and not value.__name__.startswith(
+                    ("vdi2770.", "xml.")), (
+                    f"rules/{f.name} holds the module {value.__name__!r} as {name!r}, "
+                    f"which is every function on it")
+                continue
+            origin = getattr(value, "__module__", None)
+            reaches = origin in forbidden and (
+                (callable(value) and name in parsers)
+                or getattr(value, "__name__", "") in parsers)
+            assert not reaches, (
+                f"rules/{f.name} holds {name!r} from {origin!r}. A rule validates "
+                f"the model; reaching a parser lets it check how a document was "
+                f"spelled instead of what it says.")

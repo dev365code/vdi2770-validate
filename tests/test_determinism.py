@@ -5,6 +5,7 @@ import zipfile
 
 from conftest import CLEAN_DOCUMENT
 from vdi2770_validate import report as rendering
+from vdi2770_validate.model import MAX_LISTED_PER_RULE
 from vdi2770_validate.runner import check_bytes, check_file
 
 
@@ -15,18 +16,45 @@ def test_two_runs_are_byte_identical():
 
 
 def test_member_order_does_not_change_the_verdict():
+    """The subject has to produce many findings and they have to be compared as
+    bytes.
+
+    This ran on a container with exactly one finding and compared rule ids, so
+    it evaluated `["P4"] == ["P4"]`: replacing `Report.sorted()` with
+    `list(self.findings)` — removing the report's ordering entirely — left it
+    passing. Rule ids also hide the thing most likely to move, which is the
+    order of several findings of the *same* rule.
+    """
     src = zipfile.ZipFile(CLEAN_DOCUMENT)
+    # Undeclared inner archives, because `Z11` walks `container.members` and so
+    # emits in the order the archive stores them. Plain files were not enough:
+    # `F2` sorts its own set before yielding, so its findings come out in the
+    # same order either way and the report's sort has nothing left to do.
+    tiny = io.BytesIO()
+    with zipfile.ZipFile(tiny, "w") as z:
+        z.writestr("a.txt", b"x")
+    extra = {f"beilage-{i:02d}.zip": tiny.getvalue() for i in range(5)}
     names = src.namelist()
-    forward, backward = io.BytesIO(), io.BytesIO()
-    with zipfile.ZipFile(forward, "w") as z:
-        for n in names:
-            z.writestr(n, src.read(n))
-    with zipfile.ZipFile(backward, "w") as z:
-        for n in reversed(names):
-            z.writestr(n, src.read(n))
-    a = check_bytes(forward.getvalue(), "x.zip")
-    b = check_bytes(backward.getvalue(), "x.zip")
-    assert [f.rule.id for f in a.sorted()] == [f.rule.id for f in b.sorted()]
+
+    def built(order):
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+            for n in order:
+                z.writestr(n, extra[n] if n in extra else src.read(n))
+        return buf.getvalue()
+
+    every = names + sorted(extra)
+    a = check_bytes(built(every), "x.zip")
+    b = check_bytes(built(list(reversed(every))), "x.zip")
+    # The premise, asserted rather than hoped for: several findings of one rule,
+    # emitted in archive order, so reversing the archive really does reverse
+    # them before the report sorts.
+    emitted = [f.where.member for f in a.findings if f.rule.id == "Z11"]
+    reversed_emission = [f.where.member for f in b.findings if f.rule.id == "Z11"]
+    assert len(emitted) >= 5, f"nothing here would reorder: {emitted}"
+    assert emitted == list(reversed(reversed_emission)), (
+        f"the two archives did not emit in opposite orders: {emitted} / {reversed_emission}")
+    assert rendering.as_json(a) == rendering.as_json(b)
 
 
 def test_the_hash_seed_does_not_reach_the_output(tmp_path):
@@ -49,18 +77,35 @@ def test_the_hash_seed_does_not_reach_the_output(tmp_path):
     # set of one iterates the same way every time. Removing `sorted()` from F2
     # walked straight through the first version of this test for exactly that
     # reason. Eight is enough for the orders to differ between seeds.
+    #
+    # Eight was also not enough once the report grew a listing cap. Under the
+    # cap the *final* sort no longer hides an unsorted set: it decides the order
+    # of what is printed, but the set decides which hundred survive to be
+    # printed at all. Removing `sorted()` from F2 passed every test in this file
+    # until this container held more than MAX_LISTED_PER_RULE of them.
     crowded = tmp_path / "many_undeclared.zip"
     src = zipfile.ZipFile(CLEAN_DOCUMENT)
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
         for n in src.namelist():
             z.writestr(n, src.read(n))
-        for n in ("anlage.txt", "notiz.txt", "zusatz.txt", "beiblatt.txt",
-                  "liste.txt", "extra.txt", "info.txt", "rest.txt"):
-            z.writestr(n, b"x")
+        for i in range(MAX_LISTED_PER_RULE * 2):
+            z.writestr(f"anlage-{i:03d}.txt", b"x")
     crowded.write_bytes(buf.getvalue())
 
-    targets = [str(crowded), str(CLEAN_DOCUMENT), str(CLEAN_DOCUMENTATION)]
+    # Z9 emits one finding per container and names the first five folders in its
+    # detail, so a set leaks into the output without the listing cap being
+    # anywhere near it. No fixture held enough folders for the order to differ.
+    foldered = tmp_path / "many_folders.zip"
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        for n in src.namelist():
+            z.writestr(n, src.read(n))
+        for i in range(12):
+            z.writestr(f"ordner-{i:02d}/blatt.txt", b"x")
+    foldered.write_bytes(buf.getvalue())
+
+    targets = [str(crowded), str(foldered), str(CLEAN_DOCUMENT), str(CLEAN_DOCUMENTATION)]
     targets += [str(p) for p in sorted(FIXTURES.glob("*.zip"))[:6]]
     assert len(targets) >= 7, targets
 
@@ -84,3 +129,10 @@ def test_the_hash_seed_does_not_reach_the_output(tmp_path):
 
     assert outputs[0] == outputs[1], "the report changes with the interpreter's hash seed"
     assert json.loads(outputs[0]), "the subprocess produced no findings at all"
+    # The premise: the cap has to be biting, or the crowded container is just a
+    # bigger version of the case that already passed.
+    first = json.loads(json.loads(outputs[0])[0])
+    assert first["notListed"], "the listing cap did not engage; this tests nothing new"
+    z9 = [f for f in json.loads(json.loads(outputs[0])[1])["findings"] if f["rule"] == "Z9"]
+    assert z9 and z9[0]["detail"].count(",") >= 5, (
+        "Z9 must be naming several folders, or its truncated list proves nothing")

@@ -3,8 +3,18 @@ all — which is how `classes` came to crash while `make check` stayed green.
 """
 import json
 
+import pytest
+
 from conftest import CLEAN_DOCUMENT, FIXTURES
 from vdi2770_validate.cli import main
+
+capsys_holder = [None]
+
+
+@pytest.fixture(autouse=True)
+def _hold_capsys(capsys):
+    capsys_holder[0] = capsys
+    yield
 
 
 def run(capsys, argv):
@@ -26,7 +36,8 @@ def test_check_on_a_broken_container_exits_one(capsys):
 
 def test_check_json_is_valid_json_and_says_pdfa_is_unverified(capsys):
     _, out = run(capsys, ["check", str(CLEAN_DOCUMENT), "--json"])
-    payload = json.loads(out)
+    # One document for the run, one entry per path given.
+    payload = json.loads(out)[0]
     assert payload["pdfaVerified"] is False
     assert payload["target"].endswith(".zip")
     for f in payload["findings"]:
@@ -115,3 +126,115 @@ def test_the_module_entry_point_works():
                             "PATH": "/usr/bin:/bin"})
     assert r.returncode == 0, r.stderr
     assert r.stdout.strip()
+
+
+def test_a_surprise_from_the_reader_does_not_stop_the_sweep(capsys, monkeypatch):
+    """The handler written so one bad path cannot stop the rest was itself the
+    thing that stopped the rest.
+
+    `except Exception as e: ... {e.strerror or e}` — `strerror` exists on
+    `OSError` and nowhere else, so anything else raised out of `check_file`
+    became `AttributeError: 'ValueError' object has no attribute 'strerror'`,
+    uncaught, killing a CI job sweeping a supplier drop folder at the first dud.
+    Exactly the failure it was added to prevent, for exactly the class of
+    surprise it was added for.
+    """
+    from vdi2770_validate import cli
+
+    real = cli.check_file          # before patching: the patched name is `boom`
+
+    def boom(path):
+        if "boom" in path:
+            raise ValueError("something a reader did not expect")
+        return real(path)
+
+    monkeypatch.setattr(cli, "check_file", boom)
+    code = cli.main(["check", "boom.zip", str(CLEAN_DOCUMENT)])
+    captured = capsys.readouterr()
+    assert "something a reader did not expect" in captured.err, captured.err
+    assert "0 error(s)" in captured.out, "the sweep stopped at the bad path"
+    assert code == 1, "one unreadable path out of two is not a clean run"
+
+
+def test_a_missing_file_still_says_what_the_os_said(capsys, monkeypatch):
+    """The `strerror` was there for a reason — "No such file or directory" is
+    more useful than the repr of an OSError. Fixing the crash must not lose it.
+    """
+    code = main(["check", "definitely-not-here.zip"])
+    assert code == 2
+    assert "No such file or directory" in capsys.readouterr().err
+
+
+def test_the_listing_cap_does_not_soften_the_exit_code(capsys, tmp_path):
+    """Everything holding the cap ran against `Report` objects built by hand.
+    The claim in scope.md is about what a user sees, and the exit code is the
+    half a CI job reads: a bounded listing must never become a quieter verdict.
+    """
+    import io
+    import re
+    import zipfile
+
+    from vdi2770_validate.model import MAX_LISTED_PER_RULE
+
+    src = zipfile.ZipFile(CLEAN_DOCUMENT)
+    meta = src.read("VDI2770_Metadata.xml").decode()
+    n = MAX_LISTED_PER_RULE * 2 + 50
+    one = '<DocumentId DomainId="d">x</DocumentId>'
+    assert one in meta or "DocumentId" in meta, "the fixture no longer carries a DocumentId"
+    flooded = re.sub(r"<DocumentId[^>]*>[^<]*</DocumentId>",
+                     lambda m: m.group(0) + '<DocumentId DomainId="d"></DocumentId>' * n,
+                     meta, count=1)
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        for name in src.namelist():
+            z.writestr(name, flooded.encode() if name == "VDI2770_Metadata.xml" else src.read(name))
+    path = tmp_path / "flood.zip"
+    path.write_bytes(buf.getvalue())
+
+    code, out = run(capsys, ["check", str(path)])
+    listed = len(re.findall(r"^  error  M10 ", out, re.M))
+    assert listed == MAX_LISTED_PER_RULE, f"listed {listed}"
+    assert "counted below but not listed" in out
+    summary = re.search(r"^  (\d+) error\(s\)", out, re.M)
+    assert summary and int(summary.group(1)) > MAX_LISTED_PER_RULE, out[-400:]
+    assert code == 1, "the cap must not turn errors into a clean exit"
+
+    code, out = run(capsys, ["check", str(path), "--json"])
+    payload = json.loads(out)[0]
+    assert payload["summary"]["error"] > MAX_LISTED_PER_RULE
+    assert len(payload["findings"]) <= MAX_LISTED_PER_RULE + 5
+    assert payload["notListed"] and code == 1
+
+
+def test_json_over_several_paths_is_one_document_a_parser_accepts():
+    """`--json` is advertised as machine-readable and `paths` is `nargs="+"`.
+    It printed one pretty-printed object per path with no separator, which is
+    neither JSON nor NDJSON — and every `target` was the basename, so a sweep
+    over `a/x.zip` and `b/x.zip` gave a consumer no way to tell them apart.
+
+    `cli.py`'s own docstring names this case: "A CI job pointed at a supplier
+    drop folder must come back with a verdict on every container it was given."
+    """
+
+    from conftest import CLEAN_DOCUMENT
+
+    good = str(CLEAN_DOCUMENT)
+    code, out = run(capsys_holder[0], ["check", "--json", good, good])
+    doc = json.loads(out)
+    assert isinstance(doc, list) and len(doc) == 2, type(doc)
+    assert [d["path"] for d in doc] == [good, good], doc
+    assert code == 0
+
+
+def test_a_path_that_could_not_be_read_still_appears_in_the_json():
+    """The unreadable one was skipped before the print, so a consumer got N-1
+    documents for N paths and learned about the missing one from stderr prose."""
+    from conftest import CLEAN_DOCUMENT
+
+    good = str(CLEAN_DOCUMENT)
+    code, out = run(capsys_holder[0], ["check", "--json", "no-such-file.zip", good])
+    doc = json.loads(out)
+    assert len(doc) == 2, doc
+    missing = next(d for d in doc if d["path"] == "no-such-file.zip")
+    assert missing.get("unreadable"), missing
+    assert code == 1

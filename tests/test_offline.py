@@ -5,6 +5,13 @@ decide which host this machine reaches.
 """
 import socket
 
+# At module scope, and deliberately. Patching `socket.socket` to a function and
+# *then* importing this breaks `class SSLSocket(socket)` inside the standard
+# library, which made this file fail whenever it was run on its own -- the whole
+# suite only passed because some earlier test had already imported ssl. A test
+# whose result depends on what ran before it is not a test.
+import urllib.request  # noqa: F401
+
 import pytest
 
 from conftest import CLEAN_DOCUMENTATION, FIXTURES
@@ -20,9 +27,44 @@ def no_network(monkeypatch):
     monkeypatch.setattr(socket, "getaddrinfo", refuse)
 
 
+def test_the_guard_is_live(no_network):
+    """`assert rep is not None` was the whole of the test below. If the fixture
+    ever stops patching, that assertion still passes and the offline promise is
+    unguarded, so the fixture is checked before it is relied on."""
+    with pytest.raises(AssertionError, match="tried to open a socket"):
+        socket.socket()
+
+
 def test_validating_touches_no_socket(no_network):
-    rep = check_file(str(CLEAN_DOCUMENTATION))
-    assert rep is not None
+    """The fixture is function-scoped, so it is active for the whole test.
+
+    The version before this one ran `check_file` twice inside it and compared
+    the results, with the second variable named `monkeypatch_free` — both runs
+    were under the same patch, so it compared a run to itself and could not fail
+    on the axis its name described. The real comparison has to leave the fixture
+    behind, so it happens in the test below."""
+    guarded = [f.rule.id for f in check_file(str(CLEAN_DOCUMENTATION)).sorted()]
+    assert guarded, "expected findings to compare, not merely a report object"
+
+
+def test_the_verdict_is_the_same_with_and_without_a_network():
+    """No fixture here on purpose: one run with sockets forbidden, one with them
+    as they are. A tool that quietly reaches the network would differ."""
+    import socket as real_socket
+
+    def refuse(*a, **k):
+        raise AssertionError("the tool tried to open a socket")
+
+    saved = {n: getattr(real_socket, n) for n in ("socket", "create_connection", "getaddrinfo")}
+    try:
+        for n, f in ((n, refuse) for n in saved):
+            setattr(real_socket, n, f)
+        guarded = [f.rule.id for f in check_file(str(CLEAN_DOCUMENTATION)).sorted()]
+    finally:
+        for n, f in saved.items():
+            setattr(real_socket, n, f)
+    free = [f.rule.id for f in check_file(str(CLEAN_DOCUMENTATION)).sorted()]
+    assert guarded and guarded == free, "the verdict changes when the network is unavailable"
 
 
 def test_schema_location_is_not_dereferenced(monkeypatch, no_network):
@@ -30,8 +72,6 @@ def test_schema_location_is_not_dereferenced(monkeypatch, no_network):
     bundled schema and must never fetch what the document points at — and the
     verdict must be the same whether or not the network exists, which is the
     part the old version of this test forgot to check."""
-    import urllib.request
-
     def refuse(*a, **k):
         raise AssertionError("the tool tried to open a URL")
 

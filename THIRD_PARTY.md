@@ -11,7 +11,7 @@ whether we changed it.
 | `tests/data/oracle-messages.json` | English message bundles of the same project | **MIT**, © 2021 Johannes Schmidt | **Yes** — the message strings were extracted into a JSON list; no wording changed |
 | `src/vdi2770_validate/data/rules.json` | this project | Apache-2.0 | n/a — titles and remedies are ours, checked against the reference's messages by `tests/test_catalogue.py::test_no_remedy_is_copied_from_the_reference_implementation`; its codes appear only in `refCodes`/`refKeys` as cross-references |
 | `docs/oracle-sweep.json` | produced by running the reference implementation over our containers | **derived from MIT** work, © 2021 Johannes Schmidt | **Yes** — it records message *codes* (`REP_038`) and nothing else. A test asserts no string in it is longer than a code, so their message text cannot drift into it |
-| `tools/oracle/Sweep.java` | this project | Apache-2.0 | n/a — our code, compiled against their MIT classes. It is not distributed with either package and contains none of their source |
+| `tools/oracle/Sweep.java` | this project | Apache-2.0 | n/a — our code, compiled against their MIT classes, containing none of their source. It is in this repository's sdist and in neither wheel |
 | Everything else | this project | Apache-2.0 | n/a |
 | `xmlschema` (runtime dependency, not bundled) | [sissaschool/xmlschema](https://github.com/sissaschool/xmlschema) | MIT | No |
 

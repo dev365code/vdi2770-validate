@@ -120,3 +120,55 @@ def test_the_notice_travels_with_this_package_too():
         "this package bundles nothing third-party; the NOTICE should say so "
         "rather than repeating the validator's list")
 
+
+
+def test_the_readme_names_every_budget_the_code_can_enforce():
+    """The budget list said `pdfread` had four; it had six, and it had had six
+    for a while. A count in prose is a claim nobody re-checks, so the list names
+    the constants and this asserts the naming is complete.
+    """
+    import re
+
+    from vdi2770 import pdfread, zipread
+
+    readme = (SRC.parent.parent / "README.md").read_text(encoding="utf-8")
+    for mod in (zipread, pdfread):
+        names = {n for n in dir(mod) if n.startswith(("MAX_", "MIN_"))}
+        assert names, f"{mod.__name__} has no budgets; this test is looking in the wrong place"
+        missing = sorted(n for n in names if f"`{n}`" not in readme)
+        assert not missing, f"{mod.__name__} enforces budgets the README does not name: {missing}"
+    m = re.search(r"`vdi2770\.pdfread` has (\w+) of its own", readme)
+    assert m, "the sentence counting pdfread's budgets has been reworded"
+    words = {"four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8}
+    real = len([n for n in dir(pdfread) if n.startswith(("MAX_", "MIN_"))])
+    assert words.get(m.group(1)) == real, f"the README says {m.group(1)}; there are {real}"
+
+
+def test_the_reader_does_not_write_sentences_about_what_it_refused():
+    """`rejected` held a second English sentence per refusal — "larger than this
+    tool will read", "over this tool's limit" — written beside the `Defect` that
+    already recorded the same fact. Two wordings for one event can disagree, and
+    prose about what a caller should conclude is the thing this package does not
+    do. `near_misses` lost its sentence for the same reason; this is the other
+    half of it.
+
+    `rejected` maps a name to the `Defect` that refused it. Whoever writes the
+    report writes the sentence.
+    """
+    import io
+    import zipfile
+
+    from vdi2770 import zipread
+    from vdi2770.model import Defect
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        z.writestr("VDI2770_Metadata.xml", b"<x/>")
+        z.writestr("../escape.txt", b"x")
+    c = zipread.read(buf.getvalue(), "x.zip")
+
+    assert "../escape.txt" in c.rejected
+    refusal = c.rejected["../escape.txt"]
+    assert isinstance(refusal, Defect), f"rejected carries {type(refusal).__name__}, not a fact"
+    assert refusal.kind == "unsafe-member-name"
+    assert refusal in c.defects, "the refusal and the defect are the same object"

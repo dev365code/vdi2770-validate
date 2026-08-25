@@ -42,8 +42,10 @@ Third-party material bundled with this project
 
    What the same reference implementation reported for each container in the
    corpus, recorded as message codes only. Derived from MIT-licensed software,
-   Copyright (C) 2021 Johannes Schmidt. Repository material; not in either
-   package. A test asserts it holds identifiers and no message text.
+   Copyright (C) 2021 Johannes Schmidt. Repository material: it is in this
+   repository's source distribution and in neither wheel — `check_wheel.py`
+   fails the build if anything outside the package directory ships. A test
+   asserts it holds identifiers and no message text.
 
 The text of the VDI 2770 guideline itself (VDI 2770 Blatt 1:2020-04) is sold
 by DIN Media and is NOT included, quoted, or paraphrased anywhere in this

@@ -13,8 +13,8 @@ check that — the normative text is paywalled.
 
 ## How much of this was measured
 
-It is measured now. Every container in `corpus/` and `tests/fixtures/` — 43 of
-them — was put through the reference implementation at its pinned commit
+It is measured now. Every container in `corpus/` and `tests/fixtures/` — 45 of
+them, one of which postdates the run and carries our half only — was put through the reference implementation at its pinned commit
 `e47c13c`, with the locale forced to `en_US`, and the result is checked in at
 [`docs/oracle-sweep.json`](oracle-sweep.json). `tools/capture_oracle.py --check`
 re-runs it and fails if either side has moved. `tools/oracle/README.md` says what
@@ -24,7 +24,11 @@ What the sweep settled:
 
 - **Every message key this catalogue cites exists in that project, and agrees
   with the code it is paired with.** Twenty-eight citations across the rules, nothing
-  missing, nothing mismatched. The `refKeys`/`refCodes` split earns its keep:
+  missing, nothing mismatched. (Read from the reference's own source at the pinned
+  commit, and **not checkable from a clone**: `oracle-sweep.json` records the codes
+  a run emitted, never the keys, and the vendored message file carries values with
+  no keys at all. The count of citations is derived and gated; their existence and
+  agreement are not — the same limitation §4 discloses, and it applies here too.) The `refKeys`/`refCodes` split earns its keep:
   thirteen of the reference's displayed codes are emitted from more than one key
   with different meanings, so a comparison keyed on the code alone is unsound.
 - **Six containers where it reports an error and we do not**, and **six where we

@@ -12,8 +12,6 @@ that sort of thing.
 import io
 import zipfile
 
-import pytest
-
 from conftest import CLEAN_DOCUMENT
 from vdi2770_validate.catalog import rule
 from vdi2770_validate.runner import check_file
@@ -81,9 +79,85 @@ def test_a_broken_installation_is_still_ours(monkeypatch):
     assert "X0" in got and "X4" not in got, sorted(got)
 
 
-@pytest.mark.parametrize("path", [CLEAN_DOCUMENT])
-def test_no_container_can_produce_x0(path):
+def test_no_container_can_produce_x0():
     """`tools/rule_coverage.py` justifies X0 as "only fires when this tool's own
     installation is broken, which no container can cause". That sentence was
-    false while the two cases shared a flag."""
-    assert "X0" not in findings(str(path))
+    false while the two cases shared a flag.
+
+    It is a claim about every container, and it was checked against one. The
+    excuse in CANNOT_FIRE is what keeps X0 out of the firing-coverage gate, so
+    the evidence for it should be every container this repository has.
+    """
+    from conftest import CORPUS, FIXTURES
+    targets = sorted(CORPUS.rglob("*.zip")) + sorted(FIXTURES.rglob("*.zip"))
+    assert len(targets) > 20, f"the corpus and fixtures should both be present: {len(targets)}"
+    guilty = [p.name for p in targets if "X0" in findings(str(p))]
+    assert not guilty, f"a container produced X0, which is meant to be impossible: {guilty}"
+
+
+def test_what_the_schema_check_found_before_it_crashed_is_kept():
+    """`runner._into` states the policy three files along: "the findings it
+    managed to produce before crashing are kept. They are as true as they were
+    going to be." The schema path did the opposite — `list(iter_errors(...))`
+    materialised the whole generator, so a crash part-way returned one "we gave
+    up" row and threw every real violation away.
+    """
+    from vdi2770 import parse_xml
+    from vdi2770_validate import xsdvalidate
+
+    class Truthful:
+        def iter_errors(self, src):
+            yield type("E", (), {"path": "/Document/A[1]", "reason": "first is wrong"})()
+            yield type("E", (), {"path": "/Document/A[2]", "reason": "second is wrong"})()
+            raise ValueError("gave up halfway")
+
+    tree = parse_xml(b"<Document xmlns='http://www.vdi.de/schemas/vdi2770'>"
+                     b"<A>x</A><A>y</A></Document>")
+    real = xsdvalidate._schema
+    xsdvalidate._schema = lambda: Truthful()
+    try:
+        out = xsdvalidate.validate(b"<Document/>", tree)
+    finally:
+        xsdvalidate._schema = real
+
+    reasons = [r["reason"] for r in out]
+    assert any("first is wrong" in r for r in reasons), reasons
+    assert any("second is wrong" in r for r in reasons), reasons
+    assert any("could not complete" in r for r in reasons), reasons
+
+
+def test_an_exception_with_no_message_does_not_break_the_handler():
+    """`"".strip().splitlines()` is `[]`, and subscripting it raised IndexError
+    *inside* the handler whose comment reads "hostile input, any failure".
+    `MemoryError()` carries no args — and that is the case a huge document
+    produces, so the reader got a bug report about this tool instead of the
+    diagnosis two lines above."""
+    from vdi2770 import parse_xml
+    from vdi2770_validate import xsdvalidate
+
+    class Silent:
+        def iter_errors(self, src):
+            raise MemoryError()
+
+    real = xsdvalidate._schema
+    xsdvalidate._schema = lambda: Silent()
+    try:
+        out = xsdvalidate.validate(b"<a/>", parse_xml(b"<a/>"))
+    finally:
+        xsdvalidate._schema = real
+    assert out and out[0]["broken"] == "document"
+    assert "MemoryError" in out[0]["reason"], out[0]["reason"]
+
+
+def test_the_catalogue_cannot_be_emptied_by_a_caller():
+    """`catalog.py`'s first paragraph says both families are immutable after
+    import, and `lru_cache` handed out the same mutable dict every call."""
+    import pytest
+
+    from vdi2770_validate.catalog import document_classes, rules
+
+    for family in (rules, document_classes):
+        before = len(family())
+        with pytest.raises(TypeError):
+            family()["POISON"] = None
+        assert len(family()) == before

@@ -1,0 +1,91 @@
+"""One rule can fire once per element. A crafted file makes that four hundred
+thousand times, and the report used to hold every one of them: 923 MB of memory
+and 107 MB of output for a 127 KB archive. The listing is now bounded; the
+count is not, so the summary and the exit code still tell the truth."""
+import json
+
+from vdi2770_validate.model import (
+    MAX_LISTED_PER_RULE,
+    About,
+    Finding,
+    Location,
+    Obligation,
+    Report,
+    Rule,
+    Severity,
+)
+from vdi2770_validate.report import as_json, as_text
+
+
+def a_rule(rid="M10", sev=Severity.ERROR):
+    return Rule(id=rid, title="t", severity=sev, obligation=Obligation.PUBLISHED_TABLE,
+                about=About.CONTAINER, layer="metadata",
+                remedy="Do the thing that fixes it, in a full sentence.")
+
+
+def flood(rep, n, rid="M10", sev=Severity.ERROR, container="x.zip"):
+    r = a_rule(rid, sev)
+    for i in range(n):
+        rep.add(Finding(r, f"finding {i}", Location(container=container, line=i)))
+
+
+N = MAX_LISTED_PER_RULE * 3
+
+
+def test_the_listing_is_bounded_but_the_count_is_not():
+    rep = Report(target="x.zip")
+    flood(rep, N)
+    assert len(rep.findings) == MAX_LISTED_PER_RULE
+    assert rep.count(Severity.ERROR) == N          # every one still counted
+    assert not rep.clean                           # so the exit code is still 1
+    assert rep.suppressed == {("M10", "x.zip"): N - MAX_LISTED_PER_RULE}
+
+
+def test_the_budget_is_per_rule_and_per_container():
+    rep = Report(target="outer.zip")
+    flood(rep, N, rid="M10", container="a.zip")
+    flood(rep, N, rid="M10", container="b.zip")    # a second container, its own budget
+    flood(rep, N, rid="M2", container="a.zip")     # a second rule, its own budget
+    assert len(rep.findings) == MAX_LISTED_PER_RULE * 3
+    assert rep.count(Severity.ERROR) == N * 3
+    assert sorted(rep.suppressed) == [("M10", "a.zip"), ("M10", "b.zip"), ("M2", "a.zip")]
+
+
+def test_the_text_says_what_it_did_not_list_and_agrees_with_its_own_summary():
+    rep = Report(target="x.zip")
+    flood(rep, N)
+    out = as_text(rep)
+    assert out.count("  error  M10  ") == MAX_LISTED_PER_RULE
+    assert f"... {N - MAX_LISTED_PER_RULE} more M10 findings in x.zip" in out
+    assert f"  {N} error(s)," in out               # the summary counts all of them
+
+
+def test_a_quiet_run_does_not_announce_notes_it_is_not_printing():
+    # --quiet hides notes. Announcing "... 200 more X2 findings" while printing
+    # none of them, and then a note count of zero, is the report contradicting
+    # itself twice over.
+    rep = Report(target="x.zip")
+    flood(rep, N, rid="X2", sev=Severity.INFO)
+    out = as_text(rep, show_info=False)
+    assert "more X2 findings" not in out
+    assert f"({N} note(s) not shown)" in out       # not the capped 100
+    assert f", {N} note(s)" in out
+    assert "more X2 findings" in as_text(rep, show_info=True)
+
+
+def test_the_json_carries_the_unlisted_count_next_to_the_summary():
+    rep = Report(target="x.zip")
+    flood(rep, N)
+    doc = json.loads(as_json(rep))
+    assert doc["summary"]["error"] == N
+    assert len(doc["findings"]) == MAX_LISTED_PER_RULE
+    assert doc["notListed"] == [
+        {"rule": "M10", "container": "x.zip", "count": N - MAX_LISTED_PER_RULE}]
+
+
+def test_a_report_under_the_budget_says_nothing_about_unlisted_findings():
+    rep = Report(target="x.zip")
+    flood(rep, MAX_LISTED_PER_RULE)                # exactly at the cap, none dropped
+    assert rep.suppressed == {}
+    assert "not listed" not in as_text(rep)
+    assert json.loads(as_json(rep))["notListed"] == []

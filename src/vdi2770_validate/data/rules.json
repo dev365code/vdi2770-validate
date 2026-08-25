@@ -17,161 +17,6 @@
   },
   "rules": [
     {
-      "id": "Z1",
-      "layer": "container",
-      "severity": "error",
-      "obligation": "container",
-      "title": "The file is not a readable ZIP archive",
-      "remedy": "A VDI 2770 container is a ZIP archive. Rebuild it with a standard ZIP tool and check the file was not truncated in transfer.",
-      "refKeys": [
-        "processor:ZU_MESSAGE_002",
-        "processor:ZU_MESSAGE_003"
-      ],
-      "refCodes": [
-        "ZU_002",
-        "ZU_003"
-      ],
-      "about": "container"
-    },
-    {
-      "id": "Z10",
-      "layer": "container",
-      "severity": "error",
-      "obligation": "ours",
-      "title": "Two members of the archive have the same name",
-      "whyOurs": "ZIP allows it and readers disagree about which one wins, so the container can show one thing to this tool and another to whoever unpacks it. Nothing good is ever delivered this way.",
-      "remedy": "Rebuild the archive with one entry per name. If two files genuinely differ, give them different names and declare both.",
-      "refKeys": [],
-      "refCodes": [],
-      "about": "container"
-    },
-    {
-      "id": "Z11",
-      "layer": "container",
-      "severity": "error",
-      "obligation": "ours",
-      "title": "A document container carries another container inside it",
-      "whyOurs": "Document containers hold a document's files. A container inside one is either a mistake or a way to carry something past a check that only looks at declared files.",
-      "remedy": "Move the inner container up into the documentation container, where containers belong.",
-      "refKeys": [],
-      "refCodes": [],
-      "about": "container"
-    },
-    {
-      "id": "Z2",
-      "layer": "container",
-      "severity": "error",
-      "obligation": "container",
-      "title": "The archive is empty",
-      "remedy": "Add the metadata file and the documents. An empty archive cannot be classified as either container kind.",
-      "refKeys": [
-        "processor:REP_MESSAGE_002"
-      ],
-      "refCodes": [
-        "REP_002"
-      ],
-      "about": "container"
-    },
-    {
-      "id": "Z3",
-      "layer": "container",
-      "severity": "error",
-      "obligation": "reference",
-      "title": "The archive is neither a document container nor a documentation container",
-      "remedy": "Put VDI2770_Metadata.xml at the root of a document container, or VDI2770_Main.xml at the root of a documentation container. Both names are case-sensitive and must not sit inside a folder.",
-      "refKeys": [
-        "processor:REP_EXCEPTION_004",
-        "processor:REP_MESSAGE_035"
-      ],
-      "refCodes": [
-        "REP_004",
-        "REP_035"
-      ],
-      "about": "container"
-    },
-    {
-      "id": "Z4",
-      "layer": "container",
-      "severity": "error",
-      "obligation": "ours",
-      "title": "A member name would escape the extraction directory",
-      "whyOurs": "The reference implementation extracts to a temporary directory. We never extract, so we can refuse hostile names outright instead of inheriting the risk.",
-      "remedy": "Rebuild the archive with plain relative names. Absolute paths, parent-directory segments and backslash separators are not acceptable in a container that will be unpacked by the recipient.",
-      "refKeys": [],
-      "refCodes": [],
-      "about": "container"
-    },
-    {
-      "id": "Z5",
-      "layer": "container",
-      "severity": "error",
-      "obligation": "ours",
-      "title": "The archive exceeds this tool's limits for untrusted input",
-      "whyOurs": "Supplier archives arrive from outside. A validator must not be a way to exhaust the machine that runs it.",
-      "remedy": "Split the delivery into several containers, or report the archive to whoever produced it if the size looks unintentional.",
-      "refKeys": [
-        "processor:ZU_EXCEPTION_004"
-      ],
-      "refCodes": [
-        "ZU_004"
-      ],
-      "about": "tool"
-    },
-    {
-      "id": "Z6",
-      "layer": "container",
-      "severity": "error",
-      "obligation": "ours",
-      "title": "Containers are nested deeper than this tool will open",
-      "whyOurs": "A budget for untrusted input, not a claim about the standard — three container levels occur in the reference project's own examples, so we open three and report the fourth. It is an error for the reason X0 and X4 give: we did not look, and a report that passes what it did not look at is worse than no report. Raise the level if your deliveries are deeper; do not read exit 0 as 'checked'.",
-      "remedy": "Check the delivery is what you meant to send. If the nesting is genuine, unpack the outer archive and check the inner containers separately.",
-      "refKeys": [],
-      "refCodes": [],
-      "about": "tool"
-    },
-    {
-      "id": "Z7",
-      "layer": "container",
-      "severity": "error",
-      "obligation": "reference",
-      "title": "The documentation container has no VDI2770_Main.pdf",
-      "remedy": "Add the main document as VDI2770_Main.pdf at the root of the documentation container, next to VDI2770_Main.xml.",
-      "refKeys": [
-        "processor:REP_MESSAGE_025"
-      ],
-      "refCodes": [
-        "REP_025"
-      ],
-      "about": "container"
-    },
-    {
-      "id": "Z8",
-      "layer": "container",
-      "severity": "warning",
-      "obligation": "ours",
-      "title": "The documentation container holds no document containers",
-      "remedy": "Add the document containers this handover is supposed to deliver. A documentation container with only a main document delivers no documents.",
-      "refKeys": [],
-      "refCodes": [],
-      "whyOurs": "The reference implementation has no rule for this. A documentation container whose only content is its own main document delivers nothing, which is worth saying out loud even though nobody else says it — hence a warning, not an error.",
-      "about": "container"
-    },
-    {
-      "id": "Z9",
-      "layer": "container",
-      "severity": "warning",
-      "obligation": "reference",
-      "title": "The archive stores files in folders",
-      "remedy": "Store the members flat, at the root of the archive. Metadata refers to files by name, so a file inside a folder is not the file the metadata names.",
-      "refKeys": [
-        "processor:ZU_MESSAGE_001"
-      ],
-      "refCodes": [
-        "ZU_001"
-      ],
-      "about": "container"
-    },
-    {
       "id": "F1",
       "layer": "files",
       "severity": "error",
@@ -245,21 +90,6 @@
       ],
       "refCodes": [
         "D_002"
-      ],
-      "about": "container"
-    },
-    {
-      "id": "M10",
-      "layer": "metadata",
-      "severity": "error",
-      "obligation": "reference",
-      "title": "A document identifier is empty",
-      "remedy": "Give the DocumentId element the identifier as its text. An empty identifier names nothing, and the recipient has no way to refer to this document.",
-      "refKeys": [
-        "core:DocumentId_VAL2"
-      ],
-      "refCodes": [
-        "DI_002"
       ],
       "about": "container"
     },
@@ -383,6 +213,21 @@
       "about": "container"
     },
     {
+      "id": "M10",
+      "layer": "metadata",
+      "severity": "error",
+      "obligation": "reference",
+      "title": "A document identifier is empty",
+      "remedy": "Give the DocumentId element the identifier as its text. An empty identifier names nothing, and the recipient has no way to refer to this document.",
+      "refKeys": [
+        "core:DocumentId_VAL2"
+      ],
+      "refCodes": [
+        "DI_002"
+      ],
+      "about": "container"
+    },
+    {
       "id": "P1",
       "layer": "pdf",
       "severity": "error",
@@ -417,7 +262,7 @@
       "id": "P3",
       "layer": "pdf",
       "severity": "warning",
-      "obligation": "reference",
+      "obligation": "ours",
       "title": "This scan found no PDF/A claim in the file",
       "remedy": "Produce the file as PDF/A and make sure the exporter writes the pdfaid identification into the XMP metadata. If the file does carry one, our scan did not reach it — see docs/scope.md for what it does and does not read.",
       "refKeys": [
@@ -426,7 +271,8 @@
       "refCodes": [
         "PV_004"
       ],
-      "about": "container"
+      "about": "container",
+      "whyOurs": "The reference implementation asserts that the file carries no PDF/A identification. We assert less: that a bounded scan of the bytes did not find one. The two are different propositions and only the smaller one is ours to make, so the reference's key is cited without its claim being borrowed."
     },
     {
       "id": "P4",
@@ -498,6 +344,186 @@
       "about": "container"
     },
     {
+      "id": "X4",
+      "layer": "schema",
+      "severity": "error",
+      "obligation": "ours",
+      "title": "The schema check could not finish on this metadata",
+      "whyOurs": "The document did something the schema checker would not follow to the end — nesting past its depth limit, for instance. We cannot say the metadata conforms and we cannot say it does not, so we say what happened instead. It is an error because a report that quietly skipped the check would be worse than no report.",
+      "remedy": "Simplify the metadata so the checker can reach the end of it — the reported reason says what stopped it. If the file is genuinely this shape, check it against the schema with a validator of your own: the limit that gave up belongs to this tool, not to VDI 2770.",
+      "refKeys": [],
+      "refCodes": [],
+      "basis": "",
+      "about": "tool"
+    },
+    {
+      "id": "X5",
+      "layer": "tool",
+      "severity": "error",
+      "obligation": "ours",
+      "title": "A check in this tool raised an error and did not finish",
+      "whyOurs": "A rule that crashes has checked nothing, and a report that omits it in silence would be telling the reader the container passed that check. This is about us, not the container.",
+      "remedy": "Nothing in the container needs changing for this one. Please report it with the container if you can share it. Every other finding in this report still stands; only the named check did not run.",
+      "refKeys": [],
+      "refCodes": [],
+      "about": "tool"
+    },
+    {
+      "id": "Z1",
+      "layer": "container",
+      "severity": "error",
+      "obligation": "container",
+      "title": "The file is not a readable ZIP archive",
+      "remedy": "A VDI 2770 container is a ZIP archive. Rebuild it with a standard ZIP tool and check the file was not truncated in transfer.",
+      "refKeys": [
+        "processor:ZU_MESSAGE_002",
+        "processor:ZU_MESSAGE_003"
+      ],
+      "refCodes": [
+        "ZU_002",
+        "ZU_003"
+      ],
+      "about": "container"
+    },
+    {
+      "id": "Z2",
+      "layer": "container",
+      "severity": "error",
+      "obligation": "container",
+      "title": "The archive is empty",
+      "remedy": "Add the metadata file and the documents. An empty archive cannot be classified as either container kind.",
+      "refKeys": [
+        "processor:REP_MESSAGE_002"
+      ],
+      "refCodes": [
+        "REP_002"
+      ],
+      "about": "container"
+    },
+    {
+      "id": "Z3",
+      "layer": "container",
+      "severity": "error",
+      "obligation": "reference",
+      "title": "The archive is neither a document container nor a documentation container",
+      "remedy": "Put VDI2770_Metadata.xml at the root of a document container, or VDI2770_Main.xml at the root of a documentation container. Both names are case-sensitive and must not sit inside a folder.",
+      "refKeys": [
+        "processor:REP_EXCEPTION_004",
+        "processor:REP_MESSAGE_035"
+      ],
+      "refCodes": [
+        "REP_004",
+        "REP_035"
+      ],
+      "about": "container"
+    },
+    {
+      "id": "Z4",
+      "layer": "container",
+      "severity": "error",
+      "obligation": "ours",
+      "title": "A member name would escape the extraction directory",
+      "whyOurs": "The reference implementation extracts to a temporary directory. We never extract, so we can refuse hostile names outright instead of inheriting the risk.",
+      "remedy": "Rebuild the archive with plain relative names. Absolute paths, parent-directory segments and backslash separators are not acceptable in a container that will be unpacked by the recipient.",
+      "refKeys": [],
+      "refCodes": [],
+      "about": "container"
+    },
+    {
+      "id": "Z5",
+      "layer": "container",
+      "severity": "error",
+      "obligation": "ours",
+      "title": "The archive exceeds this tool's limits for untrusted input",
+      "whyOurs": "Supplier archives arrive from outside. A validator must not be a way to exhaust the machine that runs it.",
+      "remedy": "Split the delivery into several containers, or report the archive to whoever produced it if the size looks unintentional.",
+      "refKeys": [
+        "processor:ZU_EXCEPTION_004"
+      ],
+      "refCodes": [
+        "ZU_004"
+      ],
+      "about": "tool"
+    },
+    {
+      "id": "Z6",
+      "layer": "container",
+      "severity": "error",
+      "obligation": "ours",
+      "title": "Containers are nested deeper than this tool will open",
+      "whyOurs": "A budget for untrusted input, not a claim about the standard — three container levels occur in the reference project's own examples, so we open three and report the fourth. It is an error for the reason X0 and X4 give: we did not look, and a report that passes what it did not look at is worse than no report. Raise the level if your deliveries are deeper; do not read exit 0 as 'checked'.",
+      "remedy": "Check the delivery is what you meant to send. If the nesting is genuine, unpack the outer archive and check the inner containers separately.",
+      "refKeys": [],
+      "refCodes": [],
+      "about": "tool"
+    },
+    {
+      "id": "Z7",
+      "layer": "container",
+      "severity": "error",
+      "obligation": "reference",
+      "title": "The documentation container has no VDI2770_Main.pdf",
+      "remedy": "Add the main document as VDI2770_Main.pdf at the root of the documentation container, next to VDI2770_Main.xml.",
+      "refKeys": [
+        "processor:REP_MESSAGE_025"
+      ],
+      "refCodes": [
+        "REP_025"
+      ],
+      "about": "container"
+    },
+    {
+      "id": "Z8",
+      "layer": "container",
+      "severity": "warning",
+      "obligation": "ours",
+      "title": "The documentation container holds no document containers",
+      "remedy": "Add the document containers this handover is supposed to deliver. A documentation container with only a main document delivers no documents.",
+      "refKeys": [],
+      "refCodes": [],
+      "whyOurs": "The reference implementation has no rule for this. A documentation container whose only content is its own main document delivers nothing, which is worth saying out loud even though nobody else says it — hence a warning, not an error.",
+      "about": "container"
+    },
+    {
+      "id": "Z9",
+      "layer": "container",
+      "severity": "warning",
+      "obligation": "reference",
+      "title": "The archive stores files in folders",
+      "remedy": "Store the members at the root of the archive. This tool resolves a metadata name that carries its folder path, so the file-set rules can stay quiet — but the reference implementation warns about the folders anyway, and it is the recipient's tooling that has to accept the container.",
+      "refKeys": [
+        "processor:ZU_MESSAGE_001"
+      ],
+      "refCodes": [
+        "ZU_001"
+      ],
+      "about": "container"
+    },
+    {
+      "id": "Z10",
+      "layer": "container",
+      "severity": "error",
+      "obligation": "ours",
+      "title": "Two members of the archive have the same name",
+      "whyOurs": "ZIP allows it and readers disagree about which one wins, so the container can show one thing to this tool and another to whoever unpacks it. Nothing good is ever delivered this way.",
+      "remedy": "Rebuild the archive with one entry per name. If two files genuinely differ, give them different names and declare both.",
+      "refKeys": [],
+      "refCodes": [],
+      "about": "container"
+    },
+    {
+      "id": "Z11",
+      "layer": "container",
+      "severity": "error",
+      "obligation": "ours",
+      "title": "A document container carries another container inside it",
+      "whyOurs": "Document containers hold a document's files. A container inside one is either a mistake or a way to carry something past a check that only looks at declared files.",
+      "remedy": "Move the inner container up into the documentation container, where containers belong.",
+      "refKeys": [],
+      "refCodes": [],
+      "about": "container"
+    },
+    {
       "id": "Z12",
       "layer": "container",
       "severity": "error",
@@ -511,16 +537,15 @@
       "about": "container"
     },
     {
-      "id": "X4",
-      "layer": "schema",
+      "id": "Z13",
+      "layer": "container",
       "severity": "error",
       "obligation": "ours",
-      "title": "The schema check could not finish on this metadata",
-      "whyOurs": "The document did something the schema checker would not follow to the end — nesting past its depth limit, for instance. We cannot say the metadata conforms and we cannot say it does not, so we say what happened instead. It is an error because a report that quietly skipped the check would be worse than no report.",
-      "remedy": "Simplify the metadata so the checker can reach the end of it — the reported reason says what stopped it. If the file is genuinely this shape, check it against the schema with a validator of your own: the limit that gave up belongs to this tool, not to VDI 2770.",
+      "title": "Documents are delivered as folders, which this tool does not open",
+      "whyOurs": "A folder holding VDI2770_Metadata.xml is a document container that was not zipped. This tool opens .zip members and nothing else, so everything inside was unchecked — and a report that said nothing would be telling the reader it passed. The reference implementation does read them, so this is a limit of ours rather than a fault of the delivery.",
+      "remedy": "Nothing here is necessarily wrong with the container. Zip each document folder into its own .zip member if you want this tool to check it, or check those folders with something that reads them.",
       "refKeys": [],
       "refCodes": [],
-      "basis": "",
       "about": "tool"
     }
   ]

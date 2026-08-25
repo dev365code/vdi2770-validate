@@ -8,6 +8,7 @@ not run in anyone else's environment.
 from __future__ import annotations
 
 import glob
+import shutil
 import subprocess
 import sys
 import tarfile
@@ -25,7 +26,37 @@ DISTRIBUTIONS = [
 ]
 
 
+def _pristine(project: Path):
+    """Remove what a previous build left where the next one will read it.
+
+    setuptools falls back to a previous run's `SOURCES.txt` when no VCS plugin
+    is present, so `*.egg-info` makes the next distribution assembled from the
+    last one's file list rather than from `MANIFEST.in`. Measured: with
+    `recursive-include corpus *` deleted, this gate passed with the egg-info
+    present and failed without it — the two packaging gates could not fail on a
+    packaging declaration at all on a machine that had built before.
+
+    `build/lib` is the same trap one layer along and is cleared with it.
+    """
+    for stale in list(project.glob("**/*.egg-info")) + [project / "build"]:
+        shutil.rmtree(stale, ignore_errors=True)
+
+
 def check(project: Path, before: list) -> int:
+    # setuptools writes `<project>/build/lib/...` on the way to an sdist and
+    # leaves it there. It is gitignored, so what stays behind is a complete,
+    # invisible copy of the source tree at the moment this gate last ran -- and
+    # it outlives renames: four modules that moved into the `vdi2770` package
+    # sat in `build/lib/vdi2770_validate/readers/` for weeks, findable by any
+    # `grep -r` and safe to edit for nobody. A gate cleans up after itself.
+    _pristine(project)
+    try:
+        return _build_and_run(project, before)
+    finally:
+        _pristine(project)
+
+
+def _build_and_run(project: Path, before: list) -> int:
     with tempfile.TemporaryDirectory() as tmp:
         build = subprocess.run([sys.executable, "-m", "build", "--sdist", "--outdir", tmp, str(project)],
                                capture_output=True, text=True)
@@ -38,7 +69,16 @@ def check(project: Path, before: list) -> int:
             print(f"expected one sdist, found {archives}", file=sys.stderr)
             return 1
         with tarfile.open(archives[0]) as tf:
-            tf.extractall(tmp)                                    # noqa: S202 - our own artifact
+            # 3.14 makes `filter="data"` the default and 3.12/3.13 warn without
+            # it, so the behaviour of this line would otherwise depend on which
+            # interpreter ran the gate. This unpacks an artifact we built a
+            # moment ago, so the restriction costs nothing. The keyword arrived
+            # in 3.12 and in the later patch releases of 3.9-3.11; on an
+            # interpreter without it the call raises before extracting anything.
+            try:
+                tf.extractall(tmp, filter="data")                 # noqa: S202 - our own artifact
+            except TypeError:
+                tf.extractall(tmp)                                # noqa: S202
         unpacked = next(p for p in Path(tmp).iterdir() if p.is_dir())
         # Fixtures are generated, so the sdist carries the generator, not the
         # output — build them there exactly as `make check` does here.

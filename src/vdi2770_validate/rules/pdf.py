@@ -55,11 +55,22 @@ def check(container, document, facts_for) -> Iterator[Finding]:
         if facts.encrypted:
             r = rule("P2")
             yield Finding(r, r.title, where)
-        if facts.pdfa_claim is None:
+        if facts.pdfa_claim is None and facts.encrypted:
+            # P2, one branch above, already says the file cannot be read. Adding
+            # "this scan found no PDF/A claim" would be true of the scan and
+            # useless to the reader, and its detail and remedy both name XMP
+            # metadata this tool never decrypted -- telling a producer to fix an
+            # exporter that may be doing the right thing. If we could not look,
+            # we do not get to say.
+            pass
+        elif facts.pdfa_claim is None:
             r = rule("P3")
             yield Finding(r, r.title, where,
                           detail="no pdfaid identification found in the XMP metadata")
         else:
             r = rule("P4")
             yield Finding(r, r.title, where,
-                          detail=f"claims PDF/A-{facts.pdfa_claim} — {UNVERIFIED}")
+                          detail=f"claims PDF/A-{facts.pdfa_claim} — {UNVERIFIED}. The claim is "
+                   f"read from an XMP packet in the file; PDF/A-3 files carry "
+                   f"attachments with packets of their own, and this tool cannot "
+                   f"tell one from the other")

@@ -14,7 +14,7 @@ from vdi2770_validate.runner import check_file
 
 
 def test_a_broken_installation_is_not_a_schema_violation(monkeypatch):
-    from vdi2770_validate.readers import xsdvalidate
+    from vdi2770_validate import xsdvalidate
 
     def no_schema():
         raise ImportError("No module named 'xmlschema'")
@@ -26,7 +26,7 @@ def test_a_broken_installation_is_not_a_schema_violation(monkeypatch):
 
 
 def test_the_could_not_run_finding_points_at_the_tool_not_the_document(monkeypatch):
-    from vdi2770_validate.readers import xsdvalidate
+    from vdi2770_validate import xsdvalidate
 
     monkeypatch.setattr(xsdvalidate, "_schema",
                         lambda: (_ for _ in ()).throw(ImportError("no xmlschema")))

@@ -16,6 +16,7 @@ import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+
 CORPUS = ROOT / "corpus" / "examples"
 OUT = ROOT / "tests" / "fixtures"
 
@@ -54,6 +55,17 @@ def edit(text: bytes, old: str, new: str) -> bytes:
 
 
 def main() -> int:
+    # The generator is the source of truth for this directory, which means it
+    # owns what is *not* in it as well. It only ever wrote, so a fixture deleted
+    # from this file stayed on disk and went on satisfying the gates: removing
+    # M9's block left `m9-repeated-document-id.zip` behind and firing coverage
+    # reported M9 covered. A fresh clone would have disagreed with the machine
+    # that had built before, which is the whole failure this project keeps
+    # finding in its own workspaces.
+    if OUT.exists():
+        for stale in sorted(OUT.iterdir()):
+            if stale.is_file():
+                stale.unlink()
     base = members(DOC)
     basen = members(DOCN)
     made = {}
@@ -192,6 +204,16 @@ def main() -> int:
                + b"<a>" * 1001 + b"</a>" * 1001 + b"</Document>")
     add("x4-too-deep.zip", f, "X4", [META],
         "the metadata replaced with a thousand and one levels of nesting")
+
+    # F2 — a file in the container that the metadata does not name.
+    # This used to be covered by `folders.zip` in the corpus, until that
+    # container's files turned out to be declared in a folder's own metadata
+    # that this tool never opens: accusing them was the false positive, and the
+    # rule was left with nowhere to fire.
+    f = dict(base)
+    f["beilage.txt"] = b"a file nobody declared"
+    add("f2-undeclared-file.zip", f, "F2", ["beilage.txt"],
+        "one extra file, named nowhere in the metadata")
 
     # Z12 — a member listed in the directory that cannot be decompressed.
     # Written by hand: no ZIP writer produces a broken CRC on purpose.

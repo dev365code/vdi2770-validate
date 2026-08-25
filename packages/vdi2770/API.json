@@ -1,0 +1,458 @@
+{
+  "format": 2,
+  "surface": {
+    "Classification": {
+      "bases": [
+        "object"
+      ],
+      "fields": {
+        "class_id": [
+          "Optional[str]",
+          "no-default"
+        ],
+        "names": [
+          "Tuple[Tuple[Optional[str], str], ...]",
+          "no-default"
+        ],
+        "src": [
+          "Location",
+          "has-default"
+        ],
+        "system": [
+          "str",
+          "no-default"
+        ]
+      },
+      "methods": [],
+      "properties": []
+    },
+    "Container": {
+      "bases": [
+        "object"
+      ],
+      "fields": {
+        "children": [
+          "List[Container]",
+          "has-default"
+        ],
+        "defects": [
+          "List[Defect]",
+          "has-default"
+        ],
+        "depth": [
+          "int",
+          "has-default"
+        ],
+        "duplicate_names": [
+          "Tuple[str, ...]",
+          "has-default"
+        ],
+        "kind": [
+          "Kind",
+          "has-default"
+        ],
+        "member_name": [
+          "Optional[str]",
+          "has-default"
+        ],
+        "members": [
+          "Tuple[Member, ...]",
+          "has-default"
+        ],
+        "metadata_bytes": [
+          "Optional[bytes]",
+          "has-default"
+        ],
+        "metadata_name": [
+          "Optional[str]",
+          "has-default"
+        ],
+        "near_misses": [
+          "Dict[str, Tuple[str, str]]",
+          "has-default"
+        ],
+        "parent": [
+          "Optional[Container]",
+          "has-default"
+        ],
+        "path": [
+          "str",
+          "no-default"
+        ],
+        "rejected": [
+          "Dict[str, Defect]",
+          "has-default"
+        ]
+      },
+      "methods": [
+        "walk"
+      ],
+      "properties": [
+        "file_names",
+        "present",
+        "where"
+      ]
+    },
+    "DEFECT_KINDS": {
+      "kind": "frozenset",
+      "value": "['ambiguous-name', 'archive-too-large', 'container-budget-exhausted', 'decompression-budget-exhausted', 'member-budget-exhausted', 'member-too-large', 'member-unreadable', 'metadata-too-large', 'metadata-unreadable', 'nesting-too-deep', 'not-a-zip', 'suspicious-compression', 'too-many-members', 'unsafe-member-name']"
+    },
+    "Defect": {
+      "bases": [
+        "object"
+      ],
+      "fields": {
+        "detail": [
+          "str",
+          "has-default"
+        ],
+        "kind": [
+          "str",
+          "no-default"
+        ],
+        "where": [
+          "Location",
+          "no-default"
+        ]
+      },
+      "methods": [],
+      "properties": []
+    },
+    "Description": {
+      "bases": [
+        "object"
+      ],
+      "fields": {
+        "language": [
+          "Optional[str]",
+          "no-default"
+        ],
+        "src": [
+          "Location",
+          "has-default"
+        ],
+        "title": [
+          "str",
+          "no-default"
+        ]
+      },
+      "methods": [],
+      "properties": []
+    },
+    "DigitalFile": {
+      "bases": [
+        "object"
+      ],
+      "fields": {
+        "file_format": [
+          "str",
+          "no-default"
+        ],
+        "file_name": [
+          "str",
+          "no-default"
+        ],
+        "src": [
+          "Location",
+          "has-default"
+        ]
+      },
+      "methods": [],
+      "properties": []
+    },
+    "Document": {
+      "bases": [
+        "object"
+      ],
+      "fields": {
+        "classifications": [
+          "Tuple[Classification, ...]",
+          "no-default"
+        ],
+        "identifiers": [
+          "Tuple[DocumentId, ...]",
+          "no-default"
+        ],
+        "src": [
+          "Location",
+          "has-default"
+        ],
+        "versions": [
+          "Tuple[DocumentVersion, ...]",
+          "no-default"
+        ]
+      },
+      "methods": [],
+      "properties": [
+        "all_files",
+        "ids"
+      ]
+    },
+    "DocumentId": {
+      "bases": [
+        "object"
+      ],
+      "fields": {
+        "domain_id": [
+          "str",
+          "no-default"
+        ],
+        "id": [
+          "str",
+          "no-default"
+        ],
+        "src": [
+          "Location",
+          "has-default"
+        ]
+      },
+      "methods": [],
+      "properties": []
+    },
+    "DocumentVersion": {
+      "bases": [
+        "object"
+      ],
+      "fields": {
+        "descriptions": [
+          "Tuple[Description, ...]",
+          "no-default"
+        ],
+        "files": [
+          "Tuple[DigitalFile, ...]",
+          "no-default"
+        ],
+        "languages": [
+          "Tuple[str, ...]",
+          "no-default"
+        ],
+        "life_cycle_status": [
+          "str",
+          "no-default"
+        ],
+        "src": [
+          "Location",
+          "has-default"
+        ],
+        "version_id": [
+          "str",
+          "no-default"
+        ]
+      },
+      "methods": [],
+      "properties": []
+    },
+    "Kind": {
+      "bases": [
+        "Enum",
+        "object"
+      ],
+      "members": [
+        "DOCUMENT",
+        "DOCUMENTATION",
+        "UNKNOWN",
+        "UNREADABLE"
+      ],
+      "values": {
+        "DOCUMENT": "'document container'",
+        "DOCUMENTATION": "'documentation container'",
+        "UNKNOWN": "'unrecognised'",
+        "UNREADABLE": "'unreadable'"
+      }
+    },
+    "Location": {
+      "bases": [
+        "object"
+      ],
+      "fields": {
+        "column": [
+          "Optional[int]",
+          "has-default"
+        ],
+        "container": [
+          "str",
+          "has-default"
+        ],
+        "line": [
+          "Optional[int]",
+          "has-default"
+        ],
+        "member": [
+          "Optional[str]",
+          "has-default"
+        ],
+        "subject": [
+          "Optional[str]",
+          "has-default"
+        ],
+        "xpath": [
+          "Optional[str]",
+          "has-default"
+        ]
+      },
+      "methods": [
+        "child"
+      ],
+      "properties": []
+    },
+    "MAIN_PDF": {
+      "kind": "str",
+      "value": "'VDI2770_Main.pdf'"
+    },
+    "MAIN_XML": {
+      "kind": "str",
+      "value": "'VDI2770_Main.xml'"
+    },
+    "METADATA_XML": {
+      "kind": "str",
+      "value": "'VDI2770_Metadata.xml'"
+    },
+    "Member": {
+      "bases": [
+        "object"
+      ],
+      "fields": {
+        "compressed": [
+          "int",
+          "no-default"
+        ],
+        "is_dir": [
+          "bool",
+          "no-default"
+        ],
+        "name": [
+          "str",
+          "no-default"
+        ],
+        "size": [
+          "int",
+          "no-default"
+        ]
+      },
+      "methods": [],
+      "properties": []
+    },
+    "NS": {
+      "kind": "str",
+      "value": "'http://www.vdi.de/schemas/vdi2770'"
+    },
+    "Node": {
+      "bases": [
+        "object"
+      ],
+      "fields": {
+        "attrib": [
+          "Dict[str, str]",
+          "has-default"
+        ],
+        "children": [
+          "List[Node]",
+          "has-default"
+        ],
+        "column": [
+          "int",
+          "has-default"
+        ],
+        "line": [
+          "int",
+          "has-default"
+        ],
+        "ns": [
+          "str",
+          "has-default"
+        ],
+        "parent": [
+          "Optional[Node]",
+          "has-default"
+        ],
+        "tag": [
+          "str",
+          "no-default"
+        ],
+        "text": [
+          "str",
+          "has-default"
+        ]
+      },
+      "methods": [
+        "child_text",
+        "find",
+        "find_all",
+        "text_of"
+      ],
+      "properties": []
+    },
+    "PdfFacts": {
+      "bases": [
+        "object"
+      ],
+      "fields": {
+        "encrypted": [
+          "bool",
+          "has-default"
+        ],
+        "header": [
+          "str",
+          "has-default"
+        ],
+        "is_pdf": [
+          "bool",
+          "no-default"
+        ],
+        "pdfa_claim": [
+          "Optional[str]",
+          "has-default"
+        ]
+      },
+      "methods": [],
+      "properties": []
+    },
+    "REFUSAL_KINDS": {
+      "kind": "frozenset",
+      "value": "['ambiguous-name', 'archive-too-large', 'container-budget-exhausted', 'decompression-budget-exhausted', 'member-budget-exhausted', 'member-too-large', 'member-unreadable', 'metadata-too-large', 'suspicious-compression', 'unsafe-member-name']"
+    },
+    "UnsafeXml": {
+      "bases": [
+        "XmlError",
+        "Exception",
+        "BaseException",
+        "object"
+      ],
+      "members": []
+    },
+    "XmlError": {
+      "bases": [
+        "Exception",
+        "BaseException",
+        "object"
+      ],
+      "members": []
+    },
+    "__version__": {
+      "kind": "str",
+      "value": "'0.5.0'"
+    },
+    "build_document": {
+      "signature": "(root: 'Node', base: 'Location') -> 'Document'"
+    },
+    "member_bytes": {
+      "signature": "(data: 'bytes', name: 'str', allowed: 'Optional[Set[str]]' = None) -> 'Optional[bytes]'"
+    },
+    "nfc": {
+      "signature": "(name: 'str') -> 'str'"
+    },
+    "parse_xml": {
+      "signature": "(data: 'bytes') -> 'Node'"
+    },
+    "read_container": {
+      "signature": "(data: 'bytes', path: 'str', depth: 'int' = 0, _budget: 'Optional[_Budget]' = None) -> 'Container'"
+    },
+    "read_container_file": {
+      "signature": "(path: 'str') -> 'Container'"
+    },
+    "read_pdf": {
+      "signature": "(data: 'bytes') -> 'PdfFacts'"
+    }
+  },
+  "version": "0.5.0"
+}

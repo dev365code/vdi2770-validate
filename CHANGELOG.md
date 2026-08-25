@@ -2,13 +2,270 @@
 
 ## Unreleased
 
+Six things that were true of the code and not of what the project said about it,
+plus the guards that make each one say so next time.
+
+- **A name that means two entries identifies neither.** Every refusal in the
+  reader is recorded against a *name*, and `zipfile` resolves a duplicated name
+  to the **last** entry — so the accepted member, the budget charge and the
+  allow-list all came from the first while the bytes came from the second. A
+  **505 KiB** archive whose second `d.zip` was 400 MB of zeros cost **1.25 GiB**
+  while the report said that member had been refused for expanding 1028x. Both
+  entries are refused now, once, under the new `ambiguous-name` defect kind,
+  which `Z10` already had the sentence for. Same archive: **28.8 MB**.
+- **A patch release of the reader was impossible.** `__version__` is in the
+  reader's `__all__` and the fingerprint records its value, and the compatibility
+  check is only ever consulted when the version moved — so `__version__` was in
+  the changed set every time, the "nothing incompatible changed" branch was
+  unreachable, and the verdict collapsed to "the minor must move, always". The
+  release path was shut in both directions: `--check` failed until `--write`
+  succeeded, and `--write` refused. Its unit test could not see it, because it
+  was written against a two-entry synthetic surface with no `__version__` in it.
+- **The reader is behind the same door as everything else.** `_into` guards the
+  rules and `_step` guards what feeds them; `zipread.read` and
+  `zipread.member_bytes` sat outside both. The reader's contract is that it
+  records a defect rather than raising — and it is a separately versioned
+  package, so a crash there produced the exact failure those guards exist to
+  prevent: a traceback naming internals, with the rest of the batch unchecked.
+  `nfc` is deliberately left alone: it is `unicodedata.normalize` on a `str`, it
+  cannot raise, and the validator calls it in four places besides — a wrapper on
+  two of nine call sites is an inconsistency dressed as a guard.
+- **Two subprocesses were measuring a different tree than the one under test.**
+  `pytest`'s `pythonpath` does not cross a subprocess boundary, so `-m
+  vdi2770_validate` in a child imported whatever was installed. On a dev box that
+  is an editable install of the same checkout and the difference never shows;
+  under `make mutations` and the sdist gate, which both run the suite from a
+  *copy*, the child measured the original. A mutation to the CLI left the
+  mutation table's own canary green in the copy it was judging.
+- **The reader's own suite now holds the locations the reader publishes.**
+  `ClassName.src`, `Tagged.src` and `life_cycle_src` are its public surface, and
+  every test of them lived in the validator — while the sdist gate makes it
+  literal that a packager building `vdi2770` alone runs that suite and nothing
+  else. Pointing all three back at their parent element left it green.
+- **Six numbers in prose, and the gates that make them derive.** The README gave
+  a count of rules with a fixture pair and then called the odd one out by that
+  very ordinal — the two cannot both be true — and the test pinning the sentence
+  hard-coded the ordinal, off by one, so writing the correct one turned the
+  build red. The reader README's opening snippet
+  prints a list of `(domain, value)` pairs and its output block showed a bare
+  one-tuple with the domain dropped — on the front page of the package whose
+  own rule, test file and changelog entry are about identifiers being pairs.
+  `make standalone` runs 56 files and the entry said 48. Seven rules fire because
+  this tool declined and the entry said four. `docs/rules.md` called `obligation`
+  "basis", while `rules.json` has a *different* field named `basis`. And the
+  citation floor was `>= 12` against a real count of 22, so ten could vanish in
+  silence. Each of those now derives from the thing it counts.
+- **"CI runs exactly these targets" is proved in both directions.** Only one was:
+  every `make check` command had to appear in the workflow, and nothing stopped
+  CI growing a check nobody runs locally — or replacing one — with "exactly"
+  still reading as proved.
+- **A report for an archive that was never opened does not say the rest stands.**
+  `X5`'s remedy ends *"Every other finding in this report still stands; only the
+  named check did not run"* — true of one rule crashing among thirty, false of
+  the container read, which every other check is downstream of. A user whose
+  archive could not be opened got one finding and a sentence telling them the
+  rest of the report held. `_step` now takes the remedy for steps whose failure
+  the catalogue's sentence does not cover.
+- **A failing test no longer deletes the fixtures.** The check that the fixture
+  generator clears its own output directory planted its stray file in the real
+  `tests/fixtures/` and put the tree back in a `finally` — which deleted the
+  directory and rebuilt it *without checking whether the rebuild worked*. One
+  failing assertion left 26 fixtures gone, the next test file unable to collect,
+  and the run after that reporting four unrelated failures. It runs against a
+  disposable copy of the generator now. A sweep for anything else in either suite
+  that writes inside the repository found nothing.
+- **A breaking change cannot ship as a patch release.** The API gate asked for
+  *a* version bump. The validator pins the reader with `~=0.6.0`, which admits
+  every 0.6.x, so a removal published as 0.6.1 would install itself on machines
+  that asked for 0.6.0 — a mistake this project has already shipped once. The
+  gate now distinguishes additions from removals and signature changes, and
+  requires the minor to move for the latter.
+- **The wheel carries the package and nothing else.** `check_wheel.py` asked
+  whether everything in `src/` shipped and never the other direction, while
+  NOTICE told readers the MIT-derived oracle evidence is in the sdist and in
+  neither wheel. It was a claim with no gate; a `package-data` glob could have
+  falsified it silently. NOTICE and THIRD_PARTY.md now say sdist where they said
+  "neither package", which is what is true.
+- **The mutation harness stopped poisoning the tree it measures.** One row runs
+  the fixture generator under a mutation that deletes a fixture. Restoring the
+  source file did not restore the fixtures, so the three rows after it failed
+  their own baseline and were reported as "already fail before the mutation" —
+  including the canary, which turns the whole run red.
+- **Four gates were reading a shape rather than a value, or one file rather than
+  all of them.** The reader README's defect-kind check scraped `Defect("…")` and
+  saw eight of thirteen; the reference-corpus check would have degraded to a
+  silent skip if its glob emptied; the folder-delivery check asked only that
+  "some `about: tool` rule fired", which a crash report satisfies; and the
+  citation check read `SECURITY.md` and no other document.
+
+
+Three ways a small file could make this tool spend without limit. Each number
+below is measured on this machine, before and after, on the same input.
+
+- **A rule can no longer flood the report.** One rule fires once per element, so
+  a 126 KB archive naming 200,000 identifiers produced 200,004 listed findings,
+  **51.6 MB of text output, 137 MB of JSON, and 1,260 MB of memory**. The listing
+  is now capped at 100 per (rule, container) — the same input prints 104 findings,
+  **26.8 KB of text, 71.7 KB of JSON, 367 MB** — and the report says
+  `... 199900 more M10 findings in flood.zip, counted below but not listed`,
+  with `notListed` in the JSON. **The count is not capped**: the summary still
+  reads 200,002 errors and the exit code is still 1, because a bounded listing
+  must not become a quieter verdict. What memory remains is the parse tree, which
+  is bounded: measured at 18x the metadata bytes, so 0.3 GB at
+  `MAX_METADATA_BYTES` and 1.2 GB across the whole tree budget.
+- **Decompression is now budgeted across the whole read.** Every individual
+  member was under its cap while the total was not, so 40 inner containers could
+  demand 19,200 MiB between them. `MAX_TOTAL_DECOMPRESSED` is 4 GiB across one
+  `read()`; on exhaustion the sweep stops verifying, members are still listed,
+  and `Z5` says why. That input now stops at 1.29 s.
+- **Character data no longer accumulates quadratically.** `&#nnn;` forces one
+  expat callback per reference and the parser appended to a string each time, so
+  a 198 KB archive cost **60 s** for a clean verdict. Text is collected per open
+  element and joined once: 200k/400k/800k references are **0.020 / 0.040 /
+  0.079 s**, down from 0.317 / 1.085 / 4.724.
+
+Three gates that ask what `make check` cannot ask of itself.
+
+- **`make mutations`** takes every claim this project makes about a gate, breaks
+  the thing that gate protects, and checks the gate notices — twenty-seven rows, each
+  naming the pytest selection or the tool that has to go red. The harness checks
+  itself as hard as it checks the code: a row whose anchor no longer appears
+  exactly once is an error rather than a pass; every apply and restore clears
+  `__pycache__` and touches the file, because restoring a file to its previous
+  *size* leaves bytecode CPython still considers valid and a mutation can look
+  like it survived when it never loaded; a selection that collects nothing is a
+  broken row, not a kill; and **one row must survive**, because a harness that
+  reports red for a change that does not matter is reporting red for everything.
+  It found two holes on its first full run.
+- **`make standalone`** runs each of the 55 test files on its own. A suite is a
+  shared process, so a file can pass because an earlier one imported something —
+  `tests/test_offline.py` did exactly that for weeks, patching `socket.socket`
+  and then importing `urllib.request`, which breaks `class SSLSocket(socket)`
+  inside the standard library.
+- **`oracle-half`** recomputes our column of the differential sweep and compares
+  it. The reference column needs a JDK and somebody else's checkout; ours needs
+  neither, and ours is the half that goes stale — a rule's severity could move
+  and leave a recorded verdict describing a tool that no longer exists, while
+  `docs/divergences.md` went on deriving counts from it.
+
+Also: the vendored reference messages have a generator at last
+(`capture_oracle.py --messages`) and, for the half that works offline, a pinned
+hash — that file is what proves no remedy here is a translation of somebody
+else's, and quietly shrinking it would quietly weaken the proof. And every
+Makefile target `make check` does not run now carries a written reason, because
+an exemption list is otherwise a way to make a gate go quiet.
+
+Review of the packaging work, and what it found.
+
+- **The workflow that publishes the reader could not run its own gate.**
+  `release-sdk.yml` sets `working-directory: packages/vdi2770` for every step,
+  and the step that runs `make check` was added without overriding it — there is
+  no Makefile there. The SDK release would have failed before publishing
+  anything. A test now checks structurally that a step running a repository-root
+  command overrides a file-wide default.
+- **The API fingerprint was blind to four kinds of breaking change.** A sweep put
+  thirteen mutations through it; four passed both the fingerprint and the whole
+  suite: a positional parameter made keyword-only, a public dataclass field
+  losing its default, a return annotation changing, and an enum member's *value*
+  changing. It recorded parameter names and type strings, which carry none of
+  those. It now records the whole signature, the repr of every constant, class
+  bases and members, and enum values — and it carries a format version, because
+  "the recorder changed" and "the library changed" are different events that
+  need different answers.
+- **The pin's floor was never checked against anything published.** At one point
+  today the validator pinned `vdi2770~=0.5.0` for a reader that existed nowhere
+  but this working tree. Tagging from there would have published something pip
+  could not resolve — the same failure as a loose pin, arriving from the other
+  side. The floor now has to be a released `sdk-v*` tag or the reader being
+  released beside it.
+- **`--write` would create a baseline from nothing.** `rm API.json && --write` was
+  exactly as easy as regenerating it, and looked the same in a diff. It takes
+  `--first` now. The baseline also shipped in neither source distribution, so a
+  downstream packager got the tool without the thing it compares against.
+- **Deleting a duplicated test file cost the reader four behaviours.** The
+  duplicates were real, but `tools/check_sdist.py` runs the reader's suite alone
+  — that is what a packager of `vdi2770` runs — and after the deletion that suite
+  passed a build in which every PDF is reported as encrypted, a non-ZIP is
+  misclassified, `XmlError` carries no line, and an unreadable inner archive
+  vanishes from the tree. Four tests, against the public API, in the suite that
+  ships.
+
+Packaging: the artifact people actually install is now looked at.
+
+- **The wheel is built, opened, installed and run.** Nobody installs a source
+  distribution, and nothing here built a wheel — so *"the licences travel with
+  the package"* and *"the bundled schema ships"* were claims about strings in a
+  `pyproject.toml`. `make check` now builds both wheels, checks that everything
+  under `src/<package>/` and every licence file is in them, installs them into a
+  temporary directory and runs the command line out of them. Removing the
+  bundled schema does not crash the tool — it reports `X0` — so the smoke test
+  asks about `X0` rather than only about the exit code.
+- **A file deleted from the source could still ship.** setuptools assembles the
+  wheel from `<project>/build/lib` and leaves behind files the source no longer
+  has. Measured: with `data/rules.json` moved out of the tree, the built wheel
+  still contained it. The gate now clears that directory before building, so
+  what it measures is this commit rather than whatever the workspace last built.
+- **The reader's public surface is recorded against the version that published
+  it.** The pin gate catches "the pin is too loose"; it cannot catch the other
+  half, which is the code moving while the version does not. This release's
+  reader gained `DEFECT_KINDS` and `Container.parent` and changed
+  `Container.rejected` from `Dict[str, str]` to `Dict[str, Defect]` while still
+  calling itself 0.5.0. That 0.5.0 was never tagged and so never published — the
+  newest reader on PyPI is 0.4.0 — so nobody was served a broken pair. What the
+  gate prevents is the next one, and the release that would have shipped a
+  validator pinning a reader version that exists nowhere but this tree. **The reader is
+  0.6.0 and the validator asks for `~=0.6.0`.** `--write` refuses to record a
+  changed surface under a version it has already recorded, because otherwise
+  regenerating the baseline is a way to make the gate quiet.
+
+One rule's crash used to be every container's crash.
+
+- **A check that raises is a finding, not the end of the run.** The project's own
+  conventions say so and the runner did not do it: a rule module raising killed
+  the whole run, so a sweep over a supplier's drop folder died on one archive
+  with a traceback naming this tool's internals, and every container after it
+  went unchecked — the exact failure a validator exists to prevent. Each rule
+  module and each step feeding them now demotes a crash to `X5`, an error,
+  because a check that did not run is not a check that passed. Whatever a rule
+  managed to report before crashing is kept.
+- **The handler that existed so one bad path could not stop the rest was itself
+  stopping the rest.** `except Exception as e: ... {e.strerror or e}` — that
+  attribute is on `OSError` and nowhere else, so any other surprise raised an
+  `AttributeError` out of the handler. `getattr` now, and the OS's own message
+  is still preferred when there is one.
+
+Two rules answering a question other than the one they ask.
+
+- **`Z8` counts document containers now, which is what its title says.** It
+  tested whether the reader had opened *any* archive, and a declared `.zip`
+  payload is an opened archive — so a documentation container delivering no
+  documents at all came back clean, exit 0. It also declines to answer when a
+  child was there and unreadable: `Z1` says we could not look, and "there are
+  none" would be a second and different claim.
+- **A member the reader could not read is still in the archive.** A single bad
+  CRC produced a report that contradicted itself twice. On `VDI2770_Main.pdf`:
+  `Z12` *"a file could not be read"*, `Z7` *"there is no VDI2770_Main.pdf, add
+  it"*, and `F1` *"declared but not in the archive"* — about one file that was
+  right there. On `VDI2770_Main.xml`, worse: the container was classified from
+  the readable names only, so it became `UNKNOWN`, `Z3` said *"this is neither a
+  document nor a documentation container"*, and no `M`, `F` or `X` rule ran at
+  all. Presence is now a fact about the archive's directory (`Container.present`
+  in the reader, beside `file_names`), classification reads it, and `Z7` reads
+  it. `F1` still fires — at the line in the metadata that named the file, which
+  is what `Z12` cannot give you — but says *"in the container but could not be
+  read"* and carries the remedy that fits. `metadata-unreadable` maps to `Z12`
+  rather than `Z3`, and is no longer appended on top of a reason already
+  recorded, which is how one file came to have two explanations.
+
 A shape review read the whole repository as a newcomer would. These are the
 boundary findings; the user-facing ones are above in the same section.
 
 - **One severity policy for "this tool stopped", and a field that says so.**
-  Four rules fire because the validator declined — a broken installation, a
-  document the schema checker would not finish, an archive over a budget, a tree
-  deeper than we open. Three were errors arguing *"a report that silently skipped
+  Six rules fire because the validator declined — a broken installation, a
+  document the schema checker would not finish, a check of ours that crashed, an
+  archive over a budget, a tree deeper than we open, and documents delivered as
+  folders. The four that existed when this
+  policy was settled disagreed with each other: three were errors arguing *"a report that silently skipped
   the check would be worse than no report"*; `Z6` was a warning arguing the
   opposite for the same situation. Both are good arguments and only one can be
   the policy: if we did not look, exit 0 would be telling somebody we did. **`Z6`
@@ -19,7 +276,7 @@ boundary findings; the user-facing ones are above in the same section.
   *"it must sit at the root of the archive"* — a normative claim about VDI 2770,
   authored inside the package whose first line is that it decides nothing. It
   reports `(kind, name)` now and `Z3` writes the sentence; the output a user sees
-  is unchanged. (`vdi2770` 0.5.0, breaking: `near_misses` values are tuples.)
+  is unchanged. (`vdi2770` 0.6.0, breaking: `near_misses` values are tuples.)
 - **`model.py` really is the single vocabulary a rule imports.** Its docstring
   said so while three rule modules reached past it for `Kind` and the reserved
   filenames in function-local imports, which the layering test had no opinion
@@ -36,6 +293,36 @@ boundary findings; the user-facing ones are above in the same section.
   Three times a check written in the reader package's suite reached up to the
   repository and broke the sdist test. The rule — a claim about the repository
   belongs to the repository's suite — is enforced rather than relearned.
+
+
+Gates that could not fail. Nothing here changes what the tool reports; all of it
+changes what the build refuses to let through.
+
+- **"A rule that fires nowhere fails the build" is now true.** README said it;
+  `rule_coverage --check` computed `unexercised` and never looked at it, so
+  `--write` followed by `--check` printed *"ok ... 1 unexercised"* and exited 0 —
+  the baseline blessing the one thing the tool exists to catch. The judging is a
+  function now, tested against synthetic catalogues, and the baseline cannot
+  excuse a dead rule: either it fires, or it is in `CANNOT_FIRE` with a reason.
+- **A bound with no floor passes when the code does nothing.** Two assertions
+  read *"we inflated less than N"*. A `_haystacks` that yielded an empty list
+  satisfied both — measured, by stubbing it — and a PDF nobody looks inside
+  reports no PDF/A claim at all. Both now assert that the raw bytes are searched
+  and that something was inflated, and the budget test measures the same input
+  unbounded and bounded so it tests the budget rather than the fixture.
+- **Six hostile names were not six branches.** The parametrised name test
+  asserted only that each was rejected. `dir\..\..\evil.txt`, labelled
+  *"backslash separator with traversal"*, never reached the backslash rule —
+  traversal is checked first. Each case now asserts the reason, which made the
+  wrong label visible immediately, and `5:/ratio.pdf` was added because
+  `5:1.pdf` never reaches the `isalpha` guard it was there to protect.
+- **The validator's rule-id check now looks as hard as the SDK's.** Five
+  hard-coded ids in quotes, against a regex over every id, quoted or not — and
+  the regex had already caught an unquoted id in a comment that also had the
+  severity wrong.
+- **A test that could not fail is deleted, not left to look like coverage.**
+  `test_ci_runs_every_make_command` searched the workflow text; its sibling
+  searches the actual `run:` steps and subsumes it completely.
 
 
 ## 0.6.0 — 2026-08-24

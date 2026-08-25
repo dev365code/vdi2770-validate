@@ -280,6 +280,17 @@
         ]
       }
     },
+    "f2-undeclared-file.zip": {
+      "reference": {},
+      "ours": {
+        "info": [
+          "P4"
+        ],
+        "warning": [
+          "F2"
+        ]
+      }
+    },
     "f3-format-extension.zip": {
       "reference": {
         "ERROR": [
@@ -371,11 +382,10 @@
       "ours": {
         "error": [
           "F1",
+          "Z13",
           "Z7"
         ],
         "warning": [
-          "F2",
-          "Z8",
           "Z9"
         ]
       }
@@ -845,8 +855,7 @@
       },
       "ours": {
         "warning": [
-          "P2",
-          "P3"
+          "P2"
         ]
       }
     },
@@ -1070,12 +1079,7 @@
       },
       "ours": {
         "error": [
-          "M1",
-          "X2",
           "Z10"
-        ],
-        "warning": [
-          "F2"
         ]
       }
     },
@@ -1232,5 +1236,8 @@
         ]
       }
     }
+  },
+  "_unswept": {
+    "f2-undeclared-file.zip": "postdates the recorded run; the reference half needs a JDK and the pinned checkout. Rerun tools/capture_oracle.py --reference <path> before trusting a divergence count that includes it."
   }
 }

@@ -123,7 +123,7 @@ def test_a_schema_error_whose_path_we_cannot_resolve_still_reports():
     """xsdvalidate walks the reported XPath through our own tree to recover a
     line number. When that walk fails the finding must survive without one."""
     from vdi2770 import xmlread
-    from vdi2770_validate.readers import xsdvalidate
+    from vdi2770_validate import xsdvalidate
     tree = xmlread.parse(b'<Document xmlns="http://www.vdi.de/schemas/vdi2770"/>')
     bad = BASE[META].replace(b"<ClassId>", b"<NotAThing>").replace(b"</ClassId>", b"</NotAThing>")
     errors = xsdvalidate.validate(bad, tree)

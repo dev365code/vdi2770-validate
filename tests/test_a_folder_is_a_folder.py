@@ -69,3 +69,41 @@ def test_a_nested_folder_names_both_levels(tmp_path):
     detail = z9(p)[0].detail or ""
     assert "a/b/" in detail and "a/, " in detail + ", ", detail
     assert detail.startswith("2 folders:"), detail
+
+
+def test_a_declared_folder_path_resolves_so_z9_stands_alone():
+    """Z9's remedy used to say *"metadata refers to files by name, so a file
+    inside a folder is not the file the metadata names"*. The tool says
+    otherwise: a name that carries its folder path resolves, and the file-set
+    rules stay quiet. A remedy that gives a false reason teaches the reader the
+    wrong model of the tool.
+    """
+    import io
+    import re
+    import zipfile
+
+    from conftest import CLEAN_DOCUMENT
+    from vdi2770_validate.catalog import rule
+    from vdi2770_validate.runner import check_bytes
+
+    src = zipfile.ZipFile(CLEAN_DOCUMENT)
+    meta = src.read("VDI2770_Metadata.xml").decode()
+    victim = next(n for n in re.findall(r"<DigitalFile[^>]*>([^<]+)</DigitalFile>", meta)
+                  if n.lower().endswith(".pdf"))
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        for n in src.namelist():
+            if n == victim:
+                z.writestr(f"unterlagen/{n}", src.read(n))
+            elif n == "VDI2770_Metadata.xml":
+                z.writestr(n, meta.replace(f">{victim}<", f">unterlagen/{victim}<"))
+            else:
+                z.writestr(n, src.read(n))
+
+    fired = {f.rule.id for f in check_bytes(buf.getvalue(), "foldered.zip").findings}
+    assert "Z9" in fired
+    assert not fired & {"F1", "F2"}, (
+        f"the declared path did not resolve, so Z9's remedy could say it does not: {fired}")
+    remedy = rule("Z9").remedy
+    assert "is not the file the metadata names" not in remedy
+    assert "resolves" in remedy, remedy

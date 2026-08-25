@@ -16,7 +16,9 @@ def as_text(report: Report, show_info: bool = True) -> str:
     if not findings:
         # "no findings" over a summary line reading "1 note(s)" is the report
         # contradicting itself, and a test pinned both halves of it.
-        hidden = len(report.findings)
+        # count(), not len(findings): the listing is capped, the count is not,
+        # and printing the capped number over an uncapped summary contradicts it.
+        hidden = report.count(Severity.INFO)
         lines.append(f"  no errors or warnings ({hidden} note(s) not shown)" if hidden
                      else "  no findings")
     for f in findings:
@@ -27,6 +29,9 @@ def as_text(report: Report, show_info: bool = True) -> str:
         # Every finding carries its remedy. Printing it once per rule saved a few
         # lines and quietly broke the promise the docs make.
         lines.append(f"         -> {f.remedy}")
+    for rid, container, n in report.not_listed(show_info):
+        lines.append(f"  ... {n} more {rid} finding{'' if n == 1 else 's'} in "
+                     f"{container}, counted below but not listed")
     counts = {s: report.count(s) for s in Severity}
     lines.append("")
     lines.append(f"  {counts[Severity.ERROR]} error(s), {counts[Severity.WARNING]} warning(s), "
@@ -41,6 +46,11 @@ def as_json(report: Report) -> str:
         "pdfaVerified": False,
         "pdfaNote": "This tool reports PDF/A claims. It does not verify them.",
         "summary": {s.value: report.count(s) for s in Severity},
+        # Counted in the summary above, and deliberately not listed below: one
+        # rule can fire once per element, and four hundred thousand identical
+        # findings serve nobody.
+        "notListed": [{"rule": rid, "container": container, "count": n}
+                      for rid, container, n in report.not_listed()],
         "findings": [
             {
                 "rule": f.rule.id,
@@ -49,7 +59,7 @@ def as_json(report: Report) -> str:
                 "obligation": f.rule.obligation.value,
                 # Whether this is about the archive or about the validator
                 # stopping. A CI consumer had no way to tell them apart.
-                "about": f.rule.about.value,
+                "about": f.about.value,
                 "message": f.message,
                 "detail": f.detail,
                 "remedy": f.remedy,

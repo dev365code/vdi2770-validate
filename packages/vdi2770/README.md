@@ -21,8 +21,8 @@ for c in box.walk():
 ```
 
 ```
-handover.zip ('DOC-2024-0001',) ['03-01']
-handover.zip!/pumps.zip ('DOC-2024-0002',) ['02-04']
+handover.zip [('SUPPLIER', 'DOC-2024-0001')] ['03-01']
+handover.zip!/pumps.zip [('SUPPLIER', 'DOC-2024-0002')] ['02-04']
 ```
 
 ## It decides nothing
@@ -57,12 +57,13 @@ supplier archive does not cost you the other four hundred.
 |---|---|
 | `path` | `handover.zip!/pumps.zip` — the JAR convention, so it stays greppable |
 | `kind` | `DOCUMENTATION`, `DOCUMENT`, `UNKNOWN`, or `UNREADABLE` |
-| `members`, `file_names` | what is in the archive, after the budget filter |
+| `members`, `file_names` | what the reader can open — the budget filter and the readability sweep have both run |
+| `present` | every file name the archive declares, including members that were refused. Whether a name is there is a fact about the directory; being unable to inflate the bytes behind it does not unsay it |
 | `metadata_bytes`, `metadata_name` | the metadata that was found, if any |
 | `children`, `walk()` | inner containers, opened to three levels |
 | `defects` | what the reader could not do, and why |
 | `rejected` | members present in the archive but refused, and why |
-| `near_misses` | reserved name → `(kind, the name that nearly matched)`, kind being `in-a-subfolder` or `case-differs`. `vdi2770_metadata.xml` in an archive with no metadata is worth saying; how to say it is yours, not ours |
+| `near_misses` | reserved name → `(kind, the name that nearly matched)`, kind being `in-a-subfolder`, `path-prefixed` or `case-differs`. `vdi2770_metadata.xml` in an archive with no metadata is worth saying; how to say it is yours, not ours |
 | `duplicate_names` | a ZIP may carry the same name twice; readers disagree about which one wins |
 
 `build_document(node, where)` returns a `Document` whose every node carries a
@@ -80,27 +81,40 @@ a PDF/A validator, and this is not one.
 `suspicious-compression`, `archive-too-large`, `metadata-too-large`,
 `metadata-unreadable`, `member-unreadable`, `nesting-too-deep`,
 `container-budget-exhausted`, `decompression-budget-exhausted`,
-`member-budget-exhausted`.
+`member-budget-exhausted`, `ambiguous-name`.
 
 These strings are part of the public surface; a test in this package fails if the
 code grows a kind that this list does not name.
 
-The last one is the only budget that spans the whole read rather than one
-archive: a documentation container may legitimately hold hundreds of inner
-containers, and their metadata is held for as long as you walk the tree. Ten
-thousand of them, each with sixteen megabytes of metadata, is a permitted input
-under every per-archive limit and about 156 GiB of memory. `MAX_CONTAINERS` and
-`MAX_TOTAL_METADATA_BYTES` bound that; hitting either is reported rather than
-silently truncating the tree.
+`vdi2770.REFUSAL_KINDS` is the subset of those that can name a member in
+`Container.rejected` — what a caller needs a sentence for. Working that subset
+out by reading this module's source is how two of them came to be missed.
+
+The last three are the budgets that span the whole read rather than one archive: a
+documentation container may legitimately hold hundreds of inner containers, and
+their metadata is held for as long as you walk the tree. Ten thousand of them,
+each with sixteen megabytes of metadata, is a permitted input under every
+per-archive limit and about 156 GiB of memory — and the same tree can ask the
+readability sweep to inflate terabytes while no single member is over its cap.
+`MAX_CONTAINERS` and `MAX_TOTAL_METADATA_BYTES` bound the first,
+`MAX_TOTAL_DECOMPRESSED` the second. `MAX_TOTAL_MEMBERS` bounds a third thing
+the other two do not: this package keeps one record per entry named anywhere
+in the tree, and ten thousand entries in each of a thousand archives is ten
+million of them whatever their bytes weigh. Hitting any of them is reported
+rather than silently truncating the tree.
 
 ## Supported
 
 Python 3.9 and up. The budgets are module constants in `vdi2770.zipread` — per
 archive: `MAX_MEMBERS`, `MAX_MEMBER_BYTES`, `MAX_TOTAL_BYTES`, `MAX_RATIO` with
 its `MIN_SUSPICIOUS_BYTES` floor, `MAX_METADATA_BYTES`, `MAX_CONTAINER_LEVELS`;
-across one read: `MAX_CONTAINERS`, `MAX_TOTAL_METADATA_BYTES`. `vdi2770.pdfread`
-has four of its own for the PDF scan. You can read them all, and they are
-deliberately not arguments, so a caller cannot turn them off by accident.
+across one read: `MAX_CONTAINERS`, `MAX_TOTAL_METADATA_BYTES`,
+`MAX_TOTAL_DECOMPRESSED`, `MAX_TOTAL_MEMBERS`. `vdi2770.pdfread` has six of its own for the PDF scan:
+`MAX_STREAMS`, `MAX_STREAM_SCAN`, `MAX_INFLATED_PER_STREAM`,
+`MAX_INFLATED_TOTAL`, `MAX_XMP_PACKETS`, `MAX_PDFA_PREFIXES`,
+A test fails if
+either module grows one this list does not name. You can read them all, and they
+are deliberately not arguments, so a caller cannot turn them off by accident.
 
 ## Unofficial
 

@@ -1,6 +1,16 @@
+"""The command line — the whole product, for most people who use it.
+
+Three subcommands and one rule between them: a surprise is reported and the
+sweep continues. A CI job pointed at a supplier drop folder must come back with
+a verdict on every container it was given, not a traceback about the first one.
+
+Exit codes: 0 nothing wrong, 1 at least one error or unreadable path, 2 nothing
+could be read at all.
+"""
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 
 from . import __version__ as VERSION  # one place, not three
@@ -13,21 +23,41 @@ from .runner import check_file
 def _cmd_check(args) -> int:
     worst = 0
     unreadable = 0
+    # `--json` is one document for the whole run. Printing one object per path
+    # with no separator was neither JSON nor NDJSON, so the interface advertised
+    # as machine-readable could not be read by a machine the moment a CI job
+    # passed it a second container.
+    documents = []
     for path in args.paths:
         try:
             rep = check_file(path)
         except Exception as e:              # noqa: BLE001
-            # One bad path must not stop the rest, and the reader is not the
-            # only thing that can raise on hostile input. Anything unexpected
-            # is this tool's failure to read that file, not a verdict on it.
             # One bad path must not stop the rest: a CI job sweeping a supplier
             # drop folder would silently skip everything after the first dud.
-            print(f"{path}: cannot read it — {e.strerror or e}", file=sys.stderr)
+            # Anything unexpected is this tool's failure to read that file, not
+            # a verdict on it.
+            #
+            # `getattr`, not `e.strerror`: that attribute is on OSError and
+            # nowhere else, so every other kind of surprise raised an
+            # AttributeError out of the handler and stopped the sweep — which is
+            # the one thing the handler exists to prevent. Keep it for the
+            # OSError case, though; "No such file or directory" beats a repr.
+            print(f"{path}: cannot read it — {getattr(e, 'strerror', None) or e}",
+                  file=sys.stderr)
             unreadable += 1
+            # And it appears in the JSON. Skipping it gave a consumer N-1
+            # documents for N paths, with the difference explained only in prose
+            # on another stream.
+            documents.append({"path": path, "unreadable": str(e)})
             continue
-        print(rendering.as_json(rep) if args.json else rendering.as_text(rep, not args.quiet))
+        if args.json:
+            documents.append({"path": path, **json.loads(rendering.as_json(rep))})
+        else:
+            print(rendering.as_text(rep, not args.quiet))
         if rep.count(Severity.ERROR):
             worst = 1
+    if args.json:
+        print(json.dumps(documents, ensure_ascii=False, indent=2))
     if unreadable:
         return 2 if unreadable == len(args.paths) else max(worst, 1)
     return worst
@@ -42,7 +72,7 @@ def _cmd_rules(_args) -> int:
 
     for r in sorted(rules().values(), key=in_order):
         print(f"{r.id:4} {r.severity.value:7} {r.layer:10} {r.title}")
-        print(f"     basis={r.obligation.value}"
+        print(f"     obligation={r.obligation.value}"
               + (f" refs={','.join(r.ref_codes)}" if r.ref_codes else ""))
     print(f"\n{len(rules())} rules")
     return 0

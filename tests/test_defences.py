@@ -16,6 +16,8 @@ import pytest
 
 from conftest import CLEAN_DOCUMENT
 from vdi2770 import pdfread, xmlread, zipread
+from vdi2770_validate import model, xsdvalidate
+from vdi2770_validate.rules import container as r_container
 
 BASE = {n: zipfile.ZipFile(CLEAN_DOCUMENT).read(n)
         for n in zipfile.ZipFile(CLEAN_DOCUMENT).namelist()}
@@ -43,6 +45,8 @@ BUDGETS = {
     "MIN_SUSPICIOUS_BYTES": (1 << 20, 64 << 20),
     "MAX_CONTAINERS": (100, 100_000),
     "MAX_TOTAL_METADATA_BYTES": (8 << 20, 1 << 30),
+    "MAX_TOTAL_DECOMPRESSED": (1 << 30, 64 << 30),
+    "MAX_TOTAL_MEMBERS": (10_000, 10_000_000),
 }
 PDF_BUDGETS = {
     "MAX_STREAM_SCAN": (1 << 10, 8 << 20),
@@ -58,11 +62,37 @@ def test_every_budget_constant_is_in_one_of_those_tables():
     """The tables were written by hand and then the code grew three more caps.
     A budget nobody pinned is a budget that can be raised to 10**18 in a commit
     that looks like a tidy-up."""
-    for module, table in ((zipread, BUDGETS), (pdfread, PDF_BUDGETS)):
+    # Every module that can hold one, found by asking the packages rather than
+    # by listing them: `MAX_SCHEMA_ERRORS` was added to `xsdvalidate.py` and that
+    # module was not on the list, so a new cap went unpinned in the gate whose
+    # whole job is to notice a new cap.
+    for module, table in ((zipread, BUDGETS), (pdfread, PDF_BUDGETS),
+                          (model, REPORT_BUDGETS), (r_container, RULE_BUDGETS),
+                          (xsdvalidate, SCHEMA_BUDGETS)):
         declared = {n for n in vars(module)
                     if n.startswith(("MAX_", "MIN_")) and isinstance(getattr(module, n), int)}
         missing = sorted(declared - set(table))
         assert not missing, f"{module.__name__} has unpinned budgets: {missing}"
+
+
+# The validator sets caps of its own, and the completeness check above only ever
+# looked at the reader's two modules -- so these three could be raised to 10**18
+# in a commit that looks like a tidy-up, which is what that docstring warns
+# about. `MAX_FOLDERS` and `MAX_FOLDER_DEPTH` bound the folder derivation in
+# `Z9`, which was quadratic until a crafted archive cost 1.2 GB.
+REPORT_BUDGETS = {"MAX_LISTED_PER_RULE": (10, 10_000)}
+SCHEMA_BUDGETS = {"MAX_SCHEMA_ERRORS": (100, 100_000)}
+RULE_BUDGETS = {"MAX_FOLDER_DEPTH": (4, 256), "MAX_FOLDERS": (16, 4_096)}
+
+
+@pytest.mark.parametrize("where,name,bounds", sorted(
+    [("model", k, v) for k, v in REPORT_BUDGETS.items()]
+    + [("rules.container", k, v) for k, v in RULE_BUDGETS.items()]))
+def test_a_validator_budget_is_a_budget(where, name, bounds):
+    low, high = bounds
+    value = getattr(model if where == "model" else r_container, name)
+    assert low <= value <= high, (
+        f"{where}.{name} is {value}; outside {low}..{high} it is not protecting anyone")
 
 
 @pytest.mark.parametrize("name,bounds", sorted(BUDGETS.items()))
@@ -110,11 +140,24 @@ def test_metadata_over_the_parse_budget_is_refused(monkeypatch):
 
 
 def test_pdf_inflation_stops_at_the_total_budget(monkeypatch):
+    """The budget is what stops it, not the input running out.
+
+    The assertion here used to be `< len(body) + 200_000` with nothing below it,
+    which a scanner that inflated nothing at all satisfied. Measuring the same
+    input twice — once unbounded, once bounded — is what makes it a test of the
+    budget rather than of the fixture.
+    """
     import zlib
+    one = b"stream\n" + zlib.compress(b"Q" * 100_000) + b"\nendstream\n"
+    body = b"%PDF-1.7\n" + one * 20
+    inflated = lambda: sum(len(h) for h in pdfread._haystacks(body)) - len(body)  # noqa: E731
+    unbounded = inflated()
+    assert unbounded > 1_000_000, f"the premise: this input wants a lot ({unbounded})"
     monkeypatch.setattr(pdfread, "MAX_INFLATED_TOTAL", 1000)
-    body = b"%PDF-1.7\n" + b"".join(
-        b"stream\n" + zlib.compress(b"Q" * 100_000) + b"\nendstream\n" for _ in range(20))
-    assert sum(len(h) for h in pdfread._haystacks(body)) < len(body) + 200_000
+    bounded = inflated()
+    assert 0 < bounded < unbounded, f"the budget must bite, and must not be a stub: {bounded}"
+    # One stream may overshoot the budget; the next must not start.
+    assert bounded <= 100_000, bounded
 
 
 def test_pdf_scanning_stops_after_the_stream_budget(monkeypatch):
@@ -136,18 +179,37 @@ def test_pdf_scanning_stops_after_the_stream_budget(monkeypatch):
 
 # --- hostile names -----------------------------------------------------------
 
-@pytest.mark.parametrize("name,why", [
-    ("/etc/passwd", "absolute path"),
-    ("C:\\Windows\\evil.txt", "drive letter"),
-    ("dir\\..\\..\\evil.txt", "backslash separator with traversal"),
-    ("subdir\\evil.txt", "backslash separator alone"),
-    ("../escape.txt", "parent-directory segment"),
-    ("a/../../b.txt", "parent-directory segment in the middle"),
+# The reason is asserted, not just the rejection. Six names all coming back
+# "rejected" looked like six branches and was not: `dir\..\..\evil.txt` was
+# labelled "backslash separator with traversal" and never reached the backslash
+# rule, because traversal is checked first. A case that cannot fail on its own
+# is not coverage, and a wrong label is worse than no label.
+@pytest.mark.parametrize("name,why,reason", [
+    ("/etc/passwd", "leading slash", "absolute path"),
+    ("C:\\Windows\\evil.txt", "drive letter -- a different branch, same verdict",
+     "absolute path"),
+    ("5:1.pdf", "a gear ratio is not a drive letter", None),
+    # `5:1.pdf` alone does not reach the `isalpha` guard -- its third character
+    # is not a separator, so the drive test fails one step earlier. This is the
+    # name that isolates it, and without it dropping `isalpha` went unnoticed.
+    ("5:/ratio.pdf", "digit, colon, separator -- still not a drive", None),
+    ("dir\\..\\..\\evil.txt", "traversal is checked before the backslash rule",
+     "parent-directory segment"),
+    ("subdir\\evil.txt", "backslash separator alone", "backslash path separator"),
+    ("../escape.txt", "parent-directory segment", "parent-directory segment"),
+    ("a/../../b.txt", "parent-directory segment in the middle", "parent-directory segment"),
 ])
-def test_a_hostile_member_name_never_reaches_the_member_list(name, why):
+def test_a_hostile_member_name_never_reaches_the_member_list(name, why, reason):
+    assert zipread._unsafe(name) == reason, f"{why}: {name!r} took the wrong branch"
     c = zipread.read(pack({"VDI2770_Metadata.xml": b"<x/>", name: b"x"}), "x.zip")
+    if reason is None:
+        assert name in c.file_names, f"{why}: {name!r} is an ordinary name and was refused"
+        return
     assert name not in c.file_names, f"{why}: {name!r} was accepted"
-    assert name in c.rejected, f"{why}: {name!r} was dropped without being reported"
+    refusal = c.rejected.get(name)
+    assert refusal is not None, f"{why}: {name!r} was dropped without being reported"
+    assert refusal.kind == "unsafe-member-name" and refusal.detail == reason, (
+        f"{why}: refused as {refusal.kind}/{refusal.detail!r}, expected {reason!r}")
 
 
 # --- names are case-sensitive ------------------------------------------------
@@ -183,9 +245,15 @@ def test_an_external_dtd_subset_alone_is_not_fetched(monkeypatch):
     the parser setup cannot quietly turn fetching on."""
     import socket
     monkeypatch.setattr(socket, "socket",
-                        lambda *a, **k: pytest.fail("the parser reached for the DTD"))
-    xmlread.parse(b'<!DOCTYPE Document SYSTEM "http://attacker.example/x.dtd">'
-                  b'<Document xmlns="http://www.vdi.de/schemas/vdi2770"/>')
+                        lambda *a, **k: (_ for _ in ()).throw(
+                            AssertionError("the parser reached for the DTD")))
+    with pytest.raises(AssertionError):        # the guard has to be live
+        socket.socket()
+    # And the parse has to have happened: a version of this that raised on the
+    # doctype would pass every assertion above while proving nothing.
+    node = xmlread.parse(b'<!DOCTYPE Document SYSTEM "http://attacker.example/x.dtd">'
+                         b'<Document xmlns="http://www.vdi.de/schemas/vdi2770"/>')
+    assert node.tag.endswith("Document"), node.tag
 
 
 @pytest.mark.parametrize("code,ok", [
@@ -195,3 +263,35 @@ def test_an_external_dtd_subset_alone_is_not_fetched(monkeypatch):
 def test_iso_639_accepts_only_ascii_letter_codes(code, ok):
     from vdi2770_validate.rules.metadata import _iso_ok
     assert _iso_ok(code) is ok
+
+
+def test_no_module_in_either_package_holds_an_unpinned_budget():
+    """The loop above names its modules, and a new cap arrived in one it did not
+    name. This finds them: any module in either package with a `MAX_*`/`MIN_*`
+    integer has to appear in one of the tables.
+    """
+    import importlib
+    import pkgutil
+
+    seen = {}
+    for pkg in ("vdi2770", "vdi2770_validate"):
+        package = importlib.import_module(pkg)
+        for info in pkgutil.walk_packages(package.__path__, pkg + "."):
+            # `__main__` runs the CLI on import, which would make this test parse
+            # its own arguments.
+            if info.name.endswith(".__main__"):
+                continue
+            try:
+                mod = importlib.import_module(info.name)
+            except Exception:                      # noqa: BLE001 - optional imports
+                continue
+            caps = {n for n in vars(mod)
+                    if n.startswith(("MAX_", "MIN_")) and isinstance(getattr(mod, n), int)
+                    and not isinstance(getattr(mod, n), bool)}
+            if caps:
+                seen[info.name] = caps
+
+    pinned = set(BUDGETS) | set(PDF_BUDGETS) | set(REPORT_BUDGETS) | set(RULE_BUDGETS) \
+        | set(SCHEMA_BUDGETS)
+    unpinned = {m: sorted(c - pinned) for m, c in seen.items() if c - pinned}
+    assert not unpinned, f"budgets no table pins: {unpinned}"

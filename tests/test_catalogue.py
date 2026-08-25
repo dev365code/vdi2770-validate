@@ -163,14 +163,14 @@ def test_every_defect_the_reader_can_emit_maps_to_a_rule():
     it. The SDK already gates its kinds against its README; this is the same
     gate pointed the other way.
     """
-    import re
-
-    from conftest import ROOT
+    from vdi2770 import DEFECT_KINDS
     from vdi2770_validate.catalog import rules
     from vdi2770_validate.rules.container import DEFECT_TO_RULE
 
-    source = (ROOT / "packages" / "vdi2770" / "src" / "vdi2770" / "zipread.py")
-    emitted = set(re.findall(r'Defect\(\s*\n?\s*"([a-z-]+)"', source.read_text(encoding="utf-8")))
+    # The reader's own vocabulary, not a regex over its source. The regex broke
+    # the third time a call site changed shape, and a broken scrape reports
+    # "nothing unmapped" rather than failing.
+    emitted = set(DEFECT_KINDS)
     assert len(emitted) >= 10, f"only found {sorted(emitted)}; has the reader moved?"
 
     unmapped = sorted(emitted - set(DEFECT_TO_RULE))
@@ -190,6 +190,8 @@ def test_every_defect_the_reader_can_emit_maps_to_a_rule():
 TOOL_RULES = {
     "X0": "the bundled schema would not load — a broken installation of ours",
     "X4": "the schema checker would not follow this document to the end",
+    "X5": "a check in this tool raised and did not finish — a bug of ours, not a container",
+    "Z13": "documents delivered as folders, which this tool does not open — its limit,\n           not the delivery's fault",
     "Z5": "the archive is over a budget this tool sets for untrusted input",
     "Z6": "the tree is deeper than this tool opens",
 }
@@ -230,3 +232,83 @@ def test_a_rule_about_this_tool_explains_itself():
             assert r.why_ours, f"{rid} is about us and does not say why"
             assert "this tool" in (r.title + r.remedy + r.why_ours).lower(), (
                 f"{rid} never tells the reader the limit is ours")
+
+
+def test_every_defect_that_maps_to_z5_carries_its_own_remedy():
+    """Z5 is reached seven ways and its own remedy fits none of them: "split the
+    delivery into several containers" does nothing for one member that expands
+    past the ratio floor, and `test_a_member_we_cannot_read_is_not_a_pass.py`
+    says so in as many words. A Finding may carry its own."""
+    from vdi2770_validate.rules.container import DEFECT_TO_RULE, REMEDY_FOR_DEFECT
+
+    to_z5 = {k for k, v in DEFECT_TO_RULE.items() if v == "Z5"}
+    missing = sorted(to_z5 - set(REMEDY_FOR_DEFECT))
+    assert not missing, f"these reach Z5 with only its general remedy: {missing}"
+
+    stale = sorted(set(REMEDY_FOR_DEFECT) - set(DEFECT_TO_RULE))
+    assert not stale, f"remedies for defects nothing emits: {stale}"
+
+    for kind, remedy in sorted(REMEDY_FOR_DEFECT.items()):
+        assert remedy.endswith("."), f"{kind}: a remedy is a sentence"
+        assert kind.replace("-", " ") not in remedy.lower(), (
+            f"{kind}: the remedy restates the problem instead of saying what to do")
+
+
+def test_a_rule_that_speaks_about_this_tool_owns_its_claim():
+    """`obligation` says where the requirement came from. A title that talks
+    about *our* scan is not reporting somebody else's requirement — it is our own
+    judgement about what we managed to look at, and `ours` is the value that
+    forces a `whyOurs` sentence saying so.
+
+    `P3` — *"This scan found no PDF/A claim in the file"* — was `reference`,
+    while `P4` one row below, with the same shape (*"...this tool did not verify
+    the claim"*), was `ours`. Two rules asserting the reach of the same scan
+    cannot trace to two different places.
+    """
+    import re
+
+    from vdi2770_validate.catalog import rules
+    from vdi2770_validate.model import Obligation
+
+    speaks_of_us = re.compile(r"\bthis (tool|scan)\b", re.I)
+    wrong = sorted(rid for rid, r in rules().items()
+                   if speaks_of_us.search(r.title) and r.obligation is not Obligation.OURS)
+    assert not wrong, (
+        f"these titles claim something about this tool while sourcing the requirement "
+        f"elsewhere: {wrong}")
+
+
+def test_the_docs_say_that_citing_a_key_is_not_borrowing_its_claim():
+    """Five rules are `ours` and cite a reference message key. Nothing said the
+    two fields were independent, so the natural reading of a cited key — "this is
+    what the standard requires" — was left available, which is the one reading
+    this vocabulary exists to prevent."""
+    from conftest import ROOT
+    from vdi2770_validate.catalog import rules
+    from vdi2770_validate.model import Obligation
+
+    both = sorted(rid for rid, r in rules().items()
+                  if r.obligation is Obligation.OURS and r.ref_keys)
+    prose = (ROOT / "docs" / "licensing.md").read_text(encoding="utf-8")
+    if both:
+        assert "independent" in prose and "`refKeys`" in prose, (
+            f"{len(both)} rules are `ours` and cite a reference key ({both}); "
+            f"docs/licensing.md does not say the two fields are independent")
+
+
+def test_every_field_a_rule_carries_reaches_a_reader():
+    """`Rule.basis` is loaded from `rules.json`, three rules fill it in — the
+    IDTA table, the bundled XSD — and no document or code path rendered it. A
+    field nobody reads is either a claim nobody can check or dead weight; this
+    says which by making the generated page show it.
+    """
+    from conftest import ROOT
+    from vdi2770_validate.catalog import rules
+
+    page = (ROOT / "docs" / "rules.md").read_text(encoding="utf-8")
+    for rid, r in rules().items():
+        if r.basis:
+            assert f"`{r.basis}`" in page, f"{rid} carries basis {r.basis!r} and nothing shows it"
+        for key in r.ref_keys:
+            assert f"`{key}`" in page, (
+                f"{rid} cites {key} and the page shows only the ambiguous display code")

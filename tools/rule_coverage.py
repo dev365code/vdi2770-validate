@@ -16,7 +16,12 @@ from collections import Counter
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+#: Both, and in this order. A tool that inserts only `src` measures whichever
+#: `vdi2770` happens to be installed — on a machine with the reader from PyPI
+#: that is a different library than the one in this commit, and the gate then
+#: reports coverage for code nobody is changing.
 sys.path.insert(0, str(ROOT / "src"))
+sys.path.insert(1, str(ROOT / "packages" / "vdi2770" / "src"))
 
 from vdi2770_validate.catalog import rules  # noqa: E402
 from vdi2770_validate.runner import check_file  # noqa: E402
@@ -32,6 +37,10 @@ CANNOT_FIRE: dict = {
     "X0": ("only fires when this tool's own installation is broken, which no container can "
            "cause. Exercised by tests/test_tool_limits_are_not_verdicts.py, which breaks the "
            "installation deliberately."),
+    "X5": ("only fires when a rule in this tool raises, which is a bug here rather than "
+           "anything a container can ask for. Exercised by "
+           "tests/test_a_rule_that_crashes_does_not_kill_the_run.py, which makes each rule "
+           "module raise in turn."),
 }
 
 
@@ -41,6 +50,77 @@ def observe() -> Counter:
         for f in check_file(str(z)).findings:
             fired[f.rule.id] += 1
     return fired
+
+
+def _about_the_tool(rule_id: str) -> bool:
+    from vdi2770_validate.catalog import rules
+    from vdi2770_validate.model import About
+    r = rules().get(rule_id)
+    return r is not None and r.about is About.TOOL
+
+
+def judge(all_ids, fired, baseline, cannot_fire=None, about_the_tool=None) -> list:
+    """Every reason this coverage state should fail the build.
+
+    Split out from `main` so the gate can be tested without a corpus. It used to
+    live inline, `unexercised` was computed and never looked at, and README said
+    "a rule that fires nowhere fails the build" while a rule that fired nowhere
+    exited 0.
+    """
+    cannot_fire = CANNOT_FIRE if cannot_fire is None else cannot_fire
+    all_ids, fired = set(all_ids), set(fired)
+    problems = []
+    # The baseline records how many rules there were and which ones cannot
+    # fire. Comparing only the fired set let both go stale in silence — a
+    # rule could be added, excused, and never noticed by this check.
+    if baseline.get("rules") != len(all_ids):
+        problems.append(f"the catalogue has {len(all_ids)} rules, the baseline says "
+                        f"{baseline.get('rules')}")
+    # The keys *and* the reasons. Comparing keys alone let an excuse be rewritten
+    # from a genuine impossibility to "nobody got round to it" with a green
+    # build, and the reason is the entire substance of an excuse.
+    if dict(baseline.get("cannotFire", {})) != dict(cannot_fire):
+        moved = sorted(set(baseline.get("cannotFire", {})) ^ set(cannot_fire))
+        reworded = sorted(k for k in set(baseline.get("cannotFire", {})) & set(cannot_fire)
+                          if baseline["cannotFire"][k] != cannot_fire[k])
+        problems.append(f"the excused set moved: keys {moved or 'unchanged'}, "
+                        f"reasons rewritten for {reworded or 'nothing'}")
+    regressed = sorted(set(baseline.get("fired", ())) - fired)
+    if regressed:
+        problems.append(f"rules that used to fire and no longer do: {regressed}")
+    newly = sorted(fired - set(baseline.get("fired", ())))
+    if newly:
+        problems.append(f"rules now firing that the baseline does not list: {newly} "
+                        f"(baseline is stale — rerun with --write and review the diff)")
+    # The whole point of the tool, and the one thing it did not check. Note that
+    # the baseline cannot excuse this: recording a dead rule in a JSON file is
+    # not the same as testing it. Either make it fire, or put it in CANNOT_FIRE
+    # with the reason it cannot.
+    # An excuse has to be the kind of thing an excuse can be. `CANNOT_FIRE` is
+    # both the requirement and the exemption — one sentence in this file removes
+    # a rule from the gate, and the only quality check was that the sentence was
+    # long. Reproduced: deleting M9's fixture and adding "nobody has got round to
+    # it" left the build green.
+    #
+    # The claim a row makes is "no container can cause this". That is only
+    # coherent for a rule that is *about this tool* rather than about a
+    # container, and `rules.json` already says which is which.
+    # Injectable so a test can judge a synthetic catalogue; the real one is the
+    # default, and a caller that passes nothing gets the real answer.
+    is_tool = about_the_tool if about_the_tool is not None else _about_the_tool
+    about_a_container = sorted(rid for rid in cannot_fire
+                               if rid in all_ids and not is_tool(rid))
+    if about_a_container:
+        problems.append(
+            f"excused rules that are about the container, not about this tool: "
+            f"{about_a_container}. A container can cause those, so 'no container "
+            f"can cause it' is not available — build the fixture.")
+    unexercised = sorted(all_ids - fired - set(cannot_fire))
+    if unexercised:
+        problems.append(f"rules that fire nowhere in the corpus or the fixtures: "
+                        f"{unexercised} — add a fixture that makes each one fire, or list "
+                        f"it in CANNOT_FIRE with the reason it cannot")
+    return problems
 
 
 def main() -> int:
@@ -70,30 +150,13 @@ def main() -> int:
         if not BASELINE.exists():
             print("docs/rule-coverage.json missing — run --write", file=sys.stderr)
             return 1
-        want = json.loads(BASELINE.read_text(encoding="utf-8"))
-        problems = []
-        # The baseline records how many rules there were and which ones cannot
-        # fire. Comparing only the fired set let both go stale in silence — a
-        # rule could be added, excused, and never noticed by this check.
-        if want.get("rules") != len(all_ids):
-            problems.append(f"the catalogue has {len(all_ids)} rules, the baseline says "
-                            f"{want.get('rules')}")
-        if set(want.get("cannotFire", {})) != set(CANNOT_FIRE):
-            problems.append(f"the excused set moved: baseline {sorted(want.get('cannotFire', {}))} "
-                            f"-> now {sorted(CANNOT_FIRE)}")
-        regressed = sorted(set(want["fired"]) - set(fired))
-        if regressed:
-            problems.append(f"rules that used to fire and no longer do: {regressed}")
-        newly = sorted(set(fired) - set(want["fired"]))
-        if newly:
-            problems.append(f"rules now firing that the baseline does not list: {newly} "
-                            f"(baseline is stale — rerun with --write and review the diff)")
+        problems = judge(all_ids, fired, json.loads(BASELINE.read_text(encoding="utf-8")))
         if problems:
             for p in problems:
                 print(p, file=sys.stderr)
             return 1
         print(f"firing coverage ok: {len(fired)}/{len(all_ids)} rules fire, "
-              f"{len(unexercised)} unexercised")
+              f"{len(CANNOT_FIRE)} excused, none unexercised")
         return 0
 
     print(f"{len(fired)}/{len(all_ids)} rules fire")

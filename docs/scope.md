@@ -35,9 +35,16 @@ failure — files that never claimed at all.
 | **IEC 61406 identification links** | A self-contained URL-grammar problem with its own corpus needs. Named for a later milestone, not forgotten. |
 | **Rendering PDF reports** | Not a validator's job. |
 | **Container nesting beyond three levels** | Reported rather than opened. Three levels occur in real containers; deeper is a budget, not a verdict. |
-| **More than a thousand containers, or 64 MiB of metadata, in one read** | Same answer: reported, not opened. Every other limit bounds one archive; these two bound the tree, because a few hundred kilobytes of nested containers could otherwise ask for more memory than the machine has. |
+| **More than a thousand containers, 64 MiB of metadata, or 4 GiB inflated, in one read** | Same answer: reported, not opened. Every other limit bounds one archive; these three bound the tree, because a few hundred kilobytes of nested containers could otherwise ask for more memory — or more CPU — than the machine has. The third was missing until it was measured: a 6.4 MB file inflated two terabytes and returned a clean verdict. |
 
 ## Known limits of what *is* in scope
+
+- **A rule is listed at most a hundred times per container**: one rule fires once
+  per element, so a crafted file can make one rule true two hundred thousand times.
+  Past a hundred the finding is counted but not printed, and the report says how
+  many it withheld (`notListed` in JSON). **The counts and the exit code are not
+  capped** — a bounded listing must never become a quieter verdict. Reading past
+  the hundredth identical finding tells a user nothing the count does not.
 
 - **ISO 639**: we accept every ISO 639-1 two-letter code and any three-letter
   alphabetic code. We do not carry the full ISO 639-2 register, so a plausible-looking
@@ -60,8 +67,10 @@ failure — files that never claimed at all.
   is tested against now.
 - **Every byte is read**: to say a member is deliverable we decompress it, the
   way `unzip -t` does. Measured at about 1.1 GB/s on real PDF content, so a
-  container at the 2 GiB ceiling costs roughly two seconds. Nothing is held: the
-  bytes are discarded as they are read.
+  container at the 2 GiB ceiling costs roughly two seconds and the whole-read
+  ceiling of 4 GiB costs about four. Nothing is held: the bytes are discarded as
+  they are read. Past that ceiling members are still listed but no longer checked
+  for readability, and the report says so rather than going quiet.
 - **The guideline text**: VDI 2770 Blatt 1:2020-04 is sold by DIN Media. It was not
   read. Every rule here names its source in `rules.json`: the free schema, a freely
   published table, ZIP and XML mechanics, the MIT reference implementation, or a

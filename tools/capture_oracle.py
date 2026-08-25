@@ -12,9 +12,15 @@ we vendor.
 
     python tools/capture_oracle.py --reference /path/to/vdi2770        # write
     python tools/capture_oracle.py --reference /path/to/vdi2770 --check # compare
+    python tools/capture_oracle.py --check-ours                        # our half only
+    python tools/capture_oracle.py --write-ours                        # our half only
 
-Not part of `make check`: it needs a JDK, Maven and another project's checkout.
-See tools/oracle/README.md.
+The first two need a JDK, Maven and another project's checkout, so they are not
+part of `make check`. The last two need none of that: our own column can be
+recomputed from this repository alone, and it is the half that goes stale.
+Nothing compared it, so changing a rule's severity and regenerating the docs left
+a recorded verdict describing a tool that no longer exists — while
+`docs/divergences.md` went on deriving counts from it.
 """
 from __future__ import annotations
 
@@ -65,6 +71,39 @@ def their_verdicts(reference: Path, java_home: str, paths: list) -> dict:
     return out
 
 
+MESSAGES = ROOT / "tests" / "data" / "oracle-messages.json"
+
+
+def their_messages(reference: Path) -> list:
+    """The reference's English message strings, from its own resource bundles.
+
+    `tests/data/oracle-messages.json` is what the licensing gate compares our
+    remedies against, to show none of them is a translation of someone else's
+    reading. It was extracted by hand once and had no generator, so its pinned
+    commit was a claim rather than a check — the one thing `vendor_corpus.py`
+    exists to prevent, applied to everything except this file.
+
+    Written from the layout the sweep already relies on and **not run here**:
+    that needs the reference checkout, which is the same constraint the sweep
+    carries. Whoever has one can settle it.
+    """
+    found = set()
+    for bundle in sorted(reference.glob("*/src/main/resources/i8n/*.properties")):
+        name = bundle.name
+        # The English bundle is the unsuffixed one; `_de` and friends are not
+        # what the sweep pinned its locale to.
+        if re.search(r"_[a-z]{2}\.properties$", name):
+            continue
+        for line in bundle.read_text(encoding="utf-8", errors="replace").splitlines():
+            line = line.strip()
+            if not line or line.startswith(("#", "!")) or "=" not in line:
+                continue
+            value = line.split("=", 1)[1].strip()
+            if value:
+                found.add(value)
+    return sorted(found)
+
+
 def our_verdicts(paths: list) -> dict:
     sys.path.insert(0, str(ROOT / "src"))
     sys.path.insert(0, str(ROOT / "packages" / "vdi2770" / "src"))
@@ -92,12 +131,93 @@ def build(reference: Path, java_home: str) -> dict:
     }
 
 
+def ours_only(write: bool) -> int:
+    """Recompute our column and compare it, or record it, leaving theirs alone.
+
+    Recording is safe without the reference because the two halves are
+    independent: their verdicts are a fact about a pinned commit of somebody
+    else's code, which this cannot change.
+    """
+    if not OUT.exists():
+        print(f"{OUT.relative_to(ROOT)} missing — run a full sweep first", file=sys.stderr)
+        return 1
+    recorded = json.loads(OUT.read_text(encoding="utf-8"))
+    fresh = our_verdicts(containers())
+
+    # The canary. A comparison over an empty set passes, and this file is the
+    # kind of thing that would quietly become empty.
+    if not fresh or not any(v for v in fresh.values()):
+        print("recomputed nothing; the corpus and fixtures are not where this "
+              "expects them", file=sys.stderr)
+        return 1
+
+    known = set(recorded["containers"])
+    if set(fresh) != known:
+        print(f"the container set moved: only recorded {sorted(known - set(fresh))}, "
+              f"only here {sorted(set(fresh) - known)}. Run a full sweep.", file=sys.stderr)
+        return 1
+
+    moved = [n for n in sorted(fresh) if recorded["containers"][n]["ours"] != fresh[n]]
+    if write:
+        for n in fresh:
+            recorded["containers"][n]["ours"] = fresh[n]
+        OUT.write_text(json.dumps(recorded, indent=2, ensure_ascii=False) + "\n",
+                       encoding="utf-8")
+        print(f"wrote our half of {OUT.relative_to(ROOT)}"
+              + (f": {len(moved)} container(s) moved" if moved else ": nothing moved"))
+        return 0
+
+    if moved:
+        for n in moved:
+            print(f"{n}: recorded {recorded['containers'][n]['ours']} -> now {fresh[n]}",
+                  file=sys.stderr)
+        print("our recorded verdicts are stale. If this is intended, rerun with "
+              "--write-ours and re-read docs/divergences.md, which counts them.",
+              file=sys.stderr)
+        return 1
+    print(f"our half of the oracle sweep is current: {len(fresh)} containers")
+    return 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--reference", required=True, type=Path)
+    ap.add_argument("--reference", type=Path)
     ap.add_argument("--java-home", default="/opt/homebrew/opt/openjdk@17")
     ap.add_argument("--check", action="store_true")
+    ap.add_argument("--check-ours", action="store_true")
+    ap.add_argument("--write-ours", action="store_true")
+    ap.add_argument("--messages", action="store_true",
+                    help="re-extract tests/data/oracle-messages.json from the reference")
+    ap.add_argument("--check-messages", action="store_true",
+                    help="compare the vendored messages against the reference")
     a = ap.parse_args()
+
+    if a.check_ours or a.write_ours:
+        return ours_only(write=a.write_ours)
+    if a.reference is None:
+        ap.error("--reference is required unless you asked for --check-ours/--write-ours")
+
+    if a.messages or a.check_messages:
+        fresh = their_messages(a.reference)
+        if not fresh:
+            print("no message bundles found under the reference checkout", file=sys.stderr)
+            return 1
+        recorded = json.loads(MESSAGES.read_text(encoding="utf-8"))
+        if a.check_messages:
+            if sorted(recorded["messages"]) != fresh:
+                only_here = sorted(set(recorded["messages"]) - set(fresh))
+                only_there = sorted(set(fresh) - set(recorded["messages"]))
+                print(f"the vendored message set does not match the reference at "
+                      f"{PINNED_COMMIT[:12]}: {len(only_here)} only here, "
+                      f"{len(only_there)} only there", file=sys.stderr)
+                return 1
+            print(f"the vendored messages match the reference: {len(fresh)}")
+            return 0
+        recorded["messages"], recorded["count"] = fresh, len(fresh)
+        MESSAGES.write_text(json.dumps(recorded, indent=2, ensure_ascii=False) + "\n",
+                            encoding="utf-8")
+        print(f"wrote {MESSAGES.relative_to(ROOT)}: {len(fresh)} messages")
+        return 0
 
     head = subprocess.run(["git", "-C", str(a.reference), "rev-parse", "HEAD"],
                           capture_output=True, text=True).stdout.strip()
