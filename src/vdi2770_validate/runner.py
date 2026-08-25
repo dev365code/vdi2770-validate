@@ -276,9 +276,15 @@ def check_bytes(data: bytes, name: str) -> Report:
             is_declared_payload=None if unknown_parent else is_payload),
               c.where, "container")
 
-        if c.metadata_bytes is None or not modelled:
+        if c.metadata_bytes is None:
             continue
 
+        # `tree is not None` is the decision, and it used to be made twice: the
+        # line above also read `or not modelled`, which is the same condition
+        # said a second way -- a container we declined to model has no tree.
+        # Removing it changed nothing, which is how it was found. Two spellings
+        # of one decision are two things to keep in step, and this file has
+        # already paid for that once.
         schema_errors = (_step(report, c.where, "schema check", xsdvalidate.validate,
                                c.metadata_bytes, tree)
                          if tree is not None else [])

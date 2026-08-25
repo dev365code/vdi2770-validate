@@ -353,3 +353,53 @@ def test_a_path_that_never_finishes_opening_does_not_stop_the_sweep(tmp_path):
         capture_output=True, text=True, timeout=30, env=under_test())
     assert "cannot read it" in r.stdout + r.stderr, r.stdout + r.stderr
     assert "good.zip" in r.stdout, "the readable path after it was never reached"
+
+
+def test_a_container_we_declined_to_parse_is_not_then_schema_checked(monkeypatch):
+    """The budget refuses the parse; the schema check must not run anyway.
+
+    `X6` says the metadata was not turned into objects, and `validate` takes the
+    *bytes* -- so without the `not modelled` half of the guard the tool would
+    hand `xmlschema` exactly the document the reader had just refused as too
+    expensive, with a `None` tree to resolve line numbers against. Counted
+    rather than timed: the cost of that call depends on what the document does
+    to `xmlschema`, and this asserts the decision, which is the thing that is
+    actually being made.
+    """
+    from vdi2770_validate import runner
+    from vdi2770_validate.runner import MAX_TOTAL_ELEMENTS, check_bytes
+
+    calls = []
+    real = runner.xsdvalidate.validate
+    monkeypatch.setattr(runner.xsdvalidate, "validate",
+                        lambda *a, **k: (calls.append(1), real(*a, **k))[1])
+
+    head = (b'<?xml version="1.0"?>'
+            b'<Document xmlns="http://www.vdi.de/schemas/vdi2770">')
+    n = MAX_TOTAL_ELEMENTS + 20_000
+    bomb = head + b"<a>" * n + b"</a>" * n + b"</Document>"
+    plain = head + b'<DocumentId DomainId="d">X</DocumentId></Document>'
+
+    def zipped(members):
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+            for name, body in members.items():
+                z.writestr(name, body)
+        return buf.getvalue()
+
+    archive = zipped({
+        "VDI2770_Main.xml": plain, "VDI2770_Main.pdf": b"%PDF-1.4",
+        "1_refused.zip": zipped({"VDI2770_Metadata.xml": bomb, "a.pdf": b"%PDF-1.4"}),
+        "2_fine.zip": zipped({"VDI2770_Metadata.xml": plain, "b.pdf": b"%PDF-1.4"}),
+    })
+    report = check_bytes(archive, "budget.zip")
+
+    assert "X6" in {f.rule.id for f in report.findings}, "the budget did not refuse"
+    # One. The budget is tree-wide, so the bomb spends it and the container
+    # after it is refused too -- which is the point of a tree-wide budget. Three
+    # containers, two of them never parsed, one schema check. Without the
+    # `not modelled` half of the guard it is three, and two of those hand
+    # `xmlschema` a document the reader has just refused as too expensive.
+    assert len(calls) == 1, (
+        f"{len(calls)} schema checks; only the container that was actually "
+        f"parsed should get one")

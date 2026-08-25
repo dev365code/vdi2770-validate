@@ -140,6 +140,17 @@ have a class of its own.
   happens *inside* the guard now: the schema is compiled once and held, so in a
   full-suite run this test had been measuring a cache hit that some earlier test
   had filled.
+- **One decision, said once.** The runner decided "a container we declined to
+  model gets no schema check" in two places and two spellings — `not modelled`
+  on one line, `tree is not None` three lines down. Removing the first changed
+  nothing, which is how it was found; two spellings of one decision are two
+  things to keep in step, and this file has already paid for that. The live one
+  now has a test that counts the calls, so it is a decision something notices.
+- **`_is_encrypted`'s summary claimed more than it delivers.** It said "an
+  `/Encrypt` key"; the scan requires the key's value to be an indirect
+  reference, which is the only form ISO 32000-1 permits for the encryption
+  dictionary. The behaviour is right; the sentence was loose, and `docs/scope.md`
+  had always been the honest one.
 - **Text arriving in pieces has a ceiling.** The tree had a bound on elements and
   none on how many times the parser handed back character data. One character
   reference repeated cost **287 MB** from a 4.2 KiB archive, because a byte count
@@ -502,7 +513,7 @@ below is measured on this machine, before and after, on the same input.
 Three gates that ask what `make check` cannot ask of itself.
 
 - **`make mutations`** takes every claim this project makes about a gate, breaks
-  the thing that gate protects, and checks the gate notices — 57 rows, each
+  the thing that gate protects, and checks the gate notices — 58 rows, each
   naming the pytest selection or the tool that has to go red. The harness checks
   itself as hard as it checks the code: a row whose anchor no longer appears
   exactly once is an error rather than a pass; every apply and restore clears

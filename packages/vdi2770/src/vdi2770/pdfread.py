@@ -65,7 +65,12 @@ MAX_TRAILERS = 64
 
 
 def _is_encrypted(data: bytes) -> bool:
-    """Whether a trailer dictionary has an `/Encrypt` key.
+    """Whether a trailer dictionary has an `/Encrypt` key whose value is an
+    indirect reference, which is the only form the format permits: ISO 32000-1
+    requires the encryption dictionary to be an indirect object. So
+    `<< /Encrypt << /Filter /Standard >> >>` reads as not encrypted, and that
+    is right rather than a gap -- but the one-line summary said `key`, which
+    claims more than this delivers. `docs/scope.md` has always said which.
 
     Repaired three times before this, and each repair fixed the shape that had
     been found: a whole-file token search reported any PDF whose *content*

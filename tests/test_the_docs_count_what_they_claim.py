@@ -319,8 +319,8 @@ def test_no_document_cites_a_file_that_is_not_here():
     # A floor of 12 against a real count in the twenties lets ten citations vanish in
     # silence, which is the failure this whole file is about. Exact, and updated
     # when a citation is added or removed -- that is the point of it.
-    assert seen == 21, (
-        f"{seen} citations found, not 21. If you added or removed one, say so here; "
+    assert seen == 22, (
+        f"{seen} citations found, not 22. If you added or removed one, say so here; "
         f"if you did not, ten of them just stopped being checked.")
 
 

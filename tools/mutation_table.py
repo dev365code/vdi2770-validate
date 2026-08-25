@@ -403,6 +403,14 @@ TABLE = [
      "the tool turns any `Exception` into a finding, so a guard that raises one "
      "is swallowed and both sides of the comparison come back equal"),
 
+    ("runner/a-container-we-did-not-parse-is-not-schema-checked",
+     "src/vdi2770_validate/runner.py",
+     "                         if tree is not None else [])",
+     "                         if True else [])",
+     ["tests/test_defences.py"],
+     "the budget refused the parse, and this would hand xmlschema the very "
+     "document the reader called too expensive, with no tree behind it"),
+
     ("gates/an-exception-nobody-can-catch-by-name",
      "packages/vdi2770/src/vdi2770/__init__.py",
      '"XmlTooLarge",',
