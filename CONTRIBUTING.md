@@ -54,8 +54,8 @@ environment".
 
 ## Three rules of the road
 
-Each exists because ignoring it would break something specific, and
-the defect register is the record of what that was.
+Each exists because ignoring it would break something specific, and the
+changelog records what that was.
 
 1. **A new rule is a row in `rules.json` plus a function.** The row carries where
    the requirement comes from, and a remedy sentence saying what the user should

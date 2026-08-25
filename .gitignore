@@ -18,3 +18,10 @@ htmlcov/
 # directory it is started from. tools/capture_oracle.py now starts it somewhere
 # else, and this is the second line of defence — one of these ended up committed.
 *.log
+
+# Working notes stay local.
+/CLAUDE.md
+/AGENTS.md
+/.claude/
+/docs/findings.md
+/docs/audits.md

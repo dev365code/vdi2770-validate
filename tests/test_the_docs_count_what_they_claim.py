@@ -214,40 +214,6 @@ def test_contributing_counts_the_targets_it_lists():
         f"CONTRIBUTING disagrees")
 
 
-def test_the_audit_log_does_not_contradict_its_own_headings():
-    """the audit record said "thirteen defects, six fixed" over a list where every
-    item was struck through and marked **Fixed**, and a subheading said "None is
-    fixed yet" directly above them. A dated tracker rots exactly here: the items
-    get updated and the sentence introducing them does not.
-    """
-    import re
-
-    text = (ROOT / "docs" / "the audit record").read_text(encoding="utf-8")
-    assert "None is fixed yet" not in text or not re.search(r"~~.*~~", text), (
-        "a section says nothing is fixed and the items below it are struck through")
-    for head in re.finditer(r"^## (.+)$", text, re.M):
-        rest = text[head.end():]
-        nxt = rest.find("\n## ")
-        body = rest if nxt < 0 else rest[:nxt]
-        # A heading may state how many of its own items are fixed, or say
-        # nothing. What it may not do is state a number this file cannot show:
-        # the first one claimed thirteen, six of which are recorded in the
-        # changelog and not here, so the count was unprovable from the document
-        # making it.
-        claimed = re.search(r"(\w+) fixed", head.group(1))
-        if not claimed:
-            continue
-        words = {"none": 0, "one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6,
-                 "seven": 7, "eight": 8, "nine": 9, "ten": 10, "eleven": 11, "twelve": 12,
-                 "thirteen": 13}
-        want = words.get(claimed.group(1).lower())
-        if want is None:
-            continue
-        assert len(re.findall(r"\*\*Fixed", body)) == want, (
-            f"the heading {head.group(1)!r} claims {want} fixed; the section marks "
-            f"{len(re.findall(r'[*][*]Fixed', body))}")
-
-
 def test_the_json_report_carries_what_each_finding_actually_says():
     """`--json` is sold as the machine-readable interface, and eight of its
     fields could be a constant with the whole suite green — `severity` reported
@@ -353,8 +319,8 @@ def test_no_document_cites_a_file_that_is_not_here():
     # A floor of 12 against a real count in the twenties lets ten citations vanish in
     # silence, which is the failure this whole file is about. Exact, and updated
     # when a citation is added or removed -- that is the point of it.
-    assert seen == 24, (
-        f"{seen} citations found, not 24. If you added or removed one, say so here; "
+    assert seen == 21, (
+        f"{seen} citations found, not 21. If you added or removed one, say so here; "
         f"if you did not, ten of them just stopped being checked.")
 
 

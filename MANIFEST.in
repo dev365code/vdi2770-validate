@@ -21,3 +21,8 @@ prune tests/fixtures
 # Gitignored is not the same as excluded: MANIFEST.in decides what ships.
 global-exclude .pytest_cache/*
 prune packages/vdi2770/.pytest_cache
+
+# Working notes are not part of the distribution.
+exclude CLAUDE.md AGENTS.md
+prune .claude
+exclude docs/findings.md docs/audits.md

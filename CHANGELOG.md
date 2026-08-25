@@ -755,7 +755,7 @@ container to a temporary folder on disk before validating, which this tool
 never does.
 
 **Still open**, recorded rather than quietly dropped: seven verified defects,
-listed in the defect register — a declared `application/zip` payload is judged as
+listed here — a declared `application/zip` payload is judged as
 if it were a container, `Z9` misses subdirectories that carry no explicit folder
 entry, `M9` treats one id string in two `DomainId`s as a repeat, an undeclared
 `VDI2770_Main.pdf` is never content-checked, `Z8` contradicts `Z6` at four levels

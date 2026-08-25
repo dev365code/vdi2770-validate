@@ -122,7 +122,7 @@ def test_every_rule_count_in_prose_is_the_real_one():
     """0.1.0 shipped a changelog that said 32 rules in one line and 33 in another.
 
     Two things this has to get right. It must read *every* document, not three
-    named ones -- the first version missed the defect register, which said "32 of
+    named ones -- the first version missed the changelog, which said "32 of
     32" for a catalogue of 33. And it must leave released changelog sections
     alone: "33 rules" under `## 0.1.0` is what was true then, and rewriting it to
     match today would be falsifying the record rather than fixing a number.

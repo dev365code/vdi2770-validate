@@ -74,7 +74,7 @@ This will be revisited if IDTA states which rendering is normative.
 
 The German names are the yardstick here, and they can be: both published sources
 give the same twelve. Measured against them, each English rendering departs on
-two of the four rows where they differ by wording. (The fifth, 04-01, differs only in case — see the defect register — so it has no German yardstick to lose against and is left out of the table below.)
+two of the four rows where they differ by wording. (The fifth, 04-01, differs only in case — see the changelog — so it has no German yardstick to lose against and is left out of the table below.)
 
 | ClassId | German (both agree) | IDTA 02004 Table 1 | reference implementation | closer to the German |
 |---|---|---|---|---|
