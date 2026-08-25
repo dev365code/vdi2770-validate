@@ -52,7 +52,16 @@ MAX_XMP_PACKETS = 64      # per haystack; a file needs one
 # fine. It is read from the trailer, which is where the format puts it.
 _ENCRYPT_REF = re.compile(rb"/Encrypt\s+\d+\s+\d+\s+R")
 _TRAILER = re.compile(rb"\btrailer\b")
-MAX_TRAILER_SCAN = 65536  # the most of one trailer dictionary that is read
+MAX_TRAILER_SCAN = 65536  # the most of ONE trailer dictionary that is read
+# And how many of them are read at all. Two bounds, because they answer different
+# questions and one of them was doing both jobs badly: a single file-wide total
+# stopped the multiplication attack and then let an ordinary earlier trailer -- a
+# long `/ID`, a long `/Info` -- spend the whole budget, so the authoritative
+# trailer of an incrementally updated file was never looked at and an encrypted
+# document read as clean. Per-dictionary keeps every trailer readable; this keeps
+# their number finite. The last ones are read, because an incremental update
+# appends and the newest trailer is the one that counts.
+MAX_TRAILERS = 64
 
 
 def _is_encrypted(data: bytes) -> bool:
@@ -71,25 +80,37 @@ def _is_encrypted(data: bytes) -> bool:
     that decides where the dictionary is. Nothing downstream can disagree with
     it, because there is no downstream.
 
-    And one budget for the *file*. Per-keyword bounds were the other half of the
-    same mistake: every shape that reached the bound multiplied by however many
-    `trailer` keywords a sender cared to write. 16,000 bare ones cost 135
-    seconds; when that was fixed, 8,000 that *open* a dictionary cost 28 seconds
-    from a 20 KB archive. A total is the only bound with no shape behind it.
+    And two budgets, because the cost has two axes and one bound cannot hold
+    both. A per-keyword bound multiplied: 16,000 bare `trailer` keywords cost 135
+    seconds, and 8,000 that *open* a dictionary cost 28 seconds from a 20 KB
+    archive. Replacing it with one file-wide total stopped that and started
+    something worse -- an ordinary earlier trailer with a long `/ID` spent the
+    budget, so the authoritative trailer of an incrementally updated file was
+    never read and an encrypted document came back clean. Each dictionary gets
+    its own scan; their number is capped separately, from the end, because an
+    incremental update appends and the newest trailer is the one that counts.
 
     A PDF whose trailer lives in a cross-reference stream has no `trailer`
     keyword and comes back False. That is a miss and not a false alarm, and
     docs/scope.md says so rather than leaving a reader to assume otherwise.
     """
-    left = MAX_TRAILER_SCAN
-    for hit in _TRAILER.finditer(data):
-        if left <= 0:
-            break
-        found, used = _scan_dictionary(data, hit.end(), left)
-        left -= used
+    starts = [hit.end() for hit in _TRAILER.finditer(data)]
+    for start in starts[-MAX_TRAILERS:]:
+        found, _ = _scan_dictionary(data, start, MAX_TRAILER_SCAN)
         if found:
             return True
     return False
+
+
+def _end_of_comment(data: bytes, i: int, limit: int) -> int:
+    """One past the newline that ends the comment starting at `i`.
+
+    Both the lead-in and the dictionary body need this, and when only one of them
+    had it a comment between `trailer` and `<<` made the dictionary invisible.
+    """
+    nl = min((x for x in (data.find(c, i, limit) for c in (b"\n", b"\r"))
+              if x != -1), default=limit)
+    return nl + 1
 
 
 def _scan_dictionary(data: bytes, start: int, budget: int) -> tuple:
@@ -104,19 +125,29 @@ def _scan_dictionary(data: bytes, start: int, budget: int) -> tuple:
     """
     limit = min(len(data), start + budget)
     i = start
-    while i < limit and data[i:i + 1] in b" \t\r\n\f\x00":
-        i += 1
+    # Whitespace *and* comments. A comment is legal between the keyword and the
+    # dictionary, and skipping them inside but not at the door meant a file that
+    # wrote one there had its dictionary declared absent -- the same asymmetry
+    # this scan has produced four times now, one place at a time. So both places
+    # call the one function, and there is no longer a door to forget.
+    while i < limit:
+        b = data[i:i + 1]
+        if b in b" \t\r\n\f\x00":
+            i += 1
+            continue
+        if b == b"%":
+            i = _end_of_comment(data, i, limit)
+            continue
+        break
     if data[i:i + 2] != b"<<":
         return False, i - start          # no dictionary opens here
 
-    depth = 0
+    depth, in_array = 0, 0
     while i < limit:
         b = data[i:i + 1]
 
         if b == b"%":                    # comment, to the end of the line
-            nl = min((x for x in (data.find(c, i, limit) for c in (b"\n", b"\r"))
-                      if x != -1), default=limit)
-            i = nl + 1
+            i = _end_of_comment(data, i, limit)
             continue
 
         if b == b"(":                    # literal string: nested, backslash escapes
@@ -147,11 +178,22 @@ def _scan_dictionary(data: bytes, start: int, budget: int) -> tuple:
             i = (close + 1) if close != -1 else limit
             continue
 
-        # No `depth > 0` here: the loop returns the moment the dictionary closes,
-        # so everything it still sees is inside one. Writing the condition anyway
-        # looked like a guard and guarded nothing -- removing it changed no
-        # behaviour, which is how it was found.
-        if b == b"/" and _ENCRYPT_REF.match(data, i, limit):
+        if b == b"[":
+            in_array += 1
+            i += 1
+            continue
+        if b == b"]":
+            in_array = max(0, in_array - 1)
+            i += 1
+            continue
+
+        # Only where a key of *this* dictionary can be: directly inside it, not
+        # in an array and not in a nested one. Matching at any depth counted an
+        # array element and a nested dictionary's value, neither of which is the
+        # trailer's encryption reference -- and a false positive here tells a
+        # producer to strip protection from a file that has none.
+        if (b == b"/" and depth == 1 and not in_array
+                and _ENCRYPT_REF.match(data, i, limit)):
             return True, i - start
 
         i += 1

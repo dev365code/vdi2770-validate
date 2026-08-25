@@ -361,3 +361,49 @@ def test_the_changelog_counts_the_files_make_standalone_runs():
     assert m, "the CHANGELOG sentence this test pins has been reworded"
     assert int(m.group(1)) == len(files), (
         f"`make standalone` runs {len(files)} files; the CHANGELOG says {m.group(1)}")
+
+
+def test_the_changelog_counts_the_trailer_shapes_it_claims_are_pinned():
+    """The entry said seventeen, then twenty-three; it was twenty-two.
+
+    I wrote the second number without counting, in a section whose subject is a
+    scan that has now been repaired five times. A count in prose is a claim
+    nobody re-checks, which is why the sibling test above exists for the mutation
+    table -- so this one exists for the other number in the same section.
+    """
+    import ast
+    import re
+
+    unreleased = newest_changelog_section()
+    m = re.search(r"([A-Za-z-]+) shapes are pinned", unreleased)
+    assert m, "the sentence counting the pinned trailer shapes has been reworded"
+    words = {"Seventeen": 17, "Eighteen": 18, "Nineteen": 19, "Twenty": 20,
+             "Twenty-one": 21, "Twenty-two": 22, "Twenty-three": 23,
+             "Twenty-four": 24, "Twenty-five": 25, "Twenty-six": 26}
+    said = words.get(m.group(1))
+    assert said is not None, f"unknown number word {m.group(1)!r}"
+
+    src = (ROOT / "packages/vdi2770/tests/test_the_public_api.py").read_text(
+        encoding="utf-8")
+    tree = ast.parse(src)
+    named = {t.id: len(n.value.elts)
+             for n in tree.body if isinstance(n, ast.Assign)
+             and isinstance(n.value, (ast.List, ast.Tuple))
+             for t in n.targets if isinstance(t, ast.Name)}
+    shapes = {"test_encryption_is_read_from_the_trailer_and_nowhere_else",
+              "test_the_trailer_scan_reads_pdf_structure",
+              "test_the_trailer_scan_reads_the_whole_file_and_only_keys"}
+    seen, real = set(), 0
+    for n in ast.walk(tree):
+        if not isinstance(n, ast.FunctionDef) or n.name not in shapes:
+            continue
+        seen.add(n.name)
+        for d in n.decorator_list:
+            if isinstance(d, ast.Call) and getattr(d.func, "attr", "") == "parametrize":
+                a = d.args[1]
+                real += (len(a.elts) if isinstance(a, (ast.List, ast.Tuple))
+                         else named.get(getattr(a, "id", ""), 0))
+    assert seen == shapes, f"a parametrised trailer test was renamed: {shapes - seen}"
+    # Plus one: the sentence says "including the real encrypted PDF in the
+    # corpus", which is a fixture rather than a parameter.
+    assert said == real + 1, f"the CHANGELOG says {said}; there are {real} + 1"

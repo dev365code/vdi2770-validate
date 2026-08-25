@@ -112,12 +112,15 @@ across one read: `MAX_CONTAINERS`, `MAX_TOTAL_METADATA_BYTES`,
 `MAX_TOTAL_DECOMPRESSED`, `MAX_TOTAL_MEMBERS`. `vdi2770.xmlread` adds
 `MAX_ELEMENTS` and `MAX_TEXT_PIECES`. The first bounds the tree built out of one
 metadata file — the bytes were bounded and that tree was not, and the expansion
-between them is the sender's to choose. The second bounds how many times the
-parser hands back character data, because a byte count is not the cost: one
-character reference repeated cost 287 MB from a 4.2 KiB archive. `vdi2770.pdfread` has seven of its own for the PDF scan:
+between them is the sender's to choose. The second bounds the text hung off it,
+which the element count does not see: a document of three elements whose text is
+one character reference repeated cost 287 MB from a 4.2 KiB archive. `vdi2770.pdfread` has eight of its own for the PDF scan:
 `MAX_STREAMS`, `MAX_STREAM_SCAN`, `MAX_INFLATED_PER_STREAM`,
 `MAX_INFLATED_TOTAL`, `MAX_XMP_PACKETS`, `MAX_PDFA_PREFIXES`,
-`MAX_TRAILER_SCAN`. A test fails if
+`MAX_TRAILER_SCAN` with its `MAX_TRAILERS` companion — one
+bounds how much of a trailer dictionary is read, the other how many are read at
+all, and the two exist separately because a single bound covering both let an
+encrypted file read as clean. A test fails if
 either module grows one this list does not name. You can read them all, and they
 are deliberately not arguments, so a caller cannot turn them off by accident.
 

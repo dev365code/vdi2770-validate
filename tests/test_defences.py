@@ -54,6 +54,7 @@ PDF_BUDGETS = {
     "MAX_INFLATED_TOTAL": (1 << 20, 256 << 20),
     "MAX_STREAMS": (16, 100_000),
     "MAX_TRAILER_SCAN": (256, 1 << 20),
+    "MAX_TRAILERS": (8, 4_096),
     "MAX_XMP_PACKETS": (4, 4096),
     "MAX_PDFA_PREFIXES": (1, 64),
 }

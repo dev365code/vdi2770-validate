@@ -2,40 +2,60 @@
 
 ## 0.7.0 — 2026-08-25
 
-Eight things that were true of the code and not of what the project said about it,
-plus the guards that make each one say so next time.
+Things that were true of the code and not of what the project said about it,
+plus the guards that make each one say so next time. The count that used to open
+this section was written when it held six; it holds seventy now, and a number
+nobody re-derives is the kind of claim the rest of these entries are about.
 
 
-The trailer scan had been repaired three times, and each repair fixed the shape
-in front of it rather than the class of shape, so a fourth shape was waiting.
-This one repairs the class.
+The trailer scan had been repaired four times, and each repair fixed the shape
+in front of it rather than the class of shape, so the next shape was always
+waiting. This one repairs the class — and then the class repair turned out to
+have a class of its own.
 
-- **The trailer scan is one pass that knows PDF, with one budget for the file.**
-  A whole-file token search reported any PDF that mentioned `/Encrypt`; a fixed
-  window missed one a long `/ID` pushed past it; a brace walk counted `<<` inside
-  a string; a brace walk that skipped strings still ran the token search over raw
-  bytes, so `/Encrypt` in a *comment* counted. And every per-keyword bound
-  multiplied by however many `trailer` keywords a sender wrote — 16,000 bare ones
-  cost 135 s, and when that was fixed, 8,000 that *open* a dictionary cost 28 s
-  from a 20 KB archive. Structure and token are now found in the same pass, so
-  nothing downstream can disagree with the endpoint; and the budget is the file's,
-  which is the only bound with no shape behind it. **0.008 s**, and it does not
-  move when the input grows fivefold. Seventeen shapes are pinned, including the
-  real encrypted PDF in the corpus.
+- **The trailer scan is one pass that knows PDF, with a budget on each axis of
+  its cost.** A whole-file token search reported any PDF that mentioned
+  `/Encrypt`; a fixed window missed one a long `/ID` pushed past it; a brace walk
+  counted `<<` inside a string; a brace walk that skipped strings still ran the
+  token search over raw bytes, so `/Encrypt` in a *comment* counted. And every
+  per-keyword bound multiplied by however many `trailer` keywords a sender wrote
+  — 16,000 bare ones cost 135 s, and when that was fixed, 8,000 that *open* a
+  dictionary cost 28 s from a 20 KB archive. Structure and token are now found in
+  the same pass, so nothing downstream can disagree with the endpoint.
+- **And the budget that stopped that then produced a silent miss.** Replacing the
+  per-keyword bound with one total for the whole file was the same mistake in the
+  other direction: an ordinary earlier trailer carrying a long `/ID` or `/Info`
+  spent the budget, the authoritative trailer of an incrementally updated file was
+  never scanned, and a genuinely encrypted PDF read as clean — after which the
+  report told the producer to *export it as PDF/A*. Cost has two axes and one
+  bound cannot hold both. `MAX_TRAILER_SCAN` is again per dictionary;
+  `MAX_TRAILERS` bounds how many are read, **from the end**, because an
+  incremental update appends and the newest trailer is the one that counts.
+  Worst case is 4 MiB walked, **0.07 s**; the ordinary case is **0.008 s** and
+  does not move when the input grows fivefold.
+- **Two more misses in the same scan, both the same asymmetry.** Comments were
+  skipped inside the dictionary but not between `trailer` and the `<<`, so a file
+  that wrote one there had its dictionary declared absent. And the token was
+  matched at any depth, so `/Encrypt` as an array element or a nested
+  dictionary's value read as the trailer's encryption reference — a false alarm
+  telling a producer to unprotect a file that was never protected. The token is
+  now a key only where a key can be, and the two comment skips are one function,
+  so there is no longer a door to forget. Twenty-two shapes are pinned,
+  including the real encrypted PDF in the corpus.
+- **Text arriving in pieces has a ceiling.** The tree had a bound on elements and
+  none on how many times the parser handed back character data. One character
+  reference repeated cost **287 MB** from a 4.2 KiB archive, because a byte count
+  is not the cost — each `&#120;` decodes to one character while the callback that
+  carries it is a whole Python object. `MAX_TEXT_PIECES` counts the callbacks,
+  which is where the cost is: **112 MiB** on the same input.
 - **Two rules stopped contradicting each other about the same folder.** Writers
   mix `./` prefixes and doubled slashes inside one archive. `Z13` decided a
   folder existed after dropping `.` segments, and `files.py` suppressed `F2` by
-  matching the archive's raw spelling -- so a file could be reported undeclared in
+  matching the archive's raw spelling — so a file could be reported undeclared in
   the same report that said its folder had never been opened. One `folder_path`
   now makes the decision for both; a finding still shows the archive's own
   spelling, because a name a user cannot find in their ZIP listing is not a
   report they can act on.
-- **Text arriving in pieces has a ceiling.** The tree had a bound on elements and
-  none on how many times the parser handed back character data. One character
-  reference repeated cost **287 MB** from a 4.2 KiB archive, because a byte count
-  is not the cost -- each `&#120;` decodes to one character while the callback
-  that carries it is a whole Python object. `MAX_TEXT_PIECES` counts the
-  callbacks, which is where the cost is: **112 MiB** on the same input.
 - **The record is checked against its tag unconditionally.** That check was
   guarded by "is the recorded version published?" — a value the editor of the
   file chooses. Point `version` at a tag that does not exist and the branch never
@@ -374,7 +394,7 @@ below is measured on this machine, before and after, on the same input.
 Three gates that ask what `make check` cannot ask of itself.
 
 - **`make mutations`** takes every claim this project makes about a gate, breaks
-  the thing that gate protects, and checks the gate notices — 40 rows, each
+  the thing that gate protects, and checks the gate notices — 44 rows, each
   naming the pytest selection or the tool that has to go red. The harness checks
   itself as hard as it checks the code: a row whose anchor no longer appears
   exactly once is an error rather than a pass; every apply and restore clears

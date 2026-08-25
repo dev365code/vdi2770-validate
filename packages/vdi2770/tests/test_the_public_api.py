@@ -298,7 +298,7 @@ def test_text_of_many_character_references_is_linear():
     that quadratic cannot pass: the old code needed about five seconds here.
 
     Sized just under `MAX_TEXT_PIECES`, which now refuses this shape past a
-    point -- the two bounds answer different questions and both have to hold. That
+    point — the two bounds answer different questions and both have to hold. That
     cap is why the count here is no longer 800,000.
     """
     import time
@@ -612,3 +612,69 @@ def test_no_shape_of_trailer_is_expensive(name, body):
     vdi2770.read_pdf(b"%PDF-1.4\n" + body)
     spent = time.monotonic() - started
     assert spent < 2, f"{name}: {len(body) / 1024:.0f} KiB cost {spent:.1f}s"
+
+
+@pytest.mark.parametrize("name,body,expected", [
+    # An incremental update appends a trailer, and the *last* one is the
+    # authoritative one. A file-wide scan budget let an ordinary earlier trailer
+    # -- a long `/ID`, a long `/Info` -- spend it, after which the real one was
+    # never looked at. That is the false-negative direction: the report then
+    # tells the producer to re-export as PDF/A, on a file it could not open.
+    ("an earlier trailer with a long /ID",
+     b"trailer\n<< /ID [<" + b"A" * 66000 + b">] >>\ntrailer\n<< /Encrypt 4 0 R >>", True),
+    ("an earlier trailer with a long /Info",
+     b"trailer\n<< /Info (" + b"x" * 70000 + b") >>\ntrailer\n<< /Encrypt 4 0 R >>", True),
+    # A comment is legal between the keyword and the dictionary. Comments were
+    # skipped inside the dictionary and not at the door to it -- the same
+    # "handled it in one place and not the symmetric one" this file keeps
+    # producing.
+    ("a comment between the keyword and the dictionary",
+     b"trailer\n%binary marker\n<< /Encrypt 4 0 R >>", True),
+    # And the other direction: the token is only the trailer's encryption
+    # reference where a key can be. Matching it at any depth made an array
+    # element and a nested dictionary's value count.
+    ("the token inside an array",
+     b"trailer\n<< /Foo [/Encrypt 4 0 R] >>", False),
+    ("the token as a nested dictionary's value",
+     b"trailer\n<< /Root << /X /Encrypt 4 0 R >> >>", False),
+])
+def test_the_trailer_scan_reads_the_whole_file_and_only_keys(name, body, expected):
+    assert vdi2770.read_pdf(b"%PDF-1.4\n" + body + b"\nstartxref\n0\n%%EOF"
+                            ).encrypted is expected, name
+
+
+def test_the_trailers_that_are_read_are_the_last_ones():
+    """More trailers than the cap, and the encryption reference in the newest.
+
+    An incremental update appends: the file's history is at the front and its
+    present state is at the back. Reading the first `MAX_TRAILERS` would report
+    the document as it was before it was encrypted, which is the wrong answer
+    from a scan whose whole job is to say whether this file can be read.
+    """
+    from vdi2770.pdfread import MAX_TRAILERS
+
+    older = b"trailer\n<< /Size 9 >>\n" * (MAX_TRAILERS + 40)
+    pdf = (b"%PDF-1.4\n" + older
+           + b"trailer\n<< /Size 9 /Encrypt 4 0 R >>\nstartxref\n0\n%%EOF")
+    assert vdi2770.read_pdf(pdf).encrypted is True
+
+
+def test_no_more_trailers_are_scanned_than_the_budget_names(monkeypatch):
+    """Counted, not timed.
+
+    The cost of this scan is the number of dictionaries walked times the bytes
+    walked in each. The second factor has a name; without a name for the first,
+    16,000 `trailer` keywords in a 125 KB file cost 135 seconds. This asserts the
+    count, because a stopwatch assertion in this project has twice failed under
+    load and said nothing about the bound it was written to defend.
+    """
+    from vdi2770 import pdfread
+
+    calls = []
+    real = pdfread._scan_dictionary
+    monkeypatch.setattr(pdfread, "_scan_dictionary",
+                        lambda *a: (calls.append(1), real(*a))[1])
+    vdi2770.read_pdf(b"%PDF-1.4\n" + b"trailer\n<< /Size 9 >>\n" * 4000)
+    assert len(calls) <= pdfread.MAX_TRAILERS, (
+        f"{len(calls)} dictionaries walked for a file allowed "
+        f"{pdfread.MAX_TRAILERS}")

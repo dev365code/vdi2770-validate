@@ -266,6 +266,39 @@ TABLE = [
      "`./VDI2770_Metadata.xml` is at the root, and Z13 said this tool had not "
      "looked inside something it had read"),
 
+    ("reader/each-trailer-gets-its-own-budget",
+     "packages/vdi2770/src/vdi2770/pdfread.py",
+     "        found, _ = _scan_dictionary(data, start, MAX_TRAILER_SCAN)",
+     "        found, _ = _scan_dictionary(data, start, max(0, MAX_TRAILER_SCAN - start))",
+     ["packages/vdi2770/tests/test_the_public_api.py"],
+     "one trailer with a long /ID spent the budget and the encrypted trailer "
+     "after it was never read"),
+
+    ("reader/the-trailers-that-are-read-are-the-last-ones",
+     "packages/vdi2770/src/vdi2770/pdfread.py",
+     "    for start in starts[-MAX_TRAILERS:]:",
+     "    for start in starts[:MAX_TRAILERS]:",
+     ["packages/vdi2770/tests/test_the_public_api.py"],
+     "an incremental update appends, so reading the first trailers reports the "
+     "file as it was before it was encrypted"),
+
+    ("reader/a-comment-may-stand-before-the-dictionary",
+     "packages/vdi2770/src/vdi2770/pdfread.py",
+     "    return nl + 1",
+     "    return limit",
+     ["packages/vdi2770/tests/test_the_public_api.py"],
+     "comments were skipped inside the dictionary but not at its door, so a "
+     "file that wrote one there had its trailer declared absent"),
+
+    ("reader/the-token-is-a-key-only-where-a-key-can-be",
+     "packages/vdi2770/src/vdi2770/pdfread.py",
+     "        if (b == b\"/\" and depth == 1 and not in_array",
+     "        if (b == b\"/\" and True",
+     ["packages/vdi2770/tests/test_the_public_api.py"],
+     "an array element and a nested dictionary's value both read as the "
+     "trailer's encryption reference, telling a producer to unprotect a file "
+     "that was never protected"),
+
     ("gates/an-exception-nobody-can-catch-by-name",
      "packages/vdi2770/src/vdi2770/__init__.py",
      '"XmlTooLarge",',
@@ -315,13 +348,13 @@ TABLE = [
      ["tests/test_ci_parity.py"],
      "OUTSIDE_CHECK stated the requirement in prose and enforced nothing"),
 
-    ("reader/the-trailer-scan-has-one-budget-for-the-file",
+    ("reader/the-number-of-trailers-scanned-is-bounded",
      "packages/vdi2770/src/vdi2770/pdfread.py",
-     "        found, used = _scan_dictionary(data, hit.end(), left)\n        left -= used",
-     "        found, used = _scan_dictionary(data, hit.end(), MAX_TRAILER_SCAN)",
+     "    for start in starts[-MAX_TRAILERS:]:",
+     "    for start in starts:",
      ["packages/vdi2770/tests/test_the_public_api.py"],
-     "a per-keyword bound multiplies by however many `trailer` keywords a sender "
-     "writes: 16,000 bare ones cost 135 s and 8,000 open ones cost 28 s"),
+     "without a bound on how many dictionaries are walked, the per-dictionary "
+     "budget multiplies: 16,000 bare `trailer` keywords cost 135 s"),
 
     ("reader/an-encrypt-in-a-comment-is-not-a-key",
      "packages/vdi2770/src/vdi2770/pdfread.py",
