@@ -118,6 +118,18 @@ have a class of its own.
   protects is `<< /X <41>> /Encrypt 4 0 R >>`, where the string's `>` abuts the
   dictionary's — without it the dictionary closes a byte early and the
   encryption reference is never seen.
+- **The scan returns one thing, and says what it looks for.**
+  `_scan_dictionary` still handed back how many bytes it had read, so a caller
+  could spend one budget across a whole file — which is exactly what let an
+  ordinary earlier trailer hide the encrypted one behind it. Nothing has read
+  that count since, and its docstring still described the design that produced
+  the bug, and still claimed the key was matched "at depth one or more" after
+  that stopped being true.
+- **Both packages advertise the Python they are tested on.** CI runs 3.9, 3.12
+  and 3.13; the classifiers listed 3.9 and 3.13, so PyPI under-reported the
+  supported range by the interpreter the release workflow actually uses. 3.10
+  and 3.11 are deliberately still absent: nothing runs them, and a classifier is
+  a promise to whoever reads it before installing.
 - **Text arriving in pieces has a ceiling.** The tree had a bound on elements and
   none on how many times the parser handed back character data. One character
   reference repeated cost **287 MB** from a 4.2 KiB archive, because a byte count
@@ -139,9 +151,14 @@ have a class of its own.
   waved a removal through as a patch; `--write` then overwrote the field, so the
   committed diff showed an ordinary version bump.
 - **The bundled schema is compiled once.** `validate` runs per container and
-  rebuilt it every time: a legitimate delivery of 900 document containers spent
-  **21 of its 26 seconds** recompiling the same XSD. **3.2 s** now. Only the
-  success is cached — a broken installation must not answer from memory.
+  rebuilt it every time. A legitimate delivery of 900 document containers — a
+  93 MB archive — takes **3.3 s** now and **11.2 s** with the cache removed, so
+  the recompilation was about eight of those seconds. (The figure first recorded
+  here was *21 of 26*, measured before the rest of this release cut the other
+  costs down; it does not reproduce against this tree, and a number a reader
+  cannot re-derive from the entry is not worth keeping. These two do: remove the
+  `lru_cache` and measure the same archive.) Only the success is cached — a
+  broken installation must not answer from memory.
 - **Two gates could not fail, for the same reason.** The harness in the API
   record's tests committed nothing before tagging, so every tag it made pointed
   at an empty tree and `_at_tag` returned `None` for every test in the file: the
@@ -344,7 +361,12 @@ they found, not a summary written after the fact.
   **505 KiB** archive whose second `d.zip` was 400 MB of zeros cost **1.25 GiB**
   while the report said that member had been refused for expanding 1028x. Both
   entries are refused now, once, under the new `ambiguous-name` defect kind,
-  which `Z10` already had the sentence for. Same archive: **28.8 MB**.
+  which `Z10` already had the sentence for. (The three figures first recorded
+  here — 505 KiB, 1.25 GiB, 28.8 MB — cannot be reproduced from this
+  description, by me or by the review that flagged them: how large the archive
+  is depends entirely on how the 400 MB member compresses, which the sentence
+  never said. The behaviour reproduces exactly — both entries refused, `Z10`
+  with the `ambiguous-name` detail — and that is the claim that matters.)
 - **A patch release of the reader was impossible.** `__version__` is in the
   reader's `__all__` and the fingerprint records its value, and the compatibility
   check is only ever consulted when the version moved — so `__version__` was in

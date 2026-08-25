@@ -95,11 +95,8 @@ def _is_encrypted(data: bytes) -> bool:
     docs/scope.md says so rather than leaving a reader to assume otherwise.
     """
     starts = [hit.end() for hit in _TRAILER.finditer(data)]
-    for start in starts[-MAX_TRAILERS:]:
-        found, _ = _scan_dictionary(data, start, MAX_TRAILER_SCAN)
-        if found:
-            return True
-    return False
+    return any(_scan_dictionary(data, start, MAX_TRAILER_SCAN)
+               for start in starts[-MAX_TRAILERS:])
 
 
 def _end_of_comment(data: bytes, i: int, limit: int) -> int:
@@ -113,15 +110,19 @@ def _end_of_comment(data: bytes, i: int, limit: int) -> int:
     return nl + 1
 
 
-def _scan_dictionary(data: bytes, start: int, budget: int) -> tuple:
-    """Look for an `/Encrypt` key in the dictionary opening at `start`.
+def _scan_dictionary(data: bytes, start: int, budget: int) -> bool:
+    """Whether the dictionary opening at `start` has an `/Encrypt` key.
 
-    Returns `(found, bytes examined)`. Reads at most `budget` bytes, so a caller
-    can bound a whole file rather than each dictionary in it.
+    Reads at most `budget` bytes of it. It used to return how many it had read
+    as well, so a caller could spend one budget across a whole file -- which is
+    what made an ordinary earlier trailer able to hide the encrypted one behind
+    it. Nothing has needed the count since that was undone, and a return value
+    nobody reads is the shape the wrong design leaves behind.
 
-    The key is only a key where a key can be: at depth one or more, outside every
-    string and comment. That is the whole difference between this and the three
-    scans before it.
+    The key is only a key where a key can be: directly inside this dictionary,
+    not in an array and not in a nested one, and outside every string and
+    comment. Matching at any depth counted an array element and a nested
+    dictionary's value, neither of which is the trailer's encryption reference.
     """
     limit = min(len(data), start + budget)
     i = start
@@ -140,7 +141,7 @@ def _scan_dictionary(data: bytes, start: int, budget: int) -> tuple:
             continue
         break
     if data[i:i + 2] != b"<<":
-        return False, i - start          # no dictionary opens here
+        return False                     # no dictionary opens here
 
     depth, in_array = 0, 0
     while i < limit:
@@ -170,7 +171,7 @@ def _scan_dictionary(data: bytes, start: int, budget: int) -> tuple:
             depth -= 1
             i += 2
             if depth <= 0:
-                return False, i - start
+                return False
             continue
 
         if b == b"<":                    # hex string, which may hold `3c3c`
@@ -194,10 +195,10 @@ def _scan_dictionary(data: bytes, start: int, budget: int) -> tuple:
         # producer to strip protection from a file that has none.
         if (b == b"/" and depth == 1 and not in_array
                 and _ENCRYPT_REF.match(data, i, limit)):
-            return True, i - start
+            return True
 
         i += 1
-    return False, limit - start
+    return False
 
 
 MAX_STREAM_SCAN = 400_000        # compressed bytes read after each stream marker

@@ -268,16 +268,16 @@ TABLE = [
 
     ("reader/each-trailer-gets-its-own-budget",
      "packages/vdi2770/src/vdi2770/pdfread.py",
-     "        found, _ = _scan_dictionary(data, start, MAX_TRAILER_SCAN)",
-     "        found, _ = _scan_dictionary(data, start, max(0, MAX_TRAILER_SCAN - start))",
+     "    return any(_scan_dictionary(data, start, MAX_TRAILER_SCAN)",
+     "    return any(_scan_dictionary(data, start, max(0, MAX_TRAILER_SCAN - start))",
      ["packages/vdi2770/tests/test_the_public_api.py"],
      "one trailer with a long /ID spent the budget and the encrypted trailer "
      "after it was never read"),
 
     ("reader/the-trailers-that-are-read-are-the-last-ones",
      "packages/vdi2770/src/vdi2770/pdfread.py",
-     "    for start in starts[-MAX_TRAILERS:]:",
-     "    for start in starts[:MAX_TRAILERS]:",
+     "               for start in starts[-MAX_TRAILERS:])",
+     "               for start in starts[:MAX_TRAILERS])",
      ["packages/vdi2770/tests/test_the_public_api.py"],
      "an incremental update appends, so reading the first trailers reports the "
      "file as it was before it was encrypted"),
@@ -446,8 +446,8 @@ TABLE = [
 
     ("reader/the-number-of-trailers-scanned-is-bounded",
      "packages/vdi2770/src/vdi2770/pdfread.py",
-     "    for start in starts[-MAX_TRAILERS:]:",
-     "    for start in starts:",
+     "    return any(_scan_dictionary(data, start, MAX_TRAILER_SCAN)",
+     "    return all(_scan_dictionary(data, start, MAX_TRAILER_SCAN)",
      ["packages/vdi2770/tests/test_the_public_api.py"],
      "without a bound on how many dictionaries are walked, the per-dictionary "
      "budget multiplies: 16,000 bare `trailer` keywords cost 135 s"),
