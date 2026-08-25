@@ -333,9 +333,19 @@ def test_a_workflow_that_publishes_runs_the_whole_gate():
 
     A workflow that publishes runs `make check`. Not a copy of it.
     """
-    publishing = [w for w in workflows()
-                  if "pypi-publish" in w.read_text(encoding="utf-8")
-                  or "upload-artifact" in w.read_text(encoding="utf-8")]
+    # "Uploads an artifact" was the proxy, and it is too wide: a workflow that
+    # uploads a *diagnostic* for a human to read publishes nothing, and making it
+    # run the whole gate is minutes spent answering a question it never asked.
+    # What matters is whether something leaves here that a person could install —
+    # a PyPI upload, or a built distribution one download away from being one.
+    def publishes(w):
+        text = w.read_text(encoding="utf-8")
+        if "pypi-publish" in text:
+            return True
+        return any("dist" in ln.split("path:", 1)[1]
+                   for ln in text.splitlines() if ln.strip().startswith("path:"))
+
+    publishing = [w for w in workflows() if publishes(w)]
     assert publishing, "no workflow publishes anything; this test is looking in the wrong place"
     for w in publishing:
         ran = commands_in(w)
