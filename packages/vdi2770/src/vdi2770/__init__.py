@@ -41,7 +41,7 @@ from .domain import (
     DocumentVersion,
 )
 from .domain import build as build_document
-from .model import Defect, Location
+from .model import DEFECT_KINDS, REFUSAL_KINDS, Defect, Location
 from .pdfread import PdfFacts
 from .pdfread import read as read_pdf
 from .xmlread import NS, Node, UnsafeXml, XmlError
@@ -62,7 +62,7 @@ from .zipread import read_file as read_container_file
 __version__ = "0.5.0"
 
 __all__ = [
-    "Classification", "Container", "Defect", "Description", "DigitalFile",
+    "Classification", "Container", "DEFECT_KINDS", "REFUSAL_KINDS", "Defect", "Description", "DigitalFile",
     "Document", "DocumentId", "DocumentVersion", "Kind", "Location", "MAIN_PDF",
     "MAIN_XML",
     "METADATA_XML", "Member", "NS", "Node", "PdfFacts", "UnsafeXml", "XmlError",

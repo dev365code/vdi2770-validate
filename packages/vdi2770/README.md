@@ -79,7 +79,8 @@ a PDF/A validator, and this is not one.
 `not-a-zip`, `too-many-members`, `unsafe-member-name`, `member-too-large`,
 `suspicious-compression`, `archive-too-large`, `metadata-too-large`,
 `metadata-unreadable`, `member-unreadable`, `nesting-too-deep`,
-`container-budget-exhausted`.
+`container-budget-exhausted`, `decompression-budget-exhausted`,
+`member-budget-exhausted`.
 
 These strings are part of the public surface; a test in this package fails if the
 code grows a kind that this list does not name.

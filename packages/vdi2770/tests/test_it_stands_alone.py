@@ -87,16 +87,22 @@ def test_the_readme_does_not_promise_a_verdict():
 
 
 def test_the_readme_names_every_defect_kind_the_code_can_emit():
-    """The kinds are a public vocabulary. A kind the README does not name is a
-    kind a caller cannot switch on."""
-    code = (SRC / "zipread.py").read_text(encoding="utf-8")
-    emitted = set(re.findall(r'Defect\("([a-z-]+)"', code))
-    readme = (HERE / "README.md").read_text(encoding="utf-8")
-    documented = set(re.findall(r"`([a-z]+(?:-[a-z]+)+)`", readme))
-    missing = emitted - documented
-    assert not missing, f"the code emits {missing}, which the README does not name"
+    """The vocabulary is a value, not a regex over this module's source.
 
+    The scrape saw eight of thirteen: every kind emitted through `_refuse()` is
+    written in a shape it does not match, so `unsafe-member-name`,
+    `suspicious-compression`, `member-too-large`, `member-unreadable` and
+    `metadata-too-large` could all be deleted from the README with the gate
+    green. `model.py`'s own comment says the fix — "a value cannot be missed by a
+    regex" — and the validator's copy of this check was migrated to
+    `DEFECT_KINDS` while this one was not.
+    """
+    from vdi2770 import DEFECT_KINDS, REFUSAL_KINDS
 
+    readme = (SRC.parent.parent / "README.md").read_text(encoding="utf-8")
+    missing = sorted(k for k in DEFECT_KINDS if f"`{k}`" not in readme)
+    assert not missing, f"the reader can emit kinds the README does not name: {missing}"
+    assert REFUSAL_KINDS <= DEFECT_KINDS, sorted(REFUSAL_KINDS - DEFECT_KINDS)
 
 def test_the_notice_travels_with_this_package_too():
     """Apache-2.0 asks for the NOTICE to go with the distribution. The validator

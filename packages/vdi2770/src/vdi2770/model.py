@@ -37,6 +37,33 @@ class Location:
         return s
 
 
+#: The subset of `DEFECT_KINDS` that can name a member in `Container.rejected`.
+#: A caller rendering a refusal needs a sentence for each of these, and working
+#: the set out by scraping the reader's source is how two of them were missed:
+#: one call site writes `rejected` in a shape a regex did not match, and the
+#: gate that was supposed to keep the table complete only checked the kinds this
+#: repository's own corpus happens to produce.
+REFUSAL_KINDS = frozenset({
+    "unsafe-member-name", "member-too-large", "suspicious-compression",
+    "archive-too-large", "member-unreadable", "metadata-too-large",
+    "container-budget-exhausted", "decompression-budget-exhausted",
+    "member-budget-exhausted",
+})
+
+#: Every kind a reader in this package can emit. Part of the public surface --
+#: callers switch on these strings -- and the single place they are written.
+#: Two test suites used to find them by grepping `Defect("` out of the source,
+#: which broke the third time a call site changed shape. A value cannot be
+#: missed by a regex.
+DEFECT_KINDS = frozenset({
+    "not-a-zip", "too-many-members", "unsafe-member-name", "member-too-large",
+    "suspicious-compression", "archive-too-large", "metadata-too-large",
+    "metadata-unreadable", "member-unreadable", "nesting-too-deep",
+    "container-budget-exhausted", "decompression-budget-exhausted",
+    "member-budget-exhausted",
+})
+
+
 @dataclass(frozen=True)
 class Defect:
     """Something a reader could not do -- a member that blew a budget, a
@@ -51,3 +78,9 @@ class Defect:
     kind: str
     where: Location
     detail: str = ""
+
+    def __post_init__(self) -> None:
+        # A typo used to travel: the validator looks the kind up with `.get()`
+        # and moves on, so a misspelling was a defect nobody ever reported.
+        if self.kind not in DEFECT_KINDS:
+            raise ValueError(f"unknown defect kind {self.kind!r}; add it to DEFECT_KINDS")
