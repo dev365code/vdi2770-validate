@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.7.0 — 2026-08-25
 
 Six things that were true of the code and not of what the project said about it,
 plus the guards that make each one say so next time.

@@ -55,3 +55,21 @@ def under_test(**kw):
         [str(ROOT / "src"), str(ROOT / "packages" / "vdi2770" / "src")]))
     env.update(kw)
     return env
+
+
+def newest_changelog_section() -> str:
+    """The top section of CHANGELOG.md, whatever it is called.
+
+    Three gates read the numbers in it and all three found that section by
+    slicing at the first `## 0.` — which works exactly until somebody cuts a
+    release, at which point the top section *is* a `## 0.` and the slice is
+    empty. The checks stopped at the one moment they exist for.
+
+    Released sections below the top are history and must not be edited, so they
+    are deliberately out of scope: work lands in a new section above them, and
+    that is the one whose claims still have to be true.
+    """
+    text = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+    first = text.index("\n## ") + 1
+    rest = text.find("\n## ", first)
+    return text[first:(rest if rest != -1 else len(text))]

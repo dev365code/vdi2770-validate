@@ -8,7 +8,7 @@ repository holds, the count is derived here and compared.
 import json
 import re
 
-from conftest import CORPUS, FIXTURES, ROOT, spelled
+from conftest import CORPUS, FIXTURES, ROOT, newest_changelog_section, spelled
 
 
 def containers():
@@ -305,8 +305,7 @@ def test_the_changelog_counts_the_mutation_rows_it_describes():
     sys.path.insert(0, str(ROOT / "tools"))
     from mutation_table import TABLE
 
-    prose = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
-    unreleased = prose[:prose.index("\n## 0.6.0")]
+    unreleased = newest_changelog_section()
     m = re.search(r"([a-z-]+) rows, each\s*\n?\s*naming the pytest selection", unreleased)
     assert m, "the CHANGELOG sentence this test pins has been reworded"
     said = m.group(1)
@@ -333,9 +332,8 @@ def test_no_document_cites_a_file_that_is_not_here():
     docs = ["README.md", "CONTRIBUTING.md", "SECURITY.md", "packages/vdi2770/README.md"]
     docs += [str(p.relative_to(ROOT)) for p in sorted((ROOT / "docs").glob("*.md"))]
 
-    changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
     texts = {d: (ROOT / d).read_text(encoding="utf-8") for d in docs if (ROOT / d).exists()}
-    texts["CHANGELOG.md (Unreleased)"] = changelog[:changelog.index("\n## 0.")]
+    texts["CHANGELOG.md (newest section)"] = newest_changelog_section()
 
     pattern = re.compile(
         r"`((?:tests|tools|src|packages|docs|corpus)/[\w./-]+\.(?:py|json|md|xsd|java))"
@@ -370,8 +368,7 @@ def test_the_changelog_counts_the_rules_that_fire_because_we_declined():
         (ROOT / "src" / "vdi2770_validate" / "data" / "rules.json").read_text(encoding="utf-8"))
     declined = [r["id"] for r in catalogue["rules"] if r["about"] == "tool"]
 
-    prose = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
-    unreleased = prose[:prose.index("\n## 0.")]
+    unreleased = newest_changelog_section()
     m = re.search(r"([A-Za-z-]+) rules fire because the validator declined", unreleased)
     assert m, "the CHANGELOG sentence this test pins has been reworded"
     assert m.group(1).lower() == spelled(len(declined)), (
@@ -390,8 +387,7 @@ def test_the_changelog_counts_the_files_make_standalone_runs():
     files = sorted((ROOT / "tests").glob("test_*.py"))
     files += sorted((ROOT / "packages" / "vdi2770" / "tests").glob("test_*.py"))
 
-    prose = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
-    unreleased = prose[:prose.index("\n## 0.")]
+    unreleased = newest_changelog_section()
     m = re.search(r"runs each of the (\d+) test files on its own", unreleased)
     assert m, "the CHANGELOG sentence this test pins has been reworded"
     assert int(m.group(1)) == len(files), (
