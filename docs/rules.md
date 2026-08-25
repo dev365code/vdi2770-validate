@@ -12,9 +12,9 @@ tool, because both are errors on purpose and severity cannot carry the differenc
 - **`table`** (2) — a freely published table says so (IDTA 02004)
 - **`container`** (4) — mechanics of ZIP and XML — true without VDI 2770
 - **`reference`** (13) — observed in the MIT reference implementation, **not** verified against the guideline, which is paywalled
-- **`ours`** (17) — our own judgement, and it carries a reason
+- **`ours`** (18) — our own judgement, and it carries a reason
 
-37 rules.
+38 rules.
 
 ## container
 
@@ -327,6 +327,14 @@ Why this is ours: A metadata file is data. Entity expansion lets it read local f
 Why this is ours: The document did something the schema checker would not follow to the end — nesting past its depth limit, for instance. We cannot say the metadata conforms and we cannot say it does not, so we say what happened instead. It is an error because a report that quietly skipped the check would be worse than no report.
 
 **Remedy.** Simplify the metadata so the checker can reach the end of it — the reported reason says what stopped it. If the file is genuinely this shape, check it against the schema with a validator of your own: the limit that gave up belongs to this tool, not to VDI 2770.
+
+### `X6` — The metadata is larger than this tool will build a model of
+
+*error* · obligation `ours` · **about: this tool**
+
+Why this is ours: The file is well-formed XML; we declined to turn it into objects. The bytes were bounded and the tree built out of them was not, and the expansion between the two is the sender's to choose: 7.98 MB of nested elements compresses to a 115 KB archive and cost 952 MB. Reporting it as malformed would blame the sender for our limit, and reporting nothing would say the metadata passed checks that never ran. It is an error because nothing downstream of the model was checked.
+
+**Remedy.** Nothing here is necessarily wrong with the metadata. The reported reason names the limit that stopped us — the element count or the nesting depth. If the file is genuinely this shape, check it with a validator that has no such limit: it belongs to this tool, not to VDI 2770.
 
 ## tool
 

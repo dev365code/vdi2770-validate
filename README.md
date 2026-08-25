@@ -57,8 +57,8 @@ are in [docs/scope.md](docs/scope.md).
 - **Rules are data.** [`rules.json`](src/vdi2770_validate/data/rules.json), rendered as [docs/rules.md](docs/rules.md) — each
   rule carries where its requirement comes from, a remedy sentence, and — where the
   reference implementation checks the same thing — the message keys it uses.
-- **24 of 37 rules have a minimal fixture pair** — a container that violates the rule
-  and a conforming one differing in as little as a single member. A 25th has a violating
+- **25 of 38 rules have a minimal fixture pair** — a container that violates the rule
+  and a conforming one differing in as little as a single member. A 26th has a violating
   fixture and no counterpart, because there is no conforming version of *this file is not
   a ZIP*. The rest are exercised by the vendored corpus. A rule that fires nowhere fails
   the build.

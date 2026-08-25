@@ -83,6 +83,10 @@ def test_every_budget_constant_is_in_one_of_those_tables():
 REPORT_BUDGETS = {"MAX_LISTED_PER_RULE": (10, 10_000)}
 SCHEMA_BUDGETS = {"MAX_SCHEMA_ERRORS": (100, 100_000)}
 RULE_BUDGETS = {"MAX_FOLDER_DEPTH": (4, 256), "MAX_FOLDERS": (16, 4_096)}
+# The bytes were bounded and the tree built out of them was not. The corpus's
+# largest metadata file has 53 elements; the floor here is a thousand times that,
+# because a limit tight enough to refuse a real delivery is its own defect.
+XML_BUDGETS = {"MAX_ELEMENTS": (50_000, 5_000_000)}
 
 
 @pytest.mark.parametrize("where,name,bounds", sorted(
@@ -101,6 +105,14 @@ def test_a_zip_budget_is_a_budget(name, bounds):
     value = getattr(zipread, name)
     assert low <= value <= high, (
         f"{name} is {value}; outside {low}..{high} it is not protecting anyone")
+
+
+@pytest.mark.parametrize("name,bounds", sorted(XML_BUDGETS.items()))
+def test_an_xml_budget_is_a_budget(name, bounds):
+    low, high = bounds
+    value = getattr(xmlread, name)
+    assert low <= value <= high, (
+        f"xmlread.{name} is {value}; outside {low}..{high} it is not protecting anyone")
 
 
 @pytest.mark.parametrize("name,bounds", sorted(PDF_BUDGETS.items()))
@@ -292,6 +304,6 @@ def test_no_module_in_either_package_holds_an_unpinned_budget():
                 seen[info.name] = caps
 
     pinned = set(BUDGETS) | set(PDF_BUDGETS) | set(REPORT_BUDGETS) | set(RULE_BUDGETS) \
-        | set(SCHEMA_BUDGETS)
+        | set(SCHEMA_BUDGETS) | set(XML_BUDGETS)
     unpinned = {m: sorted(c - pinned) for m, c in seen.items() if c - pinned}
     assert not unpinned, f"budgets no table pins: {unpinned}"

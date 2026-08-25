@@ -137,7 +137,7 @@ Three gates that ask what `make check` cannot ask of itself.
   broken row, not a kill; and **one row must survive**, because a harness that
   reports red for a change that does not matter is reporting red for everything.
   It found two holes on its first full run.
-- **`make standalone`** runs each of the 55 test files on its own. A suite is a
+- **`make standalone`** runs each of the 56 test files on its own. A suite is a
   shared process, so a file can pass because an earlier one imported something —
   `tests/test_offline.py` did exactly that for weeks, patching `socket.socket`
   and then importing `urllib.request`, which breaks `class SSLSocket(socket)`
@@ -261,10 +261,10 @@ A shape review read the whole repository as a newcomer would. These are the
 boundary findings; the user-facing ones are above in the same section.
 
 - **One severity policy for "this tool stopped", and a field that says so.**
-  Six rules fire because the validator declined — a broken installation, a
-  document the schema checker would not finish, a check of ours that crashed, an
-  archive over a budget, a tree deeper than we open, and documents delivered as
-  folders. The four that existed when this
+  Seven rules fire because the validator declined — a broken installation, a
+  document the schema checker would not finish, one it would not build a model
+  of, a check of ours that crashed, an archive over a budget, a tree deeper than
+  we open, and documents delivered as folders. The four that existed when this
   policy was settled disagreed with each other: three were errors arguing *"a report that silently skipped
   the check would be worse than no report"*; `Z6` was a warning arguing the
   opposite for the same situation. Both are good arguments and only one can be

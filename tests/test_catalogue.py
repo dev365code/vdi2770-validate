@@ -191,6 +191,7 @@ TOOL_RULES = {
     "X0": "the bundled schema would not load — a broken installation of ours",
     "X4": "the schema checker would not follow this document to the end",
     "X5": "a check in this tool raised and did not finish — a bug of ours, not a container",
+    "X6": "the metadata is well-formed and larger than this tool will model — our limit",
     "Z13": "documents delivered as folders, which this tool does not open — its limit,\n           not the delivery's fault",
     "Z5": "the archive is over a budget this tool sets for untrusted input",
     "Z6": "the tree is deeper than this tool opens",

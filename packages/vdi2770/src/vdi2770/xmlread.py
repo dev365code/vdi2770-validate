@@ -28,6 +28,35 @@ class UnsafeXml(XmlError):
     """The document tried to do something a data file has no business doing."""
 
 
+class XmlTooLarge(XmlError):
+    """The document is bigger than this reader will build a model of.
+
+    Not the same statement as `XmlError`: the file is well-formed and this is our
+    limit, not their mistake. The caller has to be able to tell those apart to
+    report the right one.
+    """
+
+
+# The bytes were bounded and the tree built out of them was not, and the
+# expansion between the two is what the sender chooses. A metadata member of
+# 7.98 MB -- under `MIN_SUSPICIOUS_BYTES`, so the compression-ratio guard never
+# looks at it, and under `MAX_METADATA_BYTES` -- holding 1.14 million nested
+# elements compresses to a 115 KB archive and cost 952 MB, measured.
+#
+# The largest metadata file in this repository's corpus has 53 elements. This is
+# roughly two thousand times that: generous for anything a plant will ever send,
+# and finite. At the cap one tree costs about 92 MB, measured.
+#
+# Deliberately no depth limit. Depth was the obvious second axis and it earns
+# nothing: `find_all` and `find` read one level, `domain.build` never recurses,
+# and 99,999 nested elements parse in 0.11 s and 92 MB once the count is bounded
+# -- the cost is per node either way. It would also take a real limit away from
+# whoever reads this: the schema checker downstream gives up at about a thousand
+# levels and says so, and refusing the document here first would replace that
+# true statement with one about a limit invented to have one.
+MAX_ELEMENTS = 100_000
+
+
 @dataclass
 class Node:
     tag: str                       # local name, namespace stripped
@@ -89,8 +118,16 @@ def parse(data: bytes) -> Node:
     p.EntityDeclHandler = refuse_entity
     p.ExternalEntityRefHandler = refuse_external
 
+    built = 0
+
     def start(name: str, attrs: Dict[str, str]) -> None:
-        nonlocal root
+        nonlocal root, built
+        built += 1
+        if built > MAX_ELEMENTS:
+            raise XmlTooLarge(
+                f"the document has more than {MAX_ELEMENTS} elements; this reader "
+                f"will not build a model that large",
+                p.CurrentLineNumber, p.CurrentColumnNumber)
         ns, _, local = name.rpartition("\x01")
         node = Node(tag=local, ns=ns, attrib=dict(attrs),
                     line=p.CurrentLineNumber, column=p.CurrentColumnNumber,
@@ -126,6 +163,12 @@ def parse(data: bytes) -> Node:
 
     try:
         p.Parse(data, True)
+    except XmlError:
+        # `UnsafeXml` and `XmlTooLarge` are raised from inside the handlers and
+        # travel out through `Parse`. Re-raising them unchanged keeps the
+        # distinction the caller needs; catching `ExpatError` alone let one of
+        # them arrive as a bare handler exception once.
+        raise
     except expat.ExpatError as e:
         raise XmlError(expat.ErrorString(e.code), e.lineno, e.offset) from e
 

@@ -12,10 +12,13 @@ from __future__ import annotations
 
 import io
 import json
+import sys
 import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "packages" / "vdi2770" / "src"))
+from vdi2770.xmlread import MAX_ELEMENTS  # noqa: E402 - after sys.path
 
 CORPUS = ROOT / "corpus" / "examples"
 OUT = ROOT / "tests" / "fixtures"
@@ -204,6 +207,18 @@ def main() -> int:
                + b"<a>" * 1001 + b"</a>" * 1001 + b"</Document>")
     add("x4-too-deep.zip", f, "X4", [META],
         "the metadata replaced with a thousand and one levels of nesting")
+
+    # X6 — well-formed metadata this reader will not build a model of. Not the
+    # same statement as X1: nothing here is malformed. Deliberately breadth and
+    # not depth, so this stays distinct from x4 above -- that one is about the
+    # schema checker's limit and reaches it at a thousand levels, which is well
+    # inside what this reader will parse.
+    f = dict(base)
+    f[META] = (b'<?xml version="1.0" encoding="utf-8"?>\n'
+               b'<Document xmlns="http://www.vdi.de/schemas/vdi2770">'
+               + b"<a/>" * (MAX_ELEMENTS + 1) + b"</Document>")
+    add("x6-too-many-elements.zip", f, "X6", [META],
+        f"the metadata replaced with {MAX_ELEMENTS + 1} sibling elements")
 
     # F2 — a file in the container that the metadata does not name.
     # This used to be covered by `folders.zip` in the corpus, until that

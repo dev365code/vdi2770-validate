@@ -1047,6 +1047,14 @@
         ]
       }
     },
+    "x6-too-many-elements.zip": {
+      "reference": {},
+      "ours": {
+        "error": [
+          "X6"
+        ]
+      }
+    },
     "z1-not-a-zip.zip": {
       "reference": {
         "ERROR": [
@@ -1238,6 +1246,7 @@
     }
   },
   "_unswept": {
-    "f2-undeclared-file.zip": "postdates the recorded run; the reference half needs a JDK and the pinned checkout. Rerun tools/capture_oracle.py --reference <path> before trusting a divergence count that includes it."
+    "f2-undeclared-file.zip": "postdates the recorded run; the reference half needs a JDK and the pinned checkout. Rerun tools/capture_oracle.py --reference <path> before trusting a divergence count that includes it.",
+    "x6-too-many-elements.zip": "postdates the recorded run; the reference half needs a JDK and the pinned checkout. Rerun tools/capture_oracle.py --reference <path> before trusting a divergence count that includes it."
   }
 }

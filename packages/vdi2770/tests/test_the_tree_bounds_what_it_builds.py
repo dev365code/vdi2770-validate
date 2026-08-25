@@ -73,3 +73,60 @@ def test_growth_stays_bounded_as_the_input_grows(kids, members_each, monkeypatch
     monkeypatch.setattr(zipread, "MAX_TOTAL_MEMBERS", 5_000)
     box = zipread.read(a_wide_tree(kids, members_each), "x.zip")
     assert records(box) < 40_000, records(box)
+
+
+# --- the XML tree, which had no bound at all -------------------------------
+#
+# The two budgets above bound the archives and the bytes taken out of them. The
+# tree built *from* those bytes had no limit of any kind, and the expansion from
+# one to the other is what an attacker gets to choose.
+#
+# A metadata member of 7.98 MB -- just under `MIN_SUSPICIOUS_BYTES`, so the
+# compression-ratio guard never looks at it, and well under the 16 MB
+# `MAX_METADATA_BYTES` -- holding 1.14 million nested elements compresses to a
+# 115 KB archive and drives this process to **952 MB**, measured. The reader's
+# own first paragraph says an untrusted archive does not get to decide how much
+# memory we spend.
+#
+# The largest metadata file in this repository's corpus has **53 elements** and
+# nests **five** deep.
+
+def test_a_metadata_file_cannot_choose_how_many_nodes_we_build():
+    from vdi2770 import xmlread
+
+    body = (b'<?xml version="1.0"?><Document xmlns="http://www.vdi.de/schemas/vdi2770">'
+            + b"<a/>" * (xmlread.MAX_ELEMENTS + 2)
+            + b"</Document>")
+    with pytest.raises(xmlread.XmlTooLarge) as e:
+        xmlread.parse(body)
+    assert "element" in str(e.value).lower(), str(e.value)
+
+
+def test_depth_alone_is_not_expensive_once_the_count_is_bounded():
+    """The obvious second axis, measured rather than assumed.
+
+    A depth limit was written and then removed. `find_all` and `find` read one
+    level, `domain.build` never recurses, and the cost of a node is the same
+    whether it is the hundredth sibling or the hundredth descendant -- so the
+    count bounds both. A depth limit would also have taken a real limit away
+    from the caller: the schema checker gives up on a deep document and says so,
+    and refusing it here first replaces that with a limit invented to have one.
+    """
+    from vdi2770 import xmlread
+    from vdi2770.domain import build
+    from vdi2770.model import Location
+
+    d = 20_000
+    body = (b'<?xml version="1.0"?><Document xmlns="http://www.vdi.de/schemas/vdi2770">'
+            + b"<a>" * d + b"</a>" * d
+            + b"</Document>")
+    root = xmlread.parse(body)          # neither a RecursionError nor a refusal
+    assert build(root, Location(container="x")) is not None
+
+
+def test_the_bound_is_generous_next_to_anything_real():
+    """A limit tight enough to refuse a real handover document is a bug of its
+    own. The corpus's largest metadata file has 53 elements."""
+    from vdi2770 import xmlread
+
+    assert xmlread.MAX_ELEMENTS >= 50_000, xmlread.MAX_ELEMENTS
