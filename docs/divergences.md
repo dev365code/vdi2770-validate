@@ -13,11 +13,18 @@ check that — the normative text is paywalled.
 
 ## How much of this was measured
 
-It is measured now. Every container in `corpus/` and `tests/fixtures/` — 46 of
-them, two of which postdate the run and carry our half only — was put through the reference implementation at its pinned commit
+It is measured now. 44 of the 46 containers in `corpus/` and
+`tests/fixtures/` were put through the reference implementation at its pinned commit
 `e47c13c`, with the locale forced to `en_US`, and the result is checked in at
 [`docs/oracle-sweep.json`](oracle-sweep.json). `tools/capture_oracle.py --check`
-re-runs it and fails if either side has moved. `tools/oracle/README.md` says what
+re-runs it and fails if either side has moved.
+
+The other two postdate that run and carry our half only. They are named in the
+sweep's `_unswept` block with the reason, and **every count on this page excludes
+them** — an empty `reference` means "we never asked it", and reading that as "it
+reported nothing" would invent a disagreement with a tool that has never seen the
+container. One of them, `x6-too-many-elements.zip`, errors on our side, so it did
+exactly that until the gate below started excluding it. `tools/oracle/README.md` says what
 you need to repeat it, including the two things that will bite you.
 
 What the sweep settled:
@@ -31,7 +38,7 @@ What the sweep settled:
   agreement are not — the same limitation §4 discloses, and it applies here too.) The `refKeys`/`refCodes` split earns its keep:
   thirteen of the reference's displayed codes are emitted from more than one key
   with different meanings, so a comparison keyed on the code alone is unsound.
-- **Six containers where it reports an error and we do not**, and **seven where we
+- **Six containers where it reports an error and we do not**, and **six where we
   do and it does not**. Neither list is a surprise — they are the severity
   policies in §1 and §2 below, and our own budget rules — but they were assumed
   before and are counted now.

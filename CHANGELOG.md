@@ -5,6 +5,17 @@
 Six things that were true of the code and not of what the project said about it,
 plus the guards that make each one say so next time.
 
+- **An empty column in the oracle sweep meant "we never asked", and the page read
+  it as "it reported nothing".** `docs/divergences.md` derives its disagreement
+  counts from `oracle-sweep.json`, and two containers postdate the recorded run —
+  the reference half needs a JDK and the pinned checkout, so a fixture added
+  afterwards waits for the next full sweep. One of them errors on our side, so it
+  was counted as a container where *"we report an error and it does not"*: a
+  disagreement with a tool that has never seen the file. The counts exclude
+  unswept containers now, the page says which two and why, and the gate derives
+  both numbers — how many exist and how many were measured — instead of one
+  doing the work of both.
+
 - **The bytes were bounded and the tree built out of them was not.** A metadata
   member of 7.98 MB — under the compression-ratio guard's size floor, so it was
   never ratio-checked, and under the 16 MB metadata cap — holding 1.14 million

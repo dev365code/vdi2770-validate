@@ -17,7 +17,14 @@ def containers():
 
 def test_the_oracle_sweep_covers_every_container_and_says_how_many():
     """`docs/divergences.md` said 43 while the sweep held 44 — the sweep was
-    right and the sentence describing it was a version behind."""
+    right and the sentence describing it was a version behind.
+
+    Two numbers now, because one was doing the work of two: how many containers
+    exist, and how many were actually put through the reference implementation.
+    A container added after the recorded run carries `reference: {}`, and the
+    page derived every disagreement from the total — so a container the
+    reference has never seen was counted as disagreeing with it.
+    """
     swept = json.loads((ROOT / "docs" / "oracle-sweep.json").read_text(encoding="utf-8"))
     names = set(swept["containers"])
     here = {p.name for p in containers()}
@@ -25,9 +32,6 @@ def test_the_oracle_sweep_covers_every_container_and_says_how_many():
         f"the sweep and the repository disagree about which containers exist: "
         f"only swept {sorted(names - here)}, only here {sorted(here - names)}")
 
-    prose = (ROOT / "docs" / "divergences.md").read_text(encoding="utf-8")
-    m = re.search(r"Every container in `corpus/` and `tests/fixtures/` — (\d+) of", prose)
-    assert m, "the sentence this test pins has been reworded"
     # A container may be recorded with our half only — the reference half needs a
     # JDK and the pinned checkout, so a fixture added afterwards waits for the
     # next full sweep. It has to say so rather than look swept.
@@ -35,8 +39,19 @@ def test_the_oracle_sweep_covers_every_container_and_says_how_many():
     for n in unswept:
         assert n in swept.get("_unswept", {}), (
             f"{n} has no reference verdict and the file does not say why")
-    assert int(m.group(1)) == len(here), (
-        f"divergences.md says {m.group(1)} containers; there are {len(here)}")
+    assert not (set(swept.get("_unswept", {})) - set(unswept)), (
+        "the file excuses a container that does have a reference verdict: "
+        f"{sorted(set(swept['_unswept']) - set(unswept))}")
+
+    prose = (ROOT / "docs" / "divergences.md").read_text(encoding="utf-8")
+    m = re.search(r"([A-Za-z0-9-]+) of the (\d+) containers in `corpus/` and\s+`tests/fixtures/`",
+                  prose)
+    assert m, "the sentence this test pins has been reworded"
+    assert int(m.group(2)) == len(here), (
+        f"divergences.md says {m.group(2)} containers; there are {len(here)}")
+    assert m.group(1).lower() == spelled(len(here) - len(unswept)), (
+        f"{len(here) - len(unswept)} of them were swept and divergences.md "
+        f"says {m.group(1)}")
 
 
 def test_contributing_names_every_obligation_the_catalogue_uses():
@@ -122,8 +137,17 @@ def test_the_divergence_numbers_are_derived_from_the_sweep_and_the_catalogue():
     prose = (ROOT / "docs" / "divergences.md").read_text(encoding="utf-8")
     catalogue = json.loads(
         (ROOT / "src" / "vdi2770_validate" / "data" / "rules.json").read_text(encoding="utf-8"))
-    sweep = json.loads(
-        (ROOT / "docs" / "oracle-sweep.json").read_text(encoding="utf-8"))["containers"]
+    recorded = json.loads(
+        (ROOT / "docs" / "oracle-sweep.json").read_text(encoding="utf-8"))
+    # Only what was actually put through the reference implementation. A
+    # container added after the recorded run carries `reference: {}`, and every
+    # count below reads that as "the reference reported nothing" when it means
+    # "we never asked it". `x6-too-many-elements.zip` errors on our side, so it
+    # was counted as a disagreement with a tool that has never seen it — the
+    # exact mistake this project exists to prevent, in its own evidence.
+    sweep = {n: e for n, e in recorded["containers"].items()
+             if n not in recorded.get("_unswept", {})}
+    assert sweep, "every container is unswept; there is nothing to derive from"
 
     words = {6: "Six", 13: "thirteen", 28: "Twenty-eight", 2: "two"}
 
@@ -318,8 +342,8 @@ def test_no_document_cites_a_file_that_is_not_here():
     # A floor of 12 against a real count in the twenties lets ten citations vanish in
     # silence, which is the failure this whole file is about. Exact, and updated
     # when a citation is added or removed -- that is the point of it.
-    assert seen == 23, (
-        f"{seen} citations found, not 23. If you added or removed one, say so here; "
+    assert seen == 24, (
+        f"{seen} citations found, not 24. If you added or removed one, say so here; "
         f"if you did not, ten of them just stopped being checked.")
 
 
