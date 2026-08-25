@@ -72,8 +72,10 @@ def test_a_broken_installation_is_still_ours(monkeypatch):
 
     from vdi2770_validate import xsdvalidate
 
+    # The line that used to sit here set `cache_clear` on the wrapper to
+    # itself -- a no-op wearing the shape of a restore. The two explicit calls
+    # are what does the work, and the second one is why there is a `finally`.
     xsdvalidate._schema.cache_clear()
-    monkeypatch.setattr(xsdvalidate._schema, "cache_clear", xsdvalidate._schema.cache_clear)
     real = builtins.__import__
 
     def no_xmlschema(name, *a, **k):

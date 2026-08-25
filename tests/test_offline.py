@@ -18,10 +18,22 @@ from conftest import CLEAN_DOCUMENTATION, FIXTURES
 from vdi2770_validate.runner import check_file
 
 
+class ReachedForTheNetwork(BaseException):
+    """Not an `Exception`, deliberately.
+
+    Both the tool's schema loader and its rule runner wrap work in
+    `except Exception` and turn what they catch into a finding -- which is right
+    for hostile input and fatal for a test whose subject is "this must never
+    happen": an `AssertionError` raised inside the guard was caught, converted
+    to `X0`, and the run finished clean on both sides of the comparison. The
+    guard has to raise something the code under test cannot swallow.
+    """
+
+
 @pytest.fixture
 def no_network(monkeypatch):
     def refuse(*a, **k):
-        raise AssertionError("the tool tried to open a socket")
+        raise ReachedForTheNetwork("the tool tried to open a socket")
     monkeypatch.setattr(socket, "socket", refuse)
     monkeypatch.setattr(socket, "create_connection", refuse)
     monkeypatch.setattr(socket, "getaddrinfo", refuse)
@@ -31,7 +43,7 @@ def test_the_guard_is_live(no_network):
     """`assert rep is not None` was the whole of the test below. If the fixture
     ever stops patching, that assertion still passes and the offline promise is
     unguarded, so the fixture is checked before it is relied on."""
-    with pytest.raises(AssertionError, match="tried to open a socket"):
+    with pytest.raises(ReachedForTheNetwork, match="tried to open a socket"):
         socket.socket()
 
 
@@ -73,9 +85,17 @@ def test_schema_location_is_not_dereferenced(monkeypatch, no_network):
     verdict must be the same whether or not the network exists, which is the
     part the old version of this test forgot to check."""
     def refuse(*a, **k):
-        raise AssertionError("the tool tried to open a URL")
+        raise ReachedForTheNetwork("the tool tried to open a URL")
+
+    # Cleared *inside* the guard, because the schema is compiled once and held:
+    # in a full-suite run whichever test touched it first did the compiling, and
+    # this test -- whose whole subject is what happens during that compile --
+    # was measuring a cache hit. `make standalone` still exercised it, so the
+    # coverage was not lost, only silently order-dependent.
+    from vdi2770_validate import xsdvalidate
 
     monkeypatch.setattr(urllib.request, "urlopen", refuse)
+    xsdvalidate._schema.cache_clear()
     guarded = [f.rule.id for f in check_file(str(CLEAN_DOCUMENTATION)).sorted()]
     monkeypatch.undo()
     free = [f.rule.id for f in check_file(str(CLEAN_DOCUMENTATION)).sorted()]

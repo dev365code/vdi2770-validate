@@ -395,6 +395,14 @@ TABLE = [
      "`<41>>` closes the dictionary a byte early without it, and the "
      "encryption reference after it is never seen"),
 
+    ("gates/the-offline-promise-survives-being-caught",
+     "tests/test_offline.py",
+     "        raise ReachedForTheNetwork(\"the tool tried to open a socket\")",
+     '        raise AssertionError("the tool tried to open a socket")',
+     ["tests/test_offline.py"],
+     "the tool turns any `Exception` into a finding, so a guard that raises one "
+     "is swallowed and both sides of the comparison come back equal"),
+
     ("gates/an-exception-nobody-can-catch-by-name",
      "packages/vdi2770/src/vdi2770/__init__.py",
      '"XmlTooLarge",',

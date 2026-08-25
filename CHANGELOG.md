@@ -130,6 +130,16 @@ have a class of its own.
   supported range by the interpreter the release workflow actually uses. 3.10
   and 3.11 are deliberately still absent: nothing runs them, and a classifier is
   a promise to whoever reads it before installing.
+- **The offline promise is guarded by something the tool cannot swallow.** The
+  network guard raised `AssertionError`; the schema loader and the rule runner
+  both wrap their work in `except Exception` and turn what they catch into a
+  finding, which is right for hostile input and fatal here — a fetch during
+  schema compilation was caught, became `X0` on both sides of the comparison,
+  and the test passed. It raises a `BaseException` now, and fails in both
+  directions when the compile reaches for a socket or a URL. The compile also
+  happens *inside* the guard now: the schema is compiled once and held, so in a
+  full-suite run this test had been measuring a cache hit that some earlier test
+  had filled.
 - **Text arriving in pieces has a ceiling.** The tree had a bound on elements and
   none on how many times the parser handed back character data. One character
   reference repeated cost **287 MB** from a 4.2 KiB archive, because a byte count
@@ -492,7 +502,7 @@ below is measured on this machine, before and after, on the same input.
 Three gates that ask what `make check` cannot ask of itself.
 
 - **`make mutations`** takes every claim this project makes about a gate, breaks
-  the thing that gate protects, and checks the gate notices — 56 rows, each
+  the thing that gate protects, and checks the gate notices — 57 rows, each
   naming the pytest selection or the tool that has to go red. The harness checks
   itself as hard as it checks the code: a row whose anchor no longer appears
   exactly once is an error rather than a pass; every apply and restore clears
