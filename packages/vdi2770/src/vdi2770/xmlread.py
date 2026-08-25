@@ -70,6 +70,25 @@ MAX_ELEMENTS = 100_000
 # pieces.
 MAX_TEXT_PIECES = 200_000
 
+# And the attributes hung off them, which neither of the two above says anything
+# about. This is the third axis of one parse and it was the one nobody charged.
+#
+# It matters downstream rather than here: this parse is linear in attributes, but
+# the schema check the validator runs afterwards is *quadratic in how many sit on
+# a single element*. 12,000 of them, in a 27 KiB archive, cost 13.6 seconds --
+# the same denial of service every other budget in this module exists to refuse,
+# reached along the one axis that had no name.
+#
+# Two bounds, because the cost has two shapes and this reader has now learned
+# three times that one bound cannot hold both: the per-element cap flattens the
+# quadratic, and the total stops a sender from paying it once per element. At
+# both caps exactly, a 0.8 MiB document costs 1.25 s end to end.
+#
+# Measured over every metadata file in this repository's corpus: the worst
+# element carries three attributes and the worst document fifty-one.
+MAX_ATTRIBUTES_PER_ELEMENT = 128
+MAX_ATTRIBUTES = 100_000
+
 
 @dataclass
 class Node:
@@ -135,12 +154,24 @@ def parse(data: bytes) -> Node:
     built = 0
 
     def start(name: str, attrs: Dict[str, str]) -> None:
-        nonlocal root, built
+        nonlocal root, built, attributes
         built += 1
         if built > MAX_ELEMENTS:
             raise XmlTooLarge(
                 f"the document has more than {MAX_ELEMENTS} elements; this reader "
                 f"will not build a model that large",
+                p.CurrentLineNumber, p.CurrentColumnNumber)
+        if len(attrs) > MAX_ATTRIBUTES_PER_ELEMENT:
+            raise XmlTooLarge(
+                f"one element carries more than {MAX_ATTRIBUTES_PER_ELEMENT} "
+                f"attributes; checking it against the schema costs time in "
+                f"proportion to the square of that number",
+                p.CurrentLineNumber, p.CurrentColumnNumber)
+        attributes += len(attrs)
+        if attributes > MAX_ATTRIBUTES:
+            raise XmlTooLarge(
+                f"the document carries more than {MAX_ATTRIBUTES} attributes; "
+                f"this reader will not build a model that large",
                 p.CurrentLineNumber, p.CurrentColumnNumber)
         ns, _, local = name.rpartition("\x01")
         node = Node(tag=local, ns=ns, attrib=dict(attrs),
@@ -168,6 +199,7 @@ def parse(data: bytes) -> Node:
             node.text = "".join(parts)
 
     pieces = 0
+    attributes = 0
 
     def chars(data_: str) -> None:
         nonlocal pieces

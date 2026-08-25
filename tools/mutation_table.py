@@ -299,6 +299,22 @@ TABLE = [
      "trailer's encryption reference, telling a producer to unprotect a file "
      "that was never protected"),
 
+    ("reader/one-element-may-not-carry-unbounded-attributes",
+     "packages/vdi2770/src/vdi2770/xmlread.py",
+     "        if len(attrs) > MAX_ATTRIBUTES_PER_ELEMENT:",
+     "        if False:",
+     ["packages/vdi2770/tests/test_the_tree_bounds_what_it_builds.py"],
+     "the schema check is quadratic in the attributes on one element: 12,000 "
+     "of them in a 27 KiB archive cost 13.6 s"),
+
+    ("reader/a-document-may-not-carry-unbounded-attributes",
+     "packages/vdi2770/src/vdi2770/xmlread.py",
+     "        if attributes > MAX_ATTRIBUTES:",
+     "        if False:",
+     ["packages/vdi2770/tests/test_the_tree_bounds_what_it_builds.py"],
+     "a per-element cap alone lets a sender pay the per-element cost once for "
+     "every element they care to write"),
+
     ("gates/an-exception-nobody-can-catch-by-name",
      "packages/vdi2770/src/vdi2770/__init__.py",
      '"XmlTooLarge",',

@@ -93,7 +93,9 @@ RULE_BUDGETS = {"MAX_FOLDER_DEPTH": (4, 256), "MAX_FOLDERS": (16, 4_096)}
 # largest metadata file has 53 elements; the floor here is a thousand times that,
 # because a limit tight enough to refuse a real delivery is its own defect.
 XML_BUDGETS = {"MAX_ELEMENTS": (50_000, 5_000_000),
-               "MAX_TEXT_PIECES": (50_000, 5_000_000)}
+               "MAX_TEXT_PIECES": (50_000, 5_000_000),
+               "MAX_ATTRIBUTES_PER_ELEMENT": (64, 8_192),
+               "MAX_ATTRIBUTES": (10_000, 2_000_000)}
 
 
 @pytest.mark.parametrize("where,name,bounds", sorted(

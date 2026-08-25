@@ -162,3 +162,57 @@ def test_the_text_bound_is_generous_next_to_anything_real():
     from vdi2770 import xmlread
 
     assert xmlread.MAX_TEXT_PIECES >= 50_000, xmlread.MAX_TEXT_PIECES
+
+
+def test_one_element_may_not_carry_unboundedly_many_attributes():
+    """The third axis of this parse, and the one nobody was charging.
+
+    Elements were bounded and text pieces were bounded; attributes were not.
+    They are cheap to write -- `a="x"` is seven bytes -- and the schema check
+    downstream is *quadratic* in how many sit on one element: 12,000 of them, in
+    a 27 KiB archive, cost 13.6 seconds. The corpus's worst real element carries
+    three.
+    """
+    from vdi2770 import xmlread
+
+    body = (b'<?xml version="1.0"?><Document xmlns="http://www.vdi.de/schemas/vdi2770" '
+            + b" ".join(b'a%d="x"' % i
+                        for i in range(xmlread.MAX_ATTRIBUTES_PER_ELEMENT + 1))
+            + b"></Document>")
+    with pytest.raises(xmlread.XmlTooLarge) as e:
+        xmlread.parse(body)
+    assert str(xmlread.MAX_ATTRIBUTES_PER_ELEMENT) in str(e.value)
+
+
+def test_a_document_may_not_carry_unboundedly_many_attributes_in_total():
+    """And the axis the per-element bound leaves open.
+
+    A cap on one element still lets a sender put that many on each of thousands
+    of elements; the quadratic becomes a linear cost multiplied by however many
+    elements they care to write. Bounding one axis and calling the cost bounded
+    is the mistake this reader has now made three times, so both are named.
+    """
+    from vdi2770 import xmlread
+
+    per = 8
+    elements = xmlread.MAX_ATTRIBUTES // per + 2
+    one = b"<E " + b" ".join(b'a%d="x"' % i for i in range(per)) + b"/>"
+    body = (b'<?xml version="1.0"?><Document xmlns="http://www.vdi.de/schemas/vdi2770">'
+            + one * elements + b"</Document>")
+    with pytest.raises(xmlread.XmlTooLarge) as e:
+        xmlread.parse(body)
+    assert str(xmlread.MAX_ATTRIBUTES) in str(e.value)
+
+
+def test_the_attribute_bounds_leave_a_real_document_far_below_them():
+    """Both caps are enormous next to anything VDI 2770 describes.
+
+    Measured over every metadata file in the corpus: the worst element carries
+    three attributes and the worst document 51. A bound written to stop an
+    attack must not be one a real delivery can reach, and these are two orders
+    of magnitude away from the real worst.
+    """
+    from vdi2770 import xmlread
+
+    assert xmlread.MAX_ATTRIBUTES_PER_ELEMENT >= 64
+    assert xmlread.MAX_ATTRIBUTES >= 10_000

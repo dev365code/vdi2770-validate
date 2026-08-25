@@ -110,11 +110,15 @@ archive: `MAX_MEMBERS`, `MAX_MEMBER_BYTES`, `MAX_TOTAL_BYTES`, `MAX_RATIO` with
 its `MIN_SUSPICIOUS_BYTES` floor, `MAX_METADATA_BYTES`, `MAX_CONTAINER_LEVELS`;
 across one read: `MAX_CONTAINERS`, `MAX_TOTAL_METADATA_BYTES`,
 `MAX_TOTAL_DECOMPRESSED`, `MAX_TOTAL_MEMBERS`. `vdi2770.xmlread` adds
-`MAX_ELEMENTS` and `MAX_TEXT_PIECES`. The first bounds the tree built out of one
-metadata file — the bytes were bounded and that tree was not, and the expansion
-between them is the sender's to choose. The second bounds the text hung off it,
-which the element count does not see: a document of three elements whose text is
-one character reference repeated cost 287 MB from a 4.2 KiB archive. `vdi2770.pdfread` has eight of its own for the PDF scan:
+`MAX_ELEMENTS`, `MAX_TEXT_PIECES`, `MAX_ATTRIBUTES_PER_ELEMENT` and
+`MAX_ATTRIBUTES`. The first bounds the tree built out of one metadata file — the
+bytes were bounded and that tree was not, and the expansion between them is the
+sender's to choose. The second bounds the text hung off it, which the element
+count does not see: a document of three elements whose text is one character
+reference repeated cost 287 MB from a 4.2 KiB archive. The last two bound the
+attributes hung off it, which neither of the others sees: attributes are cheap
+to write and the schema check downstream is quadratic in how many sit on one
+element, so 12,000 of them in a 27 KiB archive cost 13.6 seconds. `vdi2770.pdfread` has eight of its own for the PDF scan:
 `MAX_STREAMS`, `MAX_STREAM_SCAN`, `MAX_INFLATED_PER_STREAM`,
 `MAX_INFLATED_TOTAL`, `MAX_XMP_PACKETS`, `MAX_PDFA_PREFIXES`,
 `MAX_TRAILER_SCAN` with its `MAX_TRAILERS` companion — one

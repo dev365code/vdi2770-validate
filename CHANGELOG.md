@@ -42,6 +42,17 @@ have a class of its own.
   now a key only where a key can be, and the two comment skips are one function,
   so there is no longer a door to forget. Twenty-two shapes are pinned,
   including the real encrypted PDF in the corpus.
+- **And the attributes hung off them, which was the axis nobody charged.** The
+  parse is linear in attributes; the schema check afterwards is **quadratic in
+  how many sit on a single element**. 12,000 of them, in a **27 KiB** archive,
+  cost **13.6 s**, and a 3 MB one ran past two minutes — the denial of service
+  every other budget in this reader exists to refuse, reached along the one axis
+  that had no name. Two bounds again, because one would not have held:
+  `MAX_ATTRIBUTES_PER_ELEMENT` flattens the quadratic and `MAX_ATTRIBUTES` stops
+  a sender paying the flattened cost once per element. **0.04 s** and **0.53 s**
+  now. The corpus's worst real element carries three attributes and its worst
+  document fifty-one, so both caps sit two orders of magnitude above anything a
+  delivery can reach.
 - **Text arriving in pieces has a ceiling.** The tree had a bound on elements and
   none on how many times the parser handed back character data. One character
   reference repeated cost **287 MB** from a 4.2 KiB archive, because a byte count
@@ -394,7 +405,7 @@ below is measured on this machine, before and after, on the same input.
 Three gates that ask what `make check` cannot ask of itself.
 
 - **`make mutations`** takes every claim this project makes about a gate, breaks
-  the thing that gate protects, and checks the gate notices — 44 rows, each
+  the thing that gate protects, and checks the gate notices — 46 rows, each
   naming the pytest selection or the tool that has to go red. The harness checks
   itself as hard as it checks the code: a row whose anchor no longer appears
   exactly once is an error rather than a pass; every apply and restore clears
