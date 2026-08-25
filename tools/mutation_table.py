@@ -260,7 +260,7 @@ TABLE = [
 
     ("rules/a-dot-slash-prefix-is-not-a-folder",
      "src/vdi2770_validate/rules/container.py",
-     '        if not [seg for seg in prefix.split("/") if seg not in ("", ".")]:',
+     '        if not folder_path(prefix + "/"):',
      "        if False:",
      ["tests/test_documents_delivered_as_folders.py"],
      "`./VDI2770_Metadata.xml` is at the root, and Z13 said this tool had not "

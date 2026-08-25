@@ -22,6 +22,8 @@ Opening them is a feature. Not lying about them is not.
 import io
 import zipfile
 
+import pytest
+
 from conftest import CLEAN_DOCUMENT, CLEAN_DOCUMENTATION
 from vdi2770_validate.model import Severity
 from vdi2770_validate.runner import check_bytes
@@ -150,3 +152,38 @@ def test_a_dot_slash_folder_still_suppresses_the_files_inside_it():
     assert "F2" not in fired, (
         "the files inside a folder this tool did not open were called undeclared: "
         + str(fired))
+
+
+@pytest.mark.parametrize("meta_name,file_name", [
+    ("docdir/VDI2770_Metadata.xml", "docdir/B.pdf"),
+    ("./docdir/VDI2770_Metadata.xml", "docdir/B.pdf"),
+    ("docdir/VDI2770_Metadata.xml", "./docdir/B.pdf"),
+    ("./docdir/VDI2770_Metadata.xml", "./docdir/B.pdf"),
+    ("docf//VDI2770_Metadata.xml", "docf/B.pdf"),
+    ("docf/VDI2770_Metadata.xml", "docf//B.pdf"),
+])
+def test_a_folder_is_the_same_folder_however_its_members_are_spelled(meta_name, file_name):
+    """`Z13` says this tool did not open the folder, so `files.py` suppresses
+    `F2` for what is inside it — by matching the folder's prefix against the
+    archive's member names. Writers mix `./` prefixes and doubled slashes freely
+    within one archive, and a literal match on those spellings meant a file whose
+    path differed from its own metadata's by a `.` was reported undeclared, in
+    the same report that said the folder was never opened.
+
+    Two rules contradicting each other about one file is the thing the whole
+    `Z13`/`F2` arrangement exists to prevent.
+    """
+    src = zipfile.ZipFile(CLEAN_DOCUMENT)
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr("VDI2770_Main.xml",
+                   b'<?xml version="1.0"?><Document xmlns="http://www.vdi.de/schemas/vdi2770"/>')
+        z.writestr("VDI2770_Main.pdf", b"%PDF-1.7\n")
+        z.writestr(meta_name, src.read("VDI2770_Metadata.xml"))
+        z.writestr(file_name, src.read("B.pdf"))
+
+    fired = [f.rule.id for f in report(buf.getvalue()).findings]
+    assert "Z13" in fired, fired
+    assert "F2" not in fired, (
+        f"{file_name} sits in the folder {meta_name} names, and was called "
+        f"undeclared: {fired}")

@@ -9,6 +9,23 @@ from ..model import MAIN_PDF, METADATA_XML, Finding, Kind
 from ..names import nfc
 
 
+def folder_path(name: str) -> str:
+    """The folder part of a member name, with `.` and empty segments dropped.
+
+    One place, because two rules compare against it and they were comparing
+    different things: `Z13` decided a folder existed after dropping `.`, and
+    `files.py` suppressed `F2` by matching the archive's raw spelling. Writers
+    mix `./` prefixes and doubled slashes freely inside one archive, so a file
+    whose path differed from its own metadata's by a dot was reported undeclared
+    in the same report that said its folder was never opened.
+
+    The archive's spelling is still what a finding shows -- a name a user cannot
+    find in their ZIP listing is not a report they can act on. This is only for
+    deciding whether two names are in the same place.
+    """
+    return "/".join(seg for seg in nfc(name).split("/") if seg not in ("", "."))
+
+
 def folders_holding_metadata(container) -> list:
     """Folders that hold a reserved metadata name — a document container that was
     not zipped.
@@ -37,7 +54,7 @@ def folders_holding_metadata(container) -> list:
         # the prefix made that match nothing — so the files in a folder the same
         # report calls unopened were accused of being undeclared. It is also what
         # a user has to find in their ZIP listing.
-        if not [seg for seg in prefix.split("/") if seg not in ("", ".")]:
+        if not folder_path(prefix + "/"):
             continue
         out.append(prefix + "/")
     return sorted(set(out))

@@ -2,7 +2,7 @@
 
 ## 0.7.0 — 2026-08-25
 
-Six things that were true of the code and not of what the project said about it,
+Seven things that were true of the code and not of what the project said about it,
 plus the guards that make each one say so next time.
 
 
@@ -22,6 +22,14 @@ This one repairs the class.
   which is the only bound with no shape behind it. **0.008 s**, and it does not
   move when the input grows fivefold. Seventeen shapes are pinned, including the
   real encrypted PDF in the corpus.
+- **Two rules stopped contradicting each other about the same folder.** Writers
+  mix `./` prefixes and doubled slashes inside one archive. `Z13` decided a
+  folder existed after dropping `.` segments, and `files.py` suppressed `F2` by
+  matching the archive's raw spelling -- so a file could be reported undeclared in
+  the same report that said its folder had never been opened. One `folder_path`
+  now makes the decision for both; a finding still shows the archive's own
+  spelling, because a name a user cannot find in their ZIP listing is not a
+  report they can act on.
 - **The record is checked against its tag unconditionally.** That check was
   guarded by "is the recorded version published?" — a value the editor of the
   file chooses. Point `version` at a tag that does not exist and the branch never

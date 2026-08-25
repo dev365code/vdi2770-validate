@@ -5,7 +5,7 @@ from typing import Iterator
 
 from ..catalog import rule
 from ..model import MAIN_PDF, MAIN_XML, METADATA_XML, About, Finding, Kind
-from ..names import Members, nfc
+from ..names import Members
 
 EXTENSION_FOR = {"application/pdf": ".pdf", "application/zip": ".zip"}
 
@@ -94,12 +94,17 @@ def check(container, document) -> Iterator[Finding]:
     # was not zipped. Its files are declared in metadata this tool never opened,
     # so calling them undeclared is a statement about a file we did not read.
     # `Z13` says we did not read it.
-    from .container import folders_holding_metadata
-    unopened = tuple(folders_holding_metadata(container))
+    from .container import folder_path, folders_holding_metadata
+    unopened = tuple(folder_path(f) for f in folders_holding_metadata(container))
     for name in sorted(set(members.present) - accounted_for - structural):
         if name.lower().endswith(".zip"):
             continue
-        if any(nfc(name).startswith(f) for f in unopened):
+        # Both sides through the same normalisation, and compared segment by
+        # segment: `startswith` on raw names made `docdirX/B.pdf` look like it
+        # was inside `docdir/`, and a `./` on either side made a file inside one
+        # look like it was outside.
+        here = folder_path(name)
+        if any(here == f or here.startswith(f + "/") for f in unopened if f):
             continue
         r = rule("F2")
         yield Finding(r, r.title, container.where.child(member=name, subject=name))
