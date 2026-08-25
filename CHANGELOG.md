@@ -151,6 +151,15 @@ have a class of its own.
   reference, which is the only form ISO 32000-1 permits for the encryption
   dictionary. The behaviour is right; the sentence was loose, and `docs/scope.md`
   had always been the honest one.
+- **The last stopwatch assertion is a counted one.** `elapsed < 5` on a
+  16,000-error document failed four runs in six under load, and it was not
+  measuring what it defended: the cost it exists for was `_resolve` rebuilding
+  the whole sibling list once per error, 38% of the 29 seconds that prompted
+  this area. It counts the rebuilds now and compares two sizes rather than
+  holding each under a ceiling — what matters is that the number does not grow
+  with the error count. Three timed assertions in this project have flaked in
+  one week; every one of them has been replaced by a count of the thing that
+  actually costs.
 - **Text arriving in pieces has a ceiling.** The tree had a bound on elements and
   none on how many times the parser handed back character data. One character
   reference repeated cost **287 MB** from a 4.2 KiB archive, because a byte count
@@ -513,7 +522,7 @@ below is measured on this machine, before and after, on the same input.
 Three gates that ask what `make check` cannot ask of itself.
 
 - **`make mutations`** takes every claim this project makes about a gate, breaks
-  the thing that gate protects, and checks the gate notices — 58 rows, each
+  the thing that gate protects, and checks the gate notices — 59 rows, each
   naming the pytest selection or the tool that has to go red. The harness checks
   itself as hard as it checks the code: a row whose anchor no longer appears
   exactly once is an error rather than a pass; every apply and restore clears

@@ -411,6 +411,14 @@ TABLE = [
      "the budget refused the parse, and this would hand xmlschema the very "
      "document the reader called too expensive, with no tree behind it"),
 
+    ("rules/one-sibling-list-per-parent-not-per-error",
+     "src/vdi2770_validate/xsdvalidate.py",
+     "        if kids_of is None:\n            return node.find_all(tag)",
+     "        if True:\n            return node.find_all(tag)",
+     ["tests/test_the_schema_check_is_bounded.py"],
+     "rebuilding the sibling list once per error to index one of them was 38% "
+     "of the 29 seconds this area exists because of"),
+
     ("gates/an-exception-nobody-can-catch-by-name",
      "packages/vdi2770/src/vdi2770/__init__.py",
      '"XmlTooLarge",',

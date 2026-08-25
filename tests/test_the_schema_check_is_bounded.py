@@ -39,12 +39,41 @@ def container_with(n):
     return buf.getvalue()
 
 
-def test_a_document_full_of_schema_errors_does_not_cost_minutes():
-    body = metadata_with(16_000)
-    started = time.monotonic()
-    xsdvalidate.validate(body, xmlread.parse(body))
-    elapsed = time.monotonic() - started
-    assert elapsed < 5, f"{len(body) / 1024:.0f} KB of metadata cost {elapsed:.1f}s"
+def test_resolving_lines_does_not_rebuild_the_sibling_list_per_error(monkeypatch):
+    """Counted, and flat.
+
+    This asserted `elapsed < 5`, and failed four runs in six under twenty
+    background spinners on a ten-core box -- a wall-clock ceiling measures the
+    machine at least as much as the code, and this project has had two such
+    assertions flake in one week. It is also not what the cost was: 38% of the
+    29 seconds that prompted this whole area was `_resolve` rebuilding the whole
+    sibling list once per error to index one of them, which is quadratic in the
+    errors over one parent. `kids_of` caches that.
+
+    So count the rebuilds, and compare two sizes rather than holding each under
+    a ceiling: what matters is that the number does not grow with the error
+    count. Without the cache it grows with it, one rebuild per error resolved.
+    """
+    from vdi2770.xmlread import Node
+
+    real = Node.find_all
+    rebuilds = {}
+    for n in (2_000, 16_000):
+        count = [0]
+
+        def counting(self, tag, _real=real, _count=count):
+            _count[0] += 1
+            return _real(self, tag)
+
+        monkeypatch.setattr(Node, "find_all", counting)
+        body = metadata_with(n)
+        xsdvalidate.validate(body, xmlread.parse(body))
+        monkeypatch.undo()
+        rebuilds[n] = count[0]
+
+    assert rebuilds[16_000] <= rebuilds[2_000] + 2, (
+        f"the sibling list is rebuilt {rebuilds[16_000]} times for 16,000 errors "
+        f"and {rebuilds[2_000]} for 2,000; the cache is not holding")
 
 
 def test_the_cost_stops_growing_once_the_budget_is_spent():
