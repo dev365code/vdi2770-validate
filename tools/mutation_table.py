@@ -268,24 +268,24 @@ TABLE = [
 
     ("reader/each-trailer-gets-its-own-budget",
      "packages/vdi2770/src/vdi2770/pdfread.py",
-     "    return any(_scan_dictionary(data, start, MAX_TRAILER_SCAN)",
-     "    return any(_scan_dictionary(data, start, max(0, MAX_TRAILER_SCAN - start))",
+     "    declared = _declared_trailer(data)",
+     "    declared = None",
      ["packages/vdi2770/tests/test_the_public_api.py"],
-     "one trailer with a long /ID spent the budget and the encrypted trailer "
-     "after it was never read"),
+     "the file declares where its cross-reference is; guessing instead is how "
+     "this scan has been wrong five times"),
 
     ("reader/the-trailers-that-are-read-are-the-last-ones",
      "packages/vdi2770/src/vdi2770/pdfread.py",
-     "               for start in starts[-MAX_TRAILERS:])",
-     "               for start in starts[:MAX_TRAILERS])",
+     "    tail = collections.deque(_TRAILER.finditer(data), maxlen=MAX_TRAILERS)",
+     "    tail = list(_TRAILER.finditer(data))[:1]",
      ["packages/vdi2770/tests/test_the_public_api.py"],
      "an incremental update appends, so reading the first trailers reports the "
      "file as it was before it was encrypted"),
 
     ("reader/a-comment-may-stand-before-the-dictionary",
      "packages/vdi2770/src/vdi2770/pdfread.py",
-     "    return nl + 1",
-     "    return limit",
+     "    hit = _NEWLINE.search(data, i, limit)",
+     "    hit = None",
      ["packages/vdi2770/tests/test_the_public_api.py"],
      "comments were skipped inside the dictionary but not at its door, so a "
      "file that wrote one there had its trailer declared absent"),
@@ -317,11 +317,12 @@ TABLE = [
 
     ("runner/a-path-that-blocks-is-a-path-we-cannot-read",
      "src/vdi2770_validate/runner.py",
-     "    if not stat.S_ISREG(os.stat(path).st_mode):",
-     "    if False:",
+     "        fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK)",
+     '        fd = os.open(path, os.O_RDONLY)',
      ["tests/test_defences.py"],
-     "opening a FIFO with no writer waits forever, and the handler that keeps "
-     "one bad path from stopping a sweep catches exceptions, not hangs"),
+     "a blocking open on a FIFO with no writer waits forever, and the handler "
+     "that keeps one bad path from stopping a sweep catches exceptions, not "
+     "hangs"),
 
     ("rules/a-repeated-name-is-not-a-bad-checksum",
      "src/vdi2770_validate/rules/files.py",
@@ -470,8 +471,8 @@ TABLE = [
 
     ("reader/the-number-of-trailers-scanned-is-bounded",
      "packages/vdi2770/src/vdi2770/pdfread.py",
-     "    return any(_scan_dictionary(data, start, MAX_TRAILER_SCAN)",
-     "    return all(_scan_dictionary(data, start, MAX_TRAILER_SCAN)",
+     "    return any(_scan_dictionary(data, hit.end(), MAX_TRAILER_SCAN) for hit in tail)",
+     "    return all(_scan_dictionary(data, hit.end(), MAX_TRAILER_SCAN) for hit in tail)",
      ["packages/vdi2770/tests/test_the_public_api.py"],
      "without a bound on how many dictionaries are walked, the per-dictionary "
      "budget multiplies: 16,000 bare `trailer` keywords cost 135 s"),

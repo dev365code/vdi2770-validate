@@ -6,6 +6,7 @@ from typing import Iterator
 from ..catalog import rule
 from ..model import MAIN_PDF, MAIN_XML, METADATA_XML, About, Finding, Kind
 from ..names import Members
+from .container import MAX_FOLDER_DEPTH
 
 EXTENSION_FOR = {"application/pdf": ".pdf", "application/zip": ".zip"}
 
@@ -18,6 +19,32 @@ BUDGET_REFUSALS = frozenset({
     "archive-too-large", "container-budget-exhausted",
     "decompression-budget-exhausted", "member-budget-exhausted",
 })
+
+
+def _inside(here: str, unopened) -> bool:
+    """Whether the normalised member path `here` sits in one of `unopened`.
+
+    By asking about *this path's* ancestors rather than scanning every folder.
+    The scan was `any(here == f or here.startswith(f + "/") for f in unopened)`,
+    run once per undeclared member, with `unopened` bounded only by
+    `MAX_MEMBERS` -- so cost was members times folders and a 900 KB archive of
+    four thousand each cost 24 seconds, past every budget the reader has,
+    because none of them measures this.
+
+    A path has at most `MAX_FOLDER_DEPTH` ancestors, which is the bound `Z9`
+    already puts on the same walk one file away. Both sides go through
+    `folder_path` first: `startswith` on raw names made `docdirX/B.pdf` look like
+    it was inside `docdir/`, and a `./` on either side made a file inside one
+    look like it was outside.
+    """
+    if here in unopened:
+        return True
+    prefix = ""
+    for segment in here.split("/")[:-1][:MAX_FOLDER_DEPTH]:
+        prefix = f"{prefix}/{segment}" if prefix else segment
+        if prefix in unopened:
+            return True
+    return False
 
 
 def check(container, document) -> Iterator[Finding]:
@@ -103,17 +130,13 @@ def check(container, document) -> Iterator[Finding]:
     # was not zipped. Its files are declared in metadata this tool never opened,
     # so calling them undeclared is a statement about a file we did not read.
     # `Z13` says we did not read it.
-    from .container import folder_path, folders_holding_metadata
-    unopened = tuple(folder_path(f) for f in folders_holding_metadata(container))
+    from ..names import folder_path
+    from .container import folders_holding_metadata
+    unopened = frozenset(folder_path(f) for f in folders_holding_metadata(container)) - {""}
     for name in sorted(set(members.present) - accounted_for - structural):
         if name.lower().endswith(".zip"):
             continue
-        # Both sides through the same normalisation, and compared segment by
-        # segment: `startswith` on raw names made `docdirX/B.pdf` look like it
-        # was inside `docdir/`, and a `./` on either side made a file inside one
-        # look like it was outside.
-        here = folder_path(name)
-        if any(here == f or here.startswith(f + "/") for f in unopened if f):
+        if _inside(folder_path(name), unopened):
             continue
         r = rule("F2")
         yield Finding(r, r.title, container.where.child(member=name, subject=name))

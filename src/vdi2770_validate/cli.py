@@ -5,12 +5,17 @@ sweep continues. A CI job pointed at a supplier drop folder must come back with
 a verdict on every container it was given, not a traceback about the first one.
 
 Exit codes: 0 nothing wrong, 1 at least one error or unreadable path, 2 nothing
-could be read at all.
+could be read at all. A run whose reader goes away -- `| head` -- ends by
+`SIGPIPE` where the platform has one and 141 where it does not, because it did
+not finish: any of 0, 1 or 2 would be a claim about containers nobody looked at.
 """
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
+import os
+import signal
 import sys
 
 from . import __version__ as VERSION  # one place, not three
@@ -117,5 +122,47 @@ def main(argv=None) -> int:
     return args.func(args)
 
 
+def _survive_the_console() -> None:
+    """Two ways the terminal, rather than the container, ended a run.
+
+    A console that cannot encode the output. Every remedy in this tool contains
+    an em dash and four class names contain umlauts, so on `cp850` or `cp437` --
+    the OEM defaults of Windows `cmd.exe` -- `print` raised `UnicodeEncodeError`
+    from outside the handler that exists so a CI job "must come back with a
+    verdict on every container it was given, not a traceback about the first
+    one". A conformant container came back as a traceback and exit 1, this
+    tool's code for *at least one error*, and the sweep died on the first path.
+    `backslashreplace` rather than `replace`: `\u2014` says something was there
+    and says what, where `?` does not.
+
+    And a reader that stops reading. `| head` closes the pipe, and `print` then
+    raised `BrokenPipeError` from the same place -- two tracebacks on the way
+    down, exit 120 with text output and exit **1** with `--json`, for four
+    hundred containers that had nothing wrong. Restoring the default disposition
+    hands that back to the operating system, which is what every other tool in
+    the pipeline does.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is not None:
+            with contextlib.suppress(ValueError, OSError):   # not a text file
+                reconfigure(errors="backslashreplace")
+    if hasattr(signal, "SIGPIPE"):
+        signal.signal(signal.SIGPIPE, signal.SIG_DFL)
+
+
+def _run(argv=None) -> int:
+    """`main` with the console handled. The entry points call this."""
+    _survive_the_console()
+    try:
+        return main(argv)
+    except BrokenPipeError:
+        # Only where there is no `SIGPIPE` to restore. Send the rest of our
+        # output somewhere harmless so the interpreter's shutdown flush does not
+        # print a second complaint about the pipe that has already gone.
+        os.dup2(os.open(os.devnull, os.O_WRONLY), sys.stdout.fileno())
+        return 141
+
+
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(_run())

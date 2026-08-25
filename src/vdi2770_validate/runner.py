@@ -305,15 +305,44 @@ def check_bytes(data: bytes, name: str) -> Report:
 
 
 def check_file(path: str) -> Report:
-    # `os.stat` before `open`, because one kind of unreadable path does not fail
-    # -- it waits. Opening a FIFO with no writer blocks forever, and `cli` catches
-    # exceptions so that one bad path cannot stop the rest of a sweep; a hang is
-    # not an exception, so a single named pipe in a supplier drop folder meant
-    # the run produced a verdict on nothing. A directory and a dead symlink were
-    # already refused here, by raising; this refuses the third shape the same
-    # way, so the caller's handler sees what it already knows how to report.
-    if not stat.S_ISREG(os.stat(path).st_mode):
-        raise OSError(errno.EINVAL, "not a regular file", path)
-    with open(path, "rb") as fh:
-        data = fh.read()
+    # Opened without blocking, because one kind of unreadable path does not fail
+    # -- it waits. A FIFO with no writer blocks in `open` forever, and `cli`
+    # catches exceptions so one bad path cannot stop a sweep; a hang is not an
+    # exception, so a single named pipe in a supplier drop folder meant the run
+    # produced a verdict on nothing.
+    #
+    # The first repair refused anything `S_ISREG` said no to, which refused the
+    # hang and also refused `check <(unzip -p ...)` and `... | check /dev/stdin`
+    # -- both of which worked, and neither of which is a FIFO without a writer.
+    # Fixing the shape that was found instead of the thing that was wrong, for
+    # the second time this week. `O_NONBLOCK` distinguishes them: it returns at
+    # once whether or not a writer is there, so the pipe that has one is read
+    # and the one that does not reaches end-of-file instead of waiting.
+    #
+    # Cleared straight after, so a writer that is merely slow is waited for.
+    # `fcntl` is Unix-only, and importing it at module scope made the whole
+    # package fail to import on Windows -- in the release whose headline fix is
+    # the Windows console. The platform that has no `O_NONBLOCK` also has no
+    # FIFO to hang on, so it keeps the earlier refusal.
+    if not hasattr(os, "O_NONBLOCK"):
+        if not stat.S_ISREG(os.stat(path).st_mode):
+            raise OSError(errno.EINVAL, "not a regular file", path)
+        with open(path, "rb") as fh:
+            data = fh.read()
+    else:
+        import fcntl
+
+        fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK)
+        try:
+            flags = fcntl.fcntl(fd, fcntl.F_GETFL)
+            fcntl.fcntl(fd, fcntl.F_SETFL, flags & ~os.O_NONBLOCK)
+        except BaseException:
+            os.close(fd)
+            raise
+        # No second close: `fdopen` takes ownership, and closing again after the
+        # `with` had already closed it turned a read error into `EBADF` -- the
+        # true diagnosis destroyed, and in a long-lived process a chance of
+        # closing an unrelated file that had reused the number.
+        with os.fdopen(fd, "rb") as fh:
+            data = fh.read()
     return check_bytes(data, path.rsplit("/", 1)[-1])

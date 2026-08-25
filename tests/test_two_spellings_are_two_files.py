@@ -13,8 +13,10 @@ import io
 import unicodedata
 import zipfile
 
+import pytest
+
 from conftest import CLEAN_DOCUMENT
-from vdi2770_validate.runner import check_file
+from vdi2770_validate.runner import check_bytes, check_file
 
 SRC = zipfile.ZipFile(CLEAN_DOCUMENT)
 META = SRC.read("VDI2770_Metadata.xml").decode()
@@ -169,3 +171,51 @@ def test_an_exactly_repeated_name_is_as_ambiguous_as_a_normalised_one():
         f"{sorted(forward)} vs {sorted(backward)}")
     assert not (forward & {"P1", "P4"}), (
         f"a name that denotes two different files was judged as one: {sorted(forward)}")
+
+
+def _respelled(mapping):
+    """`CLEAN_DOCUMENT` with some members stored under a different spelling."""
+    src = zipfile.ZipFile(CLEAN_DOCUMENT)
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        for name in src.namelist():
+            z.writestr(mapping.get(name, name), src.read(name))
+    return buf.getvalue()
+
+
+# `d//B.pdf` is deliberately absent: it normalises to `d/B.pdf`, which is a
+# different file from the `B.pdf` this metadata declares. Only segments that
+# drop out entirely -- `.` and empty -- may be reconciled away.
+@pytest.mark.parametrize("spelling", ["./B.pdf", ".//B.pdf", ".///./B.pdf"])
+def test_a_member_spelled_with_a_dot_segment_is_the_file_the_metadata_declares(spelling):
+    """One file, reported as two contradictory things.
+
+    `names.py` exists because "every place that compares a name has to reconcile
+    them the *same* way" -- its own words. It reconciles NFC and nothing else,
+    while three other places in this codebase deliberately drop `.` segments on
+    the stated grounds that writers mix `./` prefixes freely inside one archive.
+    So `./B.pdf` was reported `F1` *declared but not in the archive* and `F2` *in
+    the container but not named in the metadata*, in the same report, about the
+    same file -- verbatim the failure this module's docstring says it prevents.
+    Both remedies are unactionable: adding the file again changes nothing, and
+    removing the `DigitalFile` entry breaks conformant metadata.
+    """
+    report = check_bytes(_respelled({"B.pdf": spelling}), "dot.zip")
+    fired = {f.rule.id for f in report.findings}
+    assert "F1" not in fired, [f.detail for f in report.findings if f.rule.id == "F1"]
+    assert "F2" not in fired, [f.where.member for f in report.findings if f.rule.id == "F2"]
+
+
+def test_a_dot_segment_does_not_stop_the_pdf_being_looked_at():
+    """The quiet half of the same defect.
+
+    `pdf._targets` resolves declared names through `Members` too, so a member the
+    resolution could not find is a member nobody scans -- the `P4` note that
+    reads the file's PDF/A claim simply disappears, and nothing in the report
+    says a PDF went unexamined.
+    """
+    plain = {f.rule.id for f in check_bytes(_respelled({}), "plain.zip").findings}
+    dotted = {f.rule.id for f in check_bytes(_respelled({"B.pdf": "./B.pdf"}),
+                                             "dot.zip").findings}
+    assert "P4" in plain, "the premise: this container's PDF carries a claim"
+    assert "P4" in dotted, "the PDF was never scanned once its name gained a `./`"

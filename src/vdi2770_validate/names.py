@@ -22,7 +22,25 @@ from typing import Dict, List, Mapping, Optional, Sequence, Tuple
 from vdi2770 import nfc
 from vdi2770.model import Defect
 
-__all__ = ["Members", "nfc"]
+__all__ = ["Members", "folder_path", "nfc"]
+
+
+def folder_path(name: str) -> str:
+    """`name` with `.` and empty segments dropped, after `nfc`.
+
+    The other half of reconciliation, and it lived somewhere else for a while --
+    in `rules/container.py`, where two rules used it to agree about folders while
+    `Members`, one layer down, still compared member names by `nfc` alone. So a
+    member stored as `./B.pdf` was `F1` *declared but not in the archive* and
+    `F2` *in the container but not named in the metadata*, in one report, about
+    one file: exactly what the module docstring above says this module exists to
+    prevent, arriving through the door the docstring was not watching.
+
+    Only segments that denote nothing are dropped -- `.` and empty. `..` is left
+    alone: it denotes a different directory, the reader refuses names carrying it
+    (`unsafe-member-name`), and quietly resolving one here would undo that.
+    """
+    return "/".join(seg for seg in nfc(name).split("/") if seg not in ("", "."))
 
 
 class Members:
@@ -46,13 +64,16 @@ class Members:
         # that wants to know whether *the archive* repeated a name has to read
         # the refusal, which is where the reader put the answer.
         self.ambiguous = frozenset(n for n, k in seen.items() if k > 1)
+        # Keyed on the path, not merely the composition. `./B.pdf` and `B.pdf`
+        # are one path -- `unzip` writes both to `B.pdf` -- and keying on `nfc`
+        # alone made the second of them unfindable.
         self._by_nfc: Dict[str, List[str]] = {}
         for name in self.present:
-            self._by_nfc.setdefault(nfc(name), []).append(name)
+            self._by_nfc.setdefault(folder_path(name), []).append(name)
         self._rejected = dict(rejected or {})
         self._rejected_by_nfc: Dict[str, List[str]] = {}
         for name in self._rejected:
-            self._rejected_by_nfc.setdefault(nfc(name), []).append(name)
+            self._rejected_by_nfc.setdefault(folder_path(name), []).append(name)
 
     def resolve(self, declared: str) -> Optional[str]:
         """The member a declared name refers to, in the archive's own spelling.
@@ -71,7 +92,7 @@ class Members:
             return None
         if declared in self._exact:
             return declared
-        candidates = self._by_nfc.get(nfc(declared), ())
+        candidates = self._by_nfc.get(folder_path(declared), ())
         return candidates[0] if len(candidates) == 1 else None
 
     #: A refusal, said in a sentence. The reader hands back the `Defect` that
@@ -103,7 +124,7 @@ class Members:
         """
         if declared in self._rejected:
             return self._rejected[declared]
-        candidates = self._rejected_by_nfc.get(nfc(declared), ())
+        candidates = self._rejected_by_nfc.get(folder_path(declared), ())
         return self._rejected[candidates[0]] if len(candidates) == 1 else None
 
     def refusal(self, declared: str) -> Optional[str]:

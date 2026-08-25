@@ -38,7 +38,7 @@ Changelog = "https://github.com/dev365code/vdi2770-validate/blob/main/CHANGELOG.
 dev = ["pytest==8.3.4", "ruff==0.16.3"]
 
 [project.scripts]
-vdi2770-validate = "vdi2770_validate.cli:main"
+vdi2770-validate = "vdi2770_validate.cli:_run"
 
 [tool.setuptools]
 # The wheel bundles VDI's schema and a table derived from an IDTA publication,

@@ -2,10 +2,12 @@
 all — which is how `classes` came to crash while `make check` stayed green.
 """
 import json
+import subprocess
+import sys
 
 import pytest
 
-from conftest import CLEAN_DOCUMENT, FIXTURES
+from conftest import CLEAN_DOCUMENT, FIXTURES, under_test
 from vdi2770_validate.cli import main
 
 capsys_holder = [None]
@@ -238,3 +240,60 @@ def test_a_path_that_could_not_be_read_still_appears_in_the_json():
     missing = next(d for d in doc if d["path"] == "no-such-file.zip")
     assert missing.get("unreadable"), missing
     assert code == 1
+
+
+@pytest.mark.parametrize("encoding", ["ascii", "latin-1", "cp850", "cp437"])
+def test_a_console_that_is_not_utf8_still_gets_a_verdict(encoding):
+    """The remedies contain an em dash, and the class names contain umlauts.
+
+    On any console that cannot encode them -- `cp850` and `cp437` are the OEM
+    defaults of Windows `cmd.exe` -- `print` raised `UnicodeEncodeError` from
+    outside the handler that exists so "a CI job must come back with a verdict on
+    every container it was given, not a traceback about the first one". A
+    conformant container came back as a traceback and exit 1, which is this
+    tool's code for *at least one error*.
+    """
+    done = subprocess.run(
+        [sys.executable, "-m", "vdi2770_validate", "check", str(CLEAN_DOCUMENT)],
+        capture_output=True, text=True, timeout=120,
+        env={**under_test(), "PYTHONIOENCODING": encoding})
+    assert "Traceback" not in done.stderr, done.stderr
+    assert done.returncode == 0, done.stdout + done.stderr
+
+
+def test_a_console_that_is_not_utf8_does_not_stop_the_sweep():
+    """And the container after it is still reported. The first failure took the
+    whole run down: three paths in, zero reports out."""
+    done = subprocess.run(
+        [sys.executable, "-m", "vdi2770_validate", "check",
+         str(CLEAN_DOCUMENT), str(CLEAN_DOCUMENT), str(CLEAN_DOCUMENT)],
+        capture_output=True, text=True, timeout=120,
+        env={**under_test(), "PYTHONIOENCODING": "ascii"})
+    assert done.stdout.count("error(s)") == 3, done.stdout + done.stderr
+
+
+def test_a_reader_that_stops_reading_does_not_produce_a_traceback():
+    """`vdi2770-validate check *.zip | head -1`.
+
+    The pipe closes, `print` raises `BrokenPipeError` from outside the handler,
+    and the interpreter prints two tracebacks on the way down. Exit was **120**,
+    which appears in no documentation; with `--json` it was **1** -- *at least
+    one error* -- for containers that had none.
+    """
+    import signal
+
+    args = [sys.executable, "-m", "vdi2770_validate", "check"] + [str(CLEAN_DOCUMENT)] * 400
+    proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                            env=under_test())
+    proc.stdout.readline()
+    proc.stdout.close()
+    proc.wait(timeout=120)
+    err = proc.stderr.read().decode("utf-8", "replace")
+    proc.stderr.close()
+
+    assert "Traceback" not in err, err
+    assert "BrokenPipeError" not in err, err
+    # Killed by the signal the platform has for this, or the code a shell
+    # reports for it. Never a verdict: the run did not finish, and saying 0 or 1
+    # would be a claim about containers nobody looked at.
+    assert proc.returncode in (-signal.SIGPIPE, 141), proc.returncode

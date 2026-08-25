@@ -12,6 +12,7 @@ report says so every time it prints a claim.
 """
 from __future__ import annotations
 
+import collections
 import re
 import zlib
 from dataclasses import dataclass
@@ -63,6 +64,9 @@ MAX_TRAILER_SCAN = 65536  # the most of ONE trailer dictionary that is read
 # appends and the newest trailer is the one that counts.
 MAX_TRAILERS = 64
 
+_STARTXREF = re.compile(rb"startxref\s+(\d+)")
+_NEWLINE = re.compile(rb"[\r\n]")
+
 
 def _is_encrypted(data: bytes) -> bool:
     """Whether a trailer dictionary has an `/Encrypt` key whose value is an
@@ -99,9 +103,60 @@ def _is_encrypted(data: bytes) -> bool:
     keyword and comes back False. That is a miss and not a false alarm, and
     docs/scope.md says so rather than leaving a reader to assume otherwise.
     """
-    starts = [hit.end() for hit in _TRAILER.finditer(data)]
-    return any(_scan_dictionary(data, start, MAX_TRAILER_SCAN)
-               for start in starts[-MAX_TRAILERS:])
+    # Where the format says the answer is, before anywhere we might guess it is.
+    #
+    # The previous repair read the *last* `MAX_TRAILERS` dictionaries, on the
+    # reasoning that an incremental update appends. True of a file nobody is
+    # attacking; sixty-four occurrences of the token `%trailer` appended after
+    # `%%EOF` -- 640 bytes, ignored by every conformant reader -- pushed the real
+    # trailer out of that window and an encrypted PDF came back clean. Every
+    # window is pushable, because the window is a guess about where to look, and
+    # this scan has now guessed four different ways.
+    #
+    # `startxref` is not a guess. It is the one offset the file itself declares,
+    # and following it is what a reader does. All fifty-five PDFs in this
+    # repository's corpus carry one.
+    declared = _declared_trailer(data)
+    if declared is not None and _scan_dictionary(data, declared, MAX_TRAILER_SCAN):
+        return True
+
+    # And the fallback, for a file damaged, truncated, or written by hand, which
+    # is the file that needs one most. `deque` rather than a list: the list was
+    # built in full and then sliced, so six million tokens in a 68 KiB archive
+    # cost 337 MiB of offsets nobody would look at.
+    tail = collections.deque(_TRAILER.finditer(data), maxlen=MAX_TRAILERS)
+    return any(_scan_dictionary(data, hit.end(), MAX_TRAILER_SCAN) for hit in tail)
+
+
+def _declared_trailer(data: bytes):
+    """The offset of the trailer dictionary the file's own `startxref` names.
+
+    Two shapes reach it. A classic cross-reference table begins `xref` and the
+    dictionary follows the table, however long that table is -- so it is found by
+    one `bytes.find` from the declared offset, which is a memchr rather than a
+    Python loop. A cross-reference *stream* (PDF 1.5 and later) has no `trailer`
+    keyword at all: the dictionary is the stream object's own, and it opens
+    within a few bytes of the offset. `None` if the file declares nothing usable.
+    """
+    # The last one in the file, found by scanning back from the end -- not by
+    # looking inside a window at the end. A reader reads the last 1024 bytes
+    # because that is where the format promises it; taking that as *our* bound
+    # left one more thing an appender could push out of view, and five thousand
+    # decoys did. `rfind` is a memchr backwards over the whole file, which costs
+    # one pass and takes no guess.
+    at = data.rfind(b"startxref")
+    if at == -1:
+        return None
+    hit = _STARTXREF.match(data, at)
+    if hit is None:
+        return None
+    offset = int(hit.group(1))
+    if not 0 < offset < len(data):
+        return None
+    if data[offset:offset + 4] == b"xref":
+        found = data.find(b"trailer", offset)
+        return None if found == -1 else found + len(b"trailer")
+    return offset
 
 
 def _end_of_comment(data: bytes, i: int, limit: int) -> int:
@@ -110,9 +165,12 @@ def _end_of_comment(data: bytes, i: int, limit: int) -> int:
     Both the lead-in and the dictionary body need this, and when only one of them
     had it a comment between `trailer` and `<<` made the dictionary invisible.
     """
-    nl = min((x for x in (data.find(c, i, limit) for c in (b"\n", b"\r"))
-              if x != -1), default=limit)
-    return nl + 1
+    # One pass. Asking `find` for each of `\n` and `\r` separately meant that a
+    # dictionary containing only one of them paid a failing scan to the end of
+    # the budget for the other -- on *every* comment. Sixty-four dictionaries of
+    # comments cost 11.6 seconds from an archive that deflates to five kilobytes.
+    hit = _NEWLINE.search(data, i, limit)
+    return (hit.start() if hit else limit) + 1
 
 
 def _scan_dictionary(data: bytes, start: int, budget: int) -> bool:

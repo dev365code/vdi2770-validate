@@ -540,9 +540,10 @@ def test_a_file_full_of_the_word_trailer_is_not_expensive():
     import time
 
     body = b"%PDF-1.4\n" + b"trailer\n" * 16_000
-    started = time.monotonic()
+    started = time.process_time()
     assert not vdi2770.read_pdf(body).encrypted
-    assert time.monotonic() - started < 5, "a keyword with no dictionary after it costs a scan"
+    assert time.process_time() - started < 5, (
+        "a keyword with no dictionary after it costs a scan")
 
 
 # --- the trailer scan, as a class rather than as three fixed instances -------
@@ -603,7 +604,19 @@ def test_the_trailer_scan_reads_pdf_structure(name, body, expected):
     ("a string that never closes", b"trailer\n<< /Info (" + b"x" * 200_000),
     ("nesting with no end", b"trailer\n" + b"<<" * 30_000),
     ("comments to the horizon", b"trailer\n<< " + b"%c\n" * 60_000),
-])
+    # The same shapes, as many times as the keyword cap allows. Each case above
+    # is one keyword, so all five passed while the *product* of the two bounds
+    # went unmeasured: 64 comment dictionaries cost 11.6 seconds from an archive
+    # that deflates to five kilobytes. A bound nobody multiplied out is not a
+    # bound, which is the sentence this module has now earned twice.
+    ("comments to the horizon, once per trailer",
+     (b"trailer\n<< " + b"%c\n" * 60_000) * 64),
+    ("a dictionary that opens and never closes, once per trailer",
+     (b"trailer<<" + b"x" * 70_000) * 64),
+# Named by the case, not by the body: pytest builds the id out of every
+# parameter, and a 4 MB `bytes` in the id turned one failure into fourteen
+# megabytes of output on the terminal that was supposed to explain it.
+], ids=lambda v: v if isinstance(v, str) else "")
 def test_no_shape_of_trailer_is_expensive(name, body):
     """The budget is for the file, not for each keyword. Per-keyword bounds meant
     every new shape that reached the bound multiplied by however many keywords a
@@ -611,12 +624,18 @@ def test_no_shape_of_trailer_is_expensive(name, body):
     8,000 that *open* a dictionary cost 28 s on a 20 KB archive. A total is the
     only bound that does not have another shape behind it.
     """
+    # CPU time, not wall clock. This is a claim about how much work the scan
+    # does, and a wall clock also measures every other process on the box: the
+    # assertion below has flaked twice on a machine running a review fleet, both
+    # times on code whose cost had just been *reduced*. Four timed assertions in
+    # this project have now failed for that reason; the ones that could be
+    # counted have been, and this is the residue that cannot.
     import time
 
-    started = time.monotonic()
+    started = time.process_time()
     vdi2770.read_pdf(b"%PDF-1.4\n" + body)
-    spent = time.monotonic() - started
-    assert spent < 2, f"{name}: {len(body) / 1024:.0f} KiB cost {spent:.1f}s"
+    spent = time.process_time() - started
+    assert spent < 3, f"{name}: {len(body) / 1024:.0f} KiB cost {spent:.1f}s CPU"
 
 
 @pytest.mark.parametrize("name,body,expected", [
@@ -683,3 +702,50 @@ def test_no_more_trailers_are_scanned_than_the_budget_names(monkeypatch):
     assert len(calls) <= pdfread.MAX_TRAILERS, (
         f"{len(calls)} dictionaries walked for a file allowed "
         f"{pdfread.MAX_TRAILERS}")
+
+
+def _pdf_with_xref(trailer: bytes) -> bytes:
+    """A minimal PDF whose `startxref` really points at its cross-reference.
+
+    Built rather than vendored: this package is tested standalone, with no
+    repository around it, so a fixture from `corpus/` is not available to it.
+    """
+    head = b"%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\n"
+    table = b"xref\n0 2\n0000000000 65535 f \n0000000009 00000 n \n"
+    body = head + table + b"trailer\n" + trailer + b"\n"
+    return body + b"startxref\n" + str(len(head)).encode() + b"\n%%EOF\n"
+
+
+def test_a_decoy_after_the_end_cannot_hide_the_real_trailer():
+    """Ten bytes of `%trailer` repeated, appended after `%%EOF`.
+
+    The fifth repair read the *last* `MAX_TRAILERS` dictionaries, because an
+    incremental update appends and the newest trailer is the authoritative one.
+    That is true of a file nobody is attacking. Sixty-four occurrences of the
+    token appended after the end -- 640 bytes, ignored by every conformant
+    reader -- push the real trailer out of the window, and a genuinely encrypted
+    PDF comes back clean. The report then drops `P2` (*remove the protection*)
+    and offers `P3` (*produce the file as PDF/A*): a remedy for a defect the
+    producer's exporter does not have.
+
+    Which is the sixth time this scan has been repaired, and the fourth time the
+    repair was a different way of guessing where to look. `startxref` is not a
+    guess -- it is where the format says the answer is, and it is what a reader
+    follows.
+    """
+    real = _pdf_with_xref(b"<< /Size 2 /Encrypt 4 0 R >>")
+    assert vdi2770.read_pdf(real).encrypted is True, "premise"
+    for decoys in (1, 63, 64, 200, 5_000):
+        grown = real + b"\n%trailer\n" * decoys
+        assert vdi2770.read_pdf(grown).encrypted is True, f"{decoys} decoys"
+
+
+def test_a_file_with_no_startxref_is_still_read():
+    """Damaged, truncated, or hand-written: the token scan is still there.
+
+    Following `startxref` is right for every file that has one -- all fifty-five
+    PDFs in this repository's corpus do -- and a file that does not is exactly
+    the file that needs the fallback most.
+    """
+    assert vdi2770.read_pdf(b"%PDF-1.4\ntrailer\n<< /Encrypt 4 0 R >>\n").encrypted is True
+    assert vdi2770.read_pdf(b"%PDF-1.4\ntrailer\n<< /Size 9 >>\n").encrypted is False

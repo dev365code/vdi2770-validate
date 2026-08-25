@@ -205,3 +205,67 @@ def test_two_rules_name_the_same_folder_the_same_way():
     assert set(said) == {"Z9", "Z13"}, said
     named = {rid: detail.split(": ", 1)[1] for rid, detail in said.items()}
     assert named["Z9"] == named["Z13"], named
+
+
+class _Counting(frozenset):
+    """A folder set that tallies how many times it is asked."""
+
+    def __new__(cls, items):
+        self = super().__new__(cls, items)
+        self.asked = 0
+        return self
+
+    def __contains__(self, item):
+        self.asked += 1
+        return super().__contains__(item)
+
+
+def test_asking_whether_a_file_is_in_an_unopened_folder_does_not_scan_them_all():
+    """Counted, and independent of how many folders there are.
+
+    The question was answered by scanning every unopened folder, once per
+    undeclared member: `any(here == f or here.startswith(f + "/") for f in
+    unopened)`, with both sides bounded only by `MAX_MEMBERS`. A 900 KB archive
+    holding four thousand folders and four thousand files cost **24 seconds** --
+    past every budget the reader has, because not one of them measures this.
+
+    A path has at most `MAX_FOLDER_DEPTH` ancestors, which is the bound `Z9`
+    already puts on the same walk. So the count must depend on the depth of the
+    path being asked about and on nothing else.
+    """
+    from vdi2770_validate.rules.files import _inside
+
+    deep = "/".join(f"d{i}" for i in range(6)) + "/x.pdf"
+    small = _Counting(["nope"])
+    big = _Counting([f"f{i:05d}" for i in range(4000)])
+    assert _inside(deep, small) is False
+    assert _inside(deep, big) is False
+    assert small.asked == big.asked, (
+        f"{big.asked} lookups against 4,000 folders and {small.asked} against "
+        f"one; the folder count is multiplying the member loop")
+    assert big.asked <= 8, f"{big.asked} lookups for a path six folders deep"
+
+
+def test_the_files_in_an_unopened_folder_are_still_suppressed():
+    """The property the speed-up must not cost.
+
+    `F2` stays quiet inside a folder holding its own metadata -- at the folder
+    itself and at any depth beneath it -- and still fires outside one. A faster
+    wrong answer is not an improvement.
+    """
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr("VDI2770_Main.xml", DOCN.read("VDI2770_Main.xml"))
+        z.writestr("VDI2770_Main.pdf", DOCN.read("VDI2770_Main.pdf"))
+        z.writestr("AB393/VDI2770_Metadata.xml", META)
+        z.writestr("AB393/B.pdf", DOC.read("B.pdf"))
+        z.writestr("AB393/deep/inside/C.pdf", DOC.read("B.pdf"))
+        z.writestr("AB393X/outside.pdf", DOC.read("B.pdf"))
+        z.writestr("loose.pdf", DOC.read("B.pdf"))
+
+    accused = {f.where.member for f in report(buf.getvalue()).findings
+               if f.rule.id == "F2"}
+    assert "AB393/B.pdf" not in accused, accused
+    assert "AB393/deep/inside/C.pdf" not in accused, accused
+    assert "AB393X/outside.pdf" in accused, accused
+    assert "loose.pdf" in accused, accused

@@ -351,8 +351,32 @@ def test_a_path_that_never_finishes_opening_does_not_stop_the_sweep(tmp_path):
     r = subprocess.run(
         [sys.executable, "-m", "vdi2770_validate", "check", str(pipe), str(good)],
         capture_output=True, text=True, timeout=30, env=under_test())
-    assert "cannot read it" in r.stdout + r.stderr, r.stdout + r.stderr
+    # A verdict, and the path after it. *Which* verdict is not the point and
+    # asserting it was a mistake: the first repair here refused everything
+    # `S_ISREG` said no to, which also refused `check <(unzip -p ...)` and
+    # `... | check /dev/stdin`, neither of which is a pipe without a writer.
+    # What must hold is that the run finishes and reaches the next path.
+    assert "pipe.zip" in r.stdout + r.stderr, r.stdout + r.stderr
     assert "good.zip" in r.stdout, "the readable path after it was never reached"
+
+
+def test_a_pipe_that_has_a_writer_is_read(tmp_path):
+    """The half the first repair broke.
+
+    `check <(unzip -p ...)` and `cat x.zip | check /dev/stdin` both worked, and
+    refusing every non-regular file refused them too -- a fix for the shape that
+    was found rather than for the thing that was wrong. Only "a FIFO with no
+    writer" hangs, and `O_NONBLOCK` tells the two apart.
+    """
+    import subprocess
+    import sys
+
+    done = subprocess.run(
+        f'cat "{CLEAN_DOCUMENT}" | "{sys.executable}" -m vdi2770_validate '
+        f"check --quiet /dev/stdin",
+        shell=True, capture_output=True, text=True, timeout=60, env=under_test())
+    assert "cannot read it" not in done.stdout + done.stderr, done.stdout + done.stderr
+    assert done.returncode == 0, done.stdout + done.stderr
 
 
 def test_a_container_we_declined_to_parse_is_not_then_schema_checked(monkeypatch):

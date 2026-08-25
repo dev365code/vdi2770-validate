@@ -58,7 +58,13 @@ have a class of its own.
   exception. Opening a FIFO with no writer waits forever, so a single named pipe
   in a supplier drop folder meant the run produced a verdict on *nothing*. A
   directory and a dead symlink were already refused by raising; the third shape
-  is refused the same way, before the open.
+  is opened without blocking instead. The first attempt refused everything
+  `S_ISREG` said no to, which also refused `check <(unzip -p …)` and
+  `… | check /dev/stdin` — both of which worked, and neither of which is a pipe
+  without a writer. `O_NONBLOCK` tells the two apart, and the Unix-only import
+  it needs is behind a platform test, because the first version of that made the
+  package fail to import on Windows — in the release whose headline fix is the
+  Windows console.
 - **A name the archive stores twice is told to remove the repeat.** `F1` said the
   bytes could not be read — they read fine — and the remedy was "re-create the
   archive and send it again", which, followed exactly, produces the same archive
@@ -160,6 +166,39 @@ have a class of its own.
   with the error count. Three timed assertions in this project have flaked in
   one week; every one of them has been replaced by a count of the thing that
   actually costs.
+- **The trailer scan follows `startxref` instead of guessing where to look.**
+  Sixth repair, and the fourth that was a different guess: reading the *last*
+  sixty-four dictionaries was pushable by sixty-four occurrences of `%trailer`
+  appended after `%%EOF` — 640 bytes a conformant reader ignores — and an
+  encrypted PDF came back clean, with `P3` (*produce the file as PDF/A*) in
+  place of `P2` (*remove the protection*). Every window is pushable, because a
+  window is a guess. `startxref` is the one offset the file itself declares, and
+  all fifty-five PDFs in this repository's corpus carry one; the token scan
+  stays as the fallback for a file damaged enough to have none. Two costs came
+  down with it: comments were scanned twice per comment, once for each newline
+  byte, so sixty-four dictionaries of them cost **11.6 s** and now cost
+  **0.9 s** of CPU; and the match offsets were built into a list and then
+  sliced, so six million tokens in a 68 KiB archive held **337 MiB** of offsets
+  nobody would look at.
+- **Two rules stopped calling one file two things.** `names.py` exists because
+  "every place that compares a name has to reconcile them the *same* way" — and
+  it reconciled Unicode composition and nothing else, while three other places
+  deliberately dropped `.` segments. So `./B.pdf` was `F1` *declared but not in
+  the archive* and `F2` *in the container but not named in the metadata*, in one
+  report, about one file — and its PDF was never scanned, because the resolution
+  that failed is the one the PDF rules use to find it. The path normalisation
+  now lives in `names.py` with the composition, which is the layer everything
+  else already goes through.
+- **`F2`'s folder check stopped being quadratic.** It asked, once per undeclared
+  member, whether any unopened folder was a prefix of it — with both sides
+  bounded only by the member cap. Four thousand of each, in a **900 KiB**
+  archive, cost **24 seconds**, past every budget the reader has because not one
+  of them measures this. A path has at most `MAX_FOLDER_DEPTH` ancestors, which
+  is the bound `Z9` already puts on the same walk one file away. **0.8 s** now,
+  and flat in the number of folders.
+- **Two doors, one fix, applied to one of them.** The console script and
+  `python -m vdi2770_validate` are separate entry points; the console handling
+  went into the first and the second kept the crash. Both go through `_run` now.
 - **Text arriving in pieces has a ceiling.** The tree had a bound on elements and
   none on how many times the parser handed back character data. One character
   reference repeated cost **287 MB** from a 4.2 KiB archive, because a byte count

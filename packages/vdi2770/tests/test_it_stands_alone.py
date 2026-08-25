@@ -16,8 +16,8 @@ SRC = HERE / "src" / "vdi2770"
 # rather than "is it in the standard library?" for two reasons: it works on the
 # oldest Python we support, where `sys.stdlib_module_names` does not exist, and
 # it makes *adding* an import a decision someone has to make on purpose.
-ALLOWED = {"dataclasses", "enum", "io", "re", "typing", "unicodedata", "xml",
-           "zipfile", "zlib"}
+ALLOWED = {"collections", "dataclasses", "enum", "io", "re", "typing",
+           "unicodedata", "xml", "zipfile", "zlib"}
 
 
 def top_level_imports(path):
