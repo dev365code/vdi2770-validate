@@ -103,6 +103,21 @@ have a class of its own.
   passed in the release workflow only because `make check` happens to run
   `fixtures` first, which is a coincidence rather than a dependency. Now it is
   a dependency.
+- **`X6` reports what it measures.** It said "this read has already built
+  *n* elements" for a number that is a charge taken from the markup *before* the
+  parse — deliberately, because refusing a document is the expensive path and
+  counting the tree that came back charged nothing for it. The two readings
+  differ by five orders of magnitude in exactly the case that trips the rule: a
+  1 KB archive whose read built about six elements reported 520,007. The number
+  was right and the noun was wrong, and a finding that names the wrong thing
+  sends its reader to look for a document that does not exist.
+- **One pinned PDF shape was pinning nothing.** `<< /ID [<2f456e...>] >>` was
+  listed as the case that proves the hex-string branch matters; the bytes are
+  hex, so no scanner finds `/Encrypt` in them with the branch or without it, and
+  removing the branch left the parametrised test green. What the branch actually
+  protects is `<< /X <41>> /Encrypt 4 0 R >>`, where the string's `>` abuts the
+  dictionary's — without it the dictionary closes a byte early and the
+  encryption reference is never seen.
 - **Text arriving in pieces has a ceiling.** The tree had a bound on elements and
   none on how many times the parser handed back character data. One character
   reference repeated cost **287 MB** from a 4.2 KiB archive, because a byte count
@@ -455,7 +470,7 @@ below is measured on this machine, before and after, on the same input.
 Three gates that ask what `make check` cannot ask of itself.
 
 - **`make mutations`** takes every claim this project makes about a gate, breaks
-  the thing that gate protects, and checks the gate notices — 55 rows, each
+  the thing that gate protects, and checks the gate notices — 56 rows, each
   naming the pytest selection or the tool that has to go red. The harness checks
   itself as hard as it checks the code: a row whose anchor no longer appears
   exactly once is an error rather than a pass; every apply and restore clears

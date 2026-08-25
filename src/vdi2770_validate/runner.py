@@ -196,9 +196,19 @@ def check_bytes(data: bytes, name: str) -> Report:
             # the checks that read it.
             r = rule("X6")
             report.add(Finding(r, r.title, c.where.child(member=c.metadata_name),
-                               detail=f"this read has already built {elements} elements, "
-                                      f"its budget of {MAX_TOTAL_ELEMENTS}; the metadata "
-                                      f"here was not parsed"))
+                               # "has already built {n} elements" was false, and
+                               # off by five orders of magnitude in the case that
+                               # trips this: the charge is taken from the markup
+                               # *before* the parse, so a 1 KB archive whose read
+                               # built about six elements reported 520,007. The
+                               # number is real -- it is what bounds the cost --
+                               # but it is a charge, not a count, and a finding
+                               # that names the wrong thing sends its reader to
+                               # look for a document that does not exist.
+                               detail=f"this read has already been charged "
+                                      f"{elements} elements' worth of markup, its "
+                                      f"budget of {MAX_TOTAL_ELEMENTS}; the "
+                                      f"metadata here was not parsed"))
             modelled = False
         elif c.metadata_bytes is not None:
             # Charged before the parse, not after it. Counting the tree that came

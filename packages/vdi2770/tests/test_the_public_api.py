@@ -575,8 +575,13 @@ def _pdf(dictionary: bytes) -> bytes:
      b"<< /Size 5 %/Encrypt 4 0 R was stripped\n>>", False),
     ("token inside a literal string",
      b"<< /Info (see /Encrypt 4 0 R in the old file) >>", False),
-    ("token inside a hex string",
-     b"<< /ID [<2f456e6372797074203420302052>] >>", False),
+    # Not `<< /ID [<2f456e...>] >>`, which was here and could not fail: the
+    # bytes are hex, so no scanner finds `/Encrypt` in them with the branch or
+    # without it. What the branch actually protects is a hex string whose `>`
+    # abuts the dictionary's -- remove it and `<41>>` closes the dictionary one
+    # byte early, and the reference after it is never seen.
+    ("a hex string whose close abuts the dictionary's",
+     b"<< /X <41>> /Encrypt 4 0 R >>", True),
     ("token after a string holding >>",
      b"<< /Info (ends with >> here) /Encrypt 4 0 R >>", True),
     ("token after a string holding <<",

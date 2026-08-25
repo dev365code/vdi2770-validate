@@ -387,6 +387,14 @@ TABLE = [
      "messages tell you to do, and it walked a surface change into a live "
      "version"),
 
+    ("reader/a-hex-string-can-hold-the-dictionarys-close",
+     "packages/vdi2770/src/vdi2770/pdfread.py",
+     '        if b == b"<":                    # hex string, which may hold `3c3c`',
+     "        if False:",
+     ["packages/vdi2770/tests/test_the_public_api.py"],
+     "`<41>>` closes the dictionary a byte early without it, and the "
+     "encryption reference after it is never seen"),
+
     ("gates/an-exception-nobody-can-catch-by-name",
      "packages/vdi2770/src/vdi2770/__init__.py",
      '"XmlTooLarge",',
