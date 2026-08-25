@@ -13,6 +13,12 @@ jobs:
         python-version: ["3.9", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
+        with:
+          # The release workflows got this and this one did not, so the two
+          # assertions that compare the tree against `sdk-v*` skipped on every
+          # pull request -- silently, which is the only way a gate fails that
+          # nobody notices. A default checkout is `--depth 1 --no-tags`.
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}

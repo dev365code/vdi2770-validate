@@ -410,6 +410,27 @@ def test_a_step_that_runs_make_check_runs_it_where_the_makefile_is():
                 f"{root_commands} without `working-directory: .`:\n{step[:200]}")
 
 
+def test_the_publishing_workflow_checks_the_reader_shipped_first():
+    """Unconditionally, because the condition is the thing being protected.
+
+    The sibling below asserts this too, but only on the branch where the pin
+    names an unpublished reader -- and it needs the tag history, which a copied
+    tree does not have, so it skips wherever the gates are measured. The claim
+    does not depend on today's pin: this workflow publishes the validator, the
+    validator pins the reader, and the order has to be checked at the moment a
+    release happens because that is the only moment anything knows one is.
+    """
+    body = (ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
+    assert "tools/check_release_order.py" in body, (
+        "release.yml does not run tools/check_release_order.py. Nothing else "
+        "asks an index whether the pinned reader exists -- the gate installs it "
+        "from the working tree and `python -m build` does not resolve runtime "
+        "dependencies -- so without this step the validator can be tagged first "
+        "and published permanently unresolvable.")
+    assert (ROOT / "tools" / "check_release_order.py").exists(), (
+        "release.yml runs a script that is not in this tree")
+
+
 def test_the_pin_names_a_reader_that_has_been_published():
     """What this enforces is release *order*, not the pin's value.
 
@@ -458,13 +479,24 @@ def test_the_pin_names_a_reader_that_has_been_published():
         f"({sorted(published)}) nor the reader in this tree ({here}). Releasing the "
         f"validator on this pin gives users something pip cannot resolve.")
 
-    # This is the live half.
+    # This is the live half -- and for most of its life it was not live at all.
+    # It asserted that `API.json` exists, which it always does, so the ordering
+    # this test is named for was enforced by nothing: a `v*` tag pushed before
+    # `sdk-v*` would build green, publish, and leave `vdi2770-validate` on the
+    # index permanently unresolvable under a number PyPI will not let anyone
+    # reuse. Only the release workflow can check this, because only it knows a
+    # release is happening; what this asserts is that the workflow does.
     if floor == here and floor not in published:
-        # Legal, and it means one thing: the SDK ships first.
         assert (ROOT / "packages" / "vdi2770" / "API.json").exists(), (
             "the pin names an unpublished reader, so `sdk-v" + here + "` has to be "
             "tagged before the validator — and the API baseline has to exist for that "
             "release to be gated at all")
+        body = (ROOT / ".github" / "workflows" / "release.yml").read_text(
+            encoding="utf-8")
+        assert "tools/check_release_order.py" in body, (
+            "the pin names a reader nobody can install yet, and release.yml does "
+            "not run tools/check_release_order.py — so nothing stops the "
+            "validator being tagged first")
 
 
 def test_a_target_outside_the_gate_has_a_written_reason():
@@ -579,7 +611,12 @@ def test_the_reader_in_this_tree_is_the_one_its_version_names():
                      (ROOT / "packages" / "vdi2770" / "pyproject.toml").read_text(encoding="utf-8"),
                      re.M).group(1)
     if f"sdk-v{here}" not in tags.stdout.split():
-        return          # being written; the record moves with it
+        # `skip`, not `return`. A bare return reports as a pass, and this test
+        # spent its whole life reporting as one: the version in the tree is by
+        # definition the unreleased one, so the tag is absent every time until
+        # the moment of release. The sibling five lines above already says skip.
+        import pytest
+        pytest.skip(f"sdk-v{here} is not tagged yet; it is being written")
 
     moved = subprocess.run(["git", "diff", "--name-only", f"sdk-v{here}", "--",
                             "packages/vdi2770/src"], cwd=ROOT, capture_output=True, text=True)

@@ -222,15 +222,58 @@ def test_a_version_that_is_already_published_is_not_recorded_over(tmp_path):
     """Restoring the baseline from the previous tag is what this tool's own error
     messages tell you to do, and it walked a surface change into the live
     version: the release branch fires on "the recorded version differs", which is
-    exactly the condition that made the same-version guard unreachable."""
-    sys.path.insert(0, str(ROOT / "tools"))
-    import api_fingerprint as fp
+    exactly the condition that made the same-version guard unreachable.
 
-    recorded = json.loads(BASELINE.read_text(encoding="utf-8"))
-    published = fp._at_tag(recorded["version"])
-    if published is None:
-        pytest.skip(f"sdk-v{recorded['version']} is not tagged here yet")
-    assert fp._published(recorded["version"]), "premise: the recorded version shipped"
+    This test used to run the tool not at all. It read `API.json`, called
+    `_at_tag`, skipped when the tag was absent -- which it is for every
+    unreleased version, so always -- and then asserted its own premise. Replacing
+    the guard it names with `if False:` left the suite green.
+
+    So: a baseline that *is* what its tag published, a compatible addition on
+    top, and the version bumped to another tag that also exists. Everything the
+    tool checks before this guard passes; the only thing wrong is that somebody
+    already installed the number being written.
+    """
+    tree = tmp_path / "tree"
+    shutil.copytree(ROOT / "packages", tree / "packages")
+    (tree / "tools").mkdir()
+    shutil.copy(TOOL, tree / "tools" / "api_fingerprint.py")
+    subprocess.run(["git", "init", "-q"], cwd=tree, check=True)
+
+    was = json.loads((tree / "packages" / "vdi2770" / "API.json").read_text(
+        encoding="utf-8"))["version"]
+    subprocess.run(["git", "add", "-A"], cwd=tree, check=True)
+    subprocess.run(["git", "-c", "user.email=t@t", "-c", "user.name=t",
+                    "commit", "-q", "-m", "x"], cwd=tree, check=True)
+    # The baseline is genuinely the record of `sdk-v{was}`, so `_at_tag` matches
+    # it and the "restore it from the tag" branch above cannot fire instead.
+    subprocess.run(["git", "tag", f"sdk-v{was}"], cwd=tree, check=True)
+
+    major, minor, _patch = (int(x) for x in was.split("."))
+    # The *minor*: the addition below changes a dataclass's signature, and the
+    # pin is `~=`, so a patch bump is refused one guard earlier and this test
+    # would pass on the wrong sentence.
+    now = f"{major}.{minor + 1}.0"
+    subprocess.run(["git", "tag", f"sdk-v{now}"], cwd=tree, check=True)
+    for name in ("pyproject.toml", "src/vdi2770/__init__.py"):
+        f = tree / "packages" / "vdi2770" / name
+        f.write_text(f.read_text(encoding="utf-8").replace(was, now), encoding="utf-8")
+    # An addition, so `compatible()` is happy with the patch bump and the only
+    # thing left to object to is the number itself.
+    zr = tree / "packages" / "vdi2770" / "src" / "vdi2770" / "zipread.py"
+    text = zr.read_text(encoding="utf-8")
+    anchor = "    member_name: Optional[str] = None"
+    assert text.count(anchor) == 1
+    zr.write_text(text.replace(anchor, anchor + "\n    sneak: Optional[str] = None"),
+                  encoding="utf-8")
+
+    done = subprocess.run([sys.executable, "tools/api_fingerprint.py", "--write"],
+                          cwd=tree, capture_output=True, text=True)
+    assert done.returncode == 1, done.stdout + done.stderr
+    assert f"sdk-v{now} is already published" in done.stderr, done.stderr
+    kept = json.loads((tree / "packages" / "vdi2770" / "API.json").read_text(
+        encoding="utf-8"))
+    assert kept["version"] == was, "it refused and wrote the file anyway"
 
 
 def test_a_version_going_backwards_is_not_a_release():

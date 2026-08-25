@@ -45,9 +45,14 @@ mutations:
 # Outside `check` because it is a release question, not a change question: a
 # container may sit unswept for as long as it takes to run the `oracle` workflow,
 # and that is fine while the divergence counts exclude it. It stops being fine
-# the moment those counts are published. Reads the recorded file only — a release
-# must not depend on Maven Central being reachable.
-oracle-fully-swept:
+# the moment those counts are published. Reads the recorded file and the
+# containers on disk — a release must not depend on Maven Central being
+# reachable, but it does have to know which containers exist, and the fixtures
+# are generated rather than committed. Without `fixtures` first this target
+# fails on a fresh clone and blames the sweep for the twenty-seven containers
+# nobody had built yet; it passed in the release workflow only because
+# `make check` happens to run `fixtures` before it.
+oracle-fully-swept: fixtures
 	$(PYTHON) tools/capture_oracle.py --check-swept
 
 # Also outside `check`: one interpreter start per test file. It answers a

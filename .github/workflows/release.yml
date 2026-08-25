@@ -39,6 +39,14 @@ jobs:
       # publishes the divergence counts, and those exclude anything unswept.
       - name: Every container has been through the reference implementation
         run: make oracle-fully-swept
+      # And the reader it pins must already be on the index. `pip install -e
+      # packages/vdi2770` satisfies the pin from the working tree, so nothing in
+      # the gate ever asks; `python -m build` does not resolve runtime
+      # dependencies at all. Tagging this before `sdk-v*` publishes a
+      # distribution pip cannot resolve, under a number PyPI will not let anyone
+      # reuse. The constraint lived in a docstring until it had this step.
+      - name: The reader this pins must already have been released
+        run: python tools/check_release_order.py
       - name: The tag must be the version
         run: |
           tag="${GITHUB_REF_NAME#v}"

@@ -339,6 +339,54 @@ TABLE = [
      "`Z9` said `AB393/` and `Z13` said `./AB393/` in one report, and a reader "
      "has to work out they are the same place"),
 
+    ("gates/the-reader-ships-before-the-validator-that-pins-it",
+     ".github/workflows/release.yml",
+     "        run: python tools/check_release_order.py",
+     "        run: true",
+     ["tests/test_ci_parity.py::test_the_publishing_workflow_checks_the_reader_shipped_first"],
+     "tagging the validator first publishes a distribution pip cannot resolve, "
+     "under a number PyPI will not let anyone reuse"),
+
+    ("gates/an-unreleased-reader-is-not-a-tagged-one",
+     "tools/check_release_order.py",
+     '    if f"sdk-v{floor}" not in tags:',
+     "    if False:",
+     ["tests/test_the_release_order_is_enforced.py"],
+     "the check that makes the workflow step mean anything"),
+
+    ("gates/a-checkout-without-tags-cannot-answer-the-order",
+     "tools/check_release_order.py",
+     "    if not tags:",
+     "    if False:",
+     ["tests/test_the_release_order_is_enforced.py"],
+     "no tags is indistinguishable from nothing having been released, and "
+     "answering yes there is how a release gate fails open"),
+
+    ("gates/the-sweep-must-cover-what-is-on-disk",
+     "tools/capture_oracle.py",
+     '        if set(recorded["containers"]) != here:',
+     "        if False:",
+     ["tests/test_the_sweep_gate_can_fail.py"],
+     "a sweep missing a container entirely answered complete, and a release "
+     "publishes divergence counts that exclude it"),
+
+    ("gates/a-sweep-over-nothing-is-not-a-sweep",
+     "tools/capture_oracle.py",
+     '        assert here, "no containers found; this gate would pass over nothing"',
+     "        pass",
+     ["tests/test_the_sweep_gate_can_fail.py"],
+     "with no containers on disk and none recorded the sets agree, and the "
+     "gate reports every one of 0 containers verified"),
+
+    ("gates/a-published-version-is-not-recorded-over",
+     "tools/api_fingerprint.py",
+     '            if _published(now["version"]):',
+     "            if False:",
+     ["tests/test_the_api_record_holds.py"],
+     "restoring the baseline from the previous tag is what this tool's own "
+     "messages tell you to do, and it walked a surface change into a live "
+     "version"),
+
     ("gates/an-exception-nobody-can-catch-by-name",
      "packages/vdi2770/src/vdi2770/__init__.py",
      '"XmlTooLarge",',

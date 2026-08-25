@@ -297,19 +297,18 @@ def main() -> int:
             # behind it. The guard tested whether *this* version was published --
             # and a release always bumps to one that is not, so `--first` was
             # open on the only path that matters.
+            #
+            # That narrower guard used to sit below this one as well, and could
+            # not run: `_tags()` either raises or returns a non-empty set, so
+            # this line answers first in every state a checkout can be in. Two
+            # tests reached it, neither could tell which branch had produced the
+            # 1 they asserted on, and `if False:` over it left the suite green.
+            # A guard that cannot run is not a second opinion; it is a comment
+            # that looks like code.
             print(f"--first records a surface as though nothing had been recorded "
                   f"before, and this package has published releases "
                   f"({len(_tags())} tags). Restore the baseline from its tag "
                   f"instead.", file=sys.stderr)
-            return 1
-        if recorded is None and a.first and _published(now["version"]):
-            # "This is the first one" cannot be true of a version somebody could
-            # already have installed. `rm API.json && --write --first` was the
-            # remaining way to record whatever is here as though it had always
-            # been, and the flag was pure honour system.
-            print(f"--first records a surface as though nothing had been recorded "
-                  f"before, and sdk-v{now['version']} is published. Restore the "
-                  f"baseline from the tag instead.", file=sys.stderr)
             return 1
         if recorded is None and not a.first:
             # `rm API.json && --write` was exactly as easy as regenerating it,

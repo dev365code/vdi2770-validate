@@ -70,6 +70,39 @@ have a class of its own.
   `AB393/` and `./AB393/` in the same report. What the folder list *returns*
   still keeps the archive's prefix, because `F2` suppression matches member
   names against it; the sentence is what changed.
+- **The reader now has to ship before the validator that pins it.** The two
+  packages release from one repository and the validator depends on the reader
+  with `~=`. `release.yml` installs the reader from the working tree, so nothing
+  in the gate ever asks an index whether that version exists, and `python -m
+  build` does not resolve runtime dependencies at all — so tagging `v*` before
+  `sdk-v*` built green, published, and left `vdi2770-validate` permanently
+  unresolvable under a number PyPI will not let anyone reuse. The constraint had
+  lived in a test docstring; the test that names it asserted that `API.json`
+  exists, which it always does. It is a step in the workflow now, and a test
+  fails if the workflow loses it.
+- **`--check-swept` can fail.** The gate that stands between a release and
+  published divergence counts excluding containers nobody swept had no test at
+  all: both its comparison and the canary beside it survived being neutered
+  against the whole suite. Seven cases now, one per way the recording can lie —
+  including a sweep of nothing over nothing, which every other case passes.
+- **The record's own published-version guard can fail.** Its test never ran the
+  tool. It read `API.json`, called `_at_tag`, skipped when the tag was absent —
+  which it is for every unreleased version, so always — and asserted its own
+  premise; replacing the guard with `if False:` left the suite green. And the
+  `--first` guard beside it could not run at all: `_tags()` either raises or
+  returns a non-empty set, so the line above always answered first. A guard that
+  cannot run is a comment that looks like code, and it is gone.
+- **CI fetches tags, and a skip looks like a skip.** `ci.yml` was a default
+  checkout — `--depth 1 --no-tags` — so the two assertions that compare the tree
+  against `sdk-v*` skipped on every pull request. One of them was not even
+  skipping: it `return`ed, which reports as a pass, on the condition that holds
+  for every unreleased version.
+- **`make oracle-fully-swept` works on a fresh clone.** The fixtures it compares
+  against are generated and not committed, so on a clean checkout the target
+  failed and blamed the sweep for twenty-seven containers nobody had built. It
+  passed in the release workflow only because `make check` happens to run
+  `fixtures` first, which is a coincidence rather than a dependency. Now it is
+  a dependency.
 - **Text arriving in pieces has a ceiling.** The tree had a bound on elements and
   none on how many times the parser handed back character data. One character
   reference repeated cost **287 MB** from a 4.2 KiB archive, because a byte count
@@ -422,7 +455,7 @@ below is measured on this machine, before and after, on the same input.
 Three gates that ask what `make check` cannot ask of itself.
 
 - **`make mutations`** takes every claim this project makes about a gate, breaks
-  the thing that gate protects, and checks the gate notices — 49 rows, each
+  the thing that gate protects, and checks the gate notices — 55 rows, each
   naming the pytest selection or the tool that has to go red. The harness checks
   itself as hard as it checks the code: a row whose anchor no longer appears
   exactly once is an error rather than a pass; every apply and restore clears
@@ -432,7 +465,7 @@ Three gates that ask what `make check` cannot ask of itself.
   broken row, not a kill; and **one row must survive**, because a harness that
   reports red for a change that does not matter is reporting red for everything.
   It found two holes on its first full run.
-- **`make standalone`** runs each of the 56 test files on its own. A suite is a
+- **`make standalone`** runs each of the 58 test files on its own. A suite is a
   shared process, so a file can pass because an earlier one imported something —
   `tests/test_offline.py` did exactly that for weeks, patching `socket.socket`
   and then importing `urllib.request`, which breaks `class SSLSocket(socket)`
