@@ -128,11 +128,15 @@ def compatible(recorded: dict, now: dict) -> Optional[str]:
     b = {k: v for k, v in now["surface"].items() if k != "__version__"}
     lost = sorted(set(a) - set(b))
     moved = sorted(n for n in set(a) & set(b) if a[n] != b[n])
+
+    was, is_ = _parts(recorded["version"]), _parts(now["version"])
+    if was and is_ and is_ < was:
+        return (f"{recorded['version']} -> {now['version']} goes backwards. A "
+                f"release does not, and a pin that admits the older one will "
+                f"never see this.")
     if not lost and not moved:
         return None
 
-    was = _parts(recorded["version"])
-    is_ = _parts(now["version"])
     if was is None or is_ is None:
         return (f"cannot compare {recorded['version']!r} with {now['version']!r} as "
                 f"release numbers, and this change needs the minor to move")
@@ -182,10 +186,34 @@ def _published(version: str) -> bool:
     move with it. Once the tag exists the record is evidence about something on
     an index, and `--write` stops accepting changes under it.
     """
-    import subprocess
-    got = subprocess.run(["git", "tag", "--list", f"sdk-v{version}"],
+    return f"sdk-v{version}" in _tags()
+
+
+def _tags() -> set:
+    """Every `sdk-v*` tag, or a refusal if git cannot answer.
+
+    "No such tag" and "there is no tag history here" were the same answer, and
+    the second one turns every guard in this file off: in a `--depth 1
+    --no-tags` clone -- which is what `actions/checkout` gives you by default --
+    a moved surface recorded cleanly under a version that is live on PyPI, and
+    the whole gate stayed green. A guard that cannot see is a guard that says
+    yes.
+    """
+    got = subprocess.run(["git", "tag", "--list", "sdk-v*"],
                          cwd=ROOT, capture_output=True, text=True)
-    return got.returncode == 0 and got.stdout.strip() != ""
+    if got.returncode:
+        raise SystemExit(
+            "cannot read the tag history, and every judgement in this file rests "
+            "on it. Fetch tags (`git fetch --tags`, or `fetch-depth: 0`) and try "
+            "again -- guessing here means recording a surface under a version "
+            "somebody may already have installed.")
+    tags = {t for t in got.stdout.split() if t}
+    if not tags:
+        raise SystemExit(
+            "this checkout has no `sdk-v*` tags at all. That is indistinguishable "
+            "from nothing having been released, which is not true of this package "
+            "-- fetch tags (`fetch-depth: 0`) before recording anything.")
+    return tags
 
 
 def main() -> int:
@@ -240,8 +268,28 @@ def main() -> int:
             if why:
                 print(why, file=sys.stderr)
                 return 1
+            if _published(now["version"]):
+                # Restoring the baseline from the previous tag is what this
+                # file's own error messages tell you to do, and it walked a
+                # surface change straight into the live version: the branch fires
+                # on "the recorded version differs", which is exactly the
+                # condition that makes the same-version guard below unreachable.
+                print(f"sdk-v{now['version']} is already published. Whoever installed "
+                      f"it does not get this surface, whatever the baseline in the "
+                      f"tree says. Bump the version.", file=sys.stderr)
+                return 1
             print(f"recording {now['version']}: {recorded['version']} is published and "
                   f"this move is compatible with the pin that admits it.", file=sys.stderr)
+        if recorded is None and a.first and _tags():
+            # "This is the first one" cannot be true of a package with releases
+            # behind it. The guard tested whether *this* version was published --
+            # and a release always bumps to one that is not, so `--first` was
+            # open on the only path that matters.
+            print(f"--first records a surface as though nothing had been recorded "
+                  f"before, and this package has published releases "
+                  f"({len(_tags())} tags). Restore the baseline from its tag "
+                  f"instead.", file=sys.stderr)
+            return 1
         if recorded is None and a.first and _published(now["version"]):
             # "This is the first one" cannot be true of a version somebody could
             # already have installed. `rm API.json && --write --first` was the

@@ -186,6 +186,7 @@ def check_bytes(data: bytes, name: str) -> Report:
         parse_error = None
         tree = None
         document = None
+        modelled = True
         if c.metadata_bytes is not None and elements >= MAX_TOTAL_ELEMENTS:
             # Not parsed at all, and the report says so rather than reporting
             # nothing -- a container whose metadata went unread has not passed
@@ -195,10 +196,21 @@ def check_bytes(data: bytes, name: str) -> Report:
                                detail=f"this read has already built {elements} elements, "
                                       f"its budget of {MAX_TOTAL_ELEMENTS}; the metadata "
                                       f"here was not parsed"))
+            modelled = False
         elif c.metadata_bytes is not None:
+            # Charged before the parse, not after it. Counting the tree that came
+            # back charged nothing for a document the parser refused -- and
+            # refusing is the expensive path, because it builds to the
+            # per-document cap first. A thousand of those was a 280 KiB archive
+            # that cost 51 seconds with the counter reading 2.
+            #
+            # From the bytes, because they are the only thing known before the
+            # work: every element the parser can build has an opening `<` in
+            # them, so this bounds what the parse can cost whether it succeeds,
+            # refuses, or dies on a malformed token. `bytes.count` is a memchr.
+            elements += (c.metadata_bytes.count(b"<") - c.metadata_bytes.count(b"</"))
             try:
                 tree = xmlread.parse(c.metadata_bytes)
-                elements += _count(tree)
             except xmlread.XmlError as e:
                 # A malformed document is the container's problem and `X1`/`X3`
                 # say so. Anything else out of expat is ours, and `_step` below
@@ -218,15 +230,32 @@ def check_bytes(data: bytes, name: str) -> Report:
 
         declared = frozenset(nfc(f.file_name) for f in document.all_files
                              if f.file_name) if document else frozenset()
-        declared_of[id(c)] = declared
+        declared_of[id(c)] = declared if modelled else None
 
-        is_payload = bool(c.member_name) and nfc(c.member_name) in declared_of.get(
-            id(c.parent), frozenset())
+        # `None` and "declares nothing" are different, and collapsing them is how
+        # a budget in the parent invented a finding about the child: `Z3` fires
+        # on an inner archive that is neither kind of container *and* was not
+        # declared as a file, and a parent we declined to model cannot say
+        # whether it declared this one. Unknown suppresses the rule; empty does
+        # not.
+        parent_declared = declared_of.get(id(c.parent))
+        unknown_parent = c.parent is not None and parent_declared is None
+        is_payload = (bool(c.member_name) and parent_declared is not None
+                      and nfc(c.member_name) in parent_declared)
 
-        _into(report, r_container.check(c, declared=declared, is_declared_payload=is_payload),
-              c.where, "container")
+        # A container whose metadata we declined to model has an empty `declared`,
+        # and the rules that read it then said things about the sender: a
+        # conforming document container declaring a `.zip` payload was reported
+        # with `Z11` and `Z3`, both errors, both `about: container`, beside the
+        # `X6` saying this tool had not looked. Checked on its own it is clean, so
+        # the verdict depended on what else was in the sweep. `X6` is the true
+        # statement and it is already in the report.
+        if modelled and not unknown_parent:
+            _into(report, r_container.check(c, declared=declared,
+                                            is_declared_payload=is_payload),
+                  c.where, "container")
 
-        if c.metadata_bytes is None:
+        if c.metadata_bytes is None or not modelled:
             continue
 
         schema_errors = (_step(report, c.where, "schema check", xsdvalidate.validate,

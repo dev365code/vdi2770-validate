@@ -30,10 +30,16 @@ def folders_holding_metadata(container) -> list:
         # `Z9` skips a `.` segment for the same reason, two rules below, and the
         # reader grew a `path-prefixed` near-miss kind for it; this was the third
         # place and it was missed.
-        segments = [seg for seg in prefix.split("/") if seg not in ("", ".")]
-        if not segments:
+        #
+        # The decision drops `.` segments; the value returned keeps the archive's
+        # spelling. `files.py` matches this against the archive's own member
+        # names to suppress `F2` inside a folder we did not open, and normalising
+        # the prefix made that match nothing — so the files in a folder the same
+        # report calls unopened were accused of being undeclared. It is also what
+        # a user has to find in their ZIP listing.
+        if not [seg for seg in prefix.split("/") if seg not in ("", ".")]:
             continue
-        out.append("/".join(segments) + "/")
+        out.append(prefix + "/")
     return sorted(set(out))
 
 
@@ -164,7 +170,14 @@ def check(container, declared, is_declared_payload) -> Iterator[Finding]:
         if len(folders) >= MAX_FOLDERS:
             break
         if m.is_dir:
-            folders.add(m.name if m.name.endswith("/") else m.name + "/")
+            # `./` is a directory entry that names the root, and many writers put
+            # one at the front of an archive. Added verbatim it produced
+            # "1 folder: ./" with a remedy the archive already obeys. The path
+            # branch below drops `.` segments; this one is the same miss, one
+            # line apart.
+            segments = [seg for seg in nfc(m.name).split("/") if seg not in ("", ".")]
+            if segments:
+                folders.add("/".join(segments) + "/")
         # Every folder on the path, not just the last one: `a/b/x.pdf` puts the
         # file in `a/b/` and also in `a/`, and a rule that reports one of them
         # calls a two-level layout "1 folder".

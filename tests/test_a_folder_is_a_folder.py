@@ -10,7 +10,7 @@ import io
 import zipfile
 
 from conftest import CLEAN_DOCUMENT
-from vdi2770_validate.runner import check_file
+from vdi2770_validate.runner import check_bytes, check_file
 
 SRC = zipfile.ZipFile(CLEAN_DOCUMENT)
 META = SRC.read("VDI2770_Metadata.xml").decode()
@@ -107,3 +107,22 @@ def test_a_declared_folder_path_resolves_so_z9_stands_alone():
     remedy = rule("Z9").remedy
     assert "is not the file the metadata names" not in remedy
     assert "resolves" in remedy, remedy
+
+
+def test_a_directory_entry_for_the_root_is_not_a_folder():
+    """`./` is a directory entry many writers put at the front of an archive, and
+    it names the root. Reported as a folder it produced *"1 folder: ./"* with a
+    remedy — "store the members at the root" — that the archive already obeys.
+
+    The path branch of this rule learned to drop `.` segments; the `is_dir`
+    branch beside it did not, which is the same miss one line apart.
+    """
+    src = zipfile.ZipFile(CLEAN_DOCUMENT)
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr(zipfile.ZipInfo("./"), b"")
+        for name in src.namelist():
+            z.writestr(name, src.read(name))
+
+    fired = {f.rule.id for f in check_bytes(buf.getvalue(), "dot.zip").findings}
+    assert "Z9" not in fired, f"a root directory entry read as a folder: {sorted(fired)}"

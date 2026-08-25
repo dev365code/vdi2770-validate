@@ -59,8 +59,10 @@ def _is_encrypted(data: bytes) -> bool:
     """Whether a trailer dictionary references an encryption dictionary.
 
     A file may carry several trailers — incremental updates append one each — so
-    every one is looked at, each bounded so a file full of the word `trailer`
-    cannot make this quadratic.
+    every one is looked at. A keyword with no dictionary after it costs nothing,
+    which is what keeps a file full of the word `trailer` cheap: balancing braces
+    to a 64 KiB cap for each of 16,000 of them cost 135 seconds before that
+    early return existed.
 
     Bounded by where the dictionary *ends*, not by a fixed window. A window was
     the first shape and it was the wrong one: `/ID` holds two strings and a legal
@@ -84,13 +86,42 @@ def _is_encrypted(data: bytes) -> bool:
 def _dict_end(data: bytes, start: int, cap: int) -> int:
     """Where the `<< >>` opened after `start` closes, or `start + cap`.
 
-    Iterative and single-pass: a nested dictionary is common in a trailer
-    (`/ID [<..> <..>]` is not one, but `/Root` values can be), and a scan that
-    stopped at the first `>>` would end early on any of them.
+    Iterative and single-pass: a nested dictionary is common in a trailer, and a
+    scan that stopped at the first `>>` would end early on any of them.
+
+    Two things this has to know about PDF, both learned the hard way. Strings and
+    comments hold arbitrary bytes, so `(value <<redacted)` counted as an opening
+    and the depth never came back to zero -- the scan then ran to its cap and
+    found an `/Encrypt` that a *comment* mentioned. And a `trailer` keyword with
+    no dictionary after it used to cost a full cap-length walk, so 16,000 of them
+    in a 128 KB member cost 135 seconds; if the dictionary does not start here,
+    there is nothing to balance.
     """
     limit = min(len(data), start + cap)
-    i, depth = start, 0
+    i = start
+    while i < limit and data[i:i + 1] in b" \t\r\n\f\x00":
+        i += 1
+    if data[i:i + 2] != b"<<":
+        return i                      # no dictionary opens here; nothing to scan
+
+    depth = 0
     while i < limit - 1:
+        b = data[i:i + 1]
+        if b == b"%":                 # comment, to end of line
+            nl = min((x for x in (data.find(c, i, limit) for c in (b"\n", b"\r"))
+                      if x != -1), default=limit)
+            i = nl + 1
+            continue
+        if b == b"(":                 # literal string: nested parens, backslash escapes
+            i, nest = i + 1, 1
+            while i < limit and nest:
+                c = data[i:i + 1]
+                if c == b"\\":
+                    i += 2
+                    continue
+                nest += (c == b"(") - (c == b")")
+                i += 1
+            continue
         pair = data[i:i + 2]
         if pair == b"<<":
             depth += 1
@@ -101,6 +132,10 @@ def _dict_end(data: bytes, start: int, cap: int) -> int:
             i += 2
             if depth <= 0:
                 return i
+            continue
+        if b == b"<":                 # hex string, which may hold `3c3c`
+            close = data.find(b">", i + 1, limit)
+            i = (close + 1) if close != -1 else i + 1
             continue
         i += 1
     return limit

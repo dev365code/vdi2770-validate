@@ -158,8 +158,8 @@ def test_every_kind_that_can_refuse_a_member_has_a_sentence():
     did not match. Then a sweep of the corpus, which only ever asked about kinds
     this repository's own fixtures happen to produce — and no fixture reaches
     2 GiB, so `archive-too-large` and `decompression-budget-exhausted` were both
-    missing while the gate stayed green. Two independent audits found the same
-    gap; a user was shown `the reader refused it (archive-too-large)`.
+    missing while the gate stayed green, and a user was shown
+    `the reader refused it (archive-too-large)`.
 
     The reader publishes the set. That is the only version of this that cannot
     rot.

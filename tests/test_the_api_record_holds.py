@@ -29,9 +29,14 @@ def run(tmp_path, *args, published=True):
     shutil.copy(TOOL, tree / "tools" / "api_fingerprint.py")
     subprocess.run(["git", "init", "-q"], cwd=tree, check=True)
     version = json.loads((tree / "packages" / "vdi2770" / "API.json").read_text())["version"]
+    subprocess.run(["git", "-c", "user.email=t@t", "-c", "user.name=t",
+                    "commit", "-q", "--allow-empty", "-m", "x"], cwd=tree, check=True)
+    # Some tag history always, because "this version has not shipped" and "this
+    # package has never shipped anything" are different claims and the tool
+    # refuses the second one outright. A copy with no tags at all used to make
+    # every guard in the tool answer "not published".
+    subprocess.run(["git", "tag", "sdk-v0.0.1"], cwd=tree, check=True)
     if published:
-        subprocess.run(["git", "-c", "user.email=t@t", "-c", "user.name=t",
-                        "commit", "-q", "--allow-empty", "-m", "x"], cwd=tree, check=True)
         subprocess.run(["git", "tag", f"sdk-v{version}"], cwd=tree, check=True)
     # Move the surface.
     zr = tree / "packages" / "vdi2770" / "src" / "vdi2770" / "zipread.py"
@@ -181,3 +186,51 @@ def test_a_baseline_that_is_not_what_its_tag_published_is_refused(tmp_path):
                           cwd=tree, capture_output=True, text=True)
     assert done.returncode == 1, done.stdout + done.stderr
     assert "not what sdk-v0.0.9 published" in done.stderr, done.stderr
+
+
+def test_a_checkout_without_tags_is_refused_rather_than_waved_through(tmp_path):
+    """"No such tag" and "this checkout has no tags" were the same answer, and
+    the second turns every judgement in the tool off. A `--depth 1 --no-tags`
+    clone — which is what `actions/checkout` gives you by default — recorded a
+    moved surface under a version that is live on PyPI, with the whole gate
+    green. A guard that cannot see is a guard that says yes.
+    """
+    tree = tmp_path / "tree"
+    shutil.copytree(ROOT / "packages", tree / "packages")
+    (tree / "tools").mkdir()
+    shutil.copy(TOOL, tree / "tools" / "api_fingerprint.py")
+    subprocess.run(["git", "init", "-q"], cwd=tree, check=True)      # no tags at all
+
+    done = subprocess.run([sys.executable, "tools/api_fingerprint.py", "--write"],
+                          cwd=tree, capture_output=True, text=True)
+    assert done.returncode == 1, done.stdout + done.stderr
+    assert "no `sdk-v*` tags" in done.stderr, done.stderr
+
+
+def test_a_version_that_is_already_published_is_not_recorded_over(tmp_path):
+    """Restoring the baseline from the previous tag is what this tool's own error
+    messages tell you to do, and it walked a surface change into the live
+    version: the release branch fires on "the recorded version differs", which is
+    exactly the condition that made the same-version guard unreachable."""
+    sys.path.insert(0, str(ROOT / "tools"))
+    import api_fingerprint as fp
+
+    recorded = json.loads(BASELINE.read_text(encoding="utf-8"))
+    published = fp._at_tag(recorded["version"])
+    if published is None:
+        pytest.skip(f"sdk-v{recorded['version']} is not tagged here yet")
+    assert fp._published(recorded["version"]), "premise: the recorded version shipped"
+
+
+def test_a_version_going_backwards_is_not_a_release():
+    """Additions are compatible with a patch bump, and `compatible()` returned
+    None on the strength of that before it ever looked at the numbers — so
+    0.6.1 -> 0.5.0 passed. A pin that admits the older one will never see it."""
+    sys.path.insert(0, str(ROOT / "tools"))
+    import api_fingerprint as fp
+
+    was = json.loads(BASELINE.read_text(encoding="utf-8"))
+    added = {"format": fp.FORMAT, "version": "0.0.1",
+             "surface": dict(was["surface"], NEWNAME={"kind": "str", "value": "'x'"})}
+    why = fp.compatible(was, added)
+    assert why and "backwards" in why, why

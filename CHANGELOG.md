@@ -6,6 +6,54 @@ Six things that were true of the code and not of what the project said about it,
 plus the guards that make each one say so next time.
 
 
+Four defects, three of them introduced by the repairs that came before them. A
+repair is a change like any other.
+
+- **A refused parse is the expensive one, and it was charged nothing.** The tree
+  budget counted the tree that came back — so metadata *over* the per-document
+  cap built a hundred thousand nodes, raised, and cost the counter zero. A
+  thousand of those is a 280 KiB archive that took **51 seconds** with the
+  counter reading 2 against a budget of 500,000. Charged before the parse now,
+  from the bytes: **6.7 s**, and the nine-hundred-document handover still passes.
+- **A container we declined to model was then judged.** Skipping the parse leaves
+  `declared` empty, and the rules that read it said things about the sender: a
+  conforming document container declaring a `.zip` payload came back with `Z11`
+  and `Z3`, both errors, both `about: container`, beside the `X6` saying this
+  tool had not looked. Checked alone it is clean — so the verdict depended on
+  what else was in the sweep. Unknown is not "declares nothing", and it
+  propagates to the children.
+- **Balancing braces re-opened both holes it closed.** `<<` inside a PDF string
+  or comment counted as an opening, so `(value <<redacted)` ran the scan to its
+  cap and found an `/Encrypt` that a *comment* mentioned; and `>>` inside a
+  string ended a real dictionary early, hiding a genuine one. A `trailer`
+  keyword with no dictionary after it walked the full 64 KiB cap, so 16,000 of
+  them in a 128 KB member cost **135 seconds** — from a 1.5 KB archive. Now
+  0.023 s, and strings, hex strings and comments are skipped.
+- **Dropping `.` segments broke what `Z13` exists to enable.** `files.py`
+  suppresses `F2` inside a folder this tool did not open by matching the
+  archive's own member names against that prefix, and normalising the prefix
+  made it match nothing — so the files in a folder the same report calls
+  unopened were accused of being undeclared. The decision drops `.`; the value
+  keeps the archive's spelling.
+- **The release gate failed open where it could not see.** "No such tag" and
+  "this checkout has no tags" were the same answer, and the second turns every
+  judgement in `api_fingerprint.py` off: in a `--depth 1 --no-tags` clone —
+  which is what `actions/checkout` gives you by default — a moved surface
+  recorded cleanly under a version live on PyPI with the whole gate green. It
+  refuses now, and `release.yml` fetches the tags it judges by. Three more holes
+  went with it: recording over a version that is itself published, `--first`
+  against a package with releases behind it, and a version going backwards.
+- **Four gates could not fail.** The mutation row for the new exception gate
+  killed a different test; the schema-budget test measured rendered findings
+  rather than errors drawn from the generator, so it passed with the bound
+  deleted; nothing asserted the release workflows run `make oracle-fully-swept`;
+  and one comment line inside a `defaults:` block made the working-directory
+  check pass vacuously over the failure it exists to prevent.
+- **`--check-swept` never looked at the repository.** It read the recorded file's
+  own key set, so a sweep missing a container answered "complete" and an empty
+  one answered "every one of 0 containers has a reference verdict".
+
+
 Review of this release candidate found one thing that had to
 stop it and a dozen that had to be fixed before it went out. What follows is what
 they found, not a summary written after the fact.
@@ -55,7 +103,8 @@ they found, not a summary written after the fact.
   changelog helper raised `ValueError` on a file with no sections, missed a
   heading on the first line, and ended a section at a `## ` inside a code fence.
   And two budget tests asserted on `time.monotonic()` and went red on a loaded
-  machine — they count what the budget bounds instead.
+  machine — they count what the budget bounds instead. Others still measure the
+  clock, deliberately: an amplification test has no meaning without one.
 - **Packaging.** An sdist built in a tree somebody had run the suite in carried
   pytest's cache, because `recursive-include packages ... *.md` matches
   `.pytest_cache/README.md` — gitignored is not excluded. Six links in the README
@@ -253,7 +302,7 @@ below is measured on this machine, before and after, on the same input.
 Three gates that ask what `make check` cannot ask of itself.
 
 - **`make mutations`** takes every claim this project makes about a gate, breaks
-  the thing that gate protects, and checks the gate notices — 33 rows, each
+  the thing that gate protects, and checks the gate notices — 39 rows, each
   naming the pytest selection or the tool that has to go red. The harness checks
   itself as hard as it checks the code: a row whose anchor no longer appears
   exactly once is an error rather than a pass; every apply and restore clears
@@ -698,10 +747,9 @@ amplification test that existed checked a single archive.
 
 ## 0.3.0 — 2026-08-24
 
-Two independent audits — one of what every rule *claims*, one trying to make the
-tool give a wrong answer — found thirteen defects. Six are fixed here. The three
-that mattered most were containers this tool passed with exit 0 that `unzip -t`
-refuses, and legitimate deliveries it failed.
+Thirteen defects, six of them fixed here. The three that mattered most were
+containers this tool passed with exit 0 that `unzip -t` refuses, and legitimate
+deliveries it failed.
 
 **It said nothing about archives that are broken**
 

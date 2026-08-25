@@ -14,7 +14,11 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      # `fetch-depth: 0` is load-bearing: three release-time assertions read
+      # the tag history, and without it they take their degraded branch or
+      # skip — in the one workflow that authorises a publish.
       - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"

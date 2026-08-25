@@ -200,6 +200,19 @@ def main() -> int:
         # Central being up — the sweep workflow keeps the file honest, and this
         # only asks whether it is complete.
         recorded = json.loads(OUT.read_text(encoding="utf-8"))
+        # Against the containers on disk, not against the file's own key set. A
+        # sweep missing a fixture entirely answered "complete", and an empty one
+        # answered "every one of 0 containers has a reference verdict" -- the
+        # canary this file already carries for `ours_only()` and did not carry
+        # here.
+        here = {p.name for p in containers()}
+        assert here, "no containers found; this gate would pass over nothing"
+        if set(recorded["containers"]) != here:
+            print(f"the sweep and the repository disagree about which containers "
+                  f"exist: only swept {sorted(set(recorded['containers']) - here)}, "
+                  f"only here {sorted(here - set(recorded['containers']))}",
+                  file=sys.stderr)
+            return 1
         waiting = sorted(recorded.get("_unswept", {}))
         if waiting:
             print(f"{len(waiting)} container(s) have never been through the reference "

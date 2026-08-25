@@ -334,7 +334,7 @@ Why this is ours: The document did something the schema checker would not follow
 
 Why this is ours: The file is well-formed XML; we declined to turn it into objects. Two ways that happens, and the detail says which: this document alone has more elements than the reader will build, or this read has already built its budget of them across the whole container tree. Both are the same arithmetic — the bytes were bounded and the tree built out of them was not, and the expansion between the two is the sender's to choose. 7.98 MB of nested elements compresses to a 115 KB archive, and forty containers of them to a 12 KB one. Reporting either as malformed would blame the sender for our limit, and reporting nothing would say the metadata passed checks that never ran. It is an error because nothing downstream of the model was checked.
 
-**Remedy.** Nothing here is necessarily wrong with the metadata. The reported reason says which limit stopped us — the elements in this document, or the elements this read had left. Split the delivery, or check it with a validator that has no such limit: the limit belongs to this tool, not to VDI 2770.
+**Remedy.** Nothing here is necessarily wrong with the metadata. The reported reason says which limit stopped us. If it is the elements in this document, that one file is larger than this tool models — check it with a validator that has no such limit. If it is the elements this read had left, the delivery as a whole is; split it and the same containers go through. Either way the limit belongs to this tool, not to VDI 2770.
 
 ## tool
 

@@ -1,6 +1,6 @@
 """Core value types: what a rule is, what a finding is, where it happened.
 
-Nothing in this module knows about ZIP files, XML, or PDF. Rules are written
+Nothing in this module reads a ZIP file, an XML document or a PDF. Rules are written
 against the model; the readers are not reachable from here.
 
 `Location`, `Defect`, `Kind` and the three reserved filenames live in the

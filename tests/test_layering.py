@@ -85,12 +85,26 @@ def test_unicode_canonicalisation_is_defined_once_in_the_project():
     for root in ("src", "packages/vdi2770/src"):
         for path in sorted((ROOT / root).rglob("*.py")):
             tree = ast.parse(path.read_text(encoding="utf-8"))
+            aliases, imported = set(), set()
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Import):
+                    aliases |= {a.asname or a.name for a in node.names
+                                if a.name == "unicodedata"}
+                elif isinstance(node, ast.ImportFrom) and node.module == "unicodedata":
+                    imported |= {a.asname or a.name for a in node.names
+                                 if a.name == "normalize"}
             for node in ast.walk(tree):
                 if not isinstance(node, ast.Call):
                     continue
                 fn = node.func
-                if (isinstance(fn, ast.Attribute) and fn.attr == "normalize"
-                        and isinstance(fn.value, ast.Name) and fn.value.id == "unicodedata"):
+                # Three spellings, because two of them are how you would write it
+                # if you were trying not to be noticed: `unicodedata.normalize`,
+                # `u.normalize` after `import unicodedata as u`, and a bare
+                # `normalize` after `from unicodedata import normalize`.
+                by_module = (isinstance(fn, ast.Attribute) and fn.attr == "normalize"
+                             and isinstance(fn.value, ast.Name) and fn.value.id in aliases)
+                by_name = isinstance(fn, ast.Name) and fn.id in imported
+                if by_module or by_name:
                     hits.append(f"{path.relative_to(ROOT)}:{node.lineno}")
 
     assert len(hits) == 1, "more than one definition of canonical form:\n  " + "\n  ".join(hits)

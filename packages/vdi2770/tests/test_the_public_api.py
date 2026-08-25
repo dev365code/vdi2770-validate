@@ -499,3 +499,40 @@ def test_encryption_is_found_however_long_the_trailer_dictionary_is():
               b"2 0 obj<< /Length 20 >>stream\n/Encrypt 9 0 R\nendstream endobj\n"
               b"trailer\n<< /Size 5 /Root 1 0 R >>\nstartxref\n0\n%%EOF")
     assert not vdi2770.read_pdf(inside).encrypted
+
+
+def test_a_dictionary_ends_at_its_own_braces_and_not_inside_a_string():
+    """Balancing `<< >>` closed one hole and opened another. PDF strings and
+    comments contain arbitrary bytes, so `(value <<redacted)` counted as a
+    dictionary opening, the depth never returned to zero, and the scan ran to
+    its cap — picking up an `/Encrypt` that a *comment* mentioned. The tool then
+    told the sender their unencrypted file was encrypted, which is the exact
+    false positive the trailer scan was narrowed to fix.
+    """
+    plain = (b"%PDF-1.4\ntrailer\n<< /ID [(note: value <<redacted)] /Root 1 0 R >>\n"
+             b"% reminder: strip /Encrypt 3 0 R from the export profile\n%%EOF")
+    assert not vdi2770.read_pdf(plain).encrypted
+
+    hexed = (b"%PDF-1.4\ntrailer\n<< /ID [<3c3c>] /Root 1 0 R >>\n"
+             b"/Encrypt 3 0 R\n%%EOF")
+    assert not vdi2770.read_pdf(hexed).encrypted
+
+    # And the thing it is for still works, including a nested dictionary.
+    real = (b"%PDF-1.4\ntrailer\n<< /Root 1 0 R /Extra << /Deep 1 >> "
+            b"/ID [(x) (y)] /Encrypt 4 0 R >>\n%%EOF")
+    assert vdi2770.read_pdf(real).encrypted
+
+
+def test_a_file_full_of_the_word_trailer_is_not_expensive():
+    """The docstring said a bounded window means "a file full of the word
+    `trailer` cannot make this quadratic". Replacing the window with a brace walk
+    kept the sentence and lost the property: with no `<<` after the keyword the
+    walk scans its whole 64 KiB cap, once per keyword. A 128 KB member cost
+    **135 seconds**, measured — from an archive of 1.5 KB.
+    """
+    import time
+
+    body = b"%PDF-1.4\n" + b"trailer\n" * 16_000
+    started = time.monotonic()
+    assert not vdi2770.read_pdf(body).encrypted
+    assert time.monotonic() - started < 5, "a keyword with no dictionary after it costs a scan"

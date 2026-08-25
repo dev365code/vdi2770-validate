@@ -60,14 +60,48 @@ def test_the_cost_stops_growing_once_the_budget_is_spent():
     # because it measures the machine as much as the code. What the budget
     # actually bounds is how many errors are rendered, and rendering is what the
     # cost was quadratic in.
-    rendered = {}
+    # What the budget bounds is how many errors are *drawn from the generator* —
+    # that is what `islice` is for, and it is where the cost was. Counting the
+    # rendered findings measured the wrong thing: a later `errors[:MAX]` truncates
+    # regardless, so this passed with the bound deleted and merely duplicated the
+    # test below it. Count the draws.
+    drawn = {}
+    real_schema = xsdvalidate._schema
+
     for n in (2_000, 8_000, 32_000):
         body = metadata_with(n)
-        rendered[n] = len(xsdvalidate.validate(body, xmlread.parse(body)))
+        seen = 0
 
-    assert len(set(rendered.values())) == 1, (
+        class Counting:
+            """The schema, with a tally on the one generator that matters.
+            `XMLSchema11` refuses attribute assignment, so this wraps rather than
+            patches."""
+
+            def __init__(self, inner):
+                self._inner = inner
+
+            def __getattr__(self, name):
+                return getattr(self._inner, name)
+
+            def iter_errors(self, *a, **kw):
+                nonlocal seen
+                for err in self._inner.iter_errors(*a, **kw):
+                    seen += 1
+                    yield err
+
+        xsdvalidate._schema = lambda: Counting(real_schema())
+        try:
+            rendered_n = len(xsdvalidate.validate(body, xmlread.parse(body)))
+        finally:
+            xsdvalidate._schema = real_schema
+        drawn[n] = (seen, rendered_n)
+
+    pulled = {n: d for n, (d, _) in drawn.items()}
+    assert len(set(pulled.values())) == 1, (
         f"the budget is supposed to be the ceiling, and the work still grows "
-        f"with the document: {rendered}")
+        f"with the document: {pulled}")
+    assert max(pulled.values()) <= xsdvalidate.MAX_SCHEMA_ERRORS + 1, pulled
+    rendered = {n: r for n, (_, r) in drawn.items()}
     # The budget plus the one finding that says it was spent — a truncated check
     # that reports nothing about being truncated is the failure the test below
     # this one is about.

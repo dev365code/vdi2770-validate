@@ -133,3 +133,78 @@ def test_the_budget_is_generous_next_to_a_real_delivery():
     from vdi2770_validate.runner import MAX_TOTAL_ELEMENTS
 
     assert MAX_TOTAL_ELEMENTS >= 900 * 500, MAX_TOTAL_ELEMENTS
+
+
+def test_the_budget_is_charged_for_work_done_not_only_for_work_kept():
+    """The first draft added `_count(tree)` *after* `parse` returned — so a
+    document over the per-document cap built a hundred thousand nodes, raised,
+    and was charged nothing. A thousand of those is a **280 KiB** archive that
+    cost **51 seconds**, with the counter reading 2 against a budget of 500,000.
+
+    The fix closed the shape just under the cap and left the shape just over it
+    wide open, which is worse than not having tried: the release notes said the
+    read was bounded.
+
+    Charged before the parse, from the bytes. Every element the parser can build
+    has an opening `<` in the metadata, so counting those bounds what the parse
+    can cost whether it succeeds, refuses, or dies on a malformed token.
+    """
+    from vdi2770_validate.runner import MAX_TOTAL_ELEMENTS
+
+    over = xmlread.MAX_ELEMENTS + 50               # every document is refused
+    n = (MAX_TOTAL_ELEMENTS // over) + 6
+    raw = _tree_of(n, over)
+    assert len(raw) < 1_000_000
+
+    report = check_bytes(raw, "overcap.zip")
+    refused = [f for f in report.findings
+               if f.rule.id == "X6" and "budget" in (f.detail or "")]
+    assert refused, (
+        "every document was over the per-document cap, so none of them was "
+        "counted, and the read parsed all of them: "
+        f"{sorted({f.rule.id for f in report.findings})}")
+
+
+def test_a_document_we_did_not_model_is_not_then_judged():
+    """A container skipped for budget has no parsed metadata, so `declared` is
+    empty — and the container rules ran anyway. A conforming document container
+    that declares a `.zip` payload was reported with `Z11` *and* `Z3`, both
+    errors, both `about: container`, on the same archive whose `X6` says this
+    tool declined to look.
+
+    Checked on its own the same container is clean. A verdict that depends on
+    what else was in the sweep is not a verdict.
+    """
+    import zipfile as zf
+
+    from conftest import CLEAN_DOCUMENT
+    from vdi2770_validate.model import About
+
+    src = zf.ZipFile(CLEAN_DOCUMENT)
+    meta = src.read("VDI2770_Metadata.xml").decode()
+    meta = meta.replace("<DigitalFile",
+                        '<DigitalFile FileFormat="application/zip">inner.zip</DigitalFile>\n'
+                        "            <DigitalFile", 1)
+    inner = io.BytesIO()
+    with zf.ZipFile(inner, "w") as z:
+        z.writestr("a.txt", b"hi")
+    doc = io.BytesIO()
+    with zf.ZipFile(doc, "w", zf.ZIP_DEFLATED) as z:
+        z.writestr("VDI2770_Metadata.xml", meta.encode())
+        z.writestr("B.pdf", src.read("B.pdf"))
+        z.writestr("B.docx", b"x")
+        z.writestr("inner.zip", inner.getvalue())
+
+    alone = {f.rule.id for f in check_bytes(doc.getvalue(), "v.zip").findings}
+
+    from vdi2770_validate import runner
+    kept = runner.MAX_TOTAL_ELEMENTS
+    runner.MAX_TOTAL_ELEMENTS = 0
+    try:
+        starved = check_bytes(doc.getvalue(), "v.zip").findings
+    finally:
+        runner.MAX_TOTAL_ELEMENTS = kept
+
+    blamed = {f.rule.id for f in starved if f.about is About.CONTAINER}
+    assert not blamed - alone, (
+        f"the budget invented findings about the sender: {sorted(blamed - alone)}")

@@ -120,3 +120,33 @@ def test_it_says_one_folder_in_english():
     assert fired, "the fixture no longer produces Z13"
     detail = fired[0].detail or ""
     assert " hold " not in detail or not detail.startswith("1 "), detail
+
+
+def test_a_dot_slash_folder_still_suppresses_the_files_inside_it():
+    """Dropping `.` segments fixed the false `Z13` and broke the thing `Z13`
+    exists to enable.
+
+    `files.py` suppresses `F2` for members under a folder this tool did not open,
+    by matching the archive's own name against the prefix this function returns.
+    Normalising `./AB393/` to `AB393/` made that match nothing, so both files in
+    the folder were reported as undeclared — accusing files inside a container
+    the same report says was never opened.
+
+    The decision uses the normalised path; the prefix has to stay the archive's
+    spelling, which is also what the finding shows a user who has to find it in
+    their ZIP listing.
+    """
+    body = zipfile.ZipFile(CLEAN_DOCUMENT)
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr("VDI2770_Main.xml",
+                   b'<?xml version="1.0"?><Document xmlns="http://www.vdi.de/schemas/vdi2770"/>')
+        z.writestr("VDI2770_Main.pdf", b"%PDF-1.7\n")
+        for name in ("VDI2770_Metadata.xml", "B.pdf"):
+            z.writestr(f"./AB393/{name}", body.read(name))
+
+    fired = [f.rule.id for f in report(buf.getvalue()).findings]
+    assert "Z13" in fired, fired
+    assert "F2" not in fired, (
+        "the files inside a folder this tool did not open were called undeclared: "
+        + str(fired))

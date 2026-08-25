@@ -356,6 +356,14 @@ def test_a_workflow_that_publishes_runs_the_whole_gate():
         ran = commands_in(w)
         assert any(c.strip() == "make check" for c in ran), (
             f"{w.name} publishes and does not run `make check`. It runs: {ran}")
+        # And that the evidence it publishes counts is complete. `OUTSIDE_CHECK`
+        # states the requirement in prose -- "it stops being acceptable the
+        # moment those counts are published, which is what a release does" --
+        # and stated it to nobody: deleting the step from either workflow left
+        # the suite green.
+        assert any(c.strip() == "make oracle-fully-swept" for c in ran), (
+            f"{w.name} publishes divergence counts and does not check the sweep "
+            f"is complete. It runs: {ran}")
 
 
 def test_a_step_that_runs_make_check_runs_it_where_the_makefile_is():
@@ -372,9 +380,25 @@ def test_a_step_that_runs_make_check_runs_it_where_the_makefile_is():
 
     for w in workflows():
         text = w.read_text(encoding="utf-8")
-        default = re.search(r"^defaults:\s*\n\s+run:\s*\n\s+working-directory:\s*(\S+)",
-                            text, re.M)
-        if not default or default.group(1) == ".":
+        # Read the block, do not match three literal lines. `\s+` cannot span a
+        # comment, so one comment line between `run:` and `working-directory:`
+        # made this find nothing, `continue` past every workflow, and pass
+        # vacuously over exactly the failure it exists to prevent.
+        default = None
+        lines, depth = text.splitlines(), None
+        for n, line in enumerate(lines):
+            if line.startswith("defaults:"):
+                depth = n
+                continue
+            if depth is None:
+                continue
+            if line and not line[0].isspace():
+                break                       # the block ended
+            stripped = line.strip()
+            if stripped.startswith("working-directory:"):
+                default = stripped.split(":", 1)[1].strip()
+                break
+        if default is None or default == ".":
             continue
         for step in re.split(r"\n      - ", text):
             root_commands = [c for c in ("make check", "make ", "python tools/")

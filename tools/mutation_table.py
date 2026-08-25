@@ -268,16 +268,16 @@ TABLE = [
 
     ("rules/a-dot-slash-prefix-is-not-a-folder",
      "src/vdi2770_validate/rules/container.py",
-     '        segments = [seg for seg in prefix.split("/") if seg not in ("", ".")]',
-     "        segments = [prefix]",
+     '        if not [seg for seg in prefix.split("/") if seg not in ("", ".")]:',
+     "        if False:",
      ["tests/test_documents_delivered_as_folders.py"],
      "`./VDI2770_Metadata.xml` is at the root, and Z13 said this tool had not "
      "looked inside something it had read"),
 
     ("gates/an-exception-nobody-can-catch-by-name",
      "packages/vdi2770/src/vdi2770/__init__.py",
-     "from .xmlread import NS, Node, UnsafeXml, XmlError, XmlTooLarge",
-     "from .xmlread import NS, Node, UnsafeXml, XmlError",
+     '"XmlTooLarge",',
+     "",
      ["packages/vdi2770/tests/test_it_stands_alone.py"],
      "XmlTooLarge was raised at the boundary and not exported, so the release "
      "fingerprint could not see it and a caller could not catch it"),
@@ -291,7 +291,54 @@ TABLE = [
      "the check for a second definition was a grep, so a comment naming the "
      "function counted as one -- and a real second import did not"),
 
-    # --- the canary -------------------------------------------------------    # --- the canary -------------------------------------------------------
+    ("reader/a-trailer-with-no-dictionary-costs-nothing",
+     "packages/vdi2770/src/vdi2770/pdfread.py",
+     '    if data[i:i + 2] != b"<<":',
+     "    if False:",
+     ["packages/vdi2770/tests/test_the_public_api.py"],
+     "balancing braces to the cap for each of 16,000 bare `trailer` keywords "
+     "cost 135 seconds from a 1.5 KB archive"),
+
+    ("reader/a-string-is-not-a-dictionary",
+     "packages/vdi2770/src/vdi2770/pdfread.py",
+     '        if b == b"(":                 # literal string: nested parens, backslash escapes',
+     "        if False:",
+     ["packages/vdi2770/tests/test_the_public_api.py"],
+     "`(value <<redacted)` counted as an opening, so the scan overran and found "
+     "an /Encrypt that a comment mentioned"),
+
+    ("runner/the-budget-is-charged-before-the-work",
+     "src/vdi2770_validate/runner.py",
+     '            elements += (c.metadata_bytes.count(b"<") - c.metadata_bytes.count(b"</"))',
+     "            pass",
+     ["tests/test_a_document_we_would_not_build_is_not_malformed.py"],
+     "counting the tree that came back charged nothing for a document the parser "
+     "refused, and refusing is the expensive path"),
+
+    ("runner/a-container-we-did-not-model-is-not-judged",
+     "src/vdi2770_validate/runner.py",
+     "        if modelled and not unknown_parent:",
+     "        if True:",
+     ["tests/test_a_document_we_would_not_build_is_not_malformed.py"],
+     "a conforming container got Z11 and Z3, both about:container, because the "
+     "budget emptied `declared` on the archive whose X6 says we did not look"),
+
+    ("gates/a-checkout-without-tags-is-not-a-package-without-releases",
+     "tools/api_fingerprint.py",
+     "    tags = {t for t in got.stdout.split() if t}",
+     '    tags = {t for t in got.stdout.split() if t} or {"sdk-v0"}',
+     ["tests/test_the_api_record_holds.py"],
+     "a --depth 1 --no-tags clone made every guard answer `not published`, and a "
+     "moved surface recorded cleanly under a version live on PyPI"),
+
+    ("gates/a-publishing-workflow-checks-the-sweep-is-complete",
+     ".github/workflows/release.yml",
+     "        run: make oracle-fully-swept",
+     "        run: true",
+     ["tests/test_ci_parity.py"],
+     "OUTSIDE_CHECK stated the requirement in prose and enforced nothing"),
+
+    # --- the canary -------------------------------------------------------
     ("canary/a-comment-nobody-reads",
      "src/vdi2770_validate/report.py",
      '"""Rendering.',
