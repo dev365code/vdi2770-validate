@@ -67,3 +67,37 @@ def test_a_claim_in_a_real_xmp_packet_is_read():
               b"<pdfaid:part>2</pdfaid:part><pdfaid:conformance>b</pdfaid:conformance>"
               b"</rdf:Description></rdf:RDF></x:xmpmeta><?xpacket end='w'?>\n")
     assert pdfread.read(packet).pdfa_claim == "2b"
+
+
+def test_the_level_the_report_prints_is_the_level_the_file_claims():
+    """The one number this product exists to report, and nothing joined the two
+    halves: `pdfread` was pinned at the reader, the wording was pinned at the
+    rule, and the value in between could be a constant.
+
+    Measured: hard-coding `claims PDF/A-1a` left the whole suite green while the
+    corpus container's B.pdf claims 3a.
+    """
+    import zipfile
+
+    from conftest import CORPUS
+    from vdi2770 import read_pdf
+    from vdi2770_validate.runner import check_file
+
+    for container in sorted(CORPUS.rglob("*.zip")):
+        claims = {}
+        with zipfile.ZipFile(container) as z:
+            for name in z.namelist():
+                if name.lower().endswith(".pdf"):
+                    claim = read_pdf(z.read(name)).pdfa_claim
+                    if claim:
+                        claims[name] = claim
+        if not claims:
+            continue
+        for f in check_file(str(container)).findings:
+            if f.rule.id != "P4" or f.where.member not in claims:
+                continue
+            want = claims[f.where.member]
+            assert f"PDF/A-{want}" in (f.detail or ""), (
+                f"{container.name}!/{f.where.member} claims {want} and the report "
+                f"says {f.detail!r}")
+        assert claims, container.name

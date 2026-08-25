@@ -109,10 +109,10 @@ Python 3.9 and up. The budgets are module constants in `vdi2770.zipread` — per
 archive: `MAX_MEMBERS`, `MAX_MEMBER_BYTES`, `MAX_TOTAL_BYTES`, `MAX_RATIO` with
 its `MIN_SUSPICIOUS_BYTES` floor, `MAX_METADATA_BYTES`, `MAX_CONTAINER_LEVELS`;
 across one read: `MAX_CONTAINERS`, `MAX_TOTAL_METADATA_BYTES`,
-`MAX_TOTAL_DECOMPRESSED`, `MAX_TOTAL_MEMBERS`. `vdi2770.pdfread` has six of its own for the PDF scan:
+`MAX_TOTAL_DECOMPRESSED`, `MAX_TOTAL_MEMBERS`. `vdi2770.pdfread` has seven of its own for the PDF scan:
 `MAX_STREAMS`, `MAX_STREAM_SCAN`, `MAX_INFLATED_PER_STREAM`,
 `MAX_INFLATED_TOTAL`, `MAX_XMP_PACKETS`, `MAX_PDFA_PREFIXES`,
-A test fails if
+`MAX_TRAILER_SCAN`. A test fails if
 either module grows one this list does not name. You can read them all, and they
 are deliberately not arguments, so a caller cannot turn them off by accident.
 

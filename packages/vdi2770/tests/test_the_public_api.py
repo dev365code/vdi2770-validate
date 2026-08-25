@@ -423,6 +423,20 @@ ENCRYPT_CASES = [
 ]
 
 
+@pytest.mark.parametrize("why,body,expected", ENCRYPT_CASES, ids=[c[0] for c in ENCRYPT_CASES])
+def test_encryption_is_read_from_the_trailer_and_nowhere_else(why, body, expected):
+    """`docs/scope.md` says this pattern "does not fire on the word appearing in
+    a comment or a content stream". It did: the indirect reference was matched
+    anywhere in the file, so a readable PDF that merely mentions `/Encrypt` in a
+    string was reported as encrypted — an error on a file that is fine.
+
+    A PDF whose trailer lives in a cross-reference stream is not read here and
+    comes back False. That is a miss rather than a false alarm, and scope.md
+    says so.
+    """
+    assert vdi2770.read_pdf(body).encrypted is expected, why
+
+
 def test_every_node_carries_the_namespace_it_was_written_in():
     """`Node.ns` is populated on every element and `NS` is exported, and nothing
     in either package or either suite ever read either — setting `ns` to `""`

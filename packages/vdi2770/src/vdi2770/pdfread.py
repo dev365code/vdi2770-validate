@@ -1,9 +1,11 @@
 """Four facts about a PDF, read by scanning bytes.
 
-We deliberately do not use a PDF parsing library. We need the header, whether
-the file is encrypted, and what PDF/A level it *claims* in its XMP packet —
-three facts. Pulling a full parser for untrusted supplier files, to read three
-facts, is a poor trade in both dependency weight and attack surface.
+We deliberately do not use a PDF parsing library. We need whether the file is a
+PDF at all, its header, whether it is encrypted, and what PDF/A level it
+*claims* in its XMP packet — the four the summary line names, and the four
+`PdfFacts` carries; this paragraph used to say three and forget `is_pdf`.
+Pulling a full parser for untrusted supplier files, to read four facts, is a
+poor trade in both dependency weight and attack surface.
 
 What this cannot do: verify a PDF/A claim. Only a PDF/A validator can. The
 report says so every time it prints a claim.
@@ -43,7 +45,31 @@ MAX_XMP_PACKETS = 64      # per haystack; a file needs one
 # The trailer references the encryption dictionary indirectly — that is what the
 # format requires. `/Encrypt` on its own appears in comments, content streams and
 # field names, and used to be reported as an error.
+#
+# Matching that indirect form anywhere in the file was not enough: the same token
+# inside a string in a content stream — `(see /Encrypt 3 0 R for details)` — read
+# as an encrypted document, which is an error raised against a file that opens
+# fine. It is read from the trailer, which is where the format puts it.
 _ENCRYPT_REF = re.compile(rb"/Encrypt\s+\d+\s+\d+\s+R")
+_TRAILER = re.compile(rb"\btrailer\b")
+MAX_TRAILER_SCAN = 4096   # bytes after each `trailer` keyword
+
+
+def _is_encrypted(data: bytes) -> bool:
+    """Whether a trailer dictionary references an encryption dictionary.
+
+    A file may carry several trailers — incremental updates append one each — so
+    every one is looked at, each over a bounded window so a file full of the
+    word `trailer` cannot make this quadratic.
+
+    A PDF whose trailer lives in a cross-reference stream has no `trailer`
+    keyword and comes back False. That is a miss and not a false alarm, and
+    docs/scope.md says so rather than leaving a reader to assume otherwise.
+    """
+    for hit in _TRAILER.finditer(data):
+        if _ENCRYPT_REF.search(data, hit.end(), hit.end() + MAX_TRAILER_SCAN):
+            return True
+    return False
 
 MAX_STREAM_SCAN = 400_000        # compressed bytes read after each stream marker
 MAX_INFLATED_PER_STREAM = 4_000_000   # and what we will let one of them become
@@ -141,7 +167,7 @@ def read(data: bytes) -> PdfFacts:
     if not data.startswith(b"%PDF-"):
         return PdfFacts(is_pdf=False)
     header = data[:8].decode("latin-1", "replace")
-    encrypted = _ENCRYPT_REF.search(data) is not None
+    encrypted = _is_encrypted(data)
     claim = None
     for hay in _haystacks(data):
         for packet in _packets(hay):

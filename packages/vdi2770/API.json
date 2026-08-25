@@ -472,7 +472,7 @@
     },
     "__version__": {
       "kind": "str",
-      "value": "'0.5.0'"
+      "value": "'0.6.0'"
     },
     "build_document": {
       "signature": "(root: 'Node', base: 'Location') -> 'Document'"
@@ -496,5 +496,5 @@
       "signature": "(data: 'bytes') -> 'PdfFacts'"
     }
   },
-  "version": "0.5.0"
+  "version": "0.6.0"
 }

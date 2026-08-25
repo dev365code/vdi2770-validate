@@ -5,6 +5,21 @@
 Six things that were true of the code and not of what the project said about it,
 plus the guards that make each one say so next time.
 
+- **The bytes were bounded and the tree built out of them was not.** A metadata
+  member of 7.98 MB — under the compression-ratio guard's size floor, so it was
+  never ratio-checked, and under the 16 MB metadata cap — holding 1.14 million
+  nested elements compresses to a **115 KB archive** and drove this process to
+  **952 MB**, measured. The reader's own first paragraph says an untrusted
+  archive does not get to decide how much memory we spend. `xmlread.parse` caps
+  the element count now: the same archive costs **101 MB**. Deliberately no depth
+  limit — 99,999 nested elements parse in 0.11 s once the count is bounded, and a
+  depth limit would take a real limit away from the caller by refusing documents
+  the schema checker gives up on and reports honestly.
+- **A document this tool would not model is not a malformed document.** Bounding
+  the tree earned the same archive a verdict that was false the other way:
+  *"The metadata file is not well-formed XML"*, because every parse error that
+  was not an entity refusal mapped to `X1`. New rule **`X6`**, `about: tool`:
+  the file is well-formed and we declined to build objects out of it.
 - **A name that means two entries identifies neither.** Every refusal in the
   reader is recorded against a *name*, and `zipfile` resolves a duplicated name
   to the **last** entry — so the accepted member, the budget charge and the
@@ -21,6 +36,17 @@ plus the guards that make each one say so next time.
   release path was shut in both directions: `--check` failed until `--write`
   succeeded, and `--write` refused. Its unit test could not see it, because it
   was written against a two-entry synthetic surface with no `__version__` in it.
+- **A finding about a name points at the name.** `M3`, `M4` and `M8` each object
+  to one `ClassName` and each reported the line of the `DocumentClassification`
+  around it — the same line for every name in the block, so the only thing
+  telling "the German name is wrong" from "this tool does not check French" was
+  the detail string. `M5` and `M7` had the same shape against `DocumentVersion`,
+  which is the largest element in the file — languages, descriptions, parties,
+  status and every digital file — so its opening line answered "where" with "in
+  this document somewhere". (`vdi2770` 0.6.0, breaking: `Classification.names`
+  holds `ClassName` objects and `DocumentVersion.languages` holds `Tagged`
+  objects, each with its own `src`, where both were bare tuples;
+  `DocumentVersion` gains `life_cycle_src`.)
 - **The reader is behind the same door as everything else.** `_into` guards the
   rules and `_step` guards what feeds them; `zipread.read` and
   `zipread.member_bytes` sat outside both. The reader's contract is that it

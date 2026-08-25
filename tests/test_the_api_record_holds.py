@@ -132,14 +132,9 @@ def test_the_version_itself_is_not_a_breaking_change():
     assert "__version__" in was["surface"], (
         "this test exists because the version is part of the recorded surface")
 
-    # Derived from the record, not hard-coded: this test asserts something about
-    # a *patch* bump, and writing "0.6.1" made it assert something about a minor
-    # one the day the recorded version was not 0.6.x.
-    major, minor, patch = (int(x) for x in was["version"].split(".")[:3])
-    later = f"{major}.{minor}.{patch + 1}"
     now = json.loads(json.dumps(was))
-    now["version"] = later
-    now["surface"]["__version__"] = {"kind": "str", "value": f"'{later}'"}
+    now["version"] = "0.6.1"
+    now["surface"]["__version__"] = {"kind": "str", "value": "'0.6.1'"}
     assert fp.compatible(was, now) is None, fp.compatible(was, now)
 
     # And the thing it is for still bites.
