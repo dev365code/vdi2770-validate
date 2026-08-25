@@ -244,8 +244,13 @@ def main() -> int:
             print(f"re-recording: the fingerprint format moved "
                   f"{recorded.get('format')} -> {FORMAT}. This says nothing about "
                   f"whether the library changed.", file=sys.stderr)
-        if (recorded and recorded.get("version") not in (None, now["version"])
-                and _published(recorded["version"])):
+        if recorded and recorded.get("version") not in (None, now["version"]):
+            # Unconditionally. Guarding this with `_published(recorded["version"])`
+            # made the check depend on a value the editor of this file chooses:
+            # point `version` at a tag that does not exist and the branch never
+            # runs at all, so `compatible()` is handed a version out of thin air
+            # and waves a removal through as a patch. `--write` then overwrites
+            # the field, so the committed diff shows an ordinary version bump.
             # This is what a release looks like: the recorded version shipped,
             # the package has moved past it. Refusing outright was a wall across
             # the one operation a release performs -- `sdk-v0.6.0` was the first
@@ -256,6 +261,13 @@ def main() -> int:
             # against a past that never existed. So the baseline has to *be* what
             # that tag published, not merely claim to be: the tag is the evidence
             # and this file is a copy of it.
+            if not _published(recorded["version"]):
+                print(f"{BASELINE.relative_to(ROOT)} says it records "
+                      f"{recorded['version']}, and no sdk-v{recorded['version']} "
+                      f"was ever tagged. There is nothing to compare against; "
+                      f"restore the baseline from the tag it belongs to.",
+                      file=sys.stderr)
+                return 1
             published = _at_tag(recorded["version"])
             if published != recorded:
                 print(f"{BASELINE.relative_to(ROOT)} says it records {recorded['version']}, "

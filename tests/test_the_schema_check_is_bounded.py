@@ -200,3 +200,60 @@ def test_resolving_many_complaints_over_one_parent_is_not_quadratic():
     assert uncached > cached * 3, (
         f"the cache saved nothing: {cached:.3f}s vs {uncached:.3f}s — either it is "
         f"gone or this input no longer has many siblings under one parent")
+
+
+def test_the_schema_is_compiled_once_and_not_once_per_container():
+    """`_schema()` built a fresh `XMLSchema` on every call, and `validate` is
+    called once per container. A delivery of 999 document containers — 302 KB of
+    archive, entirely legitimate — spent **26.4 seconds**, of which 21 was
+    recompiling the same bundled XSD 999 times. The project's own reference
+    load, "nine hundred document containers, a plant handover", paid the same
+    tax.
+
+    This is the rarer kind of budget finding: the cost falls on the customer, not
+    on the attacker. Counted rather than timed, because a wall-clock assertion
+    would measure the machine.
+    """
+    import io
+    import zipfile
+
+    # Count what the cache does *not* answer: `_schema` is memoised, so the
+    # thing to watch is how often it reaches the compiler underneath.
+    import xmlschema
+
+    from conftest import CLEAN_DOCUMENT
+    from vdi2770_validate import xsdvalidate as xv
+    from vdi2770_validate.runner import check_bytes
+
+    built = 0
+    real = xmlschema.XMLSchema
+
+    def counting(*a, **kw):
+        nonlocal built
+        built += 1
+        return real(*a, **kw)
+
+    src = zipfile.ZipFile(CLEAN_DOCUMENT)
+    inner = io.BytesIO()
+    with zipfile.ZipFile(inner, "w", zipfile.ZIP_DEFLATED) as z:
+        for name in src.namelist():
+            z.writestr(name, src.read(name))
+    outer = io.BytesIO()
+    with zipfile.ZipFile(outer, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr("VDI2770_Main.xml", b'<?xml version="1.0"?>'
+                                       b'<Document xmlns="http://www.vdi.de/schemas/vdi2770"/>')
+        z.writestr("VDI2770_Main.pdf", b"%PDF-1.7\n")
+        for i in range(12):
+            z.writestr(f"d{i}.zip", inner.getvalue())
+
+    xv._schema.cache_clear()
+    xmlschema.XMLSchema = counting
+    try:
+        check_bytes(outer.getvalue(), "many.zip")
+    finally:
+        xmlschema.XMLSchema = real
+        xv._schema.cache_clear()
+
+    assert built <= 1, (
+        f"the bundled schema was compiled {built} times for one read; it does not "
+        f"change between containers")

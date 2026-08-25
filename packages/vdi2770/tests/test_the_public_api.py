@@ -536,3 +536,72 @@ def test_a_file_full_of_the_word_trailer_is_not_expensive():
     started = time.monotonic()
     assert not vdi2770.read_pdf(body).encrypted
     assert time.monotonic() - started < 5, "a keyword with no dictionary after it costs a scan"
+
+
+# --- the trailer scan, as a class rather than as three fixed instances -------
+#
+# This scan has been repaired three times and each repair addressed the shape
+# that had been found: a whole-file token search, then a fixed window, then a
+# brace walk, then a brace walk that skips strings. Each one left the same class
+# open somewhere else, because the class is "ad-hoc byte scanning of a format
+# that has structure". These are all the shapes at once.
+
+ENC = b"%PDF-1.4\ntrailer\n<< /Size 5 /Root 1 0 R %s/Encrypt 4 0 R >>\nstartxref\n0\n%%EOF"
+
+
+def _pdf(dictionary: bytes) -> bytes:
+    return b"%PDF-1.4\ntrailer\n" + dictionary + b"\nstartxref\n0\n%%EOF"
+
+
+@pytest.mark.parametrize("name,body,expected", [
+    ("plain dictionary",
+     b"<< /Size 5 /Root 1 0 R /Encrypt 4 0 R >>", True),
+    ("no encrypt at all",
+     b"<< /Size 5 /Root 1 0 R >>", False),
+    ("nested dictionary before it",
+     b"<< /Root 1 0 R /Extra << /Deep 1 >> /Encrypt 4 0 R >>", True),
+    ("long /ID pushes it past any window",
+     b"<< /ID [<" + b"A" * 6000 + b"> <" + b"A" * 6000 + b">] /Encrypt 4 0 R >>", True),
+    # The token in a comment or a string is not a key. Reporting it told the
+    # sender to send an unprotected copy of a file that was never protected.
+    ("token inside a comment",
+     b"<< /Size 5 %/Encrypt 4 0 R was stripped\n>>", False),
+    ("token inside a literal string",
+     b"<< /Info (see /Encrypt 4 0 R in the old file) >>", False),
+    ("token inside a hex string",
+     b"<< /ID [<2f456e6372797074203420302052>] >>", False),
+    ("token after a string holding >>",
+     b"<< /Info (ends with >> here) /Encrypt 4 0 R >>", True),
+    ("token after a string holding <<",
+     b"<< /Info (opens with << here) /Encrypt 4 0 R >>", True),
+    ("token outside the dictionary",
+     b"<< /Size 5 >>\n/Encrypt 4 0 R", False),
+    ("escaped paren does not end the string",
+     rb"<< /Info (a \) /Encrypt 4 0 R still inside) >>", False),
+    ("comment inside a string is not a comment",
+     b"<< /Info (100% /Encrypt 4 0 R) >>", False),
+])
+def test_the_trailer_scan_reads_pdf_structure(name, body, expected):
+    assert vdi2770.read_pdf(_pdf(body)).encrypted is expected, name
+
+
+@pytest.mark.parametrize("name,body", [
+    ("a keyword with no dictionary", b"trailer\n" * 16_000),
+    ("a dictionary that opens and never closes", b"trailer<<" * 8_000),
+    ("a string that never closes", b"trailer\n<< /Info (" + b"x" * 200_000),
+    ("nesting with no end", b"trailer\n" + b"<<" * 30_000),
+    ("comments to the horizon", b"trailer\n<< " + b"%c\n" * 60_000),
+])
+def test_no_shape_of_trailer_is_expensive(name, body):
+    """The budget is for the file, not for each keyword. Per-keyword bounds meant
+    every new shape that reached the bound multiplied by however many keywords a
+    sender cared to write: 16,000 bare ones cost 135 s, and when that was fixed,
+    8,000 that *open* a dictionary cost 28 s on a 20 KB archive. A total is the
+    only bound that does not have another shape behind it.
+    """
+    import time
+
+    started = time.monotonic()
+    vdi2770.read_pdf(b"%PDF-1.4\n" + body)
+    spent = time.monotonic() - started
+    assert spent < 2, f"{name}: {len(body) / 1024:.0f} KiB cost {spent:.1f}s"

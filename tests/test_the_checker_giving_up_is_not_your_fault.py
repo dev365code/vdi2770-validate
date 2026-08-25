@@ -65,8 +65,15 @@ def test_an_ordinary_schema_violation_is_still_a_schema_violation(tmp_path):
 
 
 def test_a_broken_installation_is_still_ours(monkeypatch):
+    """The schema is compiled once and held, so a test that breaks the import
+    has to clear what an earlier test left behind — and so does the next one, or
+    `X0` follows it out of this test and into an unrelated container."""
     import builtins
 
+    from vdi2770_validate import xsdvalidate
+
+    xsdvalidate._schema.cache_clear()
+    monkeypatch.setattr(xsdvalidate._schema, "cache_clear", xsdvalidate._schema.cache_clear)
     real = builtins.__import__
 
     def no_xmlschema(name, *a, **k):
@@ -75,7 +82,10 @@ def test_a_broken_installation_is_still_ours(monkeypatch):
         return real(name, *a, **k)
 
     monkeypatch.setattr(builtins, "__import__", no_xmlschema)
-    got = findings(str(CLEAN_DOCUMENT))
+    try:
+        got = findings(str(CLEAN_DOCUMENT))
+    finally:
+        xsdvalidate._schema.cache_clear()
     assert "X0" in got and "X4" not in got, sorted(got)
 
 

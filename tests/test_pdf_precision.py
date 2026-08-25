@@ -101,3 +101,21 @@ def test_the_level_the_report_prints_is_the_level_the_file_claims():
                 f"{container.name}!/{f.where.member} claims {want} and the report "
                 f"says {f.detail!r}")
         assert claims, container.name
+
+
+def test_the_real_encrypted_pdf_in_the_corpus_is_still_found():
+    """The trailer scan was rewritten as one structure-aware pass. Seventeen
+    synthetic shapes say it reads PDF correctly; this says it still reads the one
+    genuinely encrypted file this repository has.
+
+    It lives here and not beside the reader because `test_layering.py` forbids the
+    reader's own suite from reaching the corpus — an sdist of that package
+    contains the package and nothing else.
+    """
+    from conftest import CORPUS
+    from vdi2770 import read_pdf
+
+    body = CORPUS / "pdf" / "encrypted.pdf"
+    assert body.exists(), body
+    facts = read_pdf(body.read_bytes())
+    assert facts.is_pdf and facts.encrypted, facts

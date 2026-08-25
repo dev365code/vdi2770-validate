@@ -56,63 +56,70 @@ MAX_TRAILER_SCAN = 65536  # the most of one trailer dictionary that is read
 
 
 def _is_encrypted(data: bytes) -> bool:
-    """Whether a trailer dictionary references an encryption dictionary.
+    """Whether a trailer dictionary has an `/Encrypt` key.
 
-    A file may carry several trailers — incremental updates append one each — so
-    every one is looked at. A keyword with no dictionary after it costs nothing,
-    which is what keeps a file full of the word `trailer` cheap: balancing braces
-    to a 64 KiB cap for each of 16,000 of them cost 135 seconds before that
-    early return existed.
+    Repaired three times before this, and each repair fixed the shape that had
+    been found: a whole-file token search reported any PDF whose *content*
+    mentioned `/Encrypt`; a fixed window missed an `/Encrypt` that a long `/ID`
+    pushed past it; a brace walk counted `<<` inside a string; a brace walk that
+    skipped strings still ran the token search over raw bytes, so `/Encrypt` in a
+    *comment* counted. Each fix was to an instance of one class -- ad-hoc byte
+    scanning of a format that has structure -- and the class kept a shape in
+    reserve.
 
-    Bounded by where the dictionary *ends*, not by a fixed window. A window was
-    the first shape and it was the wrong one: `/ID` holds two strings and a legal
-    file may make them long, which pushes `/Encrypt` past any window you pick.
-    Such a file read as not encrypted, and the report then told the producer to
-    re-export as PDF/A — a remedy for a different problem, on a document this
-    tool could not open. The cap remains as a backstop for a dictionary that
-    never closes.
+    So: one pass that knows the structure, and finds the key in the same pass
+    that decides where the dictionary is. Nothing downstream can disagree with
+    it, because there is no downstream.
+
+    And one budget for the *file*. Per-keyword bounds were the other half of the
+    same mistake: every shape that reached the bound multiplied by however many
+    `trailer` keywords a sender cared to write. 16,000 bare ones cost 135
+    seconds; when that was fixed, 8,000 that *open* a dictionary cost 28 seconds
+    from a 20 KB archive. A total is the only bound with no shape behind it.
 
     A PDF whose trailer lives in a cross-reference stream has no `trailer`
     keyword and comes back False. That is a miss and not a false alarm, and
     docs/scope.md says so rather than leaving a reader to assume otherwise.
     """
+    left = MAX_TRAILER_SCAN
     for hit in _TRAILER.finditer(data):
-        end = _dict_end(data, hit.end(), MAX_TRAILER_SCAN)
-        if _ENCRYPT_REF.search(data, hit.end(), end):
+        if left <= 0:
+            break
+        found, used = _scan_dictionary(data, hit.end(), left)
+        left -= used
+        if found:
             return True
     return False
 
 
-def _dict_end(data: bytes, start: int, cap: int) -> int:
-    """Where the `<< >>` opened after `start` closes, or `start + cap`.
+def _scan_dictionary(data: bytes, start: int, budget: int) -> tuple:
+    """Look for an `/Encrypt` key in the dictionary opening at `start`.
 
-    Iterative and single-pass: a nested dictionary is common in a trailer, and a
-    scan that stopped at the first `>>` would end early on any of them.
+    Returns `(found, bytes examined)`. Reads at most `budget` bytes, so a caller
+    can bound a whole file rather than each dictionary in it.
 
-    Two things this has to know about PDF, both learned the hard way. Strings and
-    comments hold arbitrary bytes, so `(value <<redacted)` counted as an opening
-    and the depth never came back to zero -- the scan then ran to its cap and
-    found an `/Encrypt` that a *comment* mentioned. And a `trailer` keyword with
-    no dictionary after it used to cost a full cap-length walk, so 16,000 of them
-    in a 128 KB member cost 135 seconds; if the dictionary does not start here,
-    there is nothing to balance.
+    The key is only a key where a key can be: at depth one or more, outside every
+    string and comment. That is the whole difference between this and the three
+    scans before it.
     """
-    limit = min(len(data), start + cap)
+    limit = min(len(data), start + budget)
     i = start
     while i < limit and data[i:i + 1] in b" \t\r\n\f\x00":
         i += 1
     if data[i:i + 2] != b"<<":
-        return i                      # no dictionary opens here; nothing to scan
+        return False, i - start          # no dictionary opens here
 
     depth = 0
-    while i < limit - 1:
+    while i < limit:
         b = data[i:i + 1]
-        if b == b"%":                 # comment, to end of line
+
+        if b == b"%":                    # comment, to the end of the line
             nl = min((x for x in (data.find(c, i, limit) for c in (b"\n", b"\r"))
                       if x != -1), default=limit)
             i = nl + 1
             continue
-        if b == b"(":                 # literal string: nested parens, backslash escapes
+
+        if b == b"(":                    # literal string: nested, backslash escapes
             i, nest = i + 1, 1
             while i < limit and nest:
                 c = data[i:i + 1]
@@ -122,6 +129,7 @@ def _dict_end(data: bytes, start: int, cap: int) -> int:
                 nest += (c == b"(") - (c == b")")
                 i += 1
             continue
+
         pair = data[i:i + 2]
         if pair == b"<<":
             depth += 1
@@ -131,14 +139,24 @@ def _dict_end(data: bytes, start: int, cap: int) -> int:
             depth -= 1
             i += 2
             if depth <= 0:
-                return i
+                return False, i - start
             continue
-        if b == b"<":                 # hex string, which may hold `3c3c`
+
+        if b == b"<":                    # hex string, which may hold `3c3c`
             close = data.find(b">", i + 1, limit)
-            i = (close + 1) if close != -1 else i + 1
+            i = (close + 1) if close != -1 else limit
             continue
+
+        # No `depth > 0` here: the loop returns the moment the dictionary closes,
+        # so everything it still sees is inside one. Writing the condition anyway
+        # looked like a guard and guarded nothing -- removing it changed no
+        # behaviour, which is how it was found.
+        if b == b"/" and _ENCRYPT_REF.match(data, i, limit):
+            return True, i - start
+
         i += 1
-    return limit
+    return False, limit - start
+
 
 MAX_STREAM_SCAN = 400_000        # compressed bytes read after each stream marker
 MAX_INFLATED_PER_STREAM = 4_000_000   # and what we will let one of them become

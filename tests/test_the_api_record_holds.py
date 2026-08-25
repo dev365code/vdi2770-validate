@@ -29,8 +29,14 @@ def run(tmp_path, *args, published=True):
     shutil.copy(TOOL, tree / "tools" / "api_fingerprint.py")
     subprocess.run(["git", "init", "-q"], cwd=tree, check=True)
     version = json.loads((tree / "packages" / "vdi2770" / "API.json").read_text())["version"]
+    # Commit the tree, not an empty commit. Tagging nothing made `_at_tag` return
+    # None for every test in this file, so the comparison that matters --
+    # "the baseline is not what its tag published" -- was never exercised: every
+    # test took the `published is None` path and a mutation weakening
+    # `published != recorded` to `published is None` survived the whole suite.
+    subprocess.run(["git", "add", "-A"], cwd=tree, check=True)
     subprocess.run(["git", "-c", "user.email=t@t", "-c", "user.name=t",
-                    "commit", "-q", "--allow-empty", "-m", "x"], cwd=tree, check=True)
+                    "commit", "-q", "-m", "x"], cwd=tree, check=True)
     # Some tag history always, because "this version has not shipped" and "this
     # package has never shipped anything" are different claims and the tool
     # refuses the second one outright. A copy with no tags at all used to make
@@ -239,3 +245,50 @@ def test_a_version_going_backwards_is_not_a_release():
              "surface": dict(was["surface"], NEWNAME={"kind": "str", "value": "'x'"})}
     why = fp.compatible(was, added)
     assert why and "backwards" in why, why
+
+
+def test_pointing_the_record_at_a_tag_that_does_not_exist_is_refused(tmp_path):
+    """The authenticity check was guarded by `_published(recorded["version"])` —
+    on a value the editor of that file chooses. Point `version` at a tag that
+    does not exist and the branch never runs: `compatible()` is handed a version
+    out of thin air and waves a removal through as a patch. `--write` then
+    overwrites the field, so the committed diff shows an ordinary version bump
+    and nothing else.
+    """
+    tree, _ = run(tmp_path)
+    baseline = tree / "packages" / "vdi2770" / "API.json"
+    body = json.loads(baseline.read_text(encoding="utf-8"))
+    body["version"] = "0.0.5"                    # deliberately never tagged
+    baseline.write_text(json.dumps(body, indent=2), encoding="utf-8")
+
+    done = subprocess.run([sys.executable, "tools/api_fingerprint.py", "--write"],
+                          cwd=tree, capture_output=True, text=True)
+    assert done.returncode == 1, done.stdout + done.stderr
+    assert "no sdk-v0.0.5 was ever tagged" in done.stderr, done.stderr
+
+
+def test_a_baseline_that_differs_from_its_tag_is_refused(tmp_path):
+    """The comparison itself, on a tag that really carries a different baseline.
+    The sibling above covers "no tag"; this covers "a tag, and it says something
+    else" — the path nothing in this file used to reach."""
+    tree, _ = run(tmp_path)
+    baseline = tree / "packages" / "vdi2770" / "API.json"
+    body = json.loads(baseline.read_text(encoding="utf-8"))
+    version = body["version"]
+
+    # The tag holds the real baseline; the tree's copy claims one more name.
+    body["surface"]["SNEAK"] = {"kind": "str", "value": "'x'"}
+    baseline.write_text(json.dumps(body, indent=2), encoding="utf-8")
+    bumped = ".".join([*version.split(".")[:2], str(int(version.split(".")[2]) + 1)])
+    for f in ("packages/vdi2770/pyproject.toml",
+              "packages/vdi2770/src/vdi2770/__init__.py"):
+        p = tree / f
+        p.write_text(p.read_text(encoding="utf-8").replace(f'"{version}"', f'"{bumped}"'),
+                     encoding="utf-8")
+
+    done = subprocess.run([sys.executable, "tools/api_fingerprint.py", "--write"],
+                          cwd=tree, capture_output=True, text=True)
+    assert done.returncode == 1, done.stdout + done.stderr
+    assert "is not what sdk-v" in done.stderr, done.stderr
+    assert "no baseline at all" not in done.stderr, (
+        "this is the 'the tag says something else' path, not the 'no tag' one")

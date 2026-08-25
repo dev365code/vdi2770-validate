@@ -176,8 +176,8 @@ TABLE = [
 
     ("gates/the-api-record-cannot-be-quieted-by-editing-it",
      "tools/api_fingerprint.py",
-     "        if (recorded and recorded.get(\"version\") not in (None, now[\"version\"])",
-     "        if (False and recorded.get(\"version\") not in (None, now[\"version\"])",
+     "        if recorded and recorded.get(\"version\") not in (None, now[\"version\"]):",
+     "        if False:",
      ["tests/test_the_api_record_holds.py"],
      "editing one field in the JSON steered the refusal past the row it should "
      "have compared"),
@@ -258,14 +258,6 @@ TABLE = [
      "expat raises outside ExpatError for an encoding it will not decode, so a "
      "malformed document was reported as this tool crashing"),
 
-    ("reader/a-trailer-dictionary-ends-where-it-closes",
-     "packages/vdi2770/src/vdi2770/pdfread.py",
-     "        end = _dict_end(data, hit.end(), MAX_TRAILER_SCAN)",
-     "        end = hit.end() + 4096",
-     ["packages/vdi2770/tests/test_the_public_api.py"],
-     "a legal trailer with long /ID strings pushed /Encrypt past the window, so "
-     "an encrypted PDF was told to re-export as PDF/A"),
-
     ("rules/a-dot-slash-prefix-is-not-a-folder",
      "src/vdi2770_validate/rules/container.py",
      '        if not [seg for seg in prefix.split("/") if seg not in ("", ".")]:',
@@ -291,22 +283,6 @@ TABLE = [
      "the check for a second definition was a grep, so a comment naming the "
      "function counted as one -- and a real second import did not"),
 
-    ("reader/a-trailer-with-no-dictionary-costs-nothing",
-     "packages/vdi2770/src/vdi2770/pdfread.py",
-     '    if data[i:i + 2] != b"<<":',
-     "    if False:",
-     ["packages/vdi2770/tests/test_the_public_api.py"],
-     "balancing braces to the cap for each of 16,000 bare `trailer` keywords "
-     "cost 135 seconds from a 1.5 KB archive"),
-
-    ("reader/a-string-is-not-a-dictionary",
-     "packages/vdi2770/src/vdi2770/pdfread.py",
-     '        if b == b"(":                 # literal string: nested parens, backslash escapes',
-     "        if False:",
-     ["packages/vdi2770/tests/test_the_public_api.py"],
-     "`(value <<redacted)` counted as an opening, so the scan overran and found "
-     "an /Encrypt that a comment mentioned"),
-
     ("runner/the-budget-is-charged-before-the-work",
      "src/vdi2770_validate/runner.py",
      '            elements += (c.metadata_bytes.count(b"<") - c.metadata_bytes.count(b"</"))',
@@ -317,11 +293,12 @@ TABLE = [
 
     ("runner/a-container-we-did-not-model-is-not-judged",
      "src/vdi2770_validate/runner.py",
-     "        if modelled and not unknown_parent:",
-     "        if True:",
+     "            c, declared=declared if modelled else None,",
+     "            c, declared=declared or frozenset(),",
      ["tests/test_a_document_we_would_not_build_is_not_malformed.py"],
-     "a conforming container got Z11 and Z3, both about:container, because the "
-     "budget emptied `declared` on the archive whose X6 says we did not look"),
+     "`None` is what tells the two rules that read the model that nobody knows; "
+     "an empty set tells them the container declares nothing, and a conforming "
+     "archive got Z11 and Z3 beside the X6 saying we had not looked"),
 
     ("gates/a-checkout-without-tags-is-not-a-package-without-releases",
      "tools/api_fingerprint.py",
@@ -337,6 +314,38 @@ TABLE = [
      "        run: true",
      ["tests/test_ci_parity.py"],
      "OUTSIDE_CHECK stated the requirement in prose and enforced nothing"),
+
+    ("reader/the-trailer-scan-has-one-budget-for-the-file",
+     "packages/vdi2770/src/vdi2770/pdfread.py",
+     "        found, used = _scan_dictionary(data, hit.end(), left)\n        left -= used",
+     "        found, used = _scan_dictionary(data, hit.end(), MAX_TRAILER_SCAN)",
+     ["packages/vdi2770/tests/test_the_public_api.py"],
+     "a per-keyword bound multiplies by however many `trailer` keywords a sender "
+     "writes: 16,000 bare ones cost 135 s and 8,000 open ones cost 28 s"),
+
+    ("reader/an-encrypt-in-a-comment-is-not-a-key",
+     "packages/vdi2770/src/vdi2770/pdfread.py",
+     '        if b == b"%":                    # comment, to the end of the line',
+     "        if False:",
+     ["packages/vdi2770/tests/test_the_public_api.py"],
+     "the token used to be found by a regex over raw bytes, so `/Encrypt` in a "
+     "comment told the sender their unencrypted file was encrypted"),
+
+    ("gates/the-baseline-is-checked-against-its-tag-unconditionally",
+     "tools/api_fingerprint.py",
+     '            if not _published(recorded["version"]):',
+     "            if False:",
+     ["tests/test_the_api_record_holds.py"],
+     "guarding the authenticity check on the recorded version made it depend on a "
+     "value the editor chooses: name a tag that does not exist and it never runs"),
+
+    ("gates/the-bundled-schema-is-compiled-once",
+     "src/vdi2770_validate/xsdvalidate.py",
+     "@lru_cache(maxsize=1)\ndef _schema():",
+     "def _schema():",
+     ["tests/test_the_schema_check_is_bounded.py"],
+     "999 document containers -- a legitimate delivery -- spent 21 of 26 seconds "
+     "recompiling the same XSD once per container"),
 
     # --- the canary -------------------------------------------------------
     ("canary/a-comment-nobody-reads",

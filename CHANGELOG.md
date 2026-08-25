@@ -6,6 +6,39 @@ Six things that were true of the code and not of what the project said about it,
 plus the guards that make each one say so next time.
 
 
+The trailer scan had been repaired three times, and each repair fixed the shape
+in front of it rather than the class of shape, so a fourth shape was waiting.
+This one repairs the class.
+
+- **The trailer scan is one pass that knows PDF, with one budget for the file.**
+  A whole-file token search reported any PDF that mentioned `/Encrypt`; a fixed
+  window missed one a long `/ID` pushed past it; a brace walk counted `<<` inside
+  a string; a brace walk that skipped strings still ran the token search over raw
+  bytes, so `/Encrypt` in a *comment* counted. And every per-keyword bound
+  multiplied by however many `trailer` keywords a sender wrote — 16,000 bare ones
+  cost 135 s, and when that was fixed, 8,000 that *open* a dictionary cost 28 s
+  from a 20 KB archive. Structure and token are now found in the same pass, so
+  nothing downstream can disagree with the endpoint; and the budget is the file's,
+  which is the only bound with no shape behind it. **0.008 s**, and it does not
+  move when the input grows fivefold. Seventeen shapes are pinned, including the
+  real encrypted PDF in the corpus.
+- **The record is checked against its tag unconditionally.** That check was
+  guarded by "is the recorded version published?" — a value the editor of the
+  file chooses. Point `version` at a tag that does not exist and the branch never
+  ran at all, so the compatibility check was handed a version out of thin air and
+  waved a removal through as a patch; `--write` then overwrote the field, so the
+  committed diff showed an ordinary version bump.
+- **The bundled schema is compiled once.** `validate` runs per container and
+  rebuilt it every time: a legitimate delivery of 900 document containers spent
+  **21 of its 26 seconds** recompiling the same XSD. **3.2 s** now. Only the
+  success is cached — a broken installation must not answer from memory.
+- **Two gates could not fail, for the same reason.** The harness in the API
+  record's tests committed nothing before tagging, so every tag it made pointed
+  at an empty tree and `_at_tag` returned `None` for every test in the file: the
+  comparison that matters — "the baseline is not what its tag published" — was
+  never exercised, and weakening it to `is None` survived the suite.
+
+
 The suppression added above silenced findings that never depended on the thing
 being suppressed.
 
@@ -327,7 +360,7 @@ below is measured on this machine, before and after, on the same input.
 Three gates that ask what `make check` cannot ask of itself.
 
 - **`make mutations`** takes every claim this project makes about a gate, breaks
-  the thing that gate protects, and checks the gate notices — 39 rows, each
+  the thing that gate protects, and checks the gate notices — 40 rows, each
   naming the pytest selection or the tool that has to go red. The harness checks
   itself as hard as it checks the code: a row whose anchor no longer appears
   exactly once is an error rather than a pass; every apply and restore clears

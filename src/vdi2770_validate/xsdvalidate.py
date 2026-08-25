@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import io
 import re
+from functools import lru_cache
 from itertools import islice
 from typing import List, Optional
 
@@ -98,7 +99,20 @@ def _resolve(root: Node, path: str, kids_of=None) -> Optional[Node]:
     return node
 
 
+# Only the *success* is cached. A failure -- no `xmlschema`, an unreadable or
+# corrupt XSD -- is the broken-installation case a rule reports, and caching that
+# would mean a broken install answers from memory on every container after the
+# first, which is the same shape as caching a refusal: the second answer is not
+# evidence.
+@lru_cache(maxsize=1)
 def _schema():
+    """The bundled schema, compiled once.
+
+    `validate` runs once per container and this was rebuilt every time. A
+    legitimate delivery of 999 document containers -- 302 KB of archive -- spent
+    26.4 seconds, of which 21 was recompiling the same file 999 times. The XSD
+    ships inside the wheel and cannot change while the process runs.
+    """
     import xmlschema  # imported lazily so `--version` works without it
     return xmlschema.XMLSchema(str(schema_path()))
 
