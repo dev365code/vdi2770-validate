@@ -208,3 +208,71 @@ def test_a_document_we_did_not_model_is_not_then_judged():
     blamed = {f.rule.id for f in starved if f.about is About.CONTAINER}
     assert not blamed - alone, (
         f"the budget invented findings about the sender: {sorted(blamed - alone)}")
+
+
+def _bomb_meta() -> bytes:
+    """Metadata charged the whole budget in a few hundred bytes of archive: the
+    charge counts `<` outside markup too, and CDATA is full of them."""
+    from vdi2770_validate.runner import MAX_TOTAL_ELEMENTS
+
+    return (HEAD + b"<DocumentId DomainId='d'><![CDATA["
+            + b"<" * (MAX_TOTAL_ELEMENTS + 20_000)
+            + b"]]></DocumentId></Document>")
+
+
+def _zip(members) -> bytes:
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        for name, body in members.items():
+            z.writestr(name, body)
+    return buf.getvalue()
+
+
+def test_spending_the_budget_does_not_silence_an_unsafe_member_name():
+    """Suppressing the container rules when the metadata was not modelled threw
+    out the ones that never needed a model.
+
+    `r_container.check` opens by turning the reader's own defects into findings —
+    `Z1`, `Z2`, **`Z4`**, `Z5`, `Z6`, `Z10`, `Z12`. None of those reads `declared`.
+    Only `Z11` and `Z3`'s payload test do. Gating the whole call meant a
+    path-traversal member reported `Z4` when its container was checked alone and
+    nothing at all when it sat behind a document that spent the budget — and the
+    substitute, `X6`, is `about: tool`, so a CI gate filtering the tool axis saw
+    no container finding for the whole subtree.
+
+    A finding must not depend on what else was in the batch.
+    """
+    plain = HEAD + b"<DocumentId DomainId='d'>X</DocumentId></Document>"
+    evil = _zip({"VDI2770_Metadata.xml": plain, "../../etc/evil.pdf": b"x"})
+    alone = {f.rule.id for f in check_bytes(evil, "evil.zip").findings}
+    assert "Z4" in alone, alone
+
+    sweep = _zip({"VDI2770_Main.xml": plain, "VDI2770_Main.pdf": b"%PDF",
+                  "1_bomb.zip": _zip({"VDI2770_Metadata.xml": _bomb_meta(),
+                                      "a.pdf": b"%PDF"}),
+                  "2_evil.zip": evil})
+    assert len(sweep) < 100_000, "the point is that the archive is tiny"
+    fired = {f.rule.id for f in check_bytes(sweep, "sweep.zip").findings}
+    assert "Z4" in fired, f"the budget silenced the unsafe member name: {sorted(fired)}"
+
+
+def test_a_container_under_an_unmodelled_parent_is_still_in_the_report():
+    """Worse than a missing rule: a container with no metadata of its own, under
+    a parent whose metadata was skipped, had its rules suppressed and emitted no
+    `X6` either — so a walked subtree holding a path-traversal member was absent
+    from the text report, the summary and the JSON."""
+    from vdi2770_validate import report as rendering
+
+    plain = HEAD + b"<DocumentId DomainId='d'>X</DocumentId></Document>"
+    child = _zip({"../../etc/evil.pdf": b"x", "note.txt": b"y"})
+    sweep = _zip({"VDI2770_Main.xml": plain, "VDI2770_Main.pdf": b"%PDF",
+                  "1_bomb.zip": _zip({"VDI2770_Metadata.xml": _bomb_meta(),
+                                      "a.pdf": b"%PDF"}),
+                  "3_docsub.zip": _zip({"VDI2770_Main.xml": plain,
+                                        "VDI2770_Main.pdf": b"%PDF",
+                                        "child.zip": child})})
+    report = check_bytes(sweep, "sweep.zip")
+    assert "child.zip" in rendering.as_json(report), (
+        "a subtree the walk reached is not in the report at all")
+    assert any(f.rule.id == "Z4" for f in report.findings), (
+        f"{sorted({f.rule.id for f in report.findings})}")

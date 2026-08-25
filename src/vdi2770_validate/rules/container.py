@@ -140,7 +140,10 @@ def check(container, declared, is_declared_payload) -> Iterator[Finding]:
     # container, and F3's own remedy blesses application/zip with .zip. The
     # reader opens every .zip because it has no metadata to know better; here we
     # do. If it turns out to be a real container it is still validated as one.
-    if container.kind is Kind.UNKNOWN and not is_declared_payload:
+    # `is_declared_payload is None` means the parent's metadata was never
+    # modelled, so nobody can say whether it declared this archive. Unknown
+    # suppresses the rule; False does not.
+    if container.kind is Kind.UNKNOWN and is_declared_payload is False:
         r = rule("Z3")
         # The reader records what nearly matched; the sentence is ours to write,
         # because "it must sit at the root" is a claim about VDI 2770.
@@ -236,6 +239,8 @@ def check(container, declared, is_declared_payload) -> Iterator[Finding]:
             # Z11 exists because an undeclared container is "a way to carry
             # something past a check that only looks at declared files". A
             # declared one is not past that check, so its own argument excuses it.
+            if declared is None:
+                continue        # we did not model this container's own metadata
             if m.name.lower().endswith(".zip") and nfc(m.name) not in declared:
                 r = rule("Z11")
                 yield Finding(r, r.title, container.where.child(member=m.name, subject=m.name))

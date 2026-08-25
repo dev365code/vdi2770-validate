@@ -25,7 +25,7 @@ classifiers = [
 # this was tested against, not the start of its minor line: `~=0.3.0` let pip
 # install 0.3.0 beside vdi2770-validate 0.5.0, and the fix 0.5.0 exists for is in
 # the reader. A range that merely permits the fixed version does not deliver it.
-dependencies = ["vdi2770~=0.6.1", "xmlschema==4.2.0"]
+dependencies = ["vdi2770~=0.6.2", "xmlschema==4.2.0"]
 
 [project.urls]
 Homepage = "https://github.com/dev365code/vdi2770-validate"

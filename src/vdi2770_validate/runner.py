@@ -250,10 +250,18 @@ def check_bytes(data: bytes, name: str) -> Report:
         # `X6` saying this tool had not looked. Checked on its own it is clean, so
         # the verdict depended on what else was in the sweep. `X6` is the true
         # statement and it is already in the report.
-        if modelled and not unknown_parent:
-            _into(report, r_container.check(c, declared=declared,
-                                            is_declared_payload=is_payload),
-                  c.where, "container")
+        # Not the whole call. `r_container.check` opens by turning the reader's
+        # own defects into findings -- `Z1`, `Z2`, `Z4`, `Z5`, `Z6`, `Z10`,
+        # `Z12` -- and none of those reads the model. Gating all of it meant a
+        # path-traversal member reported `Z4` on its own and *nothing* behind a
+        # sibling that spent the budget, with `X6` (`about: tool`) the only
+        # substitute -- so a CI gate filtering the tool axis saw no container
+        # finding for the subtree at all. `None` says "unknown" to the two rules
+        # that actually read the model.
+        _into(report, r_container.check(
+            c, declared=declared if modelled else None,
+            is_declared_payload=None if unknown_parent else is_payload),
+              c.where, "container")
 
         if c.metadata_bytes is None or not modelled:
             continue

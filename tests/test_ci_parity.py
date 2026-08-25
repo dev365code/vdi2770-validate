@@ -552,3 +552,39 @@ def test_the_fixture_generator_owns_its_output_directory(tmp_path):
         "that directory is then evidence too")
     assert sorted(p.name for p in out.glob("*.zip")) == built, (
         "the second run does not produce what the first one did")
+
+
+def test_the_reader_in_this_tree_is_the_one_its_version_names():
+    """The fingerprint watches the reader's public *surface*. Nothing watched its
+    behaviour.
+
+    `pdfread._is_encrypted` was repaired twice after `sdk-v0.6.1` was published —
+    a scan that cost 135 seconds on a 1.5 KB archive, and one that called a plain
+    PDF encrypted. Neither touched a name in `__all__`, so `api_fingerprint
+    --check` stayed green at 0.6.1, and a user installing the validator would
+    have got the version on PyPI: the one without the repairs. The validator
+    would have shipped against a reader it was never tested with.
+
+    A version is a promise about what you get, not only about what you can call.
+    """
+    import subprocess
+
+    tags = subprocess.run(["git", "tag", "--list", "sdk-v*"], cwd=ROOT,
+                          capture_output=True, text=True)
+    if tags.returncode != 0 or not tags.stdout.split():
+        import pytest
+        pytest.skip("no tag history here; this compares against the last release")
+
+    here = re.search(r'^version = "([^"]+)"',
+                     (ROOT / "packages" / "vdi2770" / "pyproject.toml").read_text(encoding="utf-8"),
+                     re.M).group(1)
+    if f"sdk-v{here}" not in tags.stdout.split():
+        return          # being written; the record moves with it
+
+    moved = subprocess.run(["git", "diff", "--name-only", f"sdk-v{here}", "--",
+                            "packages/vdi2770/src"], cwd=ROOT, capture_output=True, text=True)
+    changed = [p for p in moved.stdout.split() if p]
+    assert not changed, (
+        f"the reader says it is {here}, `sdk-v{here}` is published, and these have "
+        f"moved since: {changed}. Whoever installs {here} does not get them, and "
+        f"the validator's pin would fetch that one. Bump the reader.")

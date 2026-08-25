@@ -61,7 +61,7 @@ from .zipread import (
 from .zipread import read as read_container
 from .zipread import read_file as read_container_file
 
-__version__ = "0.6.1"
+__version__ = "0.6.2"
 
 __all__ = ["ClassName", "Classification", "Container", "DEFECT_KINDS", "Defect", "Description",
            "DigitalFile", "Document", "DocumentId", "DocumentVersion", "Kind", "Location",

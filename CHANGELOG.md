@@ -6,6 +6,31 @@ Six things that were true of the code and not of what the project said about it,
 plus the guards that make each one say so next time.
 
 
+The suppression added above silenced findings that never depended on the thing
+being suppressed.
+
+- **Spending the budget silenced a path-traversal member.** Not judging a
+  container whose metadata we declined to model threw out the rules that never
+  read the model: `r_container.check` opens by turning the reader's own defects
+  into findings — `Z1`, `Z2`, **`Z4`**, `Z5`, `Z6`, `Z10`, `Z12` — and only
+  `Z11` and `Z3`'s payload test touch `declared`. So an archive with
+  `../../etc/evil.pdf` reported `Z4` when checked alone and **nothing** when it
+  sat behind a sibling that spent the budget, with `X6` — `about: tool` — the
+  only substitute. A CI gate filtering the tool axis saw no container finding for
+  the subtree. From a **969-byte** archive. Worse: a container with no metadata
+  of its own, under a parent whose metadata was skipped, emitted nothing at all
+  and was absent from the report, the summary and the JSON. `None` now says
+  "unknown" to the two rules that read the model; everything else fires as it
+  would alone.
+- **A version is a promise about what you get.** The fingerprint watches the
+  reader's public *surface*, so two repairs to `pdfread._is_encrypted` — a scan
+  that cost 135 s on a 1.5 KB archive, and one that called a plain PDF encrypted
+  — left it green at 0.6.1 without touching a name in `__all__`. A user
+  installing this validator would have got the reader on PyPI: the one without
+  the repairs, which it was never tested against. A gate compares the reader's
+  source against its own published tag now, and the reader is 0.6.2.
+
+
 Four defects, three of them introduced by the repairs that came before them. A
 repair is a change like any other.
 
