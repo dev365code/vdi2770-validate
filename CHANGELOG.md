@@ -2,7 +2,7 @@
 
 ## 0.7.0 — 2026-08-25
 
-Seven things that were true of the code and not of what the project said about it,
+Eight things that were true of the code and not of what the project said about it,
 plus the guards that make each one say so next time.
 
 
@@ -30,6 +30,12 @@ This one repairs the class.
   now makes the decision for both; a finding still shows the archive's own
   spelling, because a name a user cannot find in their ZIP listing is not a
   report they can act on.
+- **Text arriving in pieces has a ceiling.** The tree had a bound on elements and
+  none on how many times the parser handed back character data. One character
+  reference repeated cost **287 MB** from a 4.2 KiB archive, because a byte count
+  is not the cost -- each `&#120;` decodes to one character while the callback
+  that carries it is a whole Python object. `MAX_TEXT_PIECES` counts the
+  callbacks, which is where the cost is: **112 MiB** on the same input.
 - **The record is checked against its tag unconditionally.** That check was
   guarded by "is the recorded version published?" — a value the editor of the
   file chooses. Point `version` at a tag that does not exist and the branch never

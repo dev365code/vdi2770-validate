@@ -296,16 +296,23 @@ def test_text_of_many_character_references_is_linear():
 
     Timed, so the ceiling is loose enough for a slow machine and tight enough
     that quadratic cannot pass: the old code needed about five seconds here.
+
+    Sized just under `MAX_TEXT_PIECES`, which now refuses this shape past a
+    point -- the two bounds answer different questions and both have to hold. That
+    cap is why the count here is no longer 800,000.
     """
     import time
 
+    from vdi2770 import xmlread
+
+    n = xmlread.MAX_TEXT_PIECES - 1
     body = (b'<?xml version="1.0"?><Document xmlns="http://www.vdi.de/schemas/vdi2770">'
-            b"<Summary>" + b"&#120;" * 800_000 + b"</Summary></Document>")
+            b"<Summary>" + b"&#120;" * n + b"</Summary></Document>")
     start = time.perf_counter()
     node = vdi2770.parse_xml(body)
     elapsed = time.perf_counter() - start
 
-    assert node.children[0].text == "x" * 800_000
+    assert node.children[0].text == "x" * n
     assert elapsed < 1.5, f"took {elapsed:.1f}s to parse {len(body) // 1024} KiB"
 
 

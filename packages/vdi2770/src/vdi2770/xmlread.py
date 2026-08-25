@@ -57,6 +57,19 @@ class XmlTooLarge(XmlError):
 # true statement with one about a limit invented to have one.
 MAX_ELEMENTS = 100_000
 
+# And the text hung off them, which the element cap says nothing about.
+#
+# The cost is in the *pieces*, not the length: expat calls back once per
+# character reference, and each call is a transient `str` and a list slot. A
+# document of three elements whose text is `&#120;` 1.3 million times decodes to
+# 1.3 MB of characters -- nothing -- and cost 287 MB from a 4.2 KiB archive.
+# Counting characters would have missed it entirely, which is why this counts
+# what actually accumulates.
+#
+# The largest metadata file in this repository's corpus arrives in a few hundred
+# pieces.
+MAX_TEXT_PIECES = 200_000
+
 
 @dataclass
 class Node:
@@ -154,9 +167,19 @@ def parse(data: bytes) -> Node:
         if parts:
             node.text = "".join(parts)
 
+    pieces = 0
+
     def chars(data_: str) -> None:
-        if stack:
-            chunks.setdefault(id(stack[-1]), []).append(data_)
+        nonlocal pieces
+        if not stack:
+            return
+        pieces += 1
+        if pieces > MAX_TEXT_PIECES:
+            raise XmlTooLarge(
+                f"the document's text arrives in more than {MAX_TEXT_PIECES} "
+                f"pieces; this reader will not hold that many",
+                p.CurrentLineNumber, p.CurrentColumnNumber)
+        chunks.setdefault(id(stack[-1]), []).append(data_)
 
     p.StartElementHandler = start
     p.EndElementHandler = end

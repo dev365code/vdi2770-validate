@@ -130,3 +130,35 @@ def test_the_bound_is_generous_next_to_anything_real():
     from vdi2770 import xmlread
 
     assert xmlread.MAX_ELEMENTS >= 50_000, xmlread.MAX_ELEMENTS
+
+
+def test_the_text_a_document_carries_is_bounded_too():
+    """The element cap bounds the *nodes*. It says nothing about the text hung
+    off them, and text is the other thing a document is made of.
+
+    `&#120;` is one `CharacterDataHandler` callback and one transient string
+    each. 1.3 million of them is a document of three elements — charged three
+    against a budget of half a million — that costs **287 MB**, measured, from a
+    4.2 KiB archive. The quadratic-time defect this handler already carries a
+    comment about is genuinely fixed; the allocation was never bounded by
+    anything.
+
+    The largest metadata file in this repository's corpus carries about 1 KB of
+    text in total.
+    """
+    from vdi2770 import xmlread
+
+    body = (b'<?xml version="1.0"?><Document xmlns="http://www.vdi.de/schemas/vdi2770">'
+            b"<a>" + b"&#120;" * (xmlread.MAX_TEXT_PIECES + 1000) + b"</a>"
+            b"</Document>")
+    with pytest.raises(xmlread.XmlTooLarge) as e:
+        xmlread.parse(body)
+    assert "pieces" in str(e.value).lower(), str(e.value)
+
+
+def test_the_text_bound_is_generous_next_to_anything_real():
+    """A limit tight enough to refuse a real handover is its own defect. The
+    corpus's largest metadata file arrives in a few hundred pieces."""
+    from vdi2770 import xmlread
+
+    assert xmlread.MAX_TEXT_PIECES >= 50_000, xmlread.MAX_TEXT_PIECES

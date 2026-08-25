@@ -110,9 +110,11 @@ archive: `MAX_MEMBERS`, `MAX_MEMBER_BYTES`, `MAX_TOTAL_BYTES`, `MAX_RATIO` with
 its `MIN_SUSPICIOUS_BYTES` floor, `MAX_METADATA_BYTES`, `MAX_CONTAINER_LEVELS`;
 across one read: `MAX_CONTAINERS`, `MAX_TOTAL_METADATA_BYTES`,
 `MAX_TOTAL_DECOMPRESSED`, `MAX_TOTAL_MEMBERS`. `vdi2770.xmlread` adds
-`MAX_ELEMENTS`, which bounds the tree built out of one metadata file — the
-bytes were bounded and that tree was not, and the expansion between them is
-the sender's to choose. `vdi2770.pdfread` has seven of its own for the PDF scan:
+`MAX_ELEMENTS` and `MAX_TEXT_PIECES`. The first bounds the tree built out of one
+metadata file — the bytes were bounded and that tree was not, and the expansion
+between them is the sender's to choose. The second bounds how many times the
+parser hands back character data, because a byte count is not the cost: one
+character reference repeated cost 287 MB from a 4.2 KiB archive. `vdi2770.pdfread` has seven of its own for the PDF scan:
 `MAX_STREAMS`, `MAX_STREAM_SCAN`, `MAX_INFLATED_PER_STREAM`,
 `MAX_INFLATED_TOTAL`, `MAX_XMP_PACKETS`, `MAX_PDFA_PREFIXES`,
 `MAX_TRAILER_SCAN`. A test fails if
