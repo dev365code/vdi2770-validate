@@ -1,0 +1,96 @@
+name: oracle
+
+# The differential sweep: the reference implementation's verdicts on our
+# containers, recorded in docs/oracle-sweep.json.
+#
+# It is not part of `check` and never will be — it needs a JDK, Maven, network
+# access to Maven Central and a checkout of another project, none of which a
+# contributor should need to run the gate. What is checked in is the *result*.
+#
+# It runs here rather than on a maintainer's laptop for a reason that is not
+# convenience: `tools/oracle/README.md` promises "everything needed to regenerate
+# it", and a workflow file is that promise in a form you can press. The
+# environment is pinned instead of being whichever JDK happened to be installed.
+#
+# The schedule is not looking for changes in the reference — it is pinned to a
+# commit and cannot move. It is looking for rot in everything around it: an
+# artifact that vanished from Maven Central, a JDK whose message formatting
+# shifted. Better to learn that on a Monday than at a release.
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 6 1 * *"          # 06:00 UTC on the first of the month
+
+permissions:
+  contents: read
+
+env:
+  # docs/oracle-sweep.json records this commit. It is the pin, not a convenience.
+  REFERENCE_COMMIT: e47c13c1925abc3ed4698cb5ed9e73b5eb544353
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: The pin must be the commit the sweep says it is
+        run: |
+          recorded=$(python -c "import json;print(json.load(open('docs/oracle-sweep.json'))['reference']['commit'])")
+          test "$recorded" = "$REFERENCE_COMMIT" || {
+            echo "the workflow pins $REFERENCE_COMMIT and the sweep records $recorded"; exit 1; }
+
+      - name: Check out the reference implementation at the pinned commit
+        run: |
+          git clone --quiet https://github.com/DigitalDataChainConsortium/vdi2770.git "$RUNNER_TEMP/ref"
+          git -C "$RUNNER_TEMP/ref" checkout --quiet "$REFERENCE_COMMIT"
+          git -C "$RUNNER_TEMP/ref" rev-parse HEAD
+
+      - name: Build it
+        # `capture_oracle.py` reads the built jars out of each module's target/,
+        # and asks Maven for the runtime classpath of `vdi2770-processor` — which
+        # resolves `vdi2770-core` from the local repository, so `install` rather
+        # than `package`. Its own tests are not our business here.
+        run: mvn -B -q -DskipTests install
+        working-directory: ${{ runner.temp }}/ref
+
+      - name: Install this project
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e packages/vdi2770
+          python -m pip install -e ".[dev]"
+
+      - name: Build the fixtures the sweep covers
+        run: python tools/make_fixtures.py
+
+      - name: Sweep
+        # Locale is pinned inside capture_oracle.py: the implementation picks its
+        # message bundle from Locale.getDefault(), and the codes shift with it.
+        run: python tools/capture_oracle.py --reference "$RUNNER_TEMP/ref" --java-home "$JAVA_HOME"
+
+      - name: What the sweep produced
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: oracle-sweep
+          path: docs/oracle-sweep.json
+
+      - name: The checked-in sweep must be what the sweep produces
+        # Not `--check`: writing it and diffing leaves an artifact a human can
+        # read and commit. A workflow that rewrote the evidence by itself would
+        # be a bot deciding what the reference implementation said.
+        run: |
+          git diff --exit-code -- docs/oracle-sweep.json || {
+            echo "::error::the recorded sweep is not what the reference implementation now reports."
+            echo 'Download the oracle-sweep artifact, read the diff, and commit it if it is right.'
+            exit 1; }
