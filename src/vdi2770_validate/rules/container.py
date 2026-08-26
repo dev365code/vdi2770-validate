@@ -284,8 +284,11 @@ def check(container, declared, is_declared_payload) -> Iterator[Finding]:
             alike = sorted(n for n in container.duplicate_names
                            if folder_path(n) == folder_path(name) and n != name)
             if not alike:
-                # Nothing else canonicalises to this, so it is not one of a
-                # look-alike pair -- the reader's own sentence covers it.
+                # Nothing else in the archive extracts to where this does, so it
+                # is not one of a colliding pair -- the reader's own sentence
+                # covers it. (It said "canonicalises" while the filter above did,
+                # and the filter has since been widened to the relation the group
+                # was built on.)
                 yield Finding(r, r.title,
                               container.where.child(member=name, subject=name))
                 continue

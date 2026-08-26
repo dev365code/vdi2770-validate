@@ -580,7 +580,7 @@ TABLE = [
     ("rules/a-name-that-prints-alike-is-spelled-out",
      "src/vdi2770_validate/names.py",
      "    hidden = any(_draws_nothing(c) for c in name)",
-     "    hidden = False\n    name = name  # noqa: PLW0127",
+     "    return name",
      ["tests/test_two_names_that_print_alike_are_told_apart.py"],
      "the helper was pinned by nothing: `return name` left the whole suite green "
      "while two members of one archive printed as the same line"),

@@ -455,7 +455,15 @@ def test_contributing_is_right_about_who_signed_off():
             "every commit is signed now; the paragraph about the lapse is stale")
         return
 
-    assert spelled(len(unsigned)) in prose.lower() or str(len(unsigned)) in prose, (
+    # Whole words. `str(2) in prose` is satisfied by the `32` already written
+    # there, and `"two" in prose.lower()` by `thirty-two` — so the count could
+    # fall by thirty and this would still agree with the page. Both spellings of
+    # the number are looked for the same way.
+    import re as _re
+
+    said = _re.search(rf"\b({_re.escape(spelled(len(unsigned)))}|{len(unsigned)})\b",
+                      prose, _re.IGNORECASE)
+    assert said, (
         f"{len(unsigned)} commits carry no Signed-off-by line and CONTRIBUTING.md "
         f"does not say so")
     assert all(signed[i] for i in range(unsigned[-1] + 1, len(signed))), (

@@ -192,7 +192,15 @@ def _run(argv=None) -> int:
         # Only where there is no `SIGPIPE` to restore. Send the rest of our
         # output somewhere harmless so the interpreter's shutdown flush does not
         # print a second complaint about the pipe that has already gone.
-        os.dup2(os.open(os.devnull, os.O_WRONLY), sys.stdout.fileno())
+        # Closed after the duplicate is made. `dup2` does not close its source,
+        # so the descriptor stayed open -- harmless in a process about to exit,
+        # and the kind of thing that stops being harmless the moment this is
+        # called from somewhere that does not exit.
+        spare = os.open(os.devnull, os.O_WRONLY)
+        try:
+            os.dup2(spare, sys.stdout.fileno())
+        finally:
+            os.close(spare)
         return 141
 
 
