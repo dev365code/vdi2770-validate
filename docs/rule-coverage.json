@@ -42,6 +42,6 @@
   "unexercised": [],
   "cannotFire": {
     "X0": "only fires when this tool's own installation is broken, which no container can cause. Exercised by tests/test_tool_limits_are_not_verdicts.py, which breaks the installation deliberately.",
-    "X5": "only fires when a rule in this tool raises, which is a bug here rather than anything a container can ask for. Exercised by tests/test_a_rule_that_crashes_does_not_kill_the_run.py, which makes each rule module raise in turn."
+    "X5": "only fires when a step in this tool raises, which is a bug here rather than anything a container can ask for. Not only the rules: the steps that feed them -- the parse, the document build, the schema walk, and the two calls into the reader, which is a separately versioned package whose pin admits releases nobody in this repository has run. Exercised by tests/test_a_rule_that_crashes_does_not_kill_the_run.py, which makes each rule module and each of those steps raise in turn."
   }
 }

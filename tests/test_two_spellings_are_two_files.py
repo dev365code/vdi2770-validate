@@ -464,5 +464,82 @@ def test_two_members_at_one_path_are_named_and_given_a_remedy():
     for f in z10:
         assert f.detail, f"a finding with no detail: {f.message}"
         assert f.remedy, f"a finding with no remedy: {f.message}"
-        assert "print alike" not in f.detail, f.detail
+        # `message` as well as `detail`. The first draft asserted only on the
+        # detail, and the words *print alike* live in the title — so the branch
+        # could be forced on, the finding could be headed "names that print
+        # alike" about `B.pdf` and `./B.pdf`, and this passed.
+        said = f"{f.message} {f.detail}"
+        assert "print alike" not in said, said
+        assert "extract to the same path" in said, said
         assert "./B.pdf" in f.detail and "B.pdf" in f.detail, f.detail
+
+
+def test_two_spellings_that_print_alike_are_said_to_print_alike():
+    """The mirror of the test above, so neither branch can be forced on.
+
+    Two orders of the same combining marks: canonically equivalent, one path
+    once the archive is unpacked, and they really do print alike.
+    """
+    from vdi2770_validate.runner import check_bytes
+
+    report = check_bytes(_document_holding(ORDER_A, ORDER_B, declared=COMPOSED),
+                         "twins.zip")
+    z10 = [f for f in report.findings if f.rule.id == "Z10"]
+    assert z10, "nothing reported the look-alike pair"
+    for f in z10:
+        said = f"{f.message} {f.detail}"
+        assert "print alike" in said, said
+        assert "extract to the same path" not in said, said
+
+
+def test_a_pair_that_differs_both_ways_is_not_said_to_land_on_one_path():
+    """`./` in front of a *decomposed* name, beside the composed spelling.
+
+    `folder_path` groups them because it normalises and drops `.` segments, but
+    they extract to two different paths and they do not print alike either. The
+    branch said *Two members of the archive extract to the same path* and
+    printed an anchor that is neither member's path — and `F2`, two lines down
+    in the same report, correctly treated them as two files. It is `F2` that was
+    right.
+    """
+    import unicodedata
+
+    from vdi2770_validate.names import extracts_to
+    from vdi2770_validate.runner import check_bytes
+
+    composed = unicodedata.normalize("NFC", "\u00c4.pdf")
+    decomposed = unicodedata.normalize("NFD", "\u00c4.pdf")
+    assert composed != decomposed, "the two spellings arrived as one string"
+    assert extracts_to("./" + decomposed) != extracts_to(composed), "premise"
+
+    report = check_bytes(
+        _document_holding(composed, "./" + decomposed, declared=composed), "both.zip")
+    z10 = [f for f in report.findings if f.rule.id == "Z10"]
+    assert z10, "nothing reported the collision"
+    for f in z10:
+        said = f"{f.message} {f.detail}"
+        assert "extract to the same path" not in said, said
+        assert "print alike" not in said, said
+        assert "one file" in said, said
+
+
+def test_a_path_collision_does_not_spell_out_a_blameless_name():
+    """Two members differing by `./`, both written the way macOS writes them.
+
+    Nothing about the *spelling* is in question — the difference is two visible
+    ASCII characters — and the finding came back as four walls of hex, which is
+    the failure this release says it fixed, arriving through a new door.
+    """
+    import unicodedata
+
+    from vdi2770_validate.runner import check_bytes
+
+    name = unicodedata.normalize("NFD", "\uc124\uba85\uc11c_Pr\u00fcfbericht.pdf")
+    report = check_bytes(_document_holding(name, "./" + name, declared=name),
+                         "mac.zip")
+    z10 = [f for f in report.findings if f.rule.id == "Z10"]
+    assert z10, "nothing reported the collision"
+    for f in z10:
+        assert "\\u" not in (f.detail or ""), (
+            f"a name with nothing wrong with its spelling was printed as code "
+            f"points: {f.detail}")

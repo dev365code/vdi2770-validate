@@ -249,3 +249,45 @@ def test_metadata_the_reader_would_not_hand_over_declares_nothing_known():
     assert not anyway, (
         "rules judged the shape of a container whose metadata was never read: "
         f"{sorted(anyway)}")
+
+
+def test_an_undeclared_payload_is_told_once_and_told_what_to_do():
+    """Two errors about one member, and the two remedies pointed apart.
+
+    `Z11` said *a document container carries another container inside it* and to
+    move it up into the documentation container. `Z3`, on the same member,
+    said the archive is neither kind of container and to put a
+    `VDI2770_Metadata.xml` at its root. Follow the first and the second still
+    fires where you moved it; follow the second and the first still fires. The
+    answer this tool actually accepts — declare it as a `DigitalFile` with
+    `FileFormat` `application/zip` — was offered by neither, and it is the one
+    that makes the whole report clean.
+
+    `Z3` is the same fact said from the other side. It is `Z11`'s to report.
+    """
+    import io
+    import zipfile
+
+    from conftest import CLEAN_DOCUMENT
+    from vdi2770_validate.runner import check_bytes
+
+    src = zipfile.ZipFile(CLEAN_DOCUMENT)
+    inner = io.BytesIO()
+    with zipfile.ZipFile(inner, "w") as z:
+        z.writestr("drawing.dwg", b"AC1027\n")
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        for name in src.namelist():
+            z.writestr(name, src.read(name))
+        z.writestr("cad.zip", inner.getvalue())
+
+    report = check_bytes(buf.getvalue(), "payload.zip")
+    about = [f for f in report.findings if (f.where.member or "").endswith("cad.zip")
+             or (f.where.container or "").endswith("cad.zip")]
+    ids = {f.rule.id for f in about}
+    assert "Z11" in ids, f"nothing reported the undeclared inner container: {sorted(ids)}"
+    assert "Z3" not in ids, (
+        "the member is reported twice, with remedies that point apart")
+    z11 = next(f for f in about if f.rule.id == "Z11")
+    assert "application/zip" in (z11.remedy or ""), (
+        f"the remedy does not offer the answer this tool accepts: {z11.remedy}")

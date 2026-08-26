@@ -5,7 +5,7 @@ from typing import Iterator
 
 from ..catalog import rule
 from ..model import MAIN_PDF, MAIN_XML, METADATA_XML, About, Finding, Kind
-from ..names import Members, escaped, extracts_to, nfc
+from ..names import Members, escaped, extracts_to, folder_path, nfc
 from .container import MAX_FOLDER_DEPTH
 
 EXTENSION_FOR = {"application/pdf": ".pdf", "application/zip": ".zip"}
@@ -95,7 +95,6 @@ def check(container, document) -> Iterator[Finding]:
             # holds twice was reported absent, with a remedy that said to add it
             # or to delete a declaration that was right.
             spellings = members.spelled_more_than_one_way(f.file_name)
-            reached_ambiguously.update(spellings)
             # Two different collisions arrive here and only one of them is about
             # spelling. `spelled_more_than_one_way` groups by `folder_path`,
             # which is `nfc` *and* dropping segments that name nothing — so
@@ -107,6 +106,11 @@ def check(container, document) -> Iterator[Finding]:
             # segment do not.
             look_alike = len({nfc(n) for n in spellings}) == 1
             if spellings and not twice:
+                # Recorded here rather than above, because this is the branch
+                # that lists them: in the `twice` case nothing names the
+                # spellings, and keeping `F2` quiet about members no finding has
+                # mentioned is silence, not a second opinion.
+                reached_ambiguously.update(spellings)
                 message = ("A file named in the metadata matches more than one "
                            "member of the container")
                 fix = ("Store one spelling. The names below are different bytes "
@@ -160,7 +164,11 @@ def check(container, document) -> Iterator[Finding]:
                 detail = (f"{f.file_name!r} matches {len(spellings)} members "
                           f"that {how}: {shown}")
             elif twice:
-                detail = f"{f.file_name!r} names two members of the archive"
+                # The count, not the word `two`: a name stored four times names
+                # four members, and `present` lists every entry, repeats and all.
+                held = sum(1 for n in container.present
+                           if folder_path(n) == folder_path(f.file_name))
+                detail = f"{f.file_name!r} names {held} members of the archive"
             elif rejected:
                 detail = f"{f.file_name!r} is in the archive but was refused: {rejected}"
             else:
@@ -172,15 +180,18 @@ def check(container, document) -> Iterator[Finding]:
     # Reserved where it is reserved, and nowhere else. Exempting all three names
     # everywhere meant a stray VDI2770_Main.pdf inside a document container -- a
     # name that means nothing there -- was never reported as undeclared.
-    structural = ({MAIN_XML, MAIN_PDF} if container.kind is Kind.DOCUMENTATION
-                  else {METADATA_XML})
+    reserved = ({MAIN_XML, MAIN_PDF} if container.kind is Kind.DOCUMENTATION
+                else {METADATA_XML})
+    # By what the name extracts to, so `./VDI2770_Main.pdf` is the reserved name
+    # it is and not a file nobody declared. The set keeps the archive's own
+    # spellings, because that is what the loop below subtracts from.
+    structural = {n for n in members.present if folder_path(n) in reserved}
     # The archive's own spelling, not the canonical one: a name the user cannot
     # find in their ZIP listing is not a report they can act on.
     # A folder holding its own VDI2770_Metadata.xml is a document container that
     # was not zipped. Its files are declared in metadata this tool never opened,
     # so calling them undeclared is a statement about a file we did not read.
     # `Z13` says we did not read it.
-    from ..names import folder_path
     from .container import folders_holding_metadata
     unopened = frozenset(folder_path(f) for f in folders_holding_metadata(container)) - {""}
     # A member that shares its extracted path with one the metadata declared is

@@ -106,7 +106,7 @@ Why this is ours: ZIP allows it and readers disagree about which one wins, so th
 
 Why this is ours: Document containers hold a document's files. A container inside one is either a mistake or a way to carry something past a check that only looks at declared files.
 
-**Remedy.** Move the inner container up into the documentation container, where containers belong.
+**Remedy.** Move the inner container up into the documentation container, where containers belong — or, if it is payload rather than a container, declare it in this document container's metadata as a DigitalFile with FileFormat application/zip. This tool opens every .zip because the reader has no metadata to know better; a declaration is what tells it which of the two you meant.
 
 ### `Z12` — A file in the container could not be read
 

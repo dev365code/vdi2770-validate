@@ -6,7 +6,7 @@ from typing import Iterator
 
 from ..catalog import rule
 from ..model import MAIN_PDF, METADATA_XML, Finding, Kind
-from ..names import escaped, folder_path, nfc
+from ..names import as_written, escaped, extracts_to, folder_path, nfc
 
 
 def folders_holding_metadata(container) -> list:
@@ -21,14 +21,21 @@ def folders_holding_metadata(container) -> list:
     """
     out = []
     for name in container.present:
-        # Not a member the reader refused. `present` lists those on purpose, so
-        # a caller can see what was in the archive -- but a name this tool would
-        # not open is not a document somebody delivered. An archive whose only
-        # extra member was `../VDI2770_Metadata.xml` drew `Z4` calling it a
-        # path-traversal attempt and, beside it, this rule counting it as a
-        # folder holding a document, with a remedy opening "Nothing here is
-        # necessarily wrong with the container".
-        if name in container.rejected:
+        # Not a member whose *name* does not denote a place in this archive.
+        # `../VDI2770_Metadata.xml` drew `Z4` calling it a path-traversal
+        # attempt and, beside it, this rule counting it as a folder holding a
+        # document, with a remedy opening "Nothing here is necessarily wrong
+        # with the container".
+        #
+        # Refused for any other reason is a different thing, and skipping those
+        # too undid the repair one door along: a folder whose own metadata has a
+        # bad CRC is a document container that was not zipped, delivered, and
+        # unopened -- the strongest case there is for this rule. Passing over it
+        # left `F2` calling that folder's files undeclared, from a metadata file
+        # the report says on the line above it could not read, and `Z8` telling
+        # the sender to add the document containers it was looking at.
+        refusal = container.rejected.get(name)
+        if refusal is not None and refusal.kind == "unsafe-member-name":
             continue
         prefix, sep, leaf = nfc(name).rpartition("/")
         if not sep or leaf != METADATA_XML:
@@ -87,6 +94,36 @@ DEFECT_TO_RULE = {
 # a single member that expands past the ratio floor, and the project's own tests
 # say so. A Finding may carry its own remedy, so each kind carries the one that
 # names what to do about *it*.
+def _remedy_for(defect):
+    """The remedy for a refusal, by what the refusal actually says.
+
+    `member-unreadable` covers a truncated transfer and a member the sender
+    locked, and the catalogue sentence -- *re-create the archive and send it
+    again* -- is the one remedy that cannot work for the second: re-zipping the
+    same directory produces the same member and the same finding. `F1` learned
+    this and `Z12` did not, so one password-protected member drew two findings
+    with two remedies, one of them a loop.
+    """
+    if (defect.kind == "member-unreadable"
+            and "encrypted" in (defect.detail or "").lower()):
+        return ("Remove the password from this member before handing the "
+                "container over. A recipient who cannot open a file has not been "
+                "given it, and nothing here can check what it cannot read.")
+    return REMEDY_FOR_DEFECT.get(defect.kind)
+
+
+# What the reader saw that nearly matched a reserved name. `Z3` has read these
+# since they existed; `Z7` did not, and told a supplier to add `VDI2770_Main.pdf`
+# to an archive holding `vdi2770_main.pdf` -- which on their own machine is not
+# an action they can take, because the file already answers to that name.
+NEAR_MISS = {
+    "in-a-subfolder": "{wanted} found at {found!r} — it must sit at the root of the archive",
+    "path-prefixed": "{wanted} found at {found!r} — it is at the root, but the "
+                     "name carries a path in front of it and readers match the "
+                     "name exactly",
+    "case-differs": "{wanted} found as {found!r} — the name is case-sensitive",
+}
+
 REMEDY_FOR_DEFECT = {
     "ambiguous-name":
         "Rebuild the archive with one entry per name. Two entries share this one, "
@@ -144,7 +181,7 @@ def check(container, declared, is_declared_payload) -> Iterator[Finding]:
         r = rule(rid)
         yield Finding(r, r.title, d.where,
                       detail=f"{d.kind}: {d.detail}" if d.detail else d.kind,
-                      fix=REMEDY_FOR_DEFECT.get(d.kind))
+                      fix=_remedy_for(d))
 
     if container.kind is Kind.UNREADABLE:
         return
@@ -168,7 +205,14 @@ def check(container, declared, is_declared_payload) -> Iterator[Finding]:
     # to judge the shape of.
     opaque = container.kind is Kind.UNKNOWN and is_declared_payload is not False
 
-    if not container.members and not container.rejected and not opaque:
+    # `defects` too, and this is the door the guard above was not watching:
+    # `nameless-member` is the one refusal recorded as a bare defect and never in
+    # `rejected`, so an archive whose only entry had no name was called empty
+    # beside a `Z12` saying there was an entry in it, with a remedy telling the
+    # sender to add the files they had sent.
+    nameless = any(d.kind == "nameless-member" for d in container.defects)
+    if (not container.members and not container.rejected
+            and not nameless and not opaque):
         r = rule("Z2")
         yield Finding(r, r.title, container.where)
         return
@@ -180,26 +224,27 @@ def check(container, declared, is_declared_payload) -> Iterator[Finding]:
     # `is_declared_payload is None` means the parent's metadata was never
     # modelled, so nobody can say whether it declared this archive. Unknown
     # suppresses the rule; False does not.
-    if container.kind is Kind.UNKNOWN and is_declared_payload is False:
+    # And not when the parent is a document container, because `Z11` reports
+    # that member from the other side and this said the opposite thing about it:
+    # *move it up into the documentation container* against *put a
+    # VDI2770_Metadata.xml at its root*. Follow either and the other still fires.
+    # `Z11`'s remedy now carries the answer this tool actually accepts -- declare
+    # it as an `application/zip` payload -- and one member gets one finding.
+    covered_by_z11 = container.parent is not None and container.parent.kind is Kind.DOCUMENT
+    if (container.kind is Kind.UNKNOWN and is_declared_payload is False
+            and not covered_by_z11):
         r = rule("Z3")
         # The reader records what nearly matched; the sentence is ours to write,
         # because "it must sit at the root" is a claim about VDI 2770.
-        said = {
-            "in-a-subfolder": "{wanted} found at {found!r} — it must sit at the root of the archive",
-            "path-prefixed": "{wanted} found at {found!r} — it is at the root, but the "
-                             "name carries a path in front of it and readers match the "
-                             "name exactly",
-            "case-differs": "{wanted} found as {found!r} — the name is case-sensitive",
-        }
         detail = "; ".join(
-            said[kind].format(wanted=wanted, found=found)
+            NEAR_MISS[kind].format(wanted=wanted, found=found)
             # (Removing this `sorted` is an equivalent mutant: `near_misses` is
             # filled by a loop over a fixed tuple of three names, so the dict's
             # insertion order is already fixed. Kept because the reader is free
             # to fill it some other way, and this is not where that should
             # become a report that differs between runs.)
             for wanted, (kind, found) in sorted(container.near_misses.items())
-            if kind in said) or None
+            if kind in NEAR_MISS) or None
         yield Finding(r, r.title, container.where, detail=detail)
 
     # A directory entry is optional in the ZIP format, so testing for one made
@@ -241,7 +286,12 @@ def check(container, declared, is_declared_payload) -> Iterator[Finding]:
                 break
         if len(folders) >= MAX_FOLDERS:
             break
-    if folders:
+    # And nothing to say about folders in an archive that holds no files. A
+    # directory entry is a folder somebody made, which is why one on its own is
+    # still collected above -- but an archive whose *only* entry was `a/` was
+    # told it "stores files in folders", naming one with no file in it, in a
+    # report saying two lines up that the archive is not a container at all.
+    if folders and container.file_names:
         r = rule("Z9")
         named = sorted(folders)
         # "at least" when the collection stopped: the list is truncated with an
@@ -284,31 +334,62 @@ def check(container, declared, is_declared_payload) -> Iterator[Finding]:
             alike = sorted(n for n in container.duplicate_names
                            if folder_path(n) == folder_path(name) and n != name)
             if not alike:
-                # Nothing else in the archive extracts to where this does, so it
-                # is not one of a colliding pair -- the reader's own sentence
-                # covers it. (It said "canonicalises" while the filter above did,
-                # and the filter has since been widened to the relation the group
-                # was built on.)
+                # A name in `duplicate_names` has a partner there: the reader
+                # appends both spellings when a key collides. The one case that
+                # leaves it alone is two entries carrying the *same* string, and
+                # the `continue` above takes those. So this is the fallback for a
+                # repeat that reached here unrefused, and the reader's own
+                # sentence covers it. Nothing the reader produces today gets
+                # here, which is worth knowing rather than worth deleting.
                 yield Finding(r, r.title,
                               container.where.child(member=name, subject=name))
                 continue
-            shown = " and ".join(escaped(n) for n in alike)
-            # And two relations arrive here, only one of which is about spelling.
-            # Names that canonicalise to one name print alike; names that differ
-            # in a `.` segment plainly do not, and telling a reader they do sends
-            # them looking for a difference that is not there.
-            look_alike = len({nfc(n) for n in (name, *alike)}) == 1
-            if not look_alike:
+            group = (name, *alike)
+            # Three relations reach this loop and only one sentence used to be
+            # said about them. `duplicate_names` is grouped on `folder_path`,
+            # which is `nfc` *and* dropping segments that name nothing -- so the
+            # group can hold names that print alike, names that land on one path,
+            # or names that do both at once, and each of those is a different
+            # thing to tell a sender. Saying "extract to the same path" over the
+            # whole group asserted it of `./Ä.pdf` written decomposed beside
+            # `Ä.pdf` written composed, which land on two paths, in a report
+            # whose `F2` on the next line correctly treats them as two files.
+            # `extracts_to` is the relation for one path; `nfc` for one glyph.
+            one_path = len({extracts_to(n) for n in group}) == 1
+            one_name = len({nfc(n) for n in group}) == 1
+            if one_path:
+                # Spelled the archive's way: the difference here is `.` segments,
+                # which are visible ASCII, and spelling out the rest turned two
+                # ordinary decomposed filenames into four walls of hex.
+                shown = " and ".join(as_written(n) for n in alike)
                 yield Finding(
                     r,
                     "Two members of the archive extract to the same path",
                     container.where.child(member=name, subject=name),
-                    detail=f"this is {escaped(name)}; the archive also holds "
+                    detail=f"this is {as_written(name)}; the archive also holds "
                            f"{shown} — different names for one path, "
-                           f"{escaped(folder_path(name))}",
+                           f"{as_written(extracts_to(name))}",
                     fix="Store the file once, at one path. Which of them a "
                         "recipient ends up with is their unzip tool's business, "
                         "and nothing here can say which one you meant.")
+                continue
+
+            shown = " and ".join(escaped(n) for n in alike)
+            if not one_name:
+                yield Finding(
+                    r,
+                    "Two members of the archive come to one name",
+                    container.where.child(member=name, subject=name),
+                    detail=f"this is {escaped(name)}; the archive also holds "
+                           f"{shown} — these differ both in how the letters are "
+                           f"spelled and in path segments that name nothing, so "
+                           f"a filesystem that normalises names sees one file "
+                           f"where this archive has {len(group)}",
+                    fix="Store the file once, under one spelling and one path. "
+                        "On a filesystem that composes names — macOS, Windows — "
+                        "these are one file and the later member wins; on one "
+                        "that does not, they are two. Nothing here can say which "
+                        "your recipient has.")
                 continue
             # "different bytes, the same glyphs" was true of the archive and
             # became false of the page: once `escaped` spells out the spelling
@@ -324,7 +405,7 @@ def check(container, declared, is_declared_payload) -> Iterator[Finding]:
                 container.where.child(member=name, subject=name),
                 detail=f"this is {escaped(name)}; the archive also holds {shown} — "
                        f"one name, {escaped(nfc(name))} in a listing, stored "
-                       f"{len(alike) + 1} ways. A spelling that is not the "
+                       f"{len(group)} ways. A spelling that is not the "
                        f"canonical one is printed here as code points, because "
                        f"otherwise these lines would be identical",
                 fix="Store one spelling. A reader asking for the name as you "
@@ -371,9 +452,17 @@ def check(container, declared, is_declared_payload) -> Iterator[Finding]:
         # `present`, not `file_names`. A main document with a bad CRC is in the
         # archive; Z12 says we could not read it. Telling the sender to add a
         # file they already sent is the report contradicting itself.
-        if MAIN_PDF not in container.present:
+        # `folder_path`, not the raw string. `./VDI2770_Main.pdf` is at the
+        # root -- the reader records a `path-prefixed` near-miss saying so, and
+        # `Members`, `Z9`, `Z3` and `Z13` all read it that way. Comparing the
+        # spelling told a sender to add a file the same report was reading the
+        # PDF/A claim out of, one line further down.
+        if not any(folder_path(n) == MAIN_PDF for n in container.present):
             r = rule("Z7")
-            yield Finding(r, r.title, container.where)
+            near = container.near_misses.get(MAIN_PDF)
+            yield Finding(r, r.title, container.where,
+                          detail=(NEAR_MISS[near[0]].format(wanted=MAIN_PDF, found=near[1])
+                                  if near and near[0] in NEAR_MISS else None))
         # A refusal to look is not an absence. The reader stops descending at
         # MAX_CONTAINER_LEVELS and at the tree's container budget, and it drops a
         # `.zip` member it could not decompress -- in each case `children` is

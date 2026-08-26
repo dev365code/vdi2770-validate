@@ -70,10 +70,14 @@ failure — files that never claimed at all.
   is tested against now.
 - **Every byte is read**: to say a member is deliverable we decompress it, the
   way `unzip -t` does. That is one pass of zlib over the member, so the rate is
-  your machine's: measured here at **0.5 GB/s** of decompressed output — one
-  member read the way this tool reads it, on real PDF content that barely
-  compresses (ratio 1.20), CPython 3.9 on an arm64 laptop, 0.50 GB/s of CPU and
-  0.47 GB/s end to end over three runs. At 0.5 GB/s a container reaching the
+  your machine's, and its content's: measured here at **0.5 GB/s** of
+  decompressed output — one member read the way this tool reads it (a chunked
+  loop that discards what it reads, not a whole-member `read()`), on real PDF
+  content that barely compresses (ratio 1.20), CPython 3.9 on an arm64 laptop.
+  Two content mixes at 0.54 GB and 1.2 GB gave 0.45–0.53 GB/s of CPU and
+  0.36–0.47 GB/s end to end; a third mix on the same machine reached 0.73. The
+  figure below is the low end of that, so the seconds it gives are the slow
+  answer rather than the flattering one. At 0.5 GB/s a container reaching the
   2 GiB ceiling costs about **4 seconds** and the whole-read ceiling of 4 GiB
   about **9**. Both figures are that division and nothing else, so a machine half
   this speed takes twice as long. The figure once published here, 1.1 GB/s, was

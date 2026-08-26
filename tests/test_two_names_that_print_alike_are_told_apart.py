@@ -161,8 +161,14 @@ def test_the_report_tells_two_look_alike_members_apart():
     """End to end, because the helper is not what a reader sees.
 
     A unit test on `escaped` can pass while the finding still prints two
-    identical lines — the detail interpolates other things, and the location line
-    carries the raw member name. This asserts on the sentence.
+    identical lines, because the detail interpolates other things around it.
+    This asserts on the sentence.
+
+    Not on the location line, which carries the member's name as the archive
+    spells it and is meant to: running every `at` through `escaped` would spell
+    out every filename in every report from a delivery written on a Mac, where
+    nothing is ambiguous at all. What tells the two apart is the detail, and it
+    does.
     """
     import io
     import zipfile

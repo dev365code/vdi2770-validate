@@ -5,7 +5,7 @@ from typing import Iterator
 
 from ..catalog import rule
 from ..model import MAIN_PDF, Finding, Kind
-from ..names import Members
+from ..names import Members, folder_path
 
 UNVERIFIED = "this tool cannot verify PDF/A conformance"
 
@@ -36,9 +36,15 @@ def _targets(container, document):
         seen.add(member)
         out.append((member, "declared as application/pdf"))
 
+    # Found by what it extracts to, not by how it is spelled. Undeclared and
+    # written `./VDI2770_Main.pdf`, the reserved main document matched nothing
+    # here and was scanned by nobody -- which is the sentence in this function's
+    # own docstring, arriving again through the `./` in front of the name.
+    at_root = next((n for n in container.file_names
+                    if folder_path(n) == MAIN_PDF), None)
     if (container.kind is Kind.DOCUMENTATION
-            and MAIN_PDF in container.file_names and MAIN_PDF not in seen):
-        out.append((MAIN_PDF, "the reserved main document"))
+            and at_root is not None and at_root not in seen):
+        out.append((at_root, "the reserved main document"))
     return out
 
 

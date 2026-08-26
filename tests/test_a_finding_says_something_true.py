@@ -13,6 +13,7 @@ user actually reads.
     the root of the archive"; `Z9` counted `./` as a folder.
 """
 import io
+import pathlib
 import zipfile
 
 from conftest import CLEAN_DOCUMENT, CORPUS
@@ -191,3 +192,106 @@ def test_a_folder_we_did_not_open_is_said_so_in_any_container():
     assert "Z13" in fired, (
         "nothing in the report said the folder had not been opened: "
         f"{sorted(fired)}")
+
+
+def test_a_folder_whose_metadata_we_could_not_read_is_still_a_folder():
+    """The guard for one refusal swallowed a different one.
+
+    `folders_holding_metadata` skips members the reader refused, because
+    `../VDI2770_Metadata.xml` is a path-traversal attempt and not a folder
+    anybody delivered. But *unreadable* is not *not a name*: a folder whose own
+    `VDI2770_Metadata.xml` has a bad CRC is a document container that was not
+    zipped, delivered, and unopened — which is the strongest case there is for
+    saying so.
+
+    With the guard as written, one damaged member turned the report into two
+    false claims and a missing one: `F2` said nothing declares the files in that
+    folder — asserted from a metadata file the line above says could not be read
+    — and `Z8` told the sender to add the document containers it was looking at,
+    while nothing said a folder had gone unexamined.
+    """
+    import struct
+
+    from conftest import CLEAN_DOCUMENT, CLEAN_DOCUMENTATION
+
+    docn = zipfile.ZipFile(CLEAN_DOCUMENTATION)
+    doc = zipfile.ZipFile(CLEAN_DOCUMENT)
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        z.writestr("VDI2770_Main.xml", docn.read("VDI2770_Main.xml"))
+        z.writestr("VDI2770_Main.pdf", docn.read("VDI2770_Main.pdf"))
+        for name in doc.namelist():
+            z.writestr("doc1/" + name, doc.read(name))
+    raw = bytearray(buf.getvalue())
+
+    # That member's bytes, found through its own header rather than by searching
+    # for them: the document's metadata and the documentation's main file open
+    # with the same forty bytes, and searching corrupted the wrong one.
+    info = zipfile.ZipFile(io.BytesIO(bytes(raw))).getinfo("doc1/VDI2770_Metadata.xml")
+    name_len, extra_len = struct.unpack("<HH", bytes(raw[info.header_offset + 26:
+                                                        info.header_offset + 30]))
+    at = info.header_offset + 30 + name_len + extra_len
+    raw[at:at + 40] = b"@" * 40
+
+    report = check_bytes(bytes(raw), "folder.zip")
+    fired = {f.rule.id for f in report.findings}
+    assert "Z12" in fired, f"the refusal itself is not reported: {sorted(fired)}"
+    assert "Z13" in fired, (
+        f"nothing said the folder had not been opened: {sorted(fired)}")
+    assert "F2" not in fired, (
+        "files inside a folder we did not open were called undeclared")
+    assert "Z8" not in fired, (
+        "the container was said to deliver nothing while a folder sat in it")
+
+
+def test_an_archive_with_an_unnameable_entry_is_not_called_empty():
+    """`Z2` said *the archive is empty* beside `Z12` saying there was an entry.
+
+    The guard reads `members` and `rejected`, and `nameless-member` is the one
+    refusal recorded as a bare defect and never in `rejected` — so it walked
+    past, and the remedy told a sender to add the files they had sent.
+    """
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        z.writestr(zipfile.ZipInfo(""), b"something is in here")
+    report = check_bytes(buf.getvalue(), "nameless.zip")
+    fired = {f.rule.id for f in report.findings}
+    assert "Z12" in fired, sorted(fired)
+    assert "Z2" not in fired, "an archive with an entry in it was called empty"
+
+    said = next(f.detail for f in report.findings if f.rule.id == "Z12")
+    assert "has no name" in said and "extract it" in said, (
+        f"one entry, told about in the plural: {said}")
+
+
+def test_a_locked_member_is_not_told_to_send_the_same_archive_again():
+    """Repaired on `F1`'s path and not on `Z12`'s, so one member drew two
+    remedies and one of them was a loop: re-creating the archive from the same
+    directory produces the same member and the same finding."""
+    import shutil
+    import subprocess
+
+    import pytest
+
+    if not shutil.which("zip"):
+        pytest.skip("needs the zip(1) command to build an encrypted member")
+
+    from conftest import CLEAN_DOCUMENT
+
+    src = zipfile.ZipFile(CLEAN_DOCUMENT)
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as tmp:
+        src.extractall(tmp)
+        out = f"{tmp}/enc.zip"
+        rest = [f"{tmp}/{n}" for n in src.namelist() if n != "B.pdf"]
+        subprocess.run(["zip", "-jq", out, *rest], check=True)
+        subprocess.run(["zip", "-jq", "-P", "secret", out, f"{tmp}/B.pdf"], check=True)
+        report = check_bytes(pathlib.Path(out).read_bytes(), "enc.zip")
+
+    z12 = [f for f in report.findings if f.rule.id == "Z12"]
+    assert z12, [f.rule.id for f in report.findings]
+    for f in z12:
+        assert "send it again" not in (f.remedy or ""), (
+            f"a locked member was told to re-send the same archive: {f.remedy}")
+        assert "password" in (f.remedy or "").lower(), f.remedy

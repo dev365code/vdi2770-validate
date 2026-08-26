@@ -296,7 +296,8 @@ def read(data: bytes, path: str, depth: int = 0, _budget: Optional[_Budget] = No
         c.defects.append(Defect(
             "nameless-member", c.where,
             f"{len(nameless)} entr{'y' if len(nameless) == 1 else 'ies'} in "
-            f"this archive have no name; nothing can extract them"))
+            f"this archive {'has' if len(nameless) == 1 else 'have'} no name; "
+            f"nothing can extract {'it' if len(nameless) == 1 else 'them'}"))
     if not budget.take_members(len(infos)):
         # The same answer `too-many-members` gives, for the same reason: we did
         # not read it, so we say nothing about what is in it. `kind` is what
@@ -304,8 +305,14 @@ def read(data: bytes, path: str, depth: int = 0, _budget: Optional[_Budget] = No
         c.kind = Kind.UNREADABLE
         c.defects.append(Defect(
             "member-budget-exhausted", c.where,
-            f"this read has listed {MAX_TOTAL_MEMBERS} entries, its limit; "
-            f"this archive lists {len(infos)} more"))
+            # `budget.members`, not the cap. The charge fails on `members + n >
+            # MAX`, so at the moment it fails fewer than the cap have been
+            # listed -- and printing the cap made the sentence a constant that
+            # was wrong by however many the archive had left to spend. The
+            # element budget one module along had the same false claim about the
+            # same kind of counter, and was repaired the same way.
+            f"this read has listed {budget.members} entries and this archive "
+            f"lists {len(infos)} more, past its limit of {MAX_TOTAL_MEMBERS}"))
         return c
     if len(infos) > MAX_MEMBERS:
         c.kind = Kind.UNREADABLE
@@ -395,8 +402,10 @@ def read(data: bytes, path: str, depth: int = 0, _budget: Optional[_Budget] = No
             exhausted = True
             c.defects.append(Defect(
                 "decompression-budget-exhausted", c.where.child(member=m.name),
-                f"this read has inflated {MAX_TOTAL_DECOMPRESSED} bytes, its limit; "
-                f"members from here on were not checked for readability"))
+                f"this read has inflated {budget.decompressed} bytes and this "
+                f"member would take it past its limit of "
+                f"{MAX_TOTAL_DECOMPRESSED}; members from here on were not "
+                f"checked for readability"))
         if exhausted:
             readable.append(m)
             continue
@@ -473,7 +482,8 @@ def read(data: bytes, path: str, depth: int = 0, _budget: Optional[_Budget] = No
             if not budget.take_bytes(declared):
                 c.rejected[wanted] = _refuse(
                     c, "decompression-budget-exhausted", c.where.child(member=wanted),
-                    f"this read has inflated {MAX_TOTAL_DECOMPRESSED} bytes, its limit")
+                    f"this read has inflated {budget.decompressed} bytes and "
+                    f"reading it would take that past {MAX_TOTAL_DECOMPRESSED}")
                 raise KeyError(wanted)
             c.metadata_bytes = zf.read(wanted)
             c.metadata_name = wanted
@@ -500,7 +510,8 @@ def read(data: bytes, path: str, depth: int = 0, _budget: Optional[_Budget] = No
             if not budget.take_bytes(m.size):
                 c.rejected[m.name] = _refuse(
                     c, "decompression-budget-exhausted", c.where.child(member=m.name),
-                    f"this read has inflated {MAX_TOTAL_DECOMPRESSED} bytes, its limit; "
+                    f"this read has inflated {budget.decompressed} bytes and "
+                    f"reading it would take that past {MAX_TOTAL_DECOMPRESSED}; "
                     f"{len(inner_zips) - i} more containers here were not opened")
                 break
             if sum(1 for i in infos if i.filename == m.name) != 1:

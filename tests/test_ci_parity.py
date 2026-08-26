@@ -670,9 +670,15 @@ def test_a_gate_that_starts_python_does_not_leave_bytecode_behind():
         # counts and `env=os.environ` does not -- and transitively, because
         # `env = dict(NO_BYTECODE, PYTHONPATH=tmp)` carries it without spelling
         # it. Iterated to a fixed point rather than assumed to be one level.
+        # Not the name a `subprocess.run(...)` result is bound to. `r =
+        # subprocess.run(..., env=NO_BYTECODE)` puts the carrier's name in the
+        # assignment's source, which made `r` -- a `CompletedProcess` -- count as
+        # an environment.
         bindings = [
             (target.id, ast.get_source_segment(source, node) or "")
             for node in ast.walk(tree) if isinstance(node, ast.Assign)
+            if not (isinstance(node.value, ast.Call)
+                    and "subprocess." in (ast.get_source_segment(source, node.value) or ""))
             for target in node.targets if isinstance(target, ast.Name)
         ]
         carriers, grew = set(), True
@@ -700,8 +706,14 @@ def test_a_gate_that_starts_python_does_not_leave_bytecode_behind():
                 f"with no env=, so it leaves bytecode wherever this interpreter "
                 f"puts it — which is not always a directory anything cleans")
             passed = ast.get_source_segment(source, env) or ""
+            # `\b`, as the loop above already uses. `c in passed` is a
+            # substring test, and this file's own carrier names include `env` --
+            # so `env=os.environ`, which is the exact regression this gate is
+            # named for, contained the word `env` and passed. The gate that
+            # replaced a grep was still doing one, three lines from the end.
             assert ("PYTHONDONTWRITEBYTECODE" in passed
-                    or any(c in passed for c in carriers)), (
+                    or any(re.search(rf"\b{re.escape(c)}\b", passed)
+                           for c in carriers)), (
                 f"tools/{name} line {call.lineno} passes env={passed}, which "
                 f"does not carry PYTHONDONTWRITEBYTECODE")
 

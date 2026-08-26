@@ -15,6 +15,57 @@ def containers():
     return sorted(CORPUS.rglob("*.zip")) + sorted(FIXTURES.rglob("*.zip"))
 
 
+def worst_document_attributes() -> int:
+    """The most attributes any `VDI2770_*.xml` in the corpus carries, counted the
+    way the budget counts them: with expat and a namespace separator, so
+    namespace declarations are not attributes.
+
+    Nested containers included, because the worst one is inside one.
+    """
+    import contextlib
+    import xml.parsers.expat
+    import zipfile
+
+    worst = 0
+
+    def count(data: bytes) -> int:
+        seen = 0
+
+        def start(_name, attrs):
+            nonlocal seen
+            seen += len(attrs)
+
+        parser = xml.parsers.expat.ParserCreate(namespace_separator="|")
+        parser.StartElementHandler = start
+        # Some fixtures are malformed on purpose. What they carry up to the point
+        # they break still counts; what they do not is not this gate's business.
+        with contextlib.suppress(xml.parsers.expat.ExpatError):
+            parser.Parse(data, True)
+        return seen
+
+    def walk(archive: zipfile.ZipFile):
+        nonlocal worst
+        for name in archive.namelist():
+            leaf = name.rsplit("/", 1)[-1]
+            if leaf.startswith("VDI2770_") and leaf.endswith(".xml"):
+                worst = max(worst, count(archive.read(name)))
+            elif leaf.lower().endswith(".zip"):
+                import io
+                try:
+                    with zipfile.ZipFile(io.BytesIO(archive.read(name))) as inner:
+                        walk(inner)
+                except (zipfile.BadZipFile, RuntimeError, OSError):
+                    continue          # a fixture that is not a readable archive
+
+    for path in containers():
+        try:
+            with zipfile.ZipFile(path) as archive:
+                walk(archive)
+        except (zipfile.BadZipFile, RuntimeError, OSError):
+            continue              # a fixture that is deliberately not an archive
+    return worst
+
+
 def test_the_oracle_sweep_covers_every_container_and_says_how_many():
     """`docs/divergences.md` said 43 while the sweep held 44 — the sweep was
     right and the sentence describing it was a version behind.
@@ -564,9 +615,18 @@ def test_the_changelog_multiplies_the_attribute_caps_the_same_way_twice():
     # `\s*` because the sentence wraps: the count sits on the next line.
     worst = re.search(r"the worst document\s*\*\*(\d+)\*\*", unreleased)
     assert worst, "the CHANGELOG no longer states the worst document's attribute count"
-    derived = round(MAX_ATTRIBUTES / int(worst.group(1)), -2)
-    assert int(said.pop().replace(",", "")) == derived, (
-        f"{MAX_ATTRIBUTES} over {worst.group(1)} rounds to {derived:,.0f}")
+
+    # Counted out of the corpus, not read back out of the prose. Taking the
+    # divisor from the same paragraph as the quotient meant the two always
+    # agreed: move the corpus to sixty attributes on one element and this stayed
+    # green about a multiple that had become wrong.
+    assert int(worst.group(1)) == worst_document_attributes(), (
+        f"the CHANGELOG says the worst document carries {worst.group(1)} "
+        f"attributes; the corpus's worst carries {worst_document_attributes()}")
+
+    derived = round(MAX_ATTRIBUTES / worst_document_attributes(), -2)
+    assert int(said[0].replace(",", "")) == derived, (
+        f"{MAX_ATTRIBUTES} over {worst_document_attributes()} rounds to {derived:,.0f}")
 
 
 def test_the_changelog_states_the_per_rule_ceiling_the_budget_allows():

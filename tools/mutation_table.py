@@ -593,6 +593,22 @@ TABLE = [
      "a member named with a literal backslash rendered exactly like a member "
      "named with the character that escape stands for"),
 
+    ("rules/one-path-is-not-one-name",
+     "src/vdi2770_validate/rules/container.py",
+     "            one_path = len({extracts_to(n) for n in group}) == 1",
+     "            one_path = True",
+     ["tests/test_two_spellings_are_two_files.py"],
+     "`Z10` grouped on `folder_path` and then said `extract to the same path` "
+     "about members that land on two, in a report where `F2` treated them as two"),
+
+    ("rules/one-name-is-not-one-path",
+     "src/vdi2770_validate/rules/container.py",
+     "            one_name = len({nfc(n) for n in group}) == 1",
+     "            one_name = False",
+     ["tests/test_two_spellings_are_two_files.py"],
+     "the look-alike sentence is the one the rule exists for; forcing the branch "
+     "off left a canonically equivalent pair described as something else"),
+
     # --- the canary -------------------------------------------------------
     ("canary/a-comment-nobody-reads",
      "src/vdi2770_validate/report.py",

@@ -30,6 +30,70 @@ gate or dropped, because a number nobody re-derives is the kind of claim the
 rest of these entries are about — and that one was itself wrong twice.
 
 
+- **Four sentences that were not true of what the report was looking at.** An
+  archive whose only entry had no name was called *empty*, beside the finding
+  saying there was an entry in it — the one refusal recorded as a bare defect
+  and never among the refused members, so the guard against exactly this walked
+  past it. A member the sender had locked was told to *re-create the archive and
+  send it again*, which produces the same member and the same finding; that was
+  repaired a release ago on one of the two rules that say it. Two budget
+  messages printed the ceiling as the amount consumed — the charge fails on
+  *would take this past*, so at the moment it fails less has been spent, and at
+  the real cap the sentence was a constant. And an archive holding nothing but a
+  directory entry was told it *stores files in folders*, naming one with no file
+  in it.
+
+- **`Z7` now says what the reader saw.** The reader records a near-miss for each
+  reserved name — wrong case, in a subfolder, a path in front of it — and only
+  one rule read them. A documentation container holding `vdi2770_main.pdf` was
+  told to add `VDI2770_Main.pdf`, which on the sender's own machine is not an
+  action they can take.
+
+- **`Z10` grouped by one relation and asserted another.** `duplicate_names` is
+  keyed on canonical form *and* dropping path segments that name nothing, and
+  the new branch said *extract to the same path* about the whole group. `./Ä.pdf`
+  stored decomposed beside `Ä.pdf` stored composed land on two paths — the tool
+  says so itself when asked, and `F2` in the same report correctly treated them
+  as two files. Three arms now, each driven by the relation its sentence is
+  about: `extracts_to` for one path, canonical form for one glyph, and both at
+  once for a pair that differs in each — which is one file only where the
+  recipient's filesystem normalises names, and says so.
+
+  A path collision is also no longer printed as code points. The difference
+  there is a `.` segment, which is two visible ASCII characters; spelling out the
+  rest turned two ordinary macOS filenames into four walls of hex, which is the
+  failure the entry below says was fixed, arriving through the new door.
+
+- **Three rules read a reserved name as a string.** `./VDI2770_Main.pdf` is at
+  the root — the reader records a `path-prefixed` near-miss saying exactly that,
+  and `Members`, `Z9`, `Z3` and `Z13` all agree. `Z7` told a sender to add a
+  file the same report was reading a PDF/A claim out of, one line down. `F2`
+  called the reserved name undeclared. And the PDF layer, which scans the main
+  document even when nothing declares it, matched nothing — so an eighteen-byte
+  text file named `./VDI2770_Main.pdf` was checked by nobody, which is the
+  regression that function's own docstring is named for.
+
+- **A folder whose metadata could not be read stopped being a folder.** The
+  guard that keeps `../VDI2770_Metadata.xml` from counting as a delivered folder
+  skipped every refused member, not only the ones refused for their name. One
+  bad CRC and `Z13` went quiet, `F2` called that folder's files undeclared — from
+  a metadata file the line above says could not be read — and `Z8` told the
+  sender to add the document containers it was looking at.
+
+- **An undeclared payload was reported twice, with remedies pointing apart.**
+  `Z11` said to move the inner container up into the documentation container;
+  `Z3`, about the same member, said to put a `VDI2770_Metadata.xml` at its root.
+  Follow either and the other still fires. The answer this tool accepts —
+  declare it as a `DigitalFile` with `FileFormat` `application/zip` — was offered
+  by neither, and is now in `Z11`'s remedy, which reports the member alone.
+
+- **Two gates could still be forged, and one of them was the gate written to
+  stop forging.** The bytecode check reads the syntax tree now, and then tested
+  its carrier names with `in` — so `env=os.environ` contained the carrier `env`
+  and passed, which is the exact regression the gate is named for. And the
+  attribute multiple took its divisor from the same paragraph as its quotient,
+  so the two always agreed; it counts the corpus now.
+
 - **Two names that print alike are told apart, and a name with nothing wrong
   with it is left alone.** The helper that spells out an invisible difference
   escaped by *combining class*, which is a guess about which characters combine,
@@ -768,7 +832,7 @@ below is measured on this machine, before and after, on the same input.
 Three gates that ask what `make check` cannot ask of itself.
 
 - **`make mutations`** takes every claim this project makes about a gate, breaks
-  the thing that gate protects, and checks the gate notices — 70 rows, each
+  the thing that gate protects, and checks the gate notices — 72 rows, each
   naming the pytest selection or the tool that has to go red. The harness checks
   itself as hard as it checks the code: a row whose anchor no longer appears
   exactly once is an error rather than a pass; every apply and restore clears
@@ -778,7 +842,7 @@ Three gates that ask what `make check` cannot ask of itself.
   broken row, not a kill; and **one row must survive**, because a harness that
   reports red for a change that does not matter is reporting red for everything.
   It found two holes on its first full run.
-- **`make standalone`** runs each of the 60 test files on its own. A suite is a
+- **`make standalone`** runs each of the 61 test files on its own. A suite is a
   shared process, so a file can pass because an earlier one imported something —
   `tests/test_offline.py` did exactly that for weeks, patching `socket.socket`
   and then importing `urllib.request`, which breaks `class SSLSocket(socket)`

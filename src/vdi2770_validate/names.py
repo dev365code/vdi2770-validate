@@ -22,7 +22,7 @@ from typing import Dict, List, Mapping, Optional, Sequence, Tuple
 from vdi2770 import nfc
 from vdi2770.model import Defect
 
-__all__ = ["Members", "escaped", "extracts_to", "folder_path", "nfc"]
+__all__ = ["Members", "as_written", "escaped", "extracts_to", "folder_path", "nfc"]
 
 
 def extracts_to(name: str) -> str:
@@ -43,13 +43,15 @@ def extracts_to(name: str) -> str:
 # a terminal draws as nothing, so a name carrying one prints exactly like the same
 # name without it. Python has no `Default_Ignorable_Code_Point` predicate, so the
 # ranges are written out.
-_INVISIBLE = ((0xFE00, 0xFE0F),      # variation selectors
-              (0xE0100, 0xE01EF),    # variation selectors supplement
-              (0xE0000, 0xE007F),    # tag characters
+_INVISIBLE = ((0x034F, 0x034F),      # combining grapheme joiner
+              (0x115F, 0x1160),      # Hangul choseong and jungseong fillers
+              (0x17B4, 0x17B5),      # Khmer inherent vowels
               (0x180B, 0x180F),      # Mongolian free variation selectors
-              (0x1160, 0x1160),      # Hangul jungseong filler
               (0x3164, 0x3164),      # Hangul filler
-              (0xFFA0, 0xFFA0))      # halfwidth Hangul filler
+              (0xFE00, 0xFE0F),      # variation selectors
+              (0xFFA0, 0xFFA0),      # halfwidth Hangul filler
+              (0xE0000, 0xE007F),    # tag characters
+              (0xE0100, 0xE01EF))    # variation selectors supplement
 
 
 def _draws_nothing(c: str) -> bool:
@@ -64,6 +66,26 @@ def _spelled(c: str) -> str:
     character, silently substituted, in the one line whose job is to be exact.
     """
     return f"\\U{ord(c):08x}" if ord(c) > 0xFFFF else f"\\u{ord(c):04x}"
+
+
+def as_written(name: str) -> str:
+    """The archive's own spelling, with only what draws nothing spelled out.
+
+    `escaped` spells out every non-ASCII character of a name that is not its own
+    NFC, because that is what tells two canonically equivalent names apart. When
+    the difference between two names is *not* a spelling difference -- two
+    members that extract to one path and differ only in `.` segments -- that
+    rule spends nothing and costs a great deal: two members written
+    `설명서_Prüfbericht.pdf` and `./설명서_Prüfbericht.pdf` came back as four
+    walls of hex in one finding, about names differing by two visible ASCII
+    characters. macOS writes every filename decomposed, so this was the ordinary
+    case for exactly the reader it hurt most.
+
+    What is still spelled out is what draws nothing, and a backslash, because a
+    name is not something a reader can act on while part of it is invisible.
+    """
+    return "".join(_spelled(c) if c == "\\" or _draws_nothing(c) else c
+                   for c in name)
 
 
 def escaped(name: str) -> str:
