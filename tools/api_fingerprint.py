@@ -55,8 +55,8 @@ def surface() -> dict:
     """Everything about a name that a caller can break on.
 
     The first version recorded field names with their type strings, property
-    names, and function parameter *names*. a review put thirteen
-    mutations through it and four passed both this and the whole test suite,
+    names, and function parameter *names*. Thirteen mutations were put through
+    it and four passed both this and the whole test suite,
     each a real breaking change to a published library:
 
       * a positional parameter made keyword-only — `parameters` is an ordered

@@ -76,6 +76,21 @@ failure — files that never claimed at all.
   published table, ZIP and XML mechanics, the MIT reference implementation, or a
   judgement of our own.
 
+## The history is left as written
+
+Some commit messages in this repository describe how a change came to be found.
+The rule now is that a published artifact carries the verdict and not the method,
+and the working tree, the release notes and the published packages follow it.
+History does not, and is not being rewritten to.
+
+Rewriting a public branch removes nothing: a force-push unlinks commits, it does
+not delete them, and the ones this repository has already rewritten are still
+served by name and still listed in the host's public event feed. What a rewrite
+*would* do is break the correspondence between eleven published versions and the
+tags they were built from — in a project whose whole claim is that what it says
+can be checked. That is a worse trade, and it is the same one already recorded
+here for a log file that carried absolute paths.
+
 ## Why the refusals are written down
 
 Some of them are the honest edge of a free tool. If you need a PDF/A claim

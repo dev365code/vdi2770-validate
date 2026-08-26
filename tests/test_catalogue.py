@@ -114,7 +114,7 @@ def test_an_unknown_class_id_has_no_published_names():
 
 
 # The `container` obligation is the strongest thing this project claims: "true
-# without knowing VDI 2770 at all". An audit found six rules wearing it that are
+# without knowing VDI 2770 at all". Six rules wore it that are
 # entirely VDI conventions -- reserved filenames, the metadata model, a byte scan
 # of a PDF. The tag had become the default for anything that was not obviously
 # schema or table. Listing them here makes the claim a decision someone made.

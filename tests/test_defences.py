@@ -41,7 +41,7 @@ BUDGETS = {
     "MAX_RATIO": (10, 10_000),
     "MAX_METADATA_BYTES": (1 << 20, 256 << 20),
     "MAX_CONTAINER_LEVELS": (2, 8),
-    # Added after the table was written, and left out of it until an audit asked
+    # Added after the table was written, and left out of it until somebody asked
     # why the docstring above says every budget is pinned.
     "MIN_SUSPICIOUS_BYTES": (1 << 20, 64 << 20),
     "MAX_CONTAINERS": (100, 100_000),

@@ -54,3 +54,23 @@ def test_each_workflow_checks_that_the_tag_is_that_package_version():
     the number is on PyPI forever and does not match the code."""
     assert 'tag="${GITHUB_REF_NAME#v}"' in VALIDATOR.read_text(encoding="utf-8")
     assert 'tag="${GITHUB_REF_NAME#sdk-v}"' in SDK.read_text(encoding="utf-8")
+
+
+def test_a_publishing_workflow_refuses_a_version_the_index_already_has():
+    """A tag can be moved. Publishing cannot be undone.
+
+    Both workflows fire on `push: tags`, and a *forced* tag update emits that
+    event exactly like a new tag does. So re-pointing an old tag — which any
+    history repair does — walks a days-old tree through the gate and then hands
+    it to the publisher, which is asked to upload a filename the index already
+    holds. What comes back is a rejection and a red run against the publishing
+    environment, on a repository whose whole claim is that the gate is green.
+
+    The step below asks the index first. It costs one HTTP request and turns an
+    accident into a clean skip.
+    """
+    for path in (VALIDATOR, SDK):
+        body = path.read_text(encoding="utf-8")
+        assert "tools/check_version_is_new.py" in body, (
+            f"{path.name} publishes without asking whether the index already "
+            f"has this version; a re-pointed tag would try to upload over it")

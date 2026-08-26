@@ -208,6 +208,18 @@ have a class of its own.
   explaining the refusal did not. It is two sentences now, because the repair is
   genuinely different: a published version cannot take back what it shipped, and
   an unpublished one has shipped nothing.
+- **A publishing workflow asks the index before it builds.** Both fire on
+  `push: tags`, and a *forced* tag update emits that event exactly as a new tag
+  does — so re-pointing an old tag walks a days-old tree through the gate and
+  then asks the index to accept a filename it already holds. The answer is a
+  rejection and a failed run against the publishing environment. One HTTP
+  request up front turns that into a clean stop. It is also the only network
+  call in this repository, and deliberately so: the index is the only thing that
+  knows what has been published.
+- **A gate's failure message no longer fails.** The check that keeps a step
+  running in the right directory formatted a `str` as a match object, so a real
+  failure printed a type error instead of the workflow, the step and the missing
+  line. It reported red, which is why it survived; it just could not say why.
 - **Text arriving in pieces has a ceiling.** The tree had a bound on elements and
   none on how many times the parser handed back character data. One character
   reference repeated cost **287 MB** from a 4.2 KiB archive, because a byte count
@@ -700,8 +712,8 @@ Two rules answering a question other than the one they ask.
   rather than `Z3`, and is no longer appended on top of a reason already
   recorded, which is how one file came to have two explanations.
 
-A shape review read the whole repository as a newcomer would. These are the
-boundary findings; the user-facing ones are above in the same section.
+Boundary findings — the module edges rather than the verdicts. The user-facing
+ones are above in the same section.
 
 - **One severity policy for "this tool stopped", and a field that says so.**
   Seven rules fire because the validator declined — a broken installation, a
@@ -770,7 +782,7 @@ changes what the build refuses to let through.
 
 ## 0.6.0 — 2026-08-24
 
-What a later audit found over the earlier work.
+What turned up over the earlier work.
 No new coverage: every item is a wrong answer replaced with a true one, or a test
 that could not fail replaced with one that can.
 
@@ -915,7 +927,7 @@ run for hours on a small file, and it is in 0.4.0.
 
 ## 0.4.0 — 2026-08-24
 
-All seven defects the audits left open, fixed one at a time. Verdicts on the 43
+All seven defects left open above, fixed one at a time. Verdicts on the 43
 recorded corpus and fixture containers are unchanged throughout — checked at the
 level of finding counts, not just which rules fired, because several of these
 changes are the kind a set comparison cannot see.

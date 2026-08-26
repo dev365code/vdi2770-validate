@@ -1,7 +1,6 @@
 """The promises the README makes, asserted rather than believed.
 
-A hostile review broke this project eleven ways and `make check` stayed green
-every time: the reader could be made to write every member to disk, the tool
+Eleven ways to break this project with `make check` staying green every time: the reader could be made to write every member to disk, the tool
 could open a socket, the PDF/A wording could be turned into a lie, and severities
 could be flipped — all without a single test failing. These are those tests.
 """

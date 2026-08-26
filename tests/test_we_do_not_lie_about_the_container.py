@@ -1,6 +1,6 @@
 """A finding must be true about the user's file.
 
-Two ways to break that, both found by audit rather than by a gate: say the
+Two ways to break that, neither caught by a gate: say the
 archive is empty when we merely refused to read what was in it, and say a value
 is wrong when the element holding it is absent.
 """

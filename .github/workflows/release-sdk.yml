@@ -47,6 +47,12 @@ jobs:
       - name: Every container has been through the reference implementation
         working-directory: .
         run: make oracle-fully-swept
+      # A forced tag update fires this workflow exactly as a new tag does, so a
+      # re-pointed tag would carry a days-old tree through the gate and then ask
+      # the index to accept a filename it already holds. Ask first.
+      - name: The index must not already have this version
+        working-directory: .
+        run: python tools/check_version_is_new.py --package vdi2770 --version "${GITHUB_REF_NAME#sdk-v}"
       - name: The tag must be the version
         run: |
           tag="${GITHUB_REF_NAME#sdk-v}"

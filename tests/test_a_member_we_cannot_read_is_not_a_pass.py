@@ -1,6 +1,6 @@
 """Silence is the worst answer a validator can give.
 
-Review found three containers that this tool passed with exit 0 and
+Three containers, passed by this tool with exit 0 and
 "no findings" while `unzip -t` refused them, and three legitimate deliveries it
 failed. Both directions are recorded here.
 """

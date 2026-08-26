@@ -406,7 +406,7 @@ def test_a_step_that_runs_make_check_runs_it_where_the_makefile_is():
             if not root_commands:
                 continue
             assert re.search(r"^\s+working-directory:\s*\.\s*$", step, re.M), (
-                f"{w.name} defaults to {default.group(1)!r} and a step runs "
+                f"{w.name} defaults to {default!r} and a step runs "
                 f"{root_commands} without `working-directory: .`:\n{step[:200]}")
 
 

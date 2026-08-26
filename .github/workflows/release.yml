@@ -47,6 +47,11 @@ jobs:
       # reuse. The constraint lived in a docstring until it had this step.
       - name: The reader this pins must already have been released
         run: python tools/check_release_order.py
+      # A forced tag update fires this workflow exactly as a new tag does, so a
+      # re-pointed tag would carry a days-old tree through the gate and then ask
+      # the index to accept a filename it already holds. Ask first.
+      - name: The index must not already have this version
+        run: python tools/check_version_is_new.py --package vdi2770-validate --version "${GITHUB_REF_NAME#v}"
       - name: The tag must be the version
         run: |
           tag="${GITHUB_REF_NAME#v}"
