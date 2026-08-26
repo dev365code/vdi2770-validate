@@ -526,3 +526,62 @@ def test_the_readme_describes_the_json_entries_the_tool_actually_emits():
     assert "unreadable" in unread, sorted(unread)
     assert '`"unreadable"`' in readme, (
         "the README no longer says what an entry for an unopenable path carries")
+
+
+def test_the_changelog_multiplies_the_attribute_caps_the_same_way_twice():
+    """One release section said `2,000×` in one entry and `1,900×` in another.
+
+    Both are the same division — `MAX_ATTRIBUTES` over the worst document the
+    corpus holds, which the entry beside them says is 49. `100000 / 49` is
+    2,040.8, so one of the two was rounded and the other was wrong, and nothing
+    noticed because the two sentences are two hundred lines apart. A figure
+    stated twice is a figure that will be stated two ways.
+    """
+    import re
+
+    from vdi2770.xmlread import MAX_ATTRIBUTES
+
+    unreleased = newest_changelog_section()
+    # `\*{0,2}` because one of the two is bold and the other is not. A pattern
+    # that matched only the plain one found a single value, agreed with itself,
+    # and could not have failed -- which is the shape of defect this gate exists
+    # to catch, so the count of matches is asserted before their agreement is.
+    said = re.findall(r"([\d,]+)×\*{0,2} (?:above )?the worst document", unreleased)
+    assert len(said) >= 2, (
+        f"this gate compares two sentences and found {len(said)}; the CHANGELOG "
+        f"has been reworded: {said}")
+    assert len(set(said)) == 1, (
+        f"the same multiple is written two ways: {sorted(set(said))}")
+
+    # `\s*` because the sentence wraps: the count sits on the next line.
+    worst = re.search(r"the worst document\s*\*\*(\d+)\*\*", unreleased)
+    assert worst, "the CHANGELOG no longer states the worst document's attribute count"
+    derived = round(MAX_ATTRIBUTES / int(worst.group(1)), -2)
+    assert int(said.pop().replace(",", "")) == derived, (
+        f"{MAX_ATTRIBUTES} over {worst.group(1)} rounds to {derived:,.0f}")
+
+
+def test_the_changelog_states_the_per_rule_ceiling_the_budget_allows():
+    """It said `99,997`, and the ceiling is `99,999`.
+
+    A rule that fires once per element can fire once for every element the budget
+    admits, less the root — which is an element too. `M10` reaches exactly that
+    on a document of nothing but `<DocumentId/>`; `M9` stops one short because
+    its own shape costs a child. The figure is derived here rather than measured,
+    because measuring it means building a hundred thousand elements and this
+    gate should cost nothing.
+
+    The same entry also said the page "now says so" of a page that says *nearly
+    a hundred thousand* — which is the right thing for the page to say, since
+    which rule the file provokes moves the exact number.
+    """
+    import re
+
+    from vdi2770.xmlread import MAX_ELEMENTS
+
+    unreleased = newest_changelog_section()
+    m = re.search(r"real ceiling is \*\*([\d,]+)\*\*", unreleased)
+    assert m, "the CHANGELOG sentence this test pins has been reworded"
+    assert int(m.group(1).replace(",", "")) == MAX_ELEMENTS - 1, (
+        f"the budget admits {MAX_ELEMENTS} elements, so one rule can fire "
+        f"{MAX_ELEMENTS - 1} times; the CHANGELOG says {m.group(1)}")

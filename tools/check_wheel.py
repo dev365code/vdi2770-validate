@@ -139,10 +139,16 @@ def smoke(wheels: list) -> list:
     that pip can reach the internet.
     """
     with tempfile.TemporaryDirectory() as tmp:
+        # `env=` here too. pip compiles what it installs, and this one started
+        # Python without it: the bytecode went wherever `sys.pycache_prefix`
+        # sends it, which is the directory nothing in this repository cleans and
+        # the reason a `make check` once failed naming a budget that had not
+        # moved. The gate above this had been reading the file for the word
+        # rather than the call for the argument, so it did not notice.
         install = subprocess.run(
             [sys.executable, "-m", "pip", "install", "--quiet", "--no-index", "--no-deps",
              "--target", tmp, *[str(w) for w in wheels]],
-            capture_output=True, text=True)
+            capture_output=True, text=True, env=NO_BYTECODE)
         if install.returncode:
             return [f"the wheels do not install: {install.stderr[-800:]}"]
         found = []

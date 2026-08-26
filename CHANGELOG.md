@@ -264,11 +264,14 @@ have a class of its own.
   process, the whole tool holds **48 MB** on that archive and **23 MB** with the
   ceiling. `docs/scope.md` said a crafted file could make one rule true two
   hundred thousand times; the element budget refuses the document first, so the
-  real ceiling is **99,997** and the page now says so — and the gate that guards
-  that page derives the number instead of trusting it, which is what it did for
-  six of the page's other limits and not for the one that drifted. The attribute
+  real ceiling is **99,999** — one firing per element, and the root is an element
+  too. The page says *nearly a hundred thousand* rather than the figure, because
+  which rule the crafted file provokes moves it: `M10` reaches the bound, `M9`
+  stops one short. The gate that guards that page derives the number from
+  `MAX_ELEMENTS` instead of trusting it, which is what it did for six of the
+  page's other limits and not for the one that drifted. The attribute
   caps were called "two orders of magnitude above anything a delivery can reach";
-  they are **43×** the worst element seen and **1,900×** the worst document, which
+  they are **43×** the worst element seen and **2,000×** the worst document, which
   is one order and three, not two and two.
   The fourth was the interesting one. "The corpus's worst document carries
   fifty-one attributes" is *a* true number — for `VDI2770_*.xml` with namespace

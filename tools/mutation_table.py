@@ -644,8 +644,15 @@ def main() -> int:
         tree = Path(tmp) / "tree"
         shutil.copytree(ROOT, tree, ignore=shutil.ignore_patterns(
             ".git", "__pycache__", "build", "dist", "*.egg-info", ".pytest_cache", ".ruff_cache"))
+        # `env=` here too. The run below sets it for every check it starts and
+        # this one, which builds the fixtures the whole sweep is measured
+        # against, did not -- so the copy this sweep runs in was seeded with
+        # bytecode written wherever `sys.pycache_prefix` points, and a mutation
+        # is exactly the file most likely to be restored to its previous size
+        # inside the same second.
         if subprocess.run([sys.executable, "tools/make_fixtures.py"],
-                          cwd=tree, capture_output=True).returncode:
+                          cwd=tree, capture_output=True,
+                          env=dict(os.environ, PYTHONDONTWRITEBYTECODE="1")).returncode:
             print("could not build the fixtures in the copy", file=sys.stderr)
             return 1
 
@@ -671,7 +678,8 @@ def main() -> int:
             # "the tests it names already fail before the mutation". A harness
             # that poisons the tree it is measuring measures itself.
             if subprocess.run([sys.executable, "tools/make_fixtures.py"],
-                              cwd=tree, capture_output=True).returncode:
+                              cwd=tree, capture_output=True,
+                              env=dict(os.environ, PYTHONDONTWRITEBYTECODE="1")).returncode:
                 print(f"{_id}: could not rebuild the fixtures after restoring the tree",
                       file=sys.stderr)
                 return 1

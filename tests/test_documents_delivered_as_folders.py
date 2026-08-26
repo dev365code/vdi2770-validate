@@ -208,7 +208,15 @@ def test_two_rules_name_the_same_folder_the_same_way():
 
 
 class _Counting(frozenset):
-    """A folder set that tallies how many times it is asked."""
+    """A folder set that tallies how much of it gets touched.
+
+    `__iter__` as well as `__contains__`, and this is the whole point. Counting
+    only membership tests measured nothing about the implementation it was
+    written to pin: the scan it replaced -- `any(here == f or here.startswith(f +
+    "/") for f in unopened)` -- *iterates*, and never asks `in`. Put that scan
+    back and both counters stayed at zero, `0 == 0` and `0 <= 8` both held, and
+    the test passed against the quadratic code it exists to refuse.
+    """
 
     def __new__(cls, items):
         self = super().__new__(cls, items)
@@ -218,6 +226,12 @@ class _Counting(frozenset):
     def __contains__(self, item):
         self.asked += 1
         return super().__contains__(item)
+
+    def __iter__(self):
+        # Charged for the whole walk, because that is what iterating one of
+        # these costs whether or not the loop breaks early.
+        self.asked += len(self)
+        return super().__iter__()
 
 
 def test_asking_whether_a_file_is_in_an_unopened_folder_does_not_scan_them_all():

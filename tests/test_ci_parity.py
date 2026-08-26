@@ -650,20 +650,61 @@ def test_a_gate_that_starts_python_does_not_leave_bytecode_behind():
 
     The mutation table already sets this. The others start Python the same way
     and did not.
+
+    Read as a syntax tree, not as text. `"PYTHONDONTWRITEBYTECODE" in body` was
+    satisfied by the word appearing anywhere in the file: strip every `env=` from
+    the real `subprocess.run` calls, leave a comment saying the variable used to
+    be set, and this passed. That is the same shape as the gate that read an
+    explanatory comment instead of the config line it meant to check, found in
+    this repository a day earlier, and it is worth saying twice: a check that
+    greps for a name is a check that a name is mentioned.
     """
+    import ast
     import re
 
     for name in sorted(p.name for p in (ROOT / "tools").glob("*.py")):
-        body = (ROOT / "tools" / name).read_text(encoding="utf-8")
-        if not re.search(r"subprocess\.(run|Popen|check_)", body):
-            continue
-        if "sys.executable" not in body:
-            continue
-        assert "PYTHONDONTWRITEBYTECODE" in body, (
-            f"tools/{name} starts Python in a subprocess without "
-            f"PYTHONDONTWRITEBYTECODE, so it leaves bytecode wherever this "
-            f"interpreter puts it — which is not always a directory anything "
-            f"cleans")
+        source = (ROOT / "tools" / name).read_text(encoding="utf-8")
+        tree = ast.parse(source)
+
+        # Names bound to something that sets the variable, so `env=NO_BYTECODE`
+        # counts and `env=os.environ` does not -- and transitively, because
+        # `env = dict(NO_BYTECODE, PYTHONPATH=tmp)` carries it without spelling
+        # it. Iterated to a fixed point rather than assumed to be one level.
+        bindings = [
+            (target.id, ast.get_source_segment(source, node) or "")
+            for node in ast.walk(tree) if isinstance(node, ast.Assign)
+            for target in node.targets if isinstance(target, ast.Name)
+        ]
+        carriers, grew = set(), True
+        while grew:
+            grew = False
+            for bound, text in bindings:
+                if bound in carriers:
+                    continue
+                if ("PYTHONDONTWRITEBYTECODE" in text
+                        or any(re.search(rf"\b{c}\b", text) for c in carriers)):
+                    carriers.add(bound)
+                    grew = True
+
+        for call in [n for n in ast.walk(tree) if isinstance(n, ast.Call)]:
+            shown = ast.get_source_segment(source, call) or ""
+            if not (isinstance(call.func, ast.Attribute)
+                    and isinstance(call.func.value, ast.Name)
+                    and call.func.value.id == "subprocess"):
+                continue
+            if "sys.executable" not in shown:
+                continue
+            env = next((k.value for k in call.keywords if k.arg == "env"), None)
+            assert env is not None, (
+                f"tools/{name} line {call.lineno} starts Python in a subprocess "
+                f"with no env=, so it leaves bytecode wherever this interpreter "
+                f"puts it — which is not always a directory anything cleans")
+            passed = ast.get_source_segment(source, env) or ""
+            assert ("PYTHONDONTWRITEBYTECODE" in passed
+                    or any(c in passed for c in carriers)), (
+                f"tools/{name} line {call.lineno} passes env={passed}, which "
+                f"does not carry PYTHONDONTWRITEBYTECODE")
+
 
 
 def test_ci_installs_both_halves_of_this_repository_from_the_tree():
