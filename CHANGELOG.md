@@ -2,6 +2,15 @@
 
 ## 0.7.0 — 2026-08-25
 
+**Upgrading from 0.6.0 will turn some green runs red.** Three new rules — `X5`,
+`X6` and `Z13` — are errors, and `Z6` is promoted from warning to error. All four
+are `about: tool`, meaning this tool is saying it declined to look rather than
+that your container is wrong; the exit code does not distinguish the two, so a CI
+job that gates on it will fail on a delivery nothing is wrong with. If you gate
+on exit code, read `about` in the JSON before you upgrade, or expect to triage.
+Nothing that passed 0.6.0 has become non-conformant — the tool has become honest
+about what it was not checking.
+
 Things that were true of the code and not of what the project said about it,
 plus the guards that make each one say so next time. The count that used to open
 this section was written when it held six. Every count in it is now derived by a
@@ -430,7 +439,13 @@ they found, not a summary written after the fact.
   The root package declared no specific Python versions while the reader declared
   two.
 
-### Two new rule ids, and one changed verdict
+### Three new rule ids, and one changed verdict
+
+Against the catalogue 0.6.0 shipped: `X5`, `X6` and `Z13` are new and all three
+are errors; `Z6` moves warning → error; and `X0`, `X4`, `Z5` and `Z6` move to
+`about: tool`. Derived by diffing the two catalogues rather than remembered — the
+heading here said *two* and left out `X5`, which is introduced further down as a
+mechanism and was never announced as an id somebody's CI would meet.
 
 - **`Z13` — documents delivered as folders.** A folder holding
   `VDI2770_Metadata.xml` is a document container that was not zipped. This tool
