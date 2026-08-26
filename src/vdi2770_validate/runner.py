@@ -314,10 +314,10 @@ def check_file(path: str) -> Report:
     # The first repair refused anything `S_ISREG` said no to, which refused the
     # hang and also refused `check <(unzip -p ...)` and `... | check /dev/stdin`
     # -- both of which worked, and neither of which is a FIFO without a writer.
-    # Fixing the shape that was found instead of the thing that was wrong, for
-    # the second time this week. `O_NONBLOCK` distinguishes them: it returns at
-    # once whether or not a writer is there, so the pipe that has one is read
-    # and the one that does not reaches end-of-file instead of waiting.
+    # That was a fix for the shape that had been found rather than for the thing
+    # that was wrong. `O_NONBLOCK` distinguishes the two: it returns at once
+    # whether or not a writer is there, so the pipe that has one is read and the
+    # one that does not reaches end-of-file instead of waiting.
     #
     # Cleared straight after, so a writer that is merely slow is waited for.
     # `fcntl` is Unix-only, and importing it at module scope made the whole

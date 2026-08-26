@@ -626,7 +626,7 @@ def test_no_shape_of_trailer_is_expensive(name, body):
     """
     # CPU time, not wall clock. This is a claim about how much work the scan
     # does, and a wall clock also measures every other process on the box: the
-    # assertion below has flaked twice on a machine running a review fleet, both
+    # assertion below has flaked on a loaded machine, both
     # times on code whose cost had just been *reduced*. Four timed assertions in
     # this project have now failed for that reason; the ones that could be
     # counted have been, and this is the residue that cannot.
@@ -719,7 +719,7 @@ def _pdf_with_xref(trailer: bytes) -> bytes:
 def test_a_decoy_after_the_end_cannot_hide_the_real_trailer():
     """Ten bytes of `%trailer` repeated, appended after `%%EOF`.
 
-    The fifth repair read the *last* `MAX_TRAILERS` dictionaries, because an
+    An earlier version read the *last* `MAX_TRAILERS` dictionaries, because an
     incremental update appends and the newest trailer is the authoritative one.
     That is true of a file nobody is attacking. Sixty-four occurrences of the
     token appended after the end -- 640 bytes, ignored by every conformant

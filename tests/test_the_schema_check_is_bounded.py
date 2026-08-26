@@ -42,10 +42,9 @@ def container_with(n):
 def test_resolving_lines_does_not_rebuild_the_sibling_list_per_error(monkeypatch):
     """Counted, and flat.
 
-    This asserted `elapsed < 5`, and failed four runs in six under twenty
-    background spinners on a ten-core box -- a wall-clock ceiling measures the
-    machine at least as much as the code, and this project has had two such
-    assertions flake in one week. It is also not what the cost was: 38% of the
+    This asserted `elapsed < 5`, which fails on a loaded machine -- a
+    wall-clock ceiling measures the machine at least as much as the code. It is
+    also not what the cost was: 38% of the
     29 seconds that prompted this whole area was `_resolve` rebuilding the whole
     sibling list once per error to index one of them, which is quadratic in the
     errors over one parent. `kids_of` caches that.

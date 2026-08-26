@@ -167,7 +167,7 @@ have a class of its own.
   one week; every one of them has been replaced by a count of the thing that
   actually costs.
 - **The trailer scan follows `startxref` instead of guessing where to look.**
-  Sixth repair, and the fourth that was a different guess: reading the *last*
+  Repaired again, and this time not by another guess: reading the *last*
   sixty-four dictionaries was pushable by sixty-four occurrences of `%trailer`
   appended after `%%EOF` — 640 bytes a conformant reader ignores — and an
   encrypted PDF came back clean, with `P3` (*produce the file as PDF/A*) in
@@ -261,7 +261,7 @@ being suppressed.
 
 
 Four defects, three of them introduced by the repairs that came before them. A
-repair is a change like any other.
+repair is not finished when it stops the shape that was reported.
 
 - **A refused parse is the expensive one, and it was charged nothing.** The tree
   budget counted the tree that came back — so metadata *over* the per-document
@@ -432,7 +432,7 @@ they found, not a summary written after the fact.
   entries are refused now, once, under the new `ambiguous-name` defect kind,
   which `Z10` already had the sentence for. (The three figures first recorded
   here — 505 KiB, 1.25 GiB, 28.8 MB — cannot be reproduced from this
-  description, by me or by the review that flagged them: how large the archive
+  description: how large the archive
   is depends entirely on how the 400 MB member compresses, which the sentence
   never said. The behaviour reproduces exactly — both entries refused, `Z10`
   with the `ambiguous-name` detail — and that is the claim that matters.)
