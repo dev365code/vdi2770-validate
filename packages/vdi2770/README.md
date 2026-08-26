@@ -119,13 +119,15 @@ references — a 4.1 KiB archive — held 48 MB before this bound existed and ho
 23 MB now. The last two bound the
 attributes hung off it, which neither of the others sees: attributes are cheap
 to write and the schema check downstream is quadratic in how many sit on one
-element, so 12,000 of them in a 27 KiB archive cost 13.6 seconds. `vdi2770.pdfread` has eight of its own for the PDF scan:
+element, so 12,000 of them in a 27 KiB archive cost 13.6 seconds. `vdi2770.pdfread` has nine of its own for the PDF scan:
 `MAX_STREAMS`, `MAX_STREAM_SCAN`, `MAX_INFLATED_PER_STREAM`,
 `MAX_INFLATED_TOTAL`, `MAX_XMP_PACKETS`, `MAX_PDFA_PREFIXES`,
-`MAX_TRAILER_SCAN` with its `MAX_TRAILERS` companion — one
-bounds how much of a trailer dictionary is read, the other how many are read at
-all, and the two exist separately because a single bound covering both let an
-encrypted file read as clean. A test fails if
+`MAX_TRAILER_SCAN` with `MAX_TRAILER_BYTES` and the `MAX_TRAILERS` the second is
+derived from — one bounds how much of a single trailer dictionary is read and
+the other how much all of them together may cost. Every trailer in the file is
+a candidate, newest first, because a bound on *how many* to read is a bound on
+where to look, and whoever appends to a file can push the real trailer past
+one. A test fails if
 either module grows one this list does not name. You can read them all, and they
 are deliberately not arguments, so a caller cannot turn them off by accident.
 

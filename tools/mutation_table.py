@@ -102,8 +102,8 @@ TABLE = [
 
     ("rules/f2-emits-in-a-fixed-order",
      "src/vdi2770_validate/rules/files.py",
-     "    for name in sorted(set(members.present) - accounted_for - structural):",
-     "    for name in set(members.present) - accounted_for - structural:",
+     "    for name in sorted(set(members.present) - accounted_for - structural - collides):",
+     "    for name in set(members.present) - accounted_for - structural - collides:",
      ["tests/test_determinism.py"],
      "the report depended on the interpreter's hash seed"),
 
@@ -276,8 +276,8 @@ TABLE = [
 
     ("reader/the-trailers-that-are-read-are-the-last-ones",
      "packages/vdi2770/src/vdi2770/pdfread.py",
-     "    tail = collections.deque(_TRAILER.finditer(data), maxlen=MAX_TRAILERS)",
-     "    tail = list(_TRAILER.finditer(data))[:1]",
+     '        at = data.rfind(b"trailer", 0, end)',
+     '        at = data.find(b"trailer", len(data) - end)',
      ["packages/vdi2770/tests/test_the_public_api.py"],
      "an incremental update appends, so reading the first trailers reports the "
      "file as it was before it was encrypted"),
@@ -334,8 +334,8 @@ TABLE = [
 
     ("rules/two-rules-name-one-folder-one-way",
      "src/vdi2770_validate/rules/container.py",
-     '            named = [folder_path(f) + "/" for f in as_folders[:5]]',
-     "            named = list(as_folders[:5])",
+     '        named = [folder_path(f) + "/" for f in as_folders[:5]]',
+     "        named = list(as_folders[:5])",
      ["tests/test_documents_delivered_as_folders.py"],
      "`Z9` said `AB393/` and `Z13` said `./AB393/` in one report, and a reader "
      "has to work out they are the same place"),
@@ -473,7 +473,7 @@ TABLE = [
 
     ("runner/metadata-we-could-not-model-declares-nothing-known",
      "src/vdi2770_validate/runner.py",
-     "        if c.metadata_bytes is not None and document is None:",
+     "        if c.kind in (Kind.DOCUMENT, Kind.DOCUMENTATION) and document is None:",
      "        if False:",
      ["tests/test_a_declared_zip_is_a_payload.py"],
      "a parse the reader refused left `declared` empty rather than unknown, so "
@@ -537,13 +537,21 @@ TABLE = [
      ["tests/test_ci_parity.py"],
      "OUTSIDE_CHECK stated the requirement in prose and enforced nothing"),
 
-    ("reader/the-number-of-trailers-scanned-is-bounded",
+    ("reader/the-trailer-reading-is-bounded-in-total",
      "packages/vdi2770/src/vdi2770/pdfread.py",
-     "    return any(_scan_dictionary(data, hit.end(), MAX_TRAILER_SCAN) for hit in tail)",
-     "    return all(_scan_dictionary(data, hit.end(), MAX_TRAILER_SCAN) for hit in tail)",
+     "        budget -= max(spent, 1)          # never free, or a decoy is unbounded",
+     "        budget -= 0",
      ["packages/vdi2770/tests/test_the_public_api.py"],
-     "without a bound on how many dictionaries are walked, the per-dictionary "
-     "budget multiplies: 16,000 bare `trailer` keywords cost 135 s"),
+     "without a bound on how much of all the trailers is read, the "
+     "per-dictionary budget multiplies: 16,000 bare `trailer` keywords cost 135 s"),
+
+    ("reader/a-trailer-inside-a-comment-is-not-one",
+     "packages/vdi2770/src/vdi2770/pdfread.py",
+     '        if not _is_a_keyword_here(data, at, len(b"trailer")):',
+     "        if False:",
+     ["packages/vdi2770/tests/test_the_public_api.py"],
+     "`%trailer` is the word after a `%`, which no conformant reader sees as a "
+     "keyword; reading them spent the budget the real trailer needed"),
 
     ("reader/an-encrypt-in-a-comment-is-not-a-key",
      "packages/vdi2770/src/vdi2770/pdfread.py",

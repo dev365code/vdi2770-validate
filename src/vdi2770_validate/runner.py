@@ -14,6 +14,7 @@ from typing import Optional
 
 from vdi2770 import pdfread, xmlread, zipread
 from vdi2770.domain import build
+from vdi2770.zipread import Kind
 
 from . import xsdvalidate
 from .catalog import rule
@@ -241,15 +242,25 @@ def check_bytes(data: bytes, name: str) -> Report:
                 if document is _CRASHED:
                     document, tree = None, None
 
-        # Metadata we have and could not turn into a document is the same
-        # unknown as metadata we declined to read, and only the second was
-        # marked. So a parse the reader refused left `modelled` true and
-        # `declared` empty, and every rule reading it was told the container
-        # declares nothing -- `X6` said the metadata was not modelled while
-        # `Z11`, three lines of report away, accused a member of not being in
-        # it. The comment below has said the two are different since the budget
-        # path was repaired; this is the other way in.
-        if c.metadata_bytes is not None and document is None:
+        # A container whose kind names a metadata member and has no model of it,
+        # however that came about. Keying this on `metadata_bytes is not None`
+        # covered the parse we attempted and missed the read we never got to
+        # make: when the *reader* refuses the member -- a bad CRC, over the
+        # metadata budget, out of container budget -- there are no bytes, the
+        # flag stayed true, and `declared` was an empty `frozenset`. *This
+        # container declares no files*, asserted about a file nobody read. A
+        # document container declaring an `inner.zip` payload, with its metadata
+        # member corrupted, drew `Z12` (we could not read it) and then `Z11`,
+        # `Z3` and `Z9` about that payload, all three derived from the emptiness
+        # the same report says came from not looking.
+        #
+        # The kind is the right question because it is what decides whether a
+        # metadata member is read at all: `UNKNOWN` never had one to model, so
+        # nothing here widens to the ordinary archive that simply is not a
+        # container. The comment below has said "unknown" and "declares nothing"
+        # are different things since the budget path was repaired; these were the
+        # other two ways in.
+        if c.kind in (Kind.DOCUMENT, Kind.DOCUMENTATION) and document is None:
             modelled = False
 
         # `folder_path`, not `nfc`. A declared name and a member name are the

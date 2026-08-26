@@ -74,6 +74,14 @@ def test_a_publishing_workflow_refuses_a_version_the_index_already_has():
         assert "tools/check_version_is_new.py" in body, (
             f"{path.name} publishes without asking whether the index already "
             f"has this version; a re-pointed tag would try to upload over it")
+        # `--offline` exists for a machine with no route out, and it says so
+        # rather than guessing. In a workflow it is the gate switched off, in one
+        # word, on the line that looks like the gate is there.
+        for line in body.splitlines():
+            if "check_version_is_new.py" in line and not line.lstrip().startswith("#"):
+                assert "--offline" not in line, (
+                    f"{path.name} asks the index with --offline, which is not "
+                    f"asking: " + line.strip())
 
 
 def test_each_workflow_compares_the_tag_to_the_version_and_stops():

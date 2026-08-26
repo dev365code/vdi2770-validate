@@ -184,3 +184,68 @@ def test_a_document_container_we_could_not_model_does_not_draw_z11(tmp_path):
         f"Z11 accused a member while the tool was saying it had not read the "
         f"metadata that would declare it: {got}")
     assert "X5" not in got, f"a rule crashed instead of standing aside: {got}"
+
+
+def test_metadata_the_reader_would_not_hand_over_declares_nothing_known():
+    """The other door into the same room, and the guard was on this side of it.
+
+    `modelled` was cleared when a parse we attempted came back with nothing. When
+    the *reader* refuses the metadata member -- a bad CRC, over the metadata
+    budget, out of container budget -- there are no bytes to attempt, the flag
+    stayed true, and `declared` was an empty `frozenset`: *this container
+    declares no files*, asserted about a file nobody read.
+
+    A conforming document container declaring an `inner.zip` payload, with forty
+    bytes of its metadata member corrupted, then said:
+
+        Z11  A document container carries another container inside it
+        Z12  A file in the container could not be read
+        Z3   The archive is neither a document container nor a documentation …
+        Z9   The archive stores files in folders
+
+    `Z12` is the true one. The other three are about a payload that *is*
+    declared, derived from an emptiness the same report says came from not
+    looking. The condition is about the kind, not about the bytes: a container
+    whose kind names a metadata member and does not have it is a container
+    nobody modelled, however it came to be that way.
+    """
+    import io
+    import re
+    import zipfile
+
+    from conftest import CLEAN_DOCUMENT
+    from vdi2770_validate.runner import check_bytes
+
+    src = zipfile.ZipFile(CLEAN_DOCUMENT)
+    meta = src.read("VDI2770_Metadata.xml").decode("utf-8")
+    one = re.search(r"(\s*)<DigitalFile[^>]*>[^<]*</DigitalFile>", meta)
+    assert one, "the fixture no longer declares a file"
+    meta = meta.replace(one.group(0), one.group(0) + one.group(1)
+                        + '<DigitalFile FileFormat="application/zip">inner.zip</DigitalFile>', 1)
+    payload = io.BytesIO()
+    with zipfile.ZipFile(payload, "w") as z:
+        z.writestr("cad/part.stp", b"ISO-10303-21;\n")
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        for name in src.namelist():
+            z.writestr(name, meta.encode() if name == "VDI2770_Metadata.xml"
+                       else src.read(name))
+        z.writestr("inner.zip", payload.getvalue())
+    healthy = buf.getvalue()
+    assert not [f.rule.id for f in check_bytes(healthy, "ok.zip").findings
+                if f.rule.id in ("Z11", "Z3", "Z9")], "premise: this container is fine"
+
+    # The member's stored bytes, corrupted where the CRC notices and the central
+    # directory does not: the reader hands back a defect instead of data.
+    raw = bytearray(healthy)
+    at = raw.find(meta.encode()[:40])
+    assert at != -1, "the metadata member is not stored the way this test assumes"
+    raw[at:at + 40] = b"@" * 40
+
+    fired = {f.rule.id for f in check_bytes(bytes(raw), "unreadable-metadata.zip").findings}
+    assert "Z12" in fired, f"the reader's refusal is not reported at all: {sorted(fired)}"
+    anyway = fired & {"Z11", "Z3", "Z9", "Z2"}
+    assert not anyway, (
+        "rules judged the shape of a container whose metadata was never read: "
+        f"{sorted(anyway)}")

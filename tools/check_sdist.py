@@ -1,9 +1,19 @@
 #!/usr/bin/env python3
 """Build the sdist, unpack it somewhere else, and run the tests from there.
 
-Anything the suite needs but the sdist omits is invisible here and fatal there.
-This is the same failure the licensing gate had: the gate existed, and it did
-not run in anyone else's environment.
+A file the sdist leaves out is invisible in the source tree and fatal in the
+tarball. This is the same failure the licensing gate had: the gate existed, and
+it did not run in anyone else's environment.
+
+What it does not prove is that the tarball stands up with nothing installed. It
+runs on `sys.executable`, and in this repository and in CI that interpreter
+already has `pip install -e packages/vdi2770` applied -- so `tools/make_fixtures.py`,
+which the validator's sdist ships and which imports `vdi2770`, is satisfied from
+outside the tarball. A packager who installs the declared dependencies is in the
+same position and the suite is green for them; a packager who unpacks and runs
+`pytest` without installing anything is not, and this gate will not tell them.
+That is a dependency being absent rather than a file being missing, which is the
+half this checks.
 """
 from __future__ import annotations
 

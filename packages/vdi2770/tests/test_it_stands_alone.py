@@ -142,7 +142,10 @@ def test_the_readme_names_every_budget_the_code_can_enforce():
         assert not missing, f"{mod.__name__} enforces budgets the README does not name: {missing}"
     m = re.search(r"`vdi2770\.pdfread` has (\w+) of its own", readme)
     assert m, "the sentence counting pdfread's budgets has been reworded"
-    words = {"four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8}
+    # A word the table does not know reads as "the README is wrong" — which it
+    # was not; the count had simply passed the end of the list.
+    words = {"four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8,
+             "nine": 9, "ten": 10, "eleven": 11, "twelve": 12}
     real = len([n for n in dir(pdfread) if n.startswith(("MAX_", "MIN_"))])
     assert words.get(m.group(1)) == real, f"the README says {m.group(1)}; there are {real}"
 

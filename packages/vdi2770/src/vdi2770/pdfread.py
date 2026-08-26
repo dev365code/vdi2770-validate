@@ -12,7 +12,6 @@ report says so every time it prints a claim.
 """
 from __future__ import annotations
 
-import collections
 import re
 import zlib
 from dataclasses import dataclass
@@ -63,9 +62,34 @@ MAX_TRAILER_SCAN = 65536  # the most of ONE trailer dictionary that is read
 # their number finite. The last ones are read, because an incremental update
 # appends and the newest trailer is the one that counts.
 MAX_TRAILERS = 64
+# Not a number of trailers any more, but the bytes all of them together may cost.
+# Sixty-four was a bound on *where* to look, and every bound on where is pushable
+# by whoever appends: sixty-four `%trailer` decoys and one `startxref` of their
+# own -- 658 bytes, ignored by every conformant reader -- pushed the real trailer
+# out of the window and an encrypted PDF came back clean.
+#
+# A bound on *how much* is read cannot be pushed the same way, because a decoy
+# that is not a dictionary is rejected in the two bytes it takes to see there is
+# no `<<`. Thousands of them buy nothing. What an attacker now has to spend is
+# real dictionaries, byte for byte, and this says how many bytes that is.
+#
+# Read from the end backwards, which is the half of the old reasoning that was
+# right: an incremental update appends and the newest trailer is the one that
+# counts. That order is also why one budget across the file is safe here, where
+# spending it in file order was not -- a long `/ID` in an ordinary earlier
+# trailer is now read *after* the authoritative one, not in front of it.
+MAX_TRAILER_BYTES = MAX_TRAILERS * MAX_TRAILER_SCAN
 
-_STARTXREF = re.compile(rb"startxref\s+(\d+)")
+# `\d{1,19}`, not `\d+`. CPython 3.11 refuses `int()` above 4,300 digits, so a
+# few kilobytes of nines after `startxref` came back as `ValueError` out of
+# `read_pdf` -- from a library whose contract is that it records a defect
+# rather than raising, on the two interpreters CI runs. Through the validator it
+# took the whole PDF layer down with it, so it was also a cheaper way to make an
+# encrypted file look unencrypted. No offset into a real file has twenty digits;
+# nothing that could have been an answer is lost by declining to read one.
+_STARTXREF = re.compile(rb"startxref\s+(\d{1,19})")
 _NEWLINE = re.compile(rb"[\r\n]")
+_OBJ_HEADER = re.compile(rb"\d+\s+\d+\s+obj\b")
 
 
 def _is_encrypted(data: bytes) -> bool:
@@ -99,9 +123,12 @@ def _is_encrypted(data: bytes) -> bool:
     its own scan; their number is capped separately, from the end, because an
     incremental update appends and the newest trailer is the one that counts.
 
-    A PDF whose trailer lives in a cross-reference stream has no `trailer`
-    keyword and comes back False. That is a miss and not a false alarm, and
-    docs/scope.md says so rather than leaving a reader to assume otherwise.
+    A PDF whose trailer lives in a cross-reference stream (1.5 and later) has no
+    `trailer` keyword at all. Its dictionary belongs to an object, and the
+    declared offset names that object's header rather than the `<<` -- which this
+    said it read and did not, so every such file came back unencrypted while the
+    docstring one function down said it would. Stepping over the header is what
+    makes the claim true.
     """
     # Where the format says the answer is, before anywhere we might guess it is.
     #
@@ -117,15 +144,32 @@ def _is_encrypted(data: bytes) -> bool:
     # and following it is what a reader does. All fifty-five PDFs in this
     # repository's corpus carry one.
     declared = _declared_trailer(data)
-    if declared is not None and _scan_dictionary(data, declared, MAX_TRAILER_SCAN):
+    if declared is not None and _scan_dictionary(data, declared, MAX_TRAILER_SCAN)[1]:
         return True
 
     # And the fallback, for a file damaged, truncated, or written by hand, which
-    # is the file that needs one most. `deque` rather than a list: the list was
-    # built in full and then sliced, so six million tokens in a 68 KiB archive
-    # cost 337 MiB of offsets nobody would look at.
-    tail = collections.deque(_TRAILER.finditer(data), maxlen=MAX_TRAILERS)
-    return any(_scan_dictionary(data, hit.end(), MAX_TRAILER_SCAN) for hit in tail)
+    # is the file that needs one most -- and for the file whose `startxref` was
+    # written by somebody hiding the trailer it points away from.
+    #
+    # Every trailer in the file, newest first, until the reading itself costs too
+    # much. `rfind` backwards rather than `finditer` forwards: the forward list
+    # was built in full and then sliced, so six million tokens in a 68 KiB
+    # archive cost 337 MiB of offsets nobody would look at, and a `deque` of the
+    # last few is the window this is here to stop using.
+    budget, end = MAX_TRAILER_BYTES, len(data)
+    while budget > 0:
+        at = data.rfind(b"trailer", 0, end)
+        if at == -1:
+            return False
+        end = at
+        if not _is_a_keyword_here(data, at, len(b"trailer")):
+            continue
+        spent, found = _scan_dictionary(data, at + len(b"trailer"),
+                                        min(MAX_TRAILER_SCAN, budget))
+        if found:
+            return True
+        budget -= max(spent, 1)          # never free, or a decoy is unbounded
+    return False
 
 
 def _declared_trailer(data: bytes):
@@ -156,7 +200,43 @@ def _declared_trailer(data: bytes):
     if data[offset:offset + 4] == b"xref":
         found = data.find(b"trailer", offset)
         return None if found == -1 else found + len(b"trailer")
-    return offset
+    # A cross-reference *stream* is an object, so the offset names `4 0 obj` and
+    # the dictionary opens after that header -- which the scan, requiring `<<`,
+    # declined to read. So the docstring here described a branch that could not
+    # work, forty lines under another one saying such a file "comes back False".
+    # It was the second that was true. Stepping over the header is what makes the
+    # first true instead, and every PDF 1.5 and later puts its trailer this way.
+    obj = _OBJ_HEADER.match(data, offset)
+    return obj.end() if obj else offset
+
+
+def _is_a_keyword_here(data: bytes, at: int, length: int) -> bool:
+    """Whether `data[at:at + length]` is a token and not part of a comment.
+
+    Two things the forward `\\btrailer\\b` search did not have to say out loud.
+    Searching backwards takes a literal, so the word boundary is checked here --
+    without it `endtrailer` and `trailers` are candidates.
+
+    And a `%` earlier on the same line makes everything after it a comment, all
+    the way to the newline, which is the whole of what the decoy attack was: the
+    word `trailer` written where the format says nothing reads it. Skipping those
+    is not a bound, it is the format -- a conformant reader never saw them
+    either. It also stops them from costing anything, because the scan's lead-in
+    skips comments looking for `<<` and a run of them walks forward through all
+    the rest.
+
+    A `%` inside a string on the same line would make this decline to read a real
+    trailer. Writers put `trailer` at the start of its line, the declared
+    `startxref` finds that file anyway, and the alternative is tokenising the
+    whole file to answer one question about its last few bytes.
+    """
+    before = data[at - 1:at] if at else b""
+    after = data[at + length:at + length + 1]
+    if before.isalnum() or before == b"_" or after.isalnum() or after == b"_":
+        return False
+    line = data.rfind(b"\n", 0, at)
+    carriage = data.rfind(b"\r", 0, at)
+    return b"%" not in data[max(line, carriage) + 1:at]
 
 
 def _end_of_comment(data: bytes, i: int, limit: int) -> int:
@@ -173,14 +253,16 @@ def _end_of_comment(data: bytes, i: int, limit: int) -> int:
     return (hit.start() if hit else limit) + 1
 
 
-def _scan_dictionary(data: bytes, start: int, budget: int) -> bool:
-    """Whether the dictionary opening at `start` has an `/Encrypt` key.
+def _scan_dictionary(data: bytes, start: int, budget: int):
+    """`(bytes read, whether the dictionary opening at `start` has `/Encrypt`)`.
 
-    Reads at most `budget` bytes of it. It used to return how many it had read
-    as well, so a caller could spend one budget across a whole file -- which is
-    what made an ordinary earlier trailer able to hide the encrypted one behind
-    it. Nothing has needed the count since that was undone, and a return value
-    nobody reads is the shape the wrong design leaves behind.
+    Reads at most `budget` bytes of it. The count went away once, because a
+    caller spending one budget across a whole file in *file order* let an
+    ordinary earlier trailer -- a long `/ID`, a long `/Info` -- hide the
+    encrypted one behind it. The caller now spends it from the end backwards, so
+    the authoritative trailer is read first and what an earlier one costs no
+    longer matters; what the count buys is a bound on the total work that cannot
+    be pushed by appending, the way every bound on *where to look* could be.
 
     The key is only a key where a key can be: directly inside this dictionary,
     not in an array and not in a nested one, and outside every string and
@@ -204,7 +286,7 @@ def _scan_dictionary(data: bytes, start: int, budget: int) -> bool:
             continue
         break
     if data[i:i + 2] != b"<<":
-        return False                     # no dictionary opens here
+        return i - start, False          # no dictionary opens here
 
     depth, in_array = 0, 0
     while i < limit:
@@ -234,7 +316,7 @@ def _scan_dictionary(data: bytes, start: int, budget: int) -> bool:
             depth -= 1
             i += 2
             if depth <= 0:
-                return False
+                return i - start, False
             continue
 
         if b == b"<":                    # hex string, which may hold `3c3c`
@@ -258,10 +340,10 @@ def _scan_dictionary(data: bytes, start: int, budget: int) -> bool:
         # producer to strip protection from a file that has none.
         if (b == b"/" and depth == 1 and not in_array
                 and _ENCRYPT_REF.match(data, i, limit)):
-            return True
+            return i - start, True
 
         i += 1
-    return False
+    return i - start, False
 
 
 MAX_STREAM_SCAN = 400_000        # compressed bytes read after each stream marker

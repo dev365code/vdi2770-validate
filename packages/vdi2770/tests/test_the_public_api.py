@@ -683,25 +683,62 @@ def test_the_trailers_that_are_read_are_the_last_ones():
     assert vdi2770.read_pdf(pdf).encrypted is True
 
 
-def test_no_more_trailers_are_scanned_than_the_budget_names(monkeypatch):
+def test_no_more_of_the_trailers_is_read_than_the_budget_names(monkeypatch):
     """Counted, not timed.
 
     The cost of this scan is the number of dictionaries walked times the bytes
-    walked in each. The second factor has a name; without a name for the first,
-    16,000 `trailer` keywords in a 125 KB file cost 135 seconds. This asserts the
-    count, because a stopwatch assertion in this project has twice failed under
+    walked in each. Without a bound, 16,000 `trailer` keywords in a 125 KB file
+    cost 135 seconds. What is bounded is now the product rather than each factor
+    -- a cap on how many to read was a cap on *where* to look, and an appender
+    pushed the real trailer past it with 658 bytes -- so this counts the bytes,
+    not the calls. A stopwatch assertion in this project has twice failed under
     load and said nothing about the bound it was written to defend.
+    """
+    from vdi2770 import pdfread
+
+    read = []
+    real = pdfread._scan_dictionary
+
+    def counting(data, start, budget):
+        spent, found = real(data, start, budget)
+        read.append(spent)
+        return spent, found
+
+    monkeypatch.setattr(pdfread, "_scan_dictionary", counting)
+    vdi2770.read_pdf(b"%PDF-1.4\n" + b"trailer\n<< /Size 9 >>\n" * 4000)
+    # The declared-offset attempt is one call outside the budgeted loop, and it
+    # is bounded on its own, so it is allowed on top rather than inside.
+    assert sum(read) <= pdfread.MAX_TRAILER_BYTES + pdfread.MAX_TRAILER_SCAN, (
+        f"{sum(read)} bytes of trailer dictionaries read for a file allowed "
+        f"{pdfread.MAX_TRAILER_BYTES}")
+
+
+def test_a_trailer_written_where_nothing_reads_it_is_not_a_trailer(monkeypatch):
+    """The decoys were not merely out of the window; they were in comments.
+
+    `%trailer` is the word after a `%`, which runs to the end of the line, so no
+    conformant reader ever saw it as a keyword. This one did, and then paid for
+    it twice: the token spent budget the real trailer needed, and the scan's
+    lead-in -- which skips comments looking for `<<` -- walked forward through
+    every decoy that followed. Five thousand of them turned a 60 KB file into a
+    quadratic one.
     """
     from vdi2770 import pdfread
 
     calls = []
     real = pdfread._scan_dictionary
-    monkeypatch.setattr(pdfread, "_scan_dictionary",
-                        lambda *a: (calls.append(1), real(*a))[1])
-    vdi2770.read_pdf(b"%PDF-1.4\n" + b"trailer\n<< /Size 9 >>\n" * 4000)
-    assert len(calls) <= pdfread.MAX_TRAILERS, (
-        f"{len(calls)} dictionaries walked for a file allowed "
-        f"{pdfread.MAX_TRAILERS}")
+
+    def counting(data, start, budget):
+        calls.append(1)
+        return real(data, start, budget)
+
+    monkeypatch.setattr(pdfread, "_scan_dictionary", counting)
+    pdf = (b"%PDF-1.4\ntrailer\n<< /Size 9 >>\n" + b"\n%trailer\n" * 5000
+           + b"startxref\n9\n%%EOF\n")
+    vdi2770.read_pdf(pdf)
+    assert len(calls) <= 3, (
+        f"{len(calls)} dictionaries walked for a file with one trailer and "
+        f"5,000 mentions of the word in comments")
 
 
 def _pdf_with_xref(trailer: bytes) -> bytes:
@@ -737,6 +774,75 @@ def test_a_decoy_after_the_end_cannot_hide_the_real_trailer():
     for decoys in (1, 63, 64, 200, 5_000):
         grown = real + b"\n%trailer\n" * decoys
         assert vdi2770.read_pdf(grown).encrypted is True, f"{decoys} decoys"
+
+
+def test_a_decoy_that_brings_its_own_startxref_cannot_hide_the_real_trailer():
+    """The decoy test above pinned the half that was fixed.
+
+    Following `startxref` is not a guess about where to look -- but `rfind` takes
+    the *last* one, and an appender writes decoys and then a `startxref` of its
+    own. Twenty more bytes: the declared offset resolves to nothing, the fallback
+    is the same positional window as before, and the encrypted PDF is clean
+    again. `P2` (*remove the protection*) goes and `P3` (*produce the file as
+    PDF/A*) arrives, which is a remedy for a defect the producer does not have.
+
+    A bound on *where* to look is pushable by definition. The bound has to be on
+    *how much* is read: a decoy that is not a dictionary costs a couple of bytes
+    to reject, so thousands of them no longer buy an attacker anything.
+    """
+    real = _pdf_with_xref(b"<< /Size 2 /Encrypt 4 0 R >>")
+    assert vdi2770.read_pdf(real).encrypted is True, "premise"
+    for decoys in (1, 64, 200, 5_000):
+        grown = (real + b"\n%trailer\n" * decoys
+                 + b"startxref\n9\n%%EOF\n")
+        assert vdi2770.read_pdf(grown).encrypted is True, f"{decoys} decoys"
+
+
+def test_an_offset_too_long_to_be_an_offset_is_not_an_exception():
+    """`int()` on a long digit run raises, and this is a library.
+
+    CPython 3.11 caps integer parsing at 4,300 digits; the pattern took `\\d+`
+    and handed whatever it caught to `int()`. Five thousand digits after
+    `startxref` -- a file of a few kilobytes -- came back as `ValueError` out of
+    `read_pdf` on 3.12 and 3.13, which this package's CI runs and whose contract
+    is that it records a defect rather than raising. Through the validator it
+    took the whole PDF layer down with it: `P1` through `P4` never ran, so it was
+    also a second, cheaper way to make an encrypted file look unencrypted.
+
+    No offset into a real file has twenty digits, so nothing that could have been
+    an answer is lost by declining to read one.
+    """
+    huge = b"%PDF-1.4\nstartxref\n" + b"9" * 5000 + b"\n%%EOF\n"
+    assert vdi2770.read_pdf(huge).encrypted is False
+
+    # And the bound itself, because the interpreter this suite happens to run on
+    # decides whether the line above can fail at all: 3.9 has no cap and parses
+    # five thousand digits without complaint, so on 3.9 the assertion passes
+    # against the very code that raises in CI.
+    from vdi2770.pdfread import _STARTXREF
+
+    hit = _STARTXREF.match(b"startxref\n" + b"9" * 5000)
+    assert hit is None or len(hit.group(1)) <= 20, (
+        f"the pattern accepts a {len(hit.group(1))}-digit offset, which `int` "
+        f"refuses above 4,300 on 3.11 and later")
+
+
+def test_a_cross_reference_stream_trailer_is_read():
+    """PDF 1.5 puts the trailer in an object, and this said it read it.
+
+    `_declared_trailer`'s own docstring said the dictionary "opens within a few
+    bytes of the offset" and returned the offset -- which points at `4 0 obj`,
+    not at `<<`, so the scan found no dictionary there and every such file came
+    back unencrypted. Forty lines above, the other docstring said the same file
+    "comes back False". One of them had to go; the one worth keeping is the one
+    that makes the file readable.
+    """
+    head = b"%PDF-1.5\n1 0 obj\n<< /Type /Catalog >>\nendobj\n"
+    obj = b"4 0 obj\n<< /Type /XRef /Size 5 /Encrypt 6 0 R >>\nstream\nendstream\nendobj\n"
+    body = head + obj
+    pdf = body + b"startxref\n" + str(len(head)).encode() + b"\n%%EOF\n"
+    assert b"trailer" not in pdf, "the point is that there is no trailer keyword"
+    assert vdi2770.read_pdf(pdf).encrypted is True
 
 
 def test_a_file_with_no_startxref_is_still_read():
