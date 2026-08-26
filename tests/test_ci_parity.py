@@ -429,6 +429,14 @@ def test_the_publishing_workflow_checks_the_reader_shipped_first():
         "and published permanently unresolvable.")
     assert (ROOT / "tools" / "check_release_order.py").exists(), (
         "release.yml runs a script that is not in this tree")
+    # `--offline` leaves the gate checking the tag and skipping the index, which
+    # is the half that was there when it was still claiming to have asked. One
+    # flag in one workflow line puts it back.
+    for line in body.splitlines():
+        if "check_release_order.py" in line and not line.lstrip().startswith("#"):
+            assert "--offline" not in line, (
+                "release.yml runs the order gate with --offline, so nothing asks "
+                "the index whether the pinned reader was published: " + line.strip())
 
 
 def test_the_pin_names_a_reader_that_has_been_published():

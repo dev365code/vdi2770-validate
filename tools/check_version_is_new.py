@@ -8,8 +8,11 @@ answer is a rejection, and a red run against the publishing environment.
 
 The version cannot be taken back either way, so the honest thing is to ask
 before building rather than to discover it at the upload. A version already on
-the index is not an error here: it means this tag has already been released, and
-the right outcome is to stop quietly.
+the index means this tag has already been released, and nothing is wrong with
+the tree -- but this refuses anyway, and loudly, because a shell step has no exit
+code for *stop and be pleased about it*. A red run that uploaded nothing costs a
+glance at the log. Returning 0 hands the same tree to the publisher and spends
+the failure against the publishing environment instead.
 
 Reading the index is the one network call in this repository, and it is
 deliberate: it is the only way to know what has been published. `--offline`
@@ -23,18 +26,55 @@ import sys
 import urllib.error
 import urllib.request
 
+from packaging.version import InvalidVersion, Version
+
 INDEX = "https://pypi.org/pypi/{name}/json"
 
 
 def published(name: str, timeout: float = 15.0) -> set:
-    """Every version the index holds for `name`, or an empty set if it holds none."""
+    """Every version the index holds for `name`, or an empty set if it holds none.
+
+    `.get("releases", {})` was a gate that could not fail. PyPI's legacy JSON API
+    is deprecated; the day a 200 comes back without that key, every version reads
+    as unpublished and this starts approving the duplicate uploads it exists to
+    refuse -- with nobody the wiser until the upload. An answer we cannot read is
+    a refusal, which is what the caller does with the exception.
+    """
     try:
         with urllib.request.urlopen(INDEX.format(name=name), timeout=timeout) as r:
-            return set(json.load(r).get("releases", {}))
+            answer = json.load(r)
     except urllib.error.HTTPError as e:
         if e.code == 404:
             return set()               # nothing published yet, which is fine
         raise
+    if not isinstance(answer, dict) or "releases" not in answer:
+        raise ValueError(f"the index answered about {name} without a `releases` "
+                         f"key; this cannot tell published from unpublished")
+    return set(answer["releases"])
+
+
+def holds(have, version: str) -> bool:
+    """Whether `have` already holds `version`, spelled either way.
+
+    `"0.7.0-rc1" in {"0.7.0rc1"}` is False, and PyPI stores the second: a
+    pre-release or `.post` tag walked past the one gate that exists to catch a
+    filename the index already has, and was rejected at the upload instead.
+    `Version` is what the index itself compares with. A spelling neither side can
+    parse falls back to the string, because refusing to answer here would block a
+    release over a version number that is merely unusual.
+    """
+    try:
+        want = Version(version)
+    except InvalidVersion:
+        return version in have
+    for one in have:
+        try:
+            if Version(one) == want:
+                return True
+        except InvalidVersion:
+            if one == version:
+                return True
+    return False
 
 
 def main() -> int:
@@ -56,7 +96,7 @@ def main() -> int:
               f"than guessing -- a publish that turns out to be a duplicate is "
               f"a failed run against the publishing environment.", file=sys.stderr)
         return 1
-    if a.version in have:
+    if holds(have, a.version):
         print(f"{a.package} {a.version} is already on the index. This tag has "
               f"been released; nothing to do.", file=sys.stderr)
         return 1

@@ -15,15 +15,28 @@ always does.
 The tag history is the evidence, so this needs a checkout with tags
 (`fetch-depth: 0`). Not being able to see them is a refusal, not a pass -- the
 same rule `api_fingerprint._tags()` learned.
+
+And the tag is only half of it. This checked `git tag --list sdk-v*` and printed
+*the reader this pins has been released*, which a tag does not establish: it
+exists the moment it is pushed, while publication happens afterwards, in a job
+that can stop at an environment approval or a PyPI 5xx. In that window the gate
+was green and `pip install vdi2770-validate` could not resolve -- permanently,
+because the version number does not come back. So the tag is checked first,
+offline and cheap, and then the index is asked the question the sentence was
+already claiming to have asked. `--offline` says which half ran.
 """
 from __future__ import annotations
 
+import argparse
 import pathlib
 import re
 import subprocess
 import sys
 
 from packaging.requirements import Requirement
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import check_version_is_new  # noqa: E402
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 
@@ -45,7 +58,11 @@ def floor_of_the_pin() -> str:
     return max(floors, key=lambda v: tuple(int(x) for x in v.split(".")))
 
 
-def main() -> int:
+def main(argv=None) -> int:
+    p = argparse.ArgumentParser(description=__doc__)
+    p.add_argument("--offline", action="store_true",
+                   help="check the tag history only, and say that is what happened")
+    a = p.parse_args(argv)
     floor = floor_of_the_pin()
     got = subprocess.run(["git", "tag", "--list", "sdk-v*"],
                          cwd=ROOT, capture_output=True, text=True)
@@ -65,7 +82,27 @@ def main() -> int:
               f"`pip install vdi2770-validate` cannot resolve, and the version "
               f"number cannot be reused to fix it.", file=sys.stderr)
         return 1
-    print(f"sdk-v{floor} is tagged; the reader this pins has been released.",
+    if a.offline:
+        print(f"sdk-v{floor} is tagged. Not asking the index whether it was "
+              f"published: --offline", file=sys.stderr)
+        return 0
+    try:
+        have = check_version_is_new.published("vdi2770")
+    except Exception as e:                       # noqa: BLE001 - the network is the risk
+        print(f"sdk-v{floor} is tagged, but the index could not be asked whether "
+              f"the reader was published: {e}. Refusing rather than guessing -- "
+              f"a validator published against a reader that is not there cannot "
+              f"be fixed under this version number.", file=sys.stderr)
+        return 1
+    if not check_version_is_new.holds(have, floor):
+        print(f"sdk-v{floor} is tagged but vdi2770 {floor} is not on the index. "
+              f"A tag is not a publication: the reader's publish job may still "
+              f"be waiting for an environment approval, or have failed. Publish "
+              f"the reader first -- `pip install vdi2770-validate` cannot "
+              f"resolve until it is there, and this version number does not come "
+              f"back.", file=sys.stderr)
+        return 1
+    print(f"sdk-v{floor} is tagged and vdi2770 {floor} is on the index.",
           file=sys.stderr)
     return 0
 

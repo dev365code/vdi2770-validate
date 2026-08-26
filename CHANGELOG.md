@@ -2,14 +2,26 @@
 
 ## 0.7.0 — 2026-08-25
 
-**Upgrading from 0.6.0 will turn some green runs red.** Three new rules — `X5`,
-`X6` and `Z13` — are errors, and `Z6` is promoted from warning to error. All four
-are `about: tool`, meaning this tool is saying it declined to look rather than
-that your container is wrong; the exit code does not distinguish the two, so a CI
-job that gates on it will fail on a delivery nothing is wrong with. If you gate
-on exit code, read `about` in the JSON before you upgrade, or expect to triage.
-Nothing that passed 0.6.0 has become non-conformant — the tool has become honest
-about what it was not checking.
+**Upgrading from 0.6.0 will turn some green runs red.** Three rules can do it:
+`X6` and `Z13`, both new errors, and `Z6`, promoted from warning to error. (`X5`
+is new and an error too, but no container can ask for it — it fires only when a
+rule in this tool raises.) All three are `about: tool`, meaning this tool is
+saying it declined to look rather than that your container is wrong; the exit
+code does not distinguish the two, so a CI job that gates on it will fail on a
+delivery nothing is wrong with. `about` is itself new here, so there is nothing
+to read in 0.6.0's output before you upgrade: upgrade, then gate on `about`, or
+triage those three ids. Nothing that passed 0.6.0 has become non-conformant — the
+tool has become honest about what it was not checking. It is also quieter than
+0.6.0 on a container that trips one of the new reader budgets: the model is
+refused, so the rules that needed it say nothing and `X6` says why. That is less
+reported, not less true, and it is the trade the budgets buy.
+
+**`--json` changed shape, and `rules` changed a word.** The top level is now a
+single array with one entry per path you gave, each carrying its own `path`;
+0.6.0 printed one object per path, which was not one document at all once you
+gave it more than one. A consumer reading `json.load(f)["findings"]` reads
+`[0]["findings"]` now. `rules` prints `obligation=` where 0.6.0 printed `basis=`;
+the value has not changed.
 
 Things that were true of the code and not of what the project said about it,
 plus the guards that make each one say so next time. The count that used to open

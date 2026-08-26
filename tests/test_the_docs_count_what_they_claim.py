@@ -460,3 +460,69 @@ def test_contributing_is_right_about_who_signed_off():
         f"does not say so")
     assert all(signed[i] for i in range(unsigned[-1] + 1, len(signed))), (
         "a commit newer than the lapse is unsigned; the lapse has reopened")
+
+
+def test_the_upgrade_warning_names_only_rules_a_container_can_ask_for():
+    """The first sentence of the release named a rule no delivery can trigger.
+
+    The warning exists to tell an upgrading CI job which ids will turn its green
+    run red. It opened with `X5`, which `tools/rule_coverage.py` excuses from
+    coverage precisely because it "only fires when a rule in this tool raises,
+    which is a bug here rather than anything a container can ask for" -- so the
+    repository already held the evidence, one file away, and the sentence a
+    reader sees first was written without it.
+    """
+    import re
+    import sys
+
+    sys.path.insert(0, str(ROOT / "tools"))
+    from rule_coverage import CANNOT_FIRE
+
+    # The paragraph, found by what it says rather than by its position: the
+    # section opens with its own heading, and counting paragraphs made this gate
+    # read the date line and pass on an empty set of ids.
+    paragraphs = [t for t in newest_changelog_section().split("\n\n")
+                  if "Upgrading from" in t]
+    assert len(paragraphs) == 1, "the release no longer opens with one upgrade warning"
+    warning = paragraphs[0]
+    named = set(re.findall(r"`([A-Z][0-9]+)`", warning))
+    assert named, "the upgrade warning no longer names any rule ids"
+    # Named as one this tool can raise itself is fine -- the paragraph says so
+    # about `X5` in as many words. Named among the ids that will turn a run red
+    # is not.
+    turns_red = set(re.findall(r"`([A-Z][0-9]+)`", warning.split("(")[0]))
+    assert not (turns_red & set(CANNOT_FIRE)), (
+        "the upgrade warning tells a reader to expect ids that no container can "
+        f"cause: {sorted(turns_red & set(CANNOT_FIRE))}")
+
+
+def test_the_readme_describes_the_json_entries_the_tool_actually_emits():
+    """The README promised a key that half the entries do not have.
+
+    *"a list with an entry per path you gave, each carrying that path and
+    `pdfaVerified: false`"* -- true of a container that was checked, and not of a
+    path that could not be opened, which carries `path` and `unreadable` and
+    stops there. The heterogeneous shape is deliberate: there is no PDF/A verdict
+    to give about a file nobody read. What was wrong was the sentence, and a
+    consumer that believed it raised `KeyError` on exactly the path the sweep
+    exists to keep going past.
+    """
+    import json
+    import subprocess
+    import sys
+
+    from conftest import CLEAN_DOCUMENT, under_test
+
+    done = subprocess.run(
+        [sys.executable, "-m", "vdi2770_validate", "check", "--json",
+         str(CLEAN_DOCUMENT), "no-such-container.zip"],
+        capture_output=True, text=True, timeout=120, env=under_test())
+    checked, unread = json.loads(done.stdout)
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+
+    assert "pdfaVerified" in checked and "path" in checked, sorted(checked)
+    assert "pdfaVerified" not in unread, (
+        "an unreadable path now carries a PDF/A verdict; the README says it does not")
+    assert "unreadable" in unread, sorted(unread)
+    assert '`"unreadable"`' in readme, (
+        "the README no longer says what an entry for an unopenable path carries")

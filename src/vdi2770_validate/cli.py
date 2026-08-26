@@ -62,7 +62,7 @@ def _cmd_check(args) -> int:
         if rep.count(Severity.ERROR):
             worst = 1
     if args.json:
-        print(json.dumps(documents, ensure_ascii=False, indent=2))
+        print(_json_this_console_can_carry(documents))
     if unreadable:
         return 2 if unreadable == len(args.paths) else max(worst, 1)
     return worst
@@ -120,6 +120,38 @@ def main(argv=None) -> int:
 
     args = p.parse_args(argv)
     return args.func(args)
+
+
+def _json_this_console_can_carry(payload) -> str:
+    """JSON that stays JSON on a console that cannot encode it.
+
+    `_survive_the_console` puts `errors="backslashreplace"` on stdout, so a
+    character the console has no byte for is written `\\xNN`. The text report
+    wants that -- it says something was there and says what. JSON has no such
+    escape, and a member named `Prüfbericht.pdf` on a `cp932` or `cp949` or
+    plain-ASCII console came out as
+
+        "member": "Pr\\xfcfbericht.pdf"
+
+    which stops `json.load` at *Invalid \\escape* -- with exit 0, so a sweep read
+    as clean and its payload could not be opened. Only U+0080-U+00FF does this;
+    anything above gets `\\uXXXX` from the same handler, which JSON accepts, so
+    the accented Western European names this tool is most often pointed at were
+    the ones that broke.
+
+    Asked first whether the console can carry the text, because `ü` on a UTF-8
+    or `cp1252` terminal is worth more to whoever is reading it than `\\u00fc`.
+    When it cannot, `ensure_ascii` writes the same characters as escapes JSON
+    does have -- including surrogate pairs above the BMP, which is why this
+    re-renders rather than patching the string it already has.
+    """
+    text = json.dumps(payload, ensure_ascii=False, indent=2)
+    encoding = getattr(sys.stdout, "encoding", None) or "utf-8"
+    try:
+        text.encode(encoding)
+    except (UnicodeEncodeError, LookupError):
+        text = json.dumps(payload, ensure_ascii=True, indent=2)
+    return text
 
 
 def _survive_the_console() -> None:

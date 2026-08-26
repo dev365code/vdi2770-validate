@@ -4,6 +4,7 @@ all — which is how `classes` came to crash while `make check` stayed green.
 import json
 import subprocess
 import sys
+import zipfile
 
 import pytest
 
@@ -259,6 +260,42 @@ def test_a_console_that_is_not_utf8_still_gets_a_verdict(encoding):
         env={**under_test(), "PYTHONIOENCODING": encoding})
     assert "Traceback" not in done.stderr, done.stderr
     assert done.returncode == 0, done.stdout + done.stderr
+
+
+@pytest.mark.parametrize("encoding", ["ascii", "cp932", "cp949", "koi8-r"])
+def test_the_json_a_console_cannot_carry_is_still_json(encoding, tmp_path):
+    """`--json` came back exit 0 with a payload no parser would read.
+
+    The console handler puts `errors="backslashreplace"` on stdout, so a
+    character the console cannot encode is written as `\\xNN`. For the text
+    report that is the point -- it says something was there and says what. For
+    `--json` it is not an escape JSON has: a member named `Prufbericht.pdf` with
+    an umlaut, on a console that is not Latin-1, produced
+
+        "member": "Pr\\xfcfbericht.pdf"
+
+    and `json.load` stopped at *Invalid \\escape*. Exit was 0, so a CI job saw a
+    clean run and a file it could not read. That is the shape this tool's own
+    notes call "the interface advertised as machine-readable could not be read by
+    a machine", and only U+0080-U+00FF does it: everything above gets `\\uXXXX`
+    from the same handler, which JSON does accept.
+    """
+    src = zipfile.ZipFile(CLEAN_DOCUMENT)
+    target = tmp_path / "umlaut.zip"
+    with zipfile.ZipFile(target, "w") as z:
+        for m in src.namelist():
+            z.writestr(m, src.read(m))
+        z.writestr("Pr\u00fcfbericht_\u00d6lk\u00fchler.pdf", b"%PDF-1.4\n")
+    done = subprocess.run(
+        [sys.executable, "-m", "vdi2770_validate", "check", "--json", str(target)],
+        capture_output=True, text=True, timeout=120,
+        env={**under_test(), "PYTHONIOENCODING": encoding})
+    assert "Traceback" not in done.stderr, done.stderr
+    doc = json.loads(done.stdout)          # the whole point
+    # `ensure_ascii=False` on the way back: the escape is the wire form, and
+    # what has to survive it is the name.
+    assert "Pr\u00fcfbericht_\u00d6lk\u00fchler.pdf" in json.dumps(doc, ensure_ascii=False), (
+        "the name did not survive the round trip")
 
 
 def test_a_console_that_is_not_utf8_does_not_stop_the_sweep():

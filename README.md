@@ -44,8 +44,11 @@ That is real output on a container that ships with this repository, so the same 
 **Whether a PDF really is PDF/A.** That needs a full PDF/A validator such as
 veraPDF. This tool reports what a file *claims*, which catches the common failure:
 files that never claimed at all. It says so on every line where it matters, and the
-JSON output is one document for the run — a list with an entry per path you
-gave, each carrying that path and `"pdfaVerified": false`. The rest of the refusals
+JSON output is one document for the run — a list with an entry per path you gave,
+each carrying that `path`. An entry for a container that was checked also carries
+`"pdfaVerified": false`; a path that could not be opened at all carries
+`"unreadable"` and nothing else, because there is no verdict to report about a
+file nobody read. The rest of the refusals
 are in [docs/scope.md](https://github.com/dev365code/vdi2770-validate/blob/main/docs/scope.md).
 
 ## How it is built
