@@ -275,8 +275,14 @@ def check(container, declared, is_declared_payload) -> Iterator[Finding]:
             # detail and no remedy, the reader got the same line twice with
             # nothing on it to tell the two members apart, and no hint that the
             # difference is in the encoding rather than in the letters.
+            # `folder_path`, which is the key `duplicate_names` was built on in
+            # the reader. Filtering by `nfc` alone was a narrower relation than
+            # the grouping, so `B.pdf` beside `./B.pdf` found nothing here and
+            # fell to the branch below -- the rule's bare title, no detail, no
+            # remedy, twice, about two members the report never named. The branch
+            # that says both was reached through a door it was not watching.
             alike = sorted(n for n in container.duplicate_names
-                           if nfc(n) == nfc(name) and n != name)
+                           if folder_path(n) == folder_path(name) and n != name)
             if not alike:
                 # Nothing else canonicalises to this, so it is not one of a
                 # look-alike pair -- the reader's own sentence covers it.
@@ -284,12 +290,40 @@ def check(container, declared, is_declared_payload) -> Iterator[Finding]:
                               container.where.child(member=name, subject=name))
                 continue
             shown = " and ".join(escaped(n) for n in alike)
+            # And two relations arrive here, only one of which is about spelling.
+            # Names that canonicalise to one name print alike; names that differ
+            # in a `.` segment plainly do not, and telling a reader they do sends
+            # them looking for a difference that is not there.
+            look_alike = len({nfc(n) for n in (name, *alike)}) == 1
+            if not look_alike:
+                yield Finding(
+                    r,
+                    "Two members of the archive extract to the same path",
+                    container.where.child(member=name, subject=name),
+                    detail=f"this is {escaped(name)}; the archive also holds "
+                           f"{shown} — different names for one path, "
+                           f"{escaped(folder_path(name))}",
+                    fix="Store the file once, at one path. Which of them a "
+                        "recipient ends up with is their unzip tool's business, "
+                        "and nothing here can say which one you meant.")
+                continue
+            # "different bytes, the same glyphs" was true of the archive and
+            # became false of the page: once `escaped` spells out the spelling
+            # that is not canonical, the two lines a reader sees no longer show
+            # the same glyphs, and a reader who takes the sentence literally
+            # concludes the tool contradicted itself. It also never said what the
+            # file is called -- and when neither spelling is the canonical one,
+            # both lines are code points and nothing readable ties them to
+            # anything. The canonical form is that anchor.
             yield Finding(
                 r,
                 "Two members of the archive have names that print alike",
                 container.where.child(member=name, subject=name),
                 detail=f"this is {escaped(name)}; the archive also holds {shown} — "
-                       f"different bytes, the same glyphs",
+                       f"one name, {escaped(nfc(name))} in a listing, stored "
+                       f"{len(alike) + 1} ways. A spelling that is not the "
+                       f"canonical one is printed here as code points, because "
+                       f"otherwise these lines would be identical",
                 fix="Store one spelling. A reader asking for the name as you "
                     "wrote it may get either member, and nothing here can say "
                     "which one you meant.")

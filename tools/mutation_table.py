@@ -577,6 +577,22 @@ TABLE = [
      "999 document containers -- a legitimate delivery -- spent 21 of 26 seconds "
      "recompiling the same XSD once per container"),
 
+    ("rules/a-name-that-prints-alike-is-spelled-out",
+     "src/vdi2770_validate/names.py",
+     "    hidden = any(_draws_nothing(c) for c in name)",
+     "    hidden = False\n    name = name  # noqa: PLW0127",
+     ["tests/test_two_names_that_print_alike_are_told_apart.py"],
+     "the helper was pinned by nothing: `return name` left the whole suite green "
+     "while two members of one archive printed as the same line"),
+
+    ("rules/an-escape-cannot-be-forged",
+     "src/vdi2770_validate/names.py",
+     '        _spelled(c) if c == "\\\\" or _draws_nothing(c)',
+     "        _spelled(c) if _draws_nothing(c)",
+     ["tests/test_two_names_that_print_alike_are_told_apart.py"],
+     "a member named with a literal backslash rendered exactly like a member "
+     "named with the character that escape stands for"),
+
     # --- the canary -------------------------------------------------------
     ("canary/a-comment-nobody-reads",
      "src/vdi2770_validate/report.py",

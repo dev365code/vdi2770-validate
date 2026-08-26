@@ -359,3 +359,110 @@ def test_a_declared_payload_keeps_its_exemption_however_it_is_spelled():
     assert dotted == plain, (
         f"spelling the member `./cad.zip` changed the verdict: {sorted(dotted)} "
         f"against {sorted(plain)}")
+
+
+def _document_holding(*members, declared="B.pdf"):
+    """The clean document container with `B.pdf` stored under other spellings.
+
+    `declared` renames it in the metadata too, so the declaration reaches the
+    spellings rather than missing them -- without that the container is a
+    different finding entirely (*declared but not in the archive*) and every
+    assertion below would pass for the wrong reason.
+    """
+    import io
+    import zipfile
+
+    from conftest import CLEAN_DOCUMENT
+
+    src = zipfile.ZipFile(CLEAN_DOCUMENT)
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        for name in src.namelist():
+            if name == "B.pdf":
+                for spelling in members:
+                    z.writestr(spelling, src.read(name))
+            elif name == "VDI2770_Metadata.xml":
+                meta = src.read(name).decode("utf-8")
+                assert meta.count(">B.pdf<") == 1, "the fixture no longer declares B.pdf once"
+                z.writestr(name, meta.replace(">B.pdf<", f">{declared}<").encode("utf-8"))
+            else:
+                z.writestr(name, src.read(name))
+    return buf.getvalue()
+
+
+def test_two_spellings_that_do_not_print_alike_are_not_said_to():
+    """`F1` had one sentence for two different ways of matching twice.
+
+    `.//B.pdf` and `./B.pdf` reach one declaration because `folder_path` drops
+    segments that name nothing -- not because they look the same, which they
+    plainly do not. The finding said *2 members that print alike* and the remedy
+    said *different bytes that print the same*, both about names a reader can
+    tell apart at a glance, which leaves them looking for a difference that is
+    not there.
+    """
+    from vdi2770_validate.runner import check_bytes
+
+    report = check_bytes(_document_holding(".//B.pdf", "./B.pdf"), "dots.zip")
+    f1 = [f for f in report.findings if f.rule.id == "F1"]
+    assert len(f1) == 1, [f.detail for f in f1]
+    assert "print alike" not in (f1[0].detail or ""), f1[0].detail
+    assert "print the same" not in (f1[0].remedy or ""), f1[0].remedy
+
+
+def test_two_spellings_that_do_print_alike_still_say_so():
+    """The other half, so the sentence above cannot be fixed by deleting it.
+
+    Two orders of the same two combining marks, declared as the composed form
+    they both canonicalise to — so the declaration matches neither member
+    exactly and reaches both. These really do print alike, and the finding
+    should still say so.
+    """
+    from vdi2770_validate.runner import check_bytes
+
+    report = check_bytes(
+        _document_holding(ORDER_A, ORDER_B, declared=COMPOSED), "twins.zip")
+    f1 = [f for f in report.findings if f.rule.id == "F1"]
+    assert any("print alike" in (f.detail or "") for f in f1), [f.detail for f in f1]
+
+
+def test_a_declaration_that_matches_twice_does_not_also_leave_them_undeclared():
+    """One report said both things about one file.
+
+    `F1`: *this declaration matches 2 members*. `F2`, twice, on the next lines:
+    *a file in the container is not named in the metadata*, about those same two
+    members. The declaration reaches them -- ambiguously, which is what `F1` is
+    for -- so telling the sender to declare them or remove them points away from
+    the fix `F1` just gave, and away from the truth.
+    """
+    from vdi2770_validate.runner import check_bytes
+
+    report = check_bytes(_document_holding(".//B.pdf", "./B.pdf"), "dots.zip")
+    stray = [f.where.subject for f in report.findings if f.rule.id == "F2"]
+    assert not any(s and s.endswith("B.pdf") for s in stray), (
+        f"F2 called a member undeclared that F1 says a declaration matches: {stray}")
+
+
+def test_two_members_at_one_path_are_named_and_given_a_remedy():
+    """`Z10` grouped by one relation and then filtered by a narrower one.
+
+    `duplicate_names` is keyed on `folder_path` — canonical form *and* dropping
+    segments that name nothing — while the look-alike branch selected with `nfc`
+    alone. So `B.pdf` beside `./B.pdf` produced two findings carrying the rule's
+    bare title, no detail and no remedy: nothing saying which members, nothing
+    saying what to do. The branch that would have said both was reached through
+    a door it was not watching.
+
+    They do not print alike, so the sentence for that case would be false here —
+    what is true is that they extract to one path, and a recipient ends up with
+    one of them.
+    """
+    from vdi2770_validate.runner import check_bytes
+
+    report = check_bytes(_document_holding("B.pdf", "./B.pdf"), "dot.zip")
+    z10 = [f for f in report.findings if f.rule.id == "Z10"]
+    assert z10, "nothing reported the collision at all"
+    for f in z10:
+        assert f.detail, f"a finding with no detail: {f.message}"
+        assert f.remedy, f"a finding with no remedy: {f.message}"
+        assert "print alike" not in f.detail, f.detail
+        assert "./B.pdf" in f.detail and "B.pdf" in f.detail, f.detail

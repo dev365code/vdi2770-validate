@@ -70,10 +70,15 @@ failure — files that never claimed at all.
   is tested against now.
 - **Every byte is read**: to say a member is deliverable we decompress it, the
   way `unzip -t` does. That is one pass of zlib over the member, so the rate is
-  your machine's: measured here at **0.6 GB/s** on real PDF content that barely
-  compresses (ratio 1.19), which puts a container at the 2 GiB ceiling at a few
-  seconds and the whole-read ceiling of 4 GiB at a few more. The figure once
-  published here, 1.1 GB/s, was above what zlib does on this content. Nothing is held: the bytes are discarded as
+  your machine's: measured here at **0.5 GB/s** of decompressed output — one
+  member read the way this tool reads it, on real PDF content that barely
+  compresses (ratio 1.20), CPython 3.9 on an arm64 laptop, 0.50 GB/s of CPU and
+  0.47 GB/s end to end over three runs. At 0.5 GB/s a container reaching the
+  2 GiB ceiling costs about **4 seconds** and the whole-read ceiling of 4 GiB
+  about **9**. Both figures are that division and nothing else, so a machine half
+  this speed takes twice as long. The figure once published here, 1.1 GB/s, was
+  above what zlib does on this content, and the 0.6 GB/s that replaced it was
+  still above what this machine does. Nothing is held: the bytes are discarded as
   they are read. Past that ceiling members are still listed but no longer checked
   for readability, and the report says so rather than going quiet.
 - **The guideline text**: VDI 2770 Blatt 1:2020-04 is sold by DIN Media. It was not

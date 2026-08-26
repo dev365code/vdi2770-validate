@@ -14,7 +14,6 @@ made the verdict depend on which came last in the archive.
 """
 from __future__ import annotations
 
-import unicodedata
 from typing import Dict, List, Mapping, Optional, Sequence, Tuple
 
 # Canonicalising a member name belongs to whoever reads archives. There were two
@@ -39,16 +38,74 @@ def extracts_to(name: str) -> str:
     return "/".join(seg for seg in name.split("/") if seg not in ("", "."))
 
 
-def escaped(name: str) -> str:
-    """A name with anything invisible spelled out.
+# Characters that take no room on the page. `isprintable` covers the format and
+# control categories; the rest are marks and selectors Python calls printable and
+# a terminal draws as nothing, so a name carrying one prints exactly like the same
+# name without it. Python has no `Default_Ignorable_Code_Point` predicate, so the
+# ranges are written out.
+_INVISIBLE = ((0xFE00, 0xFE0F),      # variation selectors
+              (0xE0100, 0xE01EF),    # variation selectors supplement
+              (0xE0000, 0xE007F),    # tag characters
+              (0x180B, 0x180F),      # Mongolian free variation selectors
+              (0x1160, 0x1160),      # Hangul jungseong filler
+              (0x3164, 0x3164),      # Hangul filler
+              (0xFFA0, 0xFFA0))      # halfwidth Hangul filler
 
-    Two members can differ in bytes and print identically -- combining marks in
-    a different order, a composed character against its decomposition. Showing
-    both as themselves gives a reader two lines they cannot tell apart, which is
-    the whole reason the difference is worth reporting.
+
+def _draws_nothing(c: str) -> bool:
+    return not c.isprintable() or any(lo <= ord(c) <= hi for lo, hi in _INVISIBLE)
+
+
+def _spelled(c: str) -> str:
+    """`c` as the escape a reader can type back.
+
+    `\\U` above the BMP. `f"\\u{ord(c):04x}"` printed five and six hex digits for
+    those, and `\\ue0067` reads as U+E006 followed by the digit 7 -- a different
+    character, silently substituted, in the one line whose job is to be exact.
     """
-    return "".join(c if c.isprintable() and not unicodedata.combining(c)
-                   else f"\\u{ord(c):04x}" for c in name)
+    return f"\\U{ord(c):08x}" if ord(c) > 0xFFFF else f"\\u{ord(c):04x}"
+
+
+def escaped(name: str) -> str:
+    """A name a reader can tell apart from anything that prints like it.
+
+    Two members can differ in bytes and print identically: a composed character
+    against its decomposition, combining marks in a different order, a canonical
+    singleton. Showing both as themselves gives a reader two lines they cannot
+    tell apart, which is the whole reason the difference is worth reporting.
+
+    The rule is one sentence, and it rests on one fact: **a canonical
+    equivalence class holds exactly one NFC spelling.** So a name that is not its
+    own NFC gets every non-ASCII character spelled out, and at most one member of
+    any look-alike group is left printing as itself. Nothing here needs to guess
+    which characters "combine" -- and every guess this had made was wrong in one
+    direction or the other. Escaping by combining class missed Hangul conjoining
+    jamo, which are `Lo`, printable, class 0, and compose with their neighbours:
+    `도면.pdf` written the way a Mac writes it rendered exactly like `도면.pdf`
+    written the way Windows does, in both halves of the same sentence. It missed
+    canonical singletons for the same reason -- `Ångstrom` U+212B against U+00C5,
+    `Ω` U+2126 against U+03A9. And it escaped Thai tone marks, Devanagari viramas
+    and Arabic harakat, which are *visible letters*, so `परीक्षण.pdf` -- a name
+    with nothing wrong with it -- printed as `परीक\\u094dषण.pdf`.
+
+    The escapes are spelled so that reading them back gives the name: `\\` for a
+    backslash, always. Without that, `A` and a combining ring above rendered
+    identically to a member literally named `A\\u030angstrom.pdf`, and the report
+    could not say which of the two it was looking at.
+
+    A name carrying something that draws nothing is spelled out in full too. Not
+    for the same reason -- there is nothing canonical about it -- but because
+    escaping one character in the middle can leave a following mark attached to
+    the escape's own letters, and a name with an invisible character in it is one
+    a reader has to see whole in any case.
+    """
+    hidden = any(_draws_nothing(c) for c in name)
+    all_of_it = hidden or nfc(name) != name
+    return "".join(
+        _spelled(c) if c == "\\" or _draws_nothing(c)
+        or (all_of_it and not c.isascii())
+        else c
+        for c in name)
 
 
 def folder_path(name: str) -> str:

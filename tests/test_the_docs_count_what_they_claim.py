@@ -585,3 +585,36 @@ def test_the_changelog_states_the_per_rule_ceiling_the_budget_allows():
     assert int(m.group(1).replace(",", "")) == MAX_ELEMENTS - 1, (
         f"the budget admits {MAX_ELEMENTS} elements, so one rule can fire "
         f"{MAX_ELEMENTS - 1} times; the CHANGELOG says {m.group(1)}")
+
+
+def test_scope_md_divides_the_ceilings_by_the_rate_it_publishes():
+    """The seconds were prose beside a number nobody divided by.
+
+    `docs/scope.md` gives a decompression rate and then says what the two
+    whole-read ceilings cost at it. The rate is a measurement and stays one —
+    it is the machine's, and the page says so. The seconds are not a
+    measurement; they are that division, and they were written as *a few* and *a
+    few more* beside a rate that has now been wrong twice (1.1 GB/s, then 0.6).
+    Wrong by enough and *a few more* stops being true, with nothing to notice.
+
+    So the ceilings come from the reader's own constants and the arithmetic is
+    checked here. A machine half this speed takes twice as long, which is what
+    the page tells its reader to do with the figure.
+    """
+    import re
+
+    from vdi2770 import zipread
+
+    page = (ROOT / "docs" / "scope.md").read_text(encoding="utf-8")
+    rate = re.search(r"measured here at \*\*([\d.]+) GB/s\*\*", page)
+    assert rate, "scope.md no longer publishes a decompression rate"
+    per_second = float(rate.group(1)) * 1e9
+
+    for ceiling, pattern in (
+            (zipread.MAX_TOTAL_BYTES, r"2 GiB ceiling costs about \*\*(\d+) seconds?\*\*"),
+            (zipread.MAX_TOTAL_DECOMPRESSED, r"ceiling of 4 GiB\s*\n?\s*about \*\*(\d+)\*\*")):
+        m = re.search(pattern, page)
+        assert m, f"scope.md no longer says what {ceiling} bytes costs at that rate"
+        assert int(m.group(1)) == round(ceiling / per_second), (
+            f"{ceiling} bytes at {rate.group(1)} GB/s is "
+            f"{ceiling / per_second:.1f} s; scope.md says {m.group(1)}")

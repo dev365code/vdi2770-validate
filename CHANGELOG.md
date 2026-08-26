@@ -30,6 +30,64 @@ gate or dropped, because a number nobody re-derives is the kind of claim the
 rest of these entries are about — and that one was itself wrong twice.
 
 
+- **Two names that print alike are told apart, and a name with nothing wrong
+  with it is left alone.** The helper that spells out an invisible difference
+  escaped by *combining class*, which is a guess about which characters combine,
+  and the guess was wrong in both directions. It missed Hangul conjoining
+  jamo — `Lo`, printable, class 0, and composing with their neighbours — so
+  `도면.pdf` written the way macOS writes it rendered exactly like `도면.pdf`
+  written the way Windows does, on the two lines of one finding whose only
+  purpose is to be told apart. It missed canonical singletons for the same
+  reason. And it escaped Thai tone marks, Devanagari viramas and Arabic harakat,
+  which are *visible letters*, so `परीक्षण.pdf` — a name with nothing wrong with
+  it — was printed back to its sender as `परीक\u094dषण.pdf`.
+
+  The rule is now one sentence resting on one fact: a canonical equivalence
+  class holds exactly one NFC spelling, so a name that is not its own NFC has
+  every non-ASCII character spelled out, and at most one member of any look-alike
+  group is left printing as itself. Nothing guesses which characters combine.
+
+  Two more things had to be true for that to work. A backslash is now always
+  escaped: without it a member literally named `A\u030angstrom.pdf` rendered
+  exactly like `A` and a combining ring above, and the page could not say which
+  it was looking at. And an escape above the BMP is `\U` with eight digits —
+  `f"\\u{ord(c):04x}"` produced `\ue0067`, which reads as U+E006 followed by the
+  digit 7, a different character silently substituted in the one line whose job
+  is to be exact.
+
+  **The helper was pinned by nothing.** Replacing its body with `return name`
+  left the whole suite green: the test that was meant to hold it compared Python
+  tuples, which differ in code points — an assertion satisfied by a difference
+  the reader cannot see. There are now five tests that assert on renderings, an
+  end-to-end one that reads the finding rather than the helper, and two mutation
+  rows. Four of the five die on the identity function and five on the old rule.
+
+- **Two rules said "print alike" about names that do not.** Both group members by
+  a relation that is canonical form *and* dropping path segments that name
+  nothing, and both then described the result as a spelling difference. `.//B.pdf`
+  beside `./B.pdf` was reported as *2 members that print alike*, with a remedy
+  about *different bytes that print the same*, about two names anybody can tell
+  apart at a glance. Whether they print alike is a question with an answer, so
+  each rule now asks it and says the true thing either way.
+
+  `Z10` had the same split one level deeper: it grouped on the reader's key and
+  then filtered with the narrower relation, so `B.pdf` beside `./B.pdf` matched
+  nothing, fell past the branch that names the members, and produced two findings
+  carrying the rule's bare title with no detail and no remedy.
+
+- **A declaration that matches two members does not also leave them undeclared.**
+  `F1` said *this declaration matches 2 members*; `F2`, on the next lines, said
+  of those same two members that no declaration names them — and offered *declare
+  it or remove it*, which points away from the remedy `F1` had just given.
+
+- **`Z10`'s sentence stopped being true of its own page.** *"different bytes, the
+  same glyphs"* describes the archive, and once one spelling is printed as code
+  points the two lines no longer show the same glyphs. It also never said what
+  the file is called, so when neither spelling is canonical the reader got two
+  walls of hex and nothing readable to tie them to. The sentence now carries the
+  canonical form as that anchor.
+
+
 The trailer scan had been repaired four times, and each repair fixed the shape
 in front of it rather than the class of shape, so the next shape was always
 waiting. This one repairs the class — and then the class repair turned out to
@@ -710,7 +768,7 @@ below is measured on this machine, before and after, on the same input.
 Three gates that ask what `make check` cannot ask of itself.
 
 - **`make mutations`** takes every claim this project makes about a gate, breaks
-  the thing that gate protects, and checks the gate notices — 68 rows, each
+  the thing that gate protects, and checks the gate notices — 70 rows, each
   naming the pytest selection or the tool that has to go red. The harness checks
   itself as hard as it checks the code: a row whose anchor no longer appears
   exactly once is an error rather than a pass; every apply and restore clears
@@ -720,7 +778,7 @@ Three gates that ask what `make check` cannot ask of itself.
   broken row, not a kill; and **one row must survive**, because a harness that
   reports red for a change that does not matter is reporting red for everything.
   It found two holes on its first full run.
-- **`make standalone`** runs each of the 59 test files on its own. A suite is a
+- **`make standalone`** runs each of the 60 test files on its own. A suite is a
   shared process, so a file can pass because an earlier one imported something —
   `tests/test_offline.py` did exactly that for weeks, patching `socket.socket`
   and then importing `urllib.request`, which breaks `class SSLSocket(socket)`

@@ -5,7 +5,7 @@ from typing import Iterator
 
 from ..catalog import rule
 from ..model import MAIN_PDF, MAIN_XML, METADATA_XML, About, Finding, Kind
-from ..names import Members, escaped, extracts_to
+from ..names import Members, escaped, extracts_to, nfc
 from .container import MAX_FOLDER_DEPTH
 
 EXTENSION_FOR = {"application/pdf": ".pdf", "application/zip": ".zip"}
@@ -53,6 +53,7 @@ def check(container, document) -> Iterator[Finding]:
     # already behind it.
     members = Members(container.file_names, container.rejected)
     accounted_for = set()
+    reached_ambiguously = set()
 
     for f in document.all_files:
         if not f.file_name:
@@ -94,13 +95,28 @@ def check(container, document) -> Iterator[Finding]:
             # holds twice was reported absent, with a remedy that said to add it
             # or to delete a declaration that was right.
             spellings = members.spelled_more_than_one_way(f.file_name)
+            reached_ambiguously.update(spellings)
+            # Two different collisions arrive here and only one of them is about
+            # spelling. `spelled_more_than_one_way` groups by `folder_path`,
+            # which is `nfc` *and* dropping segments that name nothing — so
+            # `.//B.pdf` and `./B.pdf` are one group, and the finding told a
+            # reader they "print alike" about two names anybody can tell apart at
+            # a glance, with a remedy about "different bytes that print the
+            # same". Whether they print alike is a question with an answer:
+            # canonically equivalent names do, and names that differ in a `.`
+            # segment do not.
+            look_alike = len({nfc(n) for n in spellings}) == 1
             if spellings and not twice:
                 message = ("A file named in the metadata matches more than one "
                            "member of the container")
                 fix = ("Store one spelling. The names below are different bytes "
                        "that print the same, so nothing can say which of them "
                        "this declaration meant — and a reader asking for the "
-                       "name you wrote may get either.")
+                       "name you wrote may get either.") if look_alike else (
+                    "Store the file once, at one path. The names below are "
+                    "different bytes that extract to the same place, so nothing "
+                    "can say which of them this declaration meant — and which "
+                    "one a recipient ends up with is their unzip tool's business.")
                 whose = None
             elif twice:
                 message = ("A file named in the metadata is in the container more "
@@ -140,8 +156,9 @@ def check(container, document) -> Iterator[Finding]:
                 whose = None
             if spellings and not twice:
                 shown = " and ".join(escaped(n) for n in spellings)
+                how = "print alike" if look_alike else "extract to the same path"
                 detail = (f"{f.file_name!r} matches {len(spellings)} members "
-                          f"that print alike: {shown}")
+                          f"that {how}: {shown}")
             elif twice:
                 detail = f"{f.file_name!r} names two members of the archive"
             elif rejected:
@@ -172,6 +189,13 @@ def check(container, document) -> Iterator[Finding]:
     # to "declare it or remove it", a sender would be declaring one path twice.
     collides = {n for n in container.duplicate_names
                 if any(extracts_to(n) == extracts_to(a) for a in accounted_for)}
+    # And the members a declaration reached without resolving to one of them.
+    # `F1` says that declaration matches these two; `F2` then said, of the same
+    # two members on the next lines, that no declaration names them. One report,
+    # one file, both claims — and the remedy it offered, *declare it or remove
+    # it*, points away from the one `F1` had just given. Whichever spelling the
+    # sender keeps, the declaration is already there.
+    collides |= reached_ambiguously
     for name in sorted(set(members.present) - accounted_for - structural - collides):
         if name.lower().endswith(".zip"):
             continue
