@@ -126,3 +126,34 @@ def test_a_directory_entry_for_the_root_is_not_a_folder():
 
     fired = {f.rule.id for f in check_bytes(buf.getvalue(), "dot.zip").findings}
     assert "Z9" not in fired, f"a root directory entry read as a folder: {sorted(fired)}"
+
+
+def test_an_archive_with_no_files_says_nothing_about_folders(tmp_path):
+    """`Z9`'s title is a claim: *the archive stores files in folders*.
+
+    A directory entry is a folder somebody made, which is why one on its own is
+    still collected — but an archive whose *only* entry was `a/` was told it
+    stores files in folders, naming one with no file in it, in a report that says
+    two lines up the archive is not a container at all.
+    """
+    import io
+    import zipfile
+
+    from vdi2770_validate.runner import check_bytes
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        z.writestr("a/", b"")
+    fired = {f.rule.id for f in check_bytes(buf.getvalue(), "dir.zip").findings}
+    assert "Z9" not in fired, (
+        f"an archive holding no files was told it stores files in folders: {sorted(fired)}")
+
+    # And the half that must not go with it: one file inside that folder and the
+    # rule speaks again.
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        z.writestr("a/", b"")
+        z.writestr("a/x.pdf", b"%PDF-1.4\n")
+    said = [f for f in check_bytes(buf.getvalue(), "dir.zip").findings if f.rule.id == "Z9"]
+    assert said and "a/" in (said[0].detail or ""), (
+        [f.rule.id for f in check_bytes(buf.getvalue(), "dir.zip").findings])
