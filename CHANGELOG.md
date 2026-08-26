@@ -272,6 +272,22 @@ have a class of its own.
   naming a budget as moved while the source on disk was correct, and 73,000 cache
   files outside the tree. The mutation table already set this; the sdist, wheel
   and standalone gates start Python the same way and did not.
+- **Three findings that told the reader something that was not so.** A name the
+  archive spells two ways — combining marks in a different order, the same
+  glyphs — reached two members, and `resolve` answers `None` for that exactly as
+  it does for *no such file*. `F1` read the second as the first and said the
+  file was **not in the container** while the container held it twice, with a
+  remedy that offered to delete a correct declaration. `Members` can now be
+  asked which it is.
+  `Z10` printed the same line twice for that pair, with no detail and no remedy,
+  under a title saying the two members have *the same name* — they have
+  different names, which is the only reason the pair is worth reporting. Each
+  finding now names itself and its twin with the invisible parts spelled out, so
+  two lines that print alike can be told apart.
+  And a member the sender password-protected was told to *re-create the archive
+  and send it again*, which reproduces the same member and the same finding. The
+  detail already knew — it prints "password required" — and the remedy ignored
+  it.
 - **Text arriving in pieces has a ceiling.** The tree had a bound on elements and
   none on how many times the parser handed back character data. 450,000 `&#120;`
   references — a **4.1 KiB** archive — held **48 MB**, because a byte count is not
@@ -644,7 +660,7 @@ below is measured on this machine, before and after, on the same input.
 Three gates that ask what `make check` cannot ask of itself.
 
 - **`make mutations`** takes every claim this project makes about a gate, breaks
-  the thing that gate protects, and checks the gate notices — 59 rows, each
+  the thing that gate protects, and checks the gate notices — 62 rows, each
   naming the pytest selection or the tool that has to go red. The harness checks
   itself as hard as it checks the code: a row whose anchor no longer appears
   exactly once is an error rather than a pass; every apply and restore clears

@@ -156,3 +156,35 @@ def test_a_declared_name_the_archive_stores_twice_is_told_to_remove_the_repeat()
     assert "more than once" in f1[0].message, f1[0].message
     assert "Remove the repeat" in (f1[0].fix or ""), f1[0].fix
     assert "not readable" not in (f1[0].fix or ""), f1[0].fix
+
+
+def test_a_password_protected_member_is_told_to_remove_the_password(tmp_path):
+    """"Re-create the archive and send it again" reproduces the same archive.
+
+    A member the sender encrypted is not a truncated transfer. The bytes are
+    intact; what is missing is the password, and re-zipping the same directory
+    produces the same member and the same finding. `F1`'s detail already knows
+    the difference — it prints "encrypted, password required" — and its remedy
+    ignored it, so the reader is told to do the one thing that cannot work.
+    """
+    import subprocess
+
+    src = zipfile.ZipFile(CLEAN_DOCUMENT)
+    work = tmp_path / "in"
+    work.mkdir()
+    for name in src.namelist():
+        f = work / name
+        f.parent.mkdir(parents=True, exist_ok=True)
+        f.write_bytes(src.read(name))
+    out = tmp_path / "enc.zip"
+    subprocess.run(["zip", "-q", "-j", "-P", "secret", str(out), str(work / "B.pdf")],
+                   check=True)
+    rest = [str(work / n) for n in src.namelist() if n != "B.pdf"]
+    subprocess.run(["zip", "-q", "-j", str(out), *rest], check=True)
+
+    f1 = [f for f in check_bytes(out.read_bytes(), "enc.zip").findings
+          if f.rule.id == "F1"]
+    assert len(f1) == 1, [f.rule.id for f in check_bytes(out.read_bytes(), "e.zip").findings]
+    remedy = f1[0].remedy or ""
+    assert "Re-create the archive and send it again" not in remedy, remedy
+    assert "password" in remedy.lower(), remedy

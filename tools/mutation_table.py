@@ -420,6 +420,32 @@ TABLE = [
      "rebuilding the sibling list once per error to index one of them was 38% "
      "of the 29 seconds this area exists because of"),
 
+    ("rules/a-name-that-matches-two-members-is-not-absent",
+     "src/vdi2770_validate/rules/files.py",
+     "            spellings = members.spelled_more_than_one_way(f.file_name)",
+     "            spellings = ()",
+     ["tests/test_two_spellings_are_two_files.py"],
+     "`resolve` answers None for `no such file` and for `which one did you "
+     "mean`, and F1 read the second as the first: a file the archive holds "
+     "twice was reported absent, with a remedy that deletes a correct "
+     "declaration"),
+
+    ("rules/two-names-that-print-alike-are-told-apart",
+     "src/vdi2770_validate/rules/container.py",
+     "            if not alike:",
+     "            if True:",
+     ["tests/test_two_spellings_are_two_files.py"],
+     "the reader got the same line twice with nothing on it to say which "
+     "member each was about, or that the difference was in the encoding"),
+
+    ("rules/a-locked-member-is-not-a-truncated-transfer",
+     "src/vdi2770_validate/rules/files.py",
+     '            elif "encrypted" in (because.detail or "").lower():',
+     "            elif False:",
+     ["tests/test_a_member_we_cannot_read_is_not_a_pass.py"],
+     "re-creating the archive reproduces the same encrypted member and the "
+     "same finding"),
+
     ("gates/an-exception-nobody-can-catch-by-name",
      "packages/vdi2770/src/vdi2770/__init__.py",
      '"XmlTooLarge",',

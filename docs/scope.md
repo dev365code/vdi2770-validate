@@ -81,20 +81,27 @@ failure — files that never claimed at all.
   published table, ZIP and XML mechanics, the MIT reference implementation, or a
   judgement of our own.
 
-## The history is left as written
+## What was rewritten, and what was not
 
-Some commit messages in this repository describe how a change came to be found.
-The rule now is that a published artifact carries the verdict and not the method,
-and the working tree, the release notes and the published packages follow it.
-History does not, and is not being rewritten to.
+Some commit messages in this repository once described how a change came to be
+found. A published artifact carries the verdict and not the method, so on
+2026-08-26 the **messages** of the commits and tags were rewritten to say what
+changed rather than how it was noticed.
 
-Rewriting a public branch removes nothing: a force-push unlinks commits, it does
-not delete them, and the ones this repository has already rewritten are still
-served by name and still listed in the host's public event feed. What a rewrite
-*would* do is break the correspondence between eleven published versions and the
-tags they were built from — in a project whose whole claim is that what it says
-can be checked. That is a worse trade, and it is the same one already recorded
-here for a log file that carried absolute paths.
+Only the messages. Every tree, author and date is unchanged, so each published
+version still corresponds byte-for-byte to the tag it was built from — checked
+against a bundle of the history taken beforehand. Nothing on an index moved, and
+nothing that was verifiable before stopped being so.
+
+What that rewrite did **not** do is remove anything. A force-push unlinks commits;
+it does not delete them. Commits this repository rewrote earlier are still served
+by name until the host collects them, and the host's public event feed records
+the pushes regardless. The honest description is that the rewrite changed what a
+visitor is shown, not what exists.
+
+Where the trade runs the other way it is recorded as such: a log file carrying
+absolute paths from a build machine was left in history rather than rewritten
+over, because there the cost of rewriting exceeded what it would have bought.
 
 ## Why the refusals are written down
 

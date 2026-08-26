@@ -219,3 +219,73 @@ def test_a_dot_segment_does_not_stop_the_pdf_being_looked_at():
                                              "dot.zip").findings}
     assert "P4" in plain, "the premise: this container's PDF carries a claim"
     assert "P4" in dotted, "the PDF was never scanned once its name gained a `./`"
+
+
+def _two_spellings_of(declared, first, second):
+    """`CLEAN_DOCUMENT` with `declared` in the metadata and two members whose
+    names differ in bytes but normalise to it."""
+    src = zipfile.ZipFile(CLEAN_DOCUMENT)
+    meta = src.read("VDI2770_Metadata.xml").decode("utf-8").replace("B.pdf", declared)
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        for name in src.namelist():
+            if name == "B.pdf":
+                continue
+            z.writestr(name, meta.encode("utf-8")
+                       if name == "VDI2770_Metadata.xml" else src.read(name))
+        z.writestr(first, src.read("B.pdf"))
+        z.writestr(second, src.read("B.pdf"))
+    return buf.getvalue()
+
+
+COMBINING = ("ẹ́.pdf",                    # ẹ + acute
+             "ẹ́.pdf",                   # e + dot below + acute
+             "ẹ́.pdf")                   # e + acute + dot below
+
+
+def test_a_name_the_archive_spells_two_ways_is_not_reported_as_absent():
+    """`F1` said the file was not in the archive. It is there twice.
+
+    Two members whose bytes differ but whose canonical form is the declared
+    name: `Members.resolve` cannot choose between them and returns `None`, and
+    every branch that reads `None` treats it as absence. The remedy a reader
+    then gets is "add the missing file, or remove its DigitalFile entry" —
+    adding makes it three members and changes nothing, and removing deletes a
+    declaration that was correct.
+
+    What the reader needs to be told is that the archive is ambiguous about
+    this name, which `Z10` is already saying on another line. So `F1` must
+    either say the same thing or say nothing; it must not say the file is
+    missing.
+    """
+    declared, first, second = COMBINING
+    assert unicodedata.normalize("NFC", first) == unicodedata.normalize("NFC", declared)
+    assert unicodedata.normalize("NFC", second) == unicodedata.normalize("NFC", declared)
+    assert first != second
+
+    report = check_bytes(_two_spellings_of(declared, first, second), "pair.zip")
+    absent = [f for f in report.findings
+              if f.rule.id == "F1" and "not in the archive" in (f.detail or "")]
+    assert not absent, [f.detail for f in absent]
+
+
+def test_the_report_can_tell_two_identical_looking_members_apart():
+    """`Z10` printed the same line twice, with no detail and no remedy.
+
+    The two members do not have the same name — they have different names that
+    render identically, which is the whole reason this is worth reporting. A
+    reader given two byte-identical lines cannot act: they cannot tell which
+    member each line is about, and nothing on the screen says Unicode
+    normalisation is involved at all.
+    """
+    declared, first, second = COMBINING
+    report = check_bytes(_two_spellings_of(declared, first, second), "pair.zip")
+    z10 = [f for f in report.findings if f.rule.id == "Z10"]
+    assert len(z10) == 2, [f.rule.id for f in report.findings]
+
+    rendered = {(f.message, f.detail, f.where.member) for f in z10}
+    assert len(rendered) == 2, (
+        "two findings rendered identically; a reader cannot tell them apart")
+    for f in z10:
+        assert f.detail, "no detail, so the finding names nothing to look at"
+        assert f.remedy, "no remedy"

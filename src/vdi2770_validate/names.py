@@ -14,6 +14,7 @@ made the verdict depend on which came last in the archive.
 """
 from __future__ import annotations
 
+import unicodedata
 from typing import Dict, List, Mapping, Optional, Sequence, Tuple
 
 # Canonicalising a member name belongs to whoever reads archives. There were two
@@ -22,7 +23,19 @@ from typing import Dict, List, Mapping, Optional, Sequence, Tuple
 from vdi2770 import nfc
 from vdi2770.model import Defect
 
-__all__ = ["Members", "folder_path", "nfc"]
+__all__ = ["Members", "escaped", "folder_path", "nfc"]
+
+
+def escaped(name: str) -> str:
+    """A name with anything invisible spelled out.
+
+    Two members can differ in bytes and print identically -- combining marks in
+    a different order, a composed character against its decomposition. Showing
+    both as themselves gives a reader two lines they cannot tell apart, which is
+    the whole reason the difference is worth reporting.
+    """
+    return "".join(c if c.isprintable() and not unicodedata.combining(c)
+                   else f"\\u{ord(c):04x}" for c in name)
 
 
 def folder_path(name: str) -> str:
@@ -114,6 +127,23 @@ class Members:
         "ambiguous-name": "two entries in the archive carry this name, so it "
                           "identifies neither of them",
     }
+
+    def spelled_more_than_one_way(self, declared: str) -> tuple:
+        """The members a declared name reaches, when it reaches more than one.
+
+        `resolve` returns `None` for two unrelated reasons — nothing matched, and
+        too much matched — and every caller read the second as the first. So a
+        file the archive holds *twice*, under two spellings that both canonicalise
+        to the declared name, was reported as not being there, with a remedy that
+        said to add it or to delete a correct declaration.
+
+        Empty when the name is absent or resolves cleanly, so a caller can tell
+        "no such file" from "which one did you mean" without guessing.
+        """
+        if declared in self._exact:
+            return ()
+        candidates = self._by_nfc.get(folder_path(declared), ())
+        return tuple(sorted(candidates)) if len(candidates) > 1 else ()
 
     def refused_by(self, declared: str) -> Optional[Defect]:
         """The `Defect` behind a refusal, for a caller that needs to know *which*

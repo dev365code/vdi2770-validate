@@ -6,7 +6,7 @@ from typing import Iterator
 
 from ..catalog import rule
 from ..model import MAIN_PDF, METADATA_XML, Finding, Kind
-from ..names import folder_path, nfc
+from ..names import escaped, folder_path, nfc
 
 
 def folders_holding_metadata(container) -> list:
@@ -250,7 +250,30 @@ def check(container, declared, is_declared_payload) -> Iterator[Finding]:
             refused = container.rejected.get(name)
             if refused is not None and refused.kind == "ambiguous-name":
                 continue
-            yield Finding(r, r.title, container.where.child(member=name, subject=name))
+            # The title is true of a repeated name and false of this one: these
+            # are *different* names that print alike, which is the only reason
+            # the pair is worth reporting. Said with the rule's own title, no
+            # detail and no remedy, the reader got the same line twice with
+            # nothing on it to tell the two members apart, and no hint that the
+            # difference is in the encoding rather than in the letters.
+            alike = sorted(n for n in container.duplicate_names
+                           if nfc(n) == nfc(name) and n != name)
+            if not alike:
+                # Nothing else canonicalises to this, so it is not one of a
+                # look-alike pair -- the reader's own sentence covers it.
+                yield Finding(r, r.title,
+                              container.where.child(member=name, subject=name))
+                continue
+            shown = " and ".join(escaped(n) for n in alike)
+            yield Finding(
+                r,
+                "Two members of the archive have names that print alike",
+                container.where.child(member=name, subject=name),
+                detail=f"this is {escaped(name)}; the archive also holds {shown} — "
+                       f"different bytes, the same glyphs",
+                fix="Store one spelling. A reader asking for the name as you "
+                    "wrote it may get either member, and nothing here can say "
+                    "which one you meant.")
 
     if container.kind is Kind.DOCUMENT:
         for m in container.members:

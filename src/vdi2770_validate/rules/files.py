@@ -5,7 +5,7 @@ from typing import Iterator
 
 from ..catalog import rule
 from ..model import MAIN_PDF, MAIN_XML, METADATA_XML, About, Finding, Kind
-from ..names import Members
+from ..names import Members, escaped
 from .container import MAX_FOLDER_DEPTH
 
 EXTENSION_FOR = {"application/pdf": ".pdf", "application/zip": ".zip"}
@@ -86,7 +86,23 @@ def check(container, document) -> Iterator[Finding]:
             # which reproduces the same archive and the same finding.
             twice = (f.file_name in members.ambiguous
                      or (because is not None and because.kind == "ambiguous-name"))
-            if twice:
+            # And the other way a name can reach more than one member: two
+            # spellings the archive keeps as separate entries, both of which
+            # canonicalise to what the metadata declared. `resolve` answers
+            # `None` for that exactly as it does for "no such file", and every
+            # branch here read the second as the first -- so a file the archive
+            # holds twice was reported absent, with a remedy that said to add it
+            # or to delete a declaration that was right.
+            spellings = members.spelled_more_than_one_way(f.file_name)
+            if spellings and not twice:
+                message = ("A file named in the metadata matches more than one "
+                           "member of the container")
+                fix = ("Store one spelling. The names below are different bytes "
+                       "that print the same, so nothing can say which of them "
+                       "this declaration meant — and a reader asking for the "
+                       "name you wrote may get either.")
+                whose = None
+            elif twice:
                 message = ("A file named in the metadata is in the container more "
                            "than once")
                 fix = ("Remove the repeat. The name denotes two members with different "
@@ -103,13 +119,30 @@ def check(container, document) -> Iterator[Finding]:
                        "this one says which. Send it separately, or check it with "
                        "something that will read it.")
                 whose = About.TOOL
+            elif "encrypted" in (because.detail or "").lower():
+                # A member the sender locked is not a truncated transfer. The
+                # bytes are intact and re-zipping the same directory produces the
+                # same member and the same finding, so "send it again" is the one
+                # remedy that cannot work. The detail already knew -- it prints
+                # "password required" -- and the remedy ignored it.
+                message = ("A file named in the metadata is in the container and "
+                           "needs a password")
+                fix = ("Remove the password from this member before handing the "
+                       "container over. A recipient who cannot open a file has "
+                       "not been given it, and nothing here can check what it "
+                       "cannot read.")
+                whose = None
             else:
                 message = ("A file named in the metadata is in the container but could "
                            "not be read")
                 fix = ("Re-create the archive and send it again. The file is listed, so "
                        "the metadata is right; the bytes behind the name are not readable.")
                 whose = None
-            if twice:
+            if spellings and not twice:
+                shown = " and ".join(escaped(n) for n in spellings)
+                detail = (f"{f.file_name!r} matches {len(spellings)} members "
+                          f"that print alike: {shown}")
+            elif twice:
                 detail = f"{f.file_name!r} names two members of the archive"
             elif rejected:
                 detail = f"{f.file_name!r} is in the archive but was refused: {rejected}"
