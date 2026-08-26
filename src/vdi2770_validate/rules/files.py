@@ -5,7 +5,7 @@ from typing import Iterator
 
 from ..catalog import rule
 from ..model import MAIN_PDF, MAIN_XML, METADATA_XML, About, Finding, Kind
-from ..names import Members, escaped
+from ..names import Members, escaped, extracts_to
 from .container import MAX_FOLDER_DEPTH
 
 EXTENSION_FOR = {"application/pdf": ".pdf", "application/zip": ".zip"}
@@ -166,7 +166,13 @@ def check(container, document) -> Iterator[Finding]:
     from ..names import folder_path
     from .container import folders_holding_metadata
     unopened = frozenset(folder_path(f) for f in folders_holding_metadata(container)) - {""}
-    for name in sorted(set(members.present) - accounted_for - structural):
+    # A member that shares its extracted path with one the metadata declared is
+    # not undeclared -- the declaration reaches it too, and which of the two the
+    # recipient ends up with is what `Z10` is reporting on the line above. Told
+    # to "declare it or remove it", a sender would be declaring one path twice.
+    collides = {n for n in container.duplicate_names
+                if any(extracts_to(n) == extracts_to(a) for a in accounted_for)}
+    for name in sorted(set(members.present) - accounted_for - structural - collides):
         if name.lower().endswith(".zip"):
             continue
         if _inside(folder_path(name), unopened):

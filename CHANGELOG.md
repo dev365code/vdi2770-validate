@@ -305,6 +305,24 @@ have a class of its own.
   afterwards, because a certificate of origin signed on somebody's behalf later
   certifies nothing; the sentence says what happened, and a test holds the lapse
   closed.
+- **Metadata we could not model declares nothing *known*.** A parse the reader
+  refused left the container marked as modelled with an empty set of declared
+  files, so every rule reading it was told the container declares nothing —
+  `X6` said the metadata was not modelled while `Z11`, a few lines of report
+  away, accused a member of not being in it. Only the *budget* path set that
+  flag; the path where the parse itself refuses did not, and the comment beside
+  it has said since the budget was repaired that "unknown" and "declares
+  nothing" are different things.
+  Found by closing a hole in the safety net rather than by looking for it: no
+  test built a document container holding a `.zip` whose metadata went
+  unmodelled, so the guard that exists for exactly this could be deleted with
+  nothing going red. Three more of the same kind went with it — a folder count
+  whose hedge was derived from the count rather than from whether collection
+  stopped, so removing the cap printed an exact number under "at least"; an
+  `M7` test whose container was `Released` either way, so its input could not
+  tell the branch apart; and a rebuild count taken at two sizes that the error
+  budget clipped to the same number, which left a stopwatch as the only thing
+  guarding the cache it named.
 - **Text arriving in pieces has a ceiling.** The tree had a bound on elements and
   none on how many times the parser handed back character data. 450,000 `&#120;`
   references — a **4.1 KiB** archive — held **48 MB**, because a byte count is not
@@ -677,7 +695,7 @@ below is measured on this machine, before and after, on the same input.
 Three gates that ask what `make check` cannot ask of itself.
 
 - **`make mutations`** takes every claim this project makes about a gate, breaks
-  the thing that gate protects, and checks the gate notices — 65 rows, each
+  the thing that gate protects, and checks the gate notices — 67 rows, each
   naming the pytest selection or the tool that has to go red. The harness checks
   itself as hard as it checks the code: a row whose anchor no longer appears
   exactly once is an error rather than a pass; every apply and restore clears

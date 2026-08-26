@@ -21,6 +21,15 @@ def folders_holding_metadata(container) -> list:
     """
     out = []
     for name in container.present:
+        # Not a member the reader refused. `present` lists those on purpose, so
+        # a caller can see what was in the archive -- but a name this tool would
+        # not open is not a document somebody delivered. An archive whose only
+        # extra member was `../VDI2770_Metadata.xml` drew `Z4` calling it a
+        # path-traversal attempt and, beside it, this rule counting it as a
+        # folder holding a document, with a remedy opening "Nothing here is
+        # necessarily wrong with the container".
+        if name in container.rejected:
+            continue
         prefix, sep, leaf = nfc(name).rpartition("/")
         if not sep or leaf != METADATA_XML:
             continue
@@ -121,6 +130,16 @@ def check(container, declared, is_declared_payload) -> Iterator[Finding]:
     for d in container.defects:
         rid = DEFECT_TO_RULE.get(d.kind)
         if rid is None:
+            continue
+        # The reader stops descending at its depth limit before anything has
+        # read a word of metadata, so it cannot know that the archive it
+        # declined to open is a *file* this container declared -- a parts
+        # bundle, a CAD archive. Reported as `Z6` it says a container is nested
+        # too deep, names a member that never claimed to be a container, and
+        # asks the sender to check an inner container that does not exist. The
+        # same argument that excuses `Z3` and `Z11` excuses this.
+        if (rid == "Z6" and declared is not None and d.where.member
+                and folder_path(d.where.member) in declared):
             continue
         r = rule(rid)
         yield Finding(r, r.title, d.where,
@@ -282,9 +301,34 @@ def check(container, declared, is_declared_payload) -> Iterator[Finding]:
             # declared one is not past that check, so its own argument excuses it.
             if declared is None:
                 continue        # we did not model this container's own metadata
-            if m.name.lower().endswith(".zip") and nfc(m.name) not in declared:
+            if (m.name.lower().endswith(".zip")
+                    and folder_path(m.name) not in declared):
                 r = rule("Z11")
                 yield Finding(r, r.title, container.where.child(member=m.name, subject=m.name))
+
+    # Whatever kind of container this is. `files.py` keeps `F2` quiet about every
+    # file inside a folder that holds its own metadata, in any container, because
+    # what declares those files is a metadata file this tool never opened. That
+    # silence is only honest while something says we did not look -- and this
+    # said it for documentation containers alone. Put such a folder inside a
+    # *document* container and its files left the report with nothing said about
+    # them, which is the outcome the suppression exists to prevent. The reason
+    # this rule gives has never had anything to do with the parent's kind.
+    as_folders = folders_holding_metadata(container)
+    if as_folders:
+        r = rule("Z13")
+        # Named the way `Z9` names it. The two rules were spelling one folder two
+        # ways in the same report -- `AB393/` and `./AB393/` -- and a reader then
+        # has to work out that the tool is not talking about two places. The list
+        # itself keeps the archive's prefix, because `files.py` matches it against
+        # member names to suppress `F2`; it is the sentence that is rendered.
+        named = [folder_path(f) + "/" for f in as_folders[:5]]
+        yield Finding(r, r.title, container.where,
+                      detail=f"{len(as_folders)} folder"
+                             f"{'' if len(as_folders) == 1 else 's'} "
+                             f"{'holds' if len(as_folders) == 1 else 'hold'} "
+                             f"{METADATA_XML}: " + ", ".join(named)
+                             + (", ..." if len(as_folders) > 5 else ""))
 
     if container.kind is Kind.DOCUMENTATION:
         # `present`, not `file_names`. A main document with a bad CRC is in the
@@ -316,23 +360,6 @@ def check(container, declared, is_declared_payload) -> Iterator[Finding]:
         # set as the document containers this rule is about: a declared `.zip`
         # payload is a child too, and one of those used to silence the rule
         # entirely. Count what the title says we are counting.
-        as_folders = folders_holding_metadata(container)
-        if as_folders:
-            r = rule("Z13")
-            # Named the way `Z9` names it. The two rules were spelling one
-            # folder two ways in the same report -- `AB393/` and `./AB393/` --
-            # and a reader then has to work out that the tool is not talking
-            # about two places. The list itself keeps the archive's prefix,
-            # because `files.py` matches it against member names to suppress
-            # `F2`; it is the sentence that is rendered.
-            named = [folder_path(f) + "/" for f in as_folders[:5]]
-            yield Finding(r, r.title, container.where,
-                          detail=f"{len(as_folders)} folder"
-                                 f"{'' if len(as_folders) == 1 else 's'} "
-                                 f"{'holds' if len(as_folders) == 1 else 'hold'} "
-                                 f"{METADATA_XML}: " + ", ".join(named)
-                                 + (", ..." if len(as_folders) > 5 else ""))
-
         # (`stopped` above already covers the unreadable child, so whether this
         # list admits one cannot change the answer. Both are kept: one says what
         # we count, the other says when we decline to answer.)

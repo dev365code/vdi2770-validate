@@ -23,7 +23,20 @@ from typing import Dict, List, Mapping, Optional, Sequence, Tuple
 from vdi2770 import nfc
 from vdi2770.model import Defect
 
-__all__ = ["Members", "escaped", "folder_path", "nfc"]
+__all__ = ["Members", "escaped", "extracts_to", "folder_path", "nfc"]
+
+
+def extracts_to(name: str) -> str:
+    """The path an extractor writes this member to, without normalising letters.
+
+    `folder_path` also applies `nfc`, which is right for *matching a declaration
+    to a member* -- the two are written by different hands and may compose
+    differently. It is wrong for asking whether two members land on the same
+    file: `B.pdf` and its decomposed twin are two files on most filesystems and
+    the metadata declares only one of them, so the other really is undeclared.
+    `./B.pdf` and `B.pdf` are one file everywhere.
+    """
+    return "/".join(seg for seg in name.split("/") if seg not in ("", "."))
 
 
 def escaped(name: str) -> str:

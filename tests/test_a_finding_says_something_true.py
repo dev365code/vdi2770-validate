@@ -50,12 +50,28 @@ def test_an_encrypted_pdf_is_not_told_to_fix_its_exporter():
 
 
 def test_z9_does_not_print_a_capped_count_as_a_fact():
-    data = built(extra=[(f"d{i:03d}/x.txt", b"x") for i in range(MAX_FOLDERS + 44)])
+    """Exact under the cap, and hedged only when the collection actually stopped.
+
+    Asserting `"at least" in detail` was not enough: `capped` is derived from the
+    count rather than from whether collection stopped, so with the cap removed an
+    archive of 300 folders still says "at least" — now an untrue hedge over an
+    exact number, which is the mirror of the defect this exists for. Deleting all
+    three `MAX_FOLDERS` breaks left the whole suite green.
+    """
+    under = MAX_FOLDERS - 40
+    data = built(extra=[(f"d{i:03d}/x.txt", b"x") for i in range(under)])
     z9 = findings(data, "Z9")
     assert z9, "the premise: this archive stores files in folders"
-    detail = z9[0].detail
-    assert "at least" in detail, (
-        f"the count stops at {MAX_FOLDERS} and the detail states it flatly: {detail}")
+    assert z9[0].detail.startswith(f"{under} folder"), (
+        f"an archive with {under} folders, under the cap, is counted exactly: "
+        f"{z9[0].detail}")
+
+    over = MAX_FOLDERS + 44
+    data = built(extra=[(f"d{i:03d}/x.txt", b"x") for i in range(over)])
+    detail = findings(data, "Z9")[0].detail
+    assert detail.startswith(f"at least {MAX_FOLDERS} folder"), (
+        f"the collection stops at {MAX_FOLDERS}, so the count is a floor and the "
+        f"detail has to say so — and has to say {MAX_FOLDERS}, not {over}: {detail}")
 
 
 def test_a_dot_prefix_is_not_a_folder_and_not_a_subfolder():
@@ -68,3 +84,110 @@ def test_a_dot_prefix_is_not_a_folder_and_not_a_subfolder():
         assert "must sit at the root" not in z3[0].detail, (
             f"the file is at the root; the sentence tells the sender to move it "
             f"there: {z3[0].detail}")
+
+
+def test_a_refused_member_is_not_counted_as_a_delivered_folder():
+    """`Z13` counted a folder the reader had refused to open at all.
+
+    An archive whose only extra member is `../VDI2770_Metadata.xml` drew `Z4` —
+    *a member name would escape the extraction directory* — and, on the line
+    above it, `Z13` saying one folder holds metadata, with a remedy opening
+    "Nothing here is necessarily wrong with the container". There is no such
+    folder: `Z9`, whose job is counting folders, reports none.
+
+    The two decisions behind it are each defensible. `folders_holding_metadata`
+    reads `present`, which by design lists members the reader rejected, so a
+    caller can see what was in the archive. `folder_path` keeps `..`, because
+    dropping it would quietly make an escaping name look ordinary. Composed,
+    they turn a refusal into a delivery — and silence `Z8`, which would
+    otherwise say this documentation container holds no documents at all.
+    """
+    from conftest import CLEAN_DOCUMENTATION
+
+    src = zipfile.ZipFile(CLEAN_DOCUMENTATION)
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        z.writestr("VDI2770_Main.xml", src.read("VDI2770_Main.xml"))
+        z.writestr("VDI2770_Main.pdf", src.read("VDI2770_Main.pdf"))
+        z.writestr("../VDI2770_Metadata.xml", b"<x/>")
+
+    report = check_bytes(buf.getvalue(), "escape.zip")
+    fired = {f.rule.id for f in report.findings}
+    assert "Z4" in fired, f"the premise: the member escapes: {sorted(fired)}"
+    assert "Z13" not in fired, (
+        "a member the reader refused was counted as a document delivered in a "
+        "folder, next to the finding calling it a path-traversal attempt")
+    assert "Z8" in fired, (
+        f"this documentation container holds no documents and nothing said so: "
+        f"{sorted(fired)}")
+
+
+def test_the_published_german_name_is_accepted_however_it_is_spelled():
+    """`M3` fired on the name it was asking for.
+
+    `Zeichnungen, Plane` for class `02-02` is the published German name, and
+    `a` is one character composed or two characters decomposed. Both spell the
+    same word; Unicode calls them canonically equivalent and an editor picks
+    whichever its platform prefers without telling anyone. Comparing the code
+    points reported the published name as not belonging to its own class, and
+    printed the two strings side by side, where they rendered identically:
+
+        'Zeichnungen, Plane' for class 02-02; published name is 'Zeichnungen, Plane'
+
+    which asks a user to fix a difference they cannot see. Names are reconciled
+    in one place in this package for exactly this reason; the metadata layer was
+    comparing text the reader had not put through it.
+    """
+    import unicodedata
+
+    from conftest import CLEAN_DOCUMENT
+
+    src = zipfile.ZipFile(CLEAN_DOCUMENT)
+    xml = src.read("VDI2770_Metadata.xml").decode("utf-8")
+    for was, now in (("<ClassId>02-01</ClassId>", "<ClassId>02-02</ClassId>"),
+                     ("Technische Spezifikation", "Zeichnungen, Pläne"),
+                     ("Technical specification", "Drawings, plans")):
+        assert xml.count(was) == 1, f"fixture no longer says {was!r}"
+        xml = xml.replace(was, now)
+    nfd = unicodedata.normalize("NFD", xml)
+    assert nfd != xml, "the name did not decompose"
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        for m in src.namelist():
+            z.writestr(m, nfd.encode("utf-8") if m == "VDI2770_Metadata.xml"
+                       else src.read(m))
+    report = check_bytes(buf.getvalue(), "nfd.zip")
+    fired = [f for f in report.findings if f.rule.id == "M3"]
+    assert not fired, (
+        "the published German name, spelled the other legal way, was reported as "
+        f"not belonging to its class: {[f.detail for f in fired]}")
+
+
+def test_a_folder_we_did_not_open_is_said_so_in_any_container():
+    """The report went quiet instead of saying it had not looked.
+
+    `F2` does not report the files inside a folder that holds its own
+    `VDI2770_Metadata.xml`: they are declared in metadata this tool never opened,
+    so calling them undeclared would be a claim about a file we did not read. The
+    sentence that makes that silence honest -- `Z13`, *this tool does not open
+    folders* -- was emitted only for documentation containers. Put the same
+    folder in a document container and the files vanished from the report with
+    nothing said, which is the one outcome the suppression was written to avoid.
+    """
+    from conftest import CLEAN_DOCUMENT
+
+    src = zipfile.ZipFile(CLEAN_DOCUMENT)
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        for m in src.namelist():
+            z.writestr(m, src.read(m))
+        z.writestr("sub/VDI2770_Metadata.xml", b"<x/>")
+        z.writestr("sub/nobody_declared_this.pdf", b"%PDF-1.4\n")
+    report = check_bytes(buf.getvalue(), "folder-in-a-document.zip")
+    fired = {f.rule.id for f in report.findings}
+    assert not any(f.rule.id == "F2" and "nobody_declared_this" in (f.detail or "")
+                   for f in report.findings), \
+        "a file inside a folder we did not open was called undeclared"
+    assert "Z13" in fired, (
+        "nothing in the report said the folder had not been opened: "
+        f"{sorted(fired)}")

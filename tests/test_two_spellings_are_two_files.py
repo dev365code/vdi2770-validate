@@ -289,3 +289,73 @@ def test_the_report_can_tell_two_identical_looking_members_apart():
     for f in z10:
         assert f.detail, "no detail, so the finding names nothing to look at"
         assert f.remedy, "no remedy"
+
+
+def _stored_as(name, extra=None, metadata=None):
+    """`CLEAN_DOCUMENT` with `B.pdf` stored under `name`."""
+    src = zipfile.ZipFile(CLEAN_DOCUMENT)
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        for member in src.namelist():
+            if member == "B.pdf":
+                continue
+            z.writestr(member, (metadata or src.read("VDI2770_Metadata.xml"))
+                       if member == "VDI2770_Metadata.xml" else src.read(member))
+        z.writestr(name, src.read("B.pdf"))
+        for n, d in (extra or {}).items():
+            z.writestr(n, d)
+    return buf.getvalue()
+
+
+def test_two_members_that_extract_to_one_path_are_reported():
+    """The archive holds `B.pdf` and `./B.pdf`. `unzip` writes one file.
+
+    Which bytes the recipient ends up with depends on the order the archive
+    stores them in — the declared PDF/A, or the junk that overwrote it. The
+    verdict was **clean**, with a warning about the twin being undeclared, and
+    the twin was never scanned: `Z10` keys duplicates on composition alone, so a
+    pair that differs by a `.` segment is invisible to it while every rule that
+    *resolves* a name treats the two as one.
+
+    `Z10`'s own argument — one member overwrites the other on extraction — is
+    stronger here than for the composition pairs it does report, because this
+    one collides on every filesystem.
+    """
+    data = _stored_as("B.pdf", extra={"./B.pdf": b"not a pdf at all\n"})
+    report = check_bytes(data, "collide.zip")
+    fired = {f.rule.id for f in report.findings}
+    assert "Z10" in fired, (
+        f"two members extract to one path and nothing said so: {sorted(fired)}")
+    assert not report.clean, "a container whose delivered bytes are a coin toss came back clean"
+
+
+def test_a_declared_payload_keeps_its_exemption_however_it_is_spelled():
+    """The same conforming delivery, with the member stored `./cad.zip`.
+
+    A `.zip` the metadata declares is one of the document's files, and `Z3` and
+    `Z11` are excused for it. Both exemptions compared the declared name to the
+    member name with composition alone, so a `.` segment on either side lost
+    the match and a conforming container drew two errors — while `F1` stayed
+    silent on the same name, because *its* comparison had already been repaired.
+    One report, two answers, from two spellings of one comparison.
+    """
+    src = zipfile.ZipFile(CLEAN_DOCUMENT)
+    meta = src.read("VDI2770_Metadata.xml").decode("utf-8")
+    docx = [line for line in meta.splitlines() if "B.docx" in line]
+    assert len(docx) == 1, docx
+    meta = meta.replace(docx[0].strip(),
+                        '<DigitalFile FileFormat="application/zip">cad.zip</DigitalFile>')
+    payload = io.BytesIO()
+    with zipfile.ZipFile(payload, "w") as z:
+        z.writestr("part.step", b"ISO-10303-21;\n")
+
+    plain = {f.rule.id for f in check_bytes(
+        _stored_as("B.pdf", extra={"cad.zip": payload.getvalue()},
+                   metadata=meta.encode("utf-8")), "plain.zip").findings}
+    dotted = {f.rule.id for f in check_bytes(
+        _stored_as("B.pdf", extra={"./cad.zip": payload.getvalue()},
+                   metadata=meta.encode("utf-8")), "dotted.zip").findings}
+    assert "Z3" not in plain and "Z11" not in plain, f"the premise moved: {sorted(plain)}"
+    assert dotted == plain, (
+        f"spelling the member `./cad.zip` changed the verdict: {sorted(dotted)} "
+        f"against {sorted(plain)}")

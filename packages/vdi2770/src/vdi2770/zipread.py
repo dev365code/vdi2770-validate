@@ -424,7 +424,14 @@ def read(data: bytes, path: str, depth: int = 0, _budget: Optional[_Budget] = No
     # is reported.
     first_seen, dupes = {}, []
     for m in [i for i in infos if not i.is_dir()]:
-        key = nfc(m.filename)
+        # The path, not just the composition. `B.pdf` and `./B.pdf` are two
+        # entries that `unzip` writes to one file, so which bytes the recipient
+        # ends up with depends on the order they were stored in -- the same
+        # argument this pairing already makes for a composed name against its
+        # decomposition, and stronger, because a `.` segment collides on every
+        # filesystem rather than only on a composing one.
+        key = "/".join(seg for seg in nfc(m.filename).split("/")
+                       if seg not in ("", "."))
         earlier = first_seen.get(key)
         if earlier is None:
             first_seen[key] = m.filename

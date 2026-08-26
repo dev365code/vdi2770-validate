@@ -149,3 +149,38 @@ def test_a_payload_that_is_unsafe_is_still_reported(tmp_path):
     over safely is a delivery risk whatever the metadata calls the archive."""
     got = ids(_payload_container(tmp_path, "unsafe.zip", {"../escape.txt": b"x"}))
     assert "Z4" in got, got
+
+
+def test_a_document_container_we_could_not_model_does_not_draw_z11(tmp_path):
+    """`declared` is `None` when this container's own metadata went unmodelled.
+
+    `Z11` reads it with `nfc(m.name) not in declared`, which on `None` is a
+    `TypeError` — so the guard above it is load-bearing, and nothing exercised
+    it: replacing it with `if False:` left the whole suite green, which proves
+    no test built a document container that holds a `.zip` *and* whose metadata
+    the reader declined to model.
+
+    "We did not model this" is not "you declared nothing", and a crash in a rule
+    is not a verdict either. The report should carry the tool's own explanation
+    and no accusation about the member.
+    """
+    from vdi2770_validate.runner import MAX_TOTAL_ELEMENTS
+
+    head = (b'<?xml version="1.0"?>'
+            b'<Document xmlns="http://www.vdi.de/schemas/vdi2770">')
+    bomb = head + b"<a>" * (MAX_TOTAL_ELEMENTS + 20_000) + b"</Document>"
+    payload = io.BytesIO()
+    with zipfile.ZipFile(payload, "w") as z:
+        z.writestr("cad/part.step", b"ISO-10303-21;")
+
+    path = build(tmp_path, "unmodelled.zip", [
+        ("VDI2770_Metadata.xml", bomb),
+        ("B.pdf", DOC.read("B.pdf")),
+        ("inner.zip", payload.getvalue()),
+    ])
+    got = ids(path)
+    assert "X6" in got, f"the premise: the metadata was not modelled — {got}"
+    assert "Z11" not in got, (
+        f"Z11 accused a member while the tool was saying it had not read the "
+        f"metadata that would declare it: {got}")
+    assert "X5" not in got, f"a rule crashed instead of standing aside: {got}"

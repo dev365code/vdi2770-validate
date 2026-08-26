@@ -18,7 +18,7 @@ from vdi2770.domain import build
 from . import xsdvalidate
 from .catalog import rule
 from .model import Finding, Location, Report
-from .names import nfc
+from .names import folder_path
 from .rules import container as r_container
 from .rules import files as r_files
 from .rules import metadata as r_metadata
@@ -241,7 +241,23 @@ def check_bytes(data: bytes, name: str) -> Report:
                 if document is _CRASHED:
                     document, tree = None, None
 
-        declared = frozenset(nfc(f.file_name) for f in document.all_files
+        # Metadata we have and could not turn into a document is the same
+        # unknown as metadata we declined to read, and only the second was
+        # marked. So a parse the reader refused left `modelled` true and
+        # `declared` empty, and every rule reading it was told the container
+        # declares nothing -- `X6` said the metadata was not modelled while
+        # `Z11`, three lines of report away, accused a member of not being in
+        # it. The comment below has said the two are different since the budget
+        # path was repaired; this is the other way in.
+        if c.metadata_bytes is not None and document is None:
+            modelled = False
+
+        # `folder_path`, not `nfc`. A declared name and a member name are the
+        # same kind of thing and have to be compared the one way -- the repair
+        # that put path normalisation into `names.py` reached `Members.resolve`
+        # and did not reach here, so `F1` matched `./cad.zip` to its declaration
+        # while `Z11` and the payload exemption, reading this set, did not.
+        declared = frozenset(folder_path(f.file_name) for f in document.all_files
                              if f.file_name) if document else frozenset()
         declared_of[id(c)] = declared if modelled else None
 
@@ -254,7 +270,7 @@ def check_bytes(data: bytes, name: str) -> Report:
         parent_declared = declared_of.get(id(c.parent))
         unknown_parent = c.parent is not None and parent_declared is None
         is_payload = (bool(c.member_name) and parent_declared is not None
-                      and nfc(c.member_name) in parent_declared)
+                      and folder_path(c.member_name) in parent_declared)
 
         # A container whose metadata we declined to model has an empty `declared`,
         # and the rules that read it then said things about the sender: a

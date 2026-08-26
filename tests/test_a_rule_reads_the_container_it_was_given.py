@@ -27,11 +27,36 @@ def test_m7_still_fires_on_a_documentation_container_that_is_not_released():
     assert "M7" in fired("m7-main-not-released.zip")
 
 
-def test_m7_does_not_fire_inside_a_document_container():
+def test_m7_does_not_fire_inside_a_document_container(tmp_path):
     """The rule is about the *main* document. A document container's own
-    metadata carries a LifeCycleStatus too, and it is not the main document."""
+    metadata carries a LifeCycleStatus too, and it is not the main document.
+
+    The container this used to check carries `Released`, so the second half of
+    `kind is DOCUMENTATION and status != RELEASED` was False either way and the
+    input could not tell the branch apart — replacing the kind guard with `True`
+    left the whole suite green. It takes a document container whose status is
+    *not* Released to make the absence of `M7` a claim about anything.
+    """
+    import io
+    import zipfile
+
     from conftest import CLEAN_DOCUMENT
-    assert "M7" not in {f.rule.id for f in check_file(str(CLEAN_DOCUMENT)).findings}
+
+    src = zipfile.ZipFile(CLEAN_DOCUMENT)
+    meta = src.read("VDI2770_Metadata.xml").decode("utf-8")
+    assert 'StatusValue="Released"' in meta, "the fixture stopped being Released"
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        for name in src.namelist():
+            z.writestr(name, meta.replace('StatusValue="Released"',
+                                          'StatusValue="InReview"').encode("utf-8")
+                       if name == "VDI2770_Metadata.xml" else src.read(name))
+    path = tmp_path / "in-review.zip"
+    path.write_bytes(buf.getvalue())
+
+    fired = {f.rule.id for f in check_file(str(path)).findings}
+    assert "M7" not in fired, (
+        f"M7 is about the main document and this is a document container: {sorted(fired)}")
 
 
 def test_the_two_document_level_rule_modules_take_the_same_arguments():

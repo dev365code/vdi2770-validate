@@ -471,6 +471,23 @@ TABLE = [
      "pip then resolves the pin from an index and every result in the run is "
      "about a different reader than the commit's"),
 
+    ("runner/metadata-we-could-not-model-declares-nothing-known",
+     "src/vdi2770_validate/runner.py",
+     "        if c.metadata_bytes is not None and document is None:",
+     "        if False:",
+     ["tests/test_a_declared_zip_is_a_payload.py"],
+     "a parse the reader refused left `declared` empty rather than unknown, so "
+     "X6 said the metadata was not modelled while Z11 accused a member of not "
+     "being in it"),
+
+    ("rules/a-folder-count-under-the-cap-is-exact",
+     "src/vdi2770_validate/rules/container.py",
+     "        capped = len(named) >= MAX_FOLDERS",
+     "        capped = True",
+     ["tests/test_a_finding_says_something_true.py"],
+     "the hedge was derived from the count rather than from whether collection "
+     "stopped, so removing the cap printed an exact number under `at least`"),
+
     ("gates/an-exception-nobody-can-catch-by-name",
      "packages/vdi2770/src/vdi2770/__init__.py",
      '"XmlTooLarge",',

@@ -10,6 +10,7 @@ from typing import Iterator
 
 from ..catalog import CLASSIFICATION_SYSTEM, ISO_639_1, document_classes, english_for, german_for, rule
 from ..model import Finding, Kind
+from ..names import escaped, nfc
 
 RELEASED = "Released"
 
@@ -65,7 +66,17 @@ def check(container, document) -> Iterator[Finding]:
         want_de = german_for(c.class_id)
         want_en = english_for(c.class_id)
         for nm in c.names:
-            lang, text = nm.language, nm.text
+            # `nfc`, because a published name and the name in front of us can
+            # spell the same word two legal ways -- one composed character or a
+            # base and a combining mark -- and an editor chooses without telling
+            # its author. Comparing the code points said `'Zeichnungen, Pläne'`
+            # does not belong to class `02-02`, whose published name is
+            # `'Zeichnungen, Pläne'`: a difference a reader cannot see and a
+            # remedy asking them to type what they already typed. This is what
+            # `names` exists to settle, and the metadata layer was comparing text
+            # that had not been through it. The published names are composed, so
+            # nothing that used to match stops matching.
+            lang, text = nm.language, nfc(nm.text)
             if lang is None:
                 continue          # no Language attribute at all; X2 says so
             # The name's own location, not the classification's. Several names
@@ -75,9 +86,10 @@ def check(container, document) -> Iterator[Finding]:
             if low.startswith("de"):
                 if text not in want_de:
                     r = rule("M3")
-                    published = " / ".join(repr(w) for w in want_de)
+                    published = " / ".join(f"'{escaped(w)}'" for w in want_de)
                     yield Finding(r, r.title, where,
-                                  detail=f"{text!r} for class {c.class_id}; published name is {published}")
+                                  detail=f"'{escaped(text)}' for class {c.class_id}; "
+                                         f"published name is {published}")
             # Not `not (startswith("de") or startswith("en"))`: the `de` half
             # is already False on this branch, and the `en` test below could
             # never be False either. Two conditions that cannot fail read as two
@@ -88,9 +100,10 @@ def check(container, document) -> Iterator[Finding]:
                               detail=f"{text!r} is tagged {lang!r}, which this tool does not check")
             elif text not in want_en:
                 r = rule("M4")
-                both = " / ".join(repr(w) for w in want_en)
+                both = " / ".join(f"'{escaped(w)}'" for w in want_en)
                 yield Finding(r, r.title, where,
-                              detail=f"{text!r} for class {c.class_id}; published renderings are {both}")
+                              detail=f"'{escaped(text)}' for class {c.class_id}; "
+                                     f"published renderings are {both}")
 
     for v in document.versions:
         for tag in v.languages:

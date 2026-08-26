@@ -57,7 +57,7 @@ def test_resolving_lines_does_not_rebuild_the_sibling_list_per_error(monkeypatch
 
     real = Node.find_all
     rebuilds = {}
-    for n in (2_000, 16_000):
+    for n in (100, 400):
         count = [0]
 
         def counting(self, tag, _real=real, _count=count):
@@ -70,9 +70,14 @@ def test_resolving_lines_does_not_rebuild_the_sibling_list_per_error(monkeypatch
         monkeypatch.undo()
         rebuilds[n] = count[0]
 
-    assert rebuilds[16_000] <= rebuilds[2_000] + 2, (
-        f"the sibling list is rebuilt {rebuilds[16_000]} times for 16,000 errors "
-        f"and {rebuilds[2_000]} for 2,000; the cache is not holding")
+    # Both sizes under `MAX_SCHEMA_ERRORS`. At 2,000 and 16,000 the generator is
+    # sliced to the cap, so the uncached count saturates at 1,000 for both and
+    # the comparison was flat with and without the cache it names -- the counted
+    # test written to retire a stopwatch was dead, and the stopwatch was the only
+    # thing left guarding this.
+    assert rebuilds[400] <= rebuilds[100] + 2, (
+        f"the sibling list is rebuilt {rebuilds[400]} times for 400 errors and "
+        f"{rebuilds[100]} for 100; the cache is not holding")
 
 
 def test_the_cost_stops_growing_once_the_budget_is_spent():
