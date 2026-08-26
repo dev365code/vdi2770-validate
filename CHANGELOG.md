@@ -199,6 +199,15 @@ have a class of its own.
 - **Two doors, one fix, applied to one of them.** The console script and
   `python -m vdi2770_validate` are separate entry points; the console handling
   went into the first and the second kept the crash. Both go through `_run` now.
+- **A refusal about an unreleased version said something untrue, and its remedy
+  cost a version number.** The record's `--check` told the reader *"whoever
+  installs 0.6.2 from PyPI does not get this — bump the version"* about a version
+  that was never published. Nobody can install it, so nobody is missing anything,
+  and following the remedy would have burned a number to repair a problem that
+  did not exist. `--write` had the distinction right all along; only the sentence
+  explaining the refusal did not. It is two sentences now, because the repair is
+  genuinely different: a published version cannot take back what it shipped, and
+  an unpublished one has shipped nothing.
 - **Text arriving in pieces has a ceiling.** The tree had a bound on elements and
   none on how many times the parser handed back character data. One character
   reference repeated cost **287 MB** from a 4.2 KiB archive, because a byte count
@@ -836,7 +845,7 @@ that could not fail replaced with one that can.
   0.3.0 notes said three `container` rules where there were four and 42
   containers where the recorded sweep says 43, `docs/divergences.md` said thirty
   reference citations where the catalogue carries 28, and the reader's README
-  listed six budgets and left out the three added the same day.
+  listed six budgets and left out the three most recently added.
 
 
 ## 0.5.1 — 2026-08-24
@@ -896,7 +905,7 @@ run for hours on a small file, and it is in 0.4.0.
   neither NOTICE nor THIRD_PARTY.md. It is in both now, and a test asserts every
   string in it is an identifier rather than their message text — which is the
   property that keeps the attribution small and true.
-- **Both spellings of a filename, in both directions.** Yesterday's NFD/NFC
+- **Both spellings of a filename, in both directions.** The earlier NFD/NFC
   reconciliation normalised `present` and `declared` and missed the `F1` lookup
   itself, so a container whose *metadata* was decomposed and whose *archive* was
   composed had its file reported as declared-but-missing while `F2` stayed quiet

@@ -136,7 +136,7 @@ def test_scope_md_states_the_limits_the_code_enforces():
 def test_the_divergence_numbers_are_derived_from_the_sweep_and_the_catalogue():
     """`divergences.md` states five counts and none of them was checked — one of
     the sentences even says "the count of citations is derived and gated", which
-    was written the same day and was not true.
+    was written at the time and was not true.
 
     They are derived here: the citation count from `rules.json`, the two
     divergence counts and the throws count from `oracle-sweep.json`.
@@ -179,7 +179,7 @@ def test_the_divergence_numbers_are_derived_from_the_sweep_and_the_catalogue():
         f"the sweep has {ours_only} where only we error")
 
     # The sweep records a thrown exception as its own severity block, which is
-    # the whole point of §3: a crash is not a finding.
+    # the whole point of `docs/divergences.md` §3: a crash is not a finding.
     threw = sum(1 for e in sweep.values() if e["reference"].get("EXCEPTION"))
     assert re.search(rf"\b{words.get(threw, threw)}\b of our fixtures", prose), (
         f"the reference threw on {threw} fixtures")

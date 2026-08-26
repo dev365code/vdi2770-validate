@@ -359,10 +359,21 @@ def main() -> int:
             lost = sorted(set(recorded["surface"]) - set(now["surface"]))
             changed = sorted(n for n in set(now["surface"]) & set(recorded["surface"])
                              if now["surface"][n] != recorded["surface"][n])
+            # Two sentences, because the repair is different and the wrong one
+            # costs a version number. This said "whoever installs {v} from PyPI
+            # does not get this" about a version that was never published --
+            # nobody can install it, so nobody is missing anything, and bumping
+            # would have burned a number to fix a problem that did not exist.
+            # `--write` already told the two apart; only the explanation did not.
+            fix = (f"Whoever installs {now['version']} from PyPI does not get this. "
+                   f"Bump the version, move the validator's pin, then rerun --write."
+                   if _published(now["version"]) else
+                   f"sdk-v{now['version']} was never published, so this surface has "
+                   f"not been promised to anybody yet. Rerun --write and review the "
+                   f"diff.")
             print(f"the reader still calls itself {now['version']} and its public surface has "
                   f"moved: added {gained}, removed {lost}, changed {changed}.\n"
-                  f"Whoever installs {now['version']} from PyPI does not get this. Bump the "
-                  f"version, move the validator's pin, then rerun --write.", file=sys.stderr)
+                  + fix, file=sys.stderr)
         else:
             print(f"the version moved {recorded['version']} -> {now['version']} and the record "
                   f"did not. Rerun --write and review the diff.", file=sys.stderr)

@@ -1,5 +1,5 @@
-"""CODE-CONVENTIONS §5: one rule's exception must not kill the run — it is
-demoted to that rule's finding.
+"""One rule's exception must not kill the run — it is demoted to that rule's
+finding.
 
 It killed the run. A batch over a supplier's delivery died on one archive with a
 traceback naming this tool's internals, and every container after it went

@@ -116,7 +116,7 @@
     },
     "DEFECT_KINDS": {
       "kind": "frozenset",
-      "value": "['ambiguous-name', 'archive-too-large', 'container-budget-exhausted', 'decompression-budget-exhausted', 'member-budget-exhausted', 'member-too-large', 'member-unreadable', 'metadata-too-large', 'metadata-unreadable', 'nesting-too-deep', 'not-a-zip', 'suspicious-compression', 'too-many-members', 'unsafe-member-name']"
+      "value": "['ambiguous-name', 'archive-too-large', 'container-budget-exhausted', 'decompression-budget-exhausted', 'member-budget-exhausted', 'member-too-large', 'member-unreadable', 'metadata-too-large', 'metadata-unreadable', 'nameless-member', 'nesting-too-deep', 'not-a-zip', 'suspicious-compression', 'too-many-members', 'unsafe-member-name']"
     },
     "Defect": {
       "bases": [

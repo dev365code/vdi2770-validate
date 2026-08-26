@@ -335,3 +335,41 @@ def test_a_baseline_that_differs_from_its_tag_is_refused(tmp_path):
     assert "is not what sdk-v" in done.stderr, done.stderr
     assert "no baseline at all" not in done.stderr, (
         "this is the 'the tag says something else' path, not the 'no tag' one")
+
+
+def test_an_unreleased_version_is_told_to_re_record_not_to_bump(tmp_path):
+    """`--check` said the wrong thing, and its remedy would have cost a version.
+
+    The message read *"Whoever installs 0.6.2 from PyPI does not get this. Bump
+    the version…"* about a version that was never published — nobody can install
+    it, so nobody is missing anything, and bumping would have burned a number to
+    fix a problem that did not exist. `--write` gets this right and accepts the
+    re-record; only the sentence explaining the refusal was untrue.
+
+    The two cases need two sentences, because the repair is different: a
+    published version cannot take back what it shipped, and an unpublished one
+    has shipped nothing.
+    """
+    tree = tmp_path / "tree"
+    shutil.copytree(ROOT / "packages", tree / "packages")
+    (tree / "tools").mkdir()
+    shutil.copy(TOOL, tree / "tools" / "api_fingerprint.py")
+    subprocess.run(["git", "init", "-q"], cwd=tree, check=True)
+    subprocess.run(["git", "add", "-A"], cwd=tree, check=True)
+    subprocess.run(["git", "-c", "user.email=t@t", "-c", "user.name=t",
+                    "commit", "-q", "-m", "x"], cwd=tree, check=True)
+    subprocess.run(["git", "tag", "sdk-v0.0.1"], cwd=tree, check=True)
+
+    zr = tree / "packages" / "vdi2770" / "src" / "vdi2770" / "zipread.py"
+    text = zr.read_text(encoding="utf-8")
+    anchor = "    member_name: Optional[str] = None"
+    assert text.count(anchor) == 1
+    zr.write_text(text.replace(anchor, anchor + "\n    sneak: Optional[str] = None"),
+                  encoding="utf-8")
+
+    done = subprocess.run([sys.executable, "tools/api_fingerprint.py", "--check"],
+                          cwd=tree, capture_output=True, text=True)
+    assert done.returncode == 1, done.stdout + done.stderr
+    assert "from PyPI does not get this" not in done.stderr, done.stderr
+    assert "--write" in done.stderr, (
+        "an unpublished version is re-recorded, and the message has to say so")

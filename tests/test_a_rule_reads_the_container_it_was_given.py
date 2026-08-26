@@ -8,8 +8,8 @@ They agree wherever the rule runs, because the runner does not reach it without
 metadata it parsed. Reading the container is the version that stays true if that
 stops being so.
 
-CODE-CONVENTIONS §5: a boolean argument is usually two functions. This one was
-neither — it was one function being told something it could see.
+A boolean argument is usually two functions. This one was neither — it was one
+function being told something it could see.
 """
 import inspect
 

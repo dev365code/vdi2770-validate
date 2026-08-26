@@ -48,8 +48,8 @@ interface definition, not on an explicit grant. We therefore:
 If VDI would rather this file were not redistributed, open an issue. What can
 actually be done, stated honestly rather than generously:
 
-- the file is removed from this repository the same day, and from every release
-  published after that;
+- the file is removed from this repository the day we are told, and from every
+  release published after that;
 - releases already on a package index are yanked, which hides them from
   resolvers but **does not delete them** — a pinned version still installs, and
   mirrors may already hold copies. Published bytes cannot be recalled by anyone,

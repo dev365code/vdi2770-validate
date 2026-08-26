@@ -195,7 +195,7 @@ def test_security_md_cites_a_test_that_would_actually_notice():
 
 def test_every_test_security_md_cites_exists():
     """The table's whole value is the "where the proof is" column, and one row
-    pointed at `tests/test_readers.py`, deleted the same day its contents moved
+    pointed at `tests/test_readers.py`, deleted when its contents moved
     into the SDK's suite. A citation to a file that is not there is worse than
     no citation: it reads as evidence.
 

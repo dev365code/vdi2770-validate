@@ -29,7 +29,7 @@ from .rules import schema as r_schema
 def _into(report, findings, where, what: str) -> None:
     """Run one rule module's findings into the report, demoting a crash.
 
-    CODE-CONVENTIONS §5: one rule's exception must not kill the run. It killed
+    One rule's exception must not kill the run. It killed
     the run — a batch died on one archive with a traceback naming this tool's
     internals, and every container after it went unchecked. A rule that crashed
     has checked nothing, so this is an error: reporting the rest and exiting 0

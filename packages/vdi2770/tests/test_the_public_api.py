@@ -728,10 +728,9 @@ def test_a_decoy_after_the_end_cannot_hide_the_real_trailer():
     and offers `P3` (*produce the file as PDF/A*): a remedy for a defect the
     producer's exporter does not have.
 
-    Which is the sixth time this scan has been repaired, and the fourth time the
-    repair was a different way of guessing where to look. `startxref` is not a
-    guess -- it is where the format says the answer is, and it is what a reader
-    follows.
+    Every window this scan has used was a guess about where to look, and every
+    guess was pushable by an appender. `startxref` is not a guess -- it is where
+    the format says the answer is, and it is what a reader follows.
     """
     real = _pdf_with_xref(b"<< /Size 2 /Encrypt 4 0 R >>")
     assert vdi2770.read_pdf(real).encrypted is True, "premise"
