@@ -50,9 +50,12 @@ have a class of its own.
   that had no name. Two bounds again, because one would not have held:
   `MAX_ATTRIBUTES_PER_ELEMENT` flattens the quadratic and `MAX_ATTRIBUTES` stops
   a sender paying the flattened cost once per element. **0.04 s** and **0.53 s**
-  now. The corpus's worst real element carries three attributes and its worst
-  document fifty-one, so both caps sit two orders of magnitude above anything a
-  delivery can reach.
+  now. Across every `VDI2770_*.xml` in this repository's corpus the worst
+  element carries three attributes and the worst document fifty-one — so the
+  per-element cap sits 43× above the worst element seen, and the total 1,900×
+  above the worst document. (Naming the set matters: counting the loose XML
+  files beside the containers as well gives 74, and a number whose subject is
+  unstated cannot be re-derived from the sentence that states it.)
 - **One path that blocks no longer stops the sweep.** `cli` wraps each path in
   `try/except` so a bad one cannot stop the rest — but a hang is not an
   exception. Opening a FIFO with no writer waits forever, so a single named pipe
@@ -220,12 +223,37 @@ have a class of its own.
   running in the right directory formatted a `str` as a match object, so a real
   failure printed a type error instead of the workflow, the step and the missing
   line. It reported red, which is why it survived; it just could not say why.
+- **Numbers that could not be re-derived, re-derived.** Three published
+  measurements were wrong and one was right but unusable. The reader's README —
+  which is the front page of a package people install — said one character
+  reference repeated cost 287 MB from a 4.2 KiB archive; measured in a fresh
+  process, the whole tool holds **48 MB** on that archive and **23 MB** with the
+  ceiling. `docs/scope.md` said a crafted file could make one rule true two
+  hundred thousand times; the element budget refuses the document first, so the
+  real ceiling is **99,997** and the page now says so — and the gate that guards
+  that page derives the number instead of trusting it, which is what it did for
+  six of the page's other limits and not for the one that drifted. The attribute
+  caps were called "two orders of magnitude above anything a delivery can reach";
+  they are **43×** the worst element seen and **1,900×** the worst document, which
+  is one order and three, not two and two.
+  The fourth was the interesting one. "The corpus's worst document carries
+  fifty-one attributes" is *true* — over every `VDI2770_*.xml`. Counting the loose
+  XML beside the containers gives 74. Both numbers are honest and the sentence
+  did not say which set it meant, so it could not be checked. Naming the set was
+  the repair; changing the number would have been a mistake.
+- **A gate that starts Python leaves no bytecode.** `__pycache__` is not where it
+  goes on every machine: `sys.pycache_prefix` can put it outside the tree, where
+  nothing cleans it and where a same-size restore inside one second leaves a
+  `.pyc` CPython still considers valid. That produced a `make check` failure
+  naming a budget as moved while the source on disk was correct, and 73,000 cache
+  files outside the tree. The mutation table already set this; the sdist, wheel
+  and standalone gates start Python the same way and did not.
 - **Text arriving in pieces has a ceiling.** The tree had a bound on elements and
-  none on how many times the parser handed back character data. One character
-  reference repeated cost **287 MB** from a 4.2 KiB archive, because a byte count
-  is not the cost — each `&#120;` decodes to one character while the callback that
+  none on how many times the parser handed back character data. 450,000 `&#120;`
+  references — a **4.1 KiB** archive — held **48 MB**, because a byte count is not
+  the cost: each reference decodes to one character while the callback that
   carries it is a whole Python object. `MAX_TEXT_PIECES` counts the callbacks,
-  which is where the cost is: **112 MiB** on the same input.
+  which is where the cost is: **23 MB** on the same input.
 - **Two rules stopped contradicting each other about the same folder.** Writers
   mix `./` prefixes and doubled slashes inside one archive. `Z13` decided a
   folder existed after dropping `.` segments, and `files.py` suppressed `F2` by

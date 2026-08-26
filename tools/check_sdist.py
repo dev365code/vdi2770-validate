@@ -8,12 +8,20 @@ not run in anyone else's environment.
 from __future__ import annotations
 
 import glob
+import os
 import shutil
 import subprocess
 import sys
 import tarfile
 import tempfile
 from pathlib import Path
+
+# Bytecode goes wherever this interpreter puts it, and `sys.pycache_prefix`
+# can put it outside the tree entirely -- where nothing here cleans it and
+# where a same-size restore inside one second leaves a stale `.pyc` that
+# CPython still considers valid. Writing none is cheaper than chasing it.
+NO_BYTECODE = dict(os.environ, PYTHONDONTWRITEBYTECODE="1")
+
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -59,6 +67,7 @@ def check(project: Path, before: list) -> int:
 def _build_and_run(project: Path, before: list) -> int:
     with tempfile.TemporaryDirectory() as tmp:
         build = subprocess.run([sys.executable, "-m", "build", "--sdist", "--outdir", tmp, str(project)],
+                               env=NO_BYTECODE,
                                capture_output=True, text=True)
         if build.returncode:
             print(build.stdout[-2000:], build.stderr[-2000:], file=sys.stderr)
@@ -85,7 +94,7 @@ def _build_and_run(project: Path, before: list) -> int:
         for step in ([*before], ["-m", "pytest", "-q"]):
             if not step:
                 continue
-            r = subprocess.run([sys.executable, *step], cwd=unpacked)
+            r = subprocess.run([sys.executable, *step], cwd=unpacked, env=NO_BYTECODE)
             if r.returncode:
                 print(f"{project.name}: the sdist cannot run its own tests: {step}",
                       file=sys.stderr)

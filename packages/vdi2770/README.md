@@ -114,8 +114,9 @@ across one read: `MAX_CONTAINERS`, `MAX_TOTAL_METADATA_BYTES`,
 `MAX_ATTRIBUTES`. The first bounds the tree built out of one metadata file — the
 bytes were bounded and that tree was not, and the expansion between them is the
 sender's to choose. The second bounds the text hung off it, which the element
-count does not see: a document of three elements whose text is one character
-reference repeated cost 287 MB from a 4.2 KiB archive. The last two bound the
+count does not see: a document of three elements whose text is 450,000 character
+references — a 4.1 KiB archive — held 48 MB before this bound existed and holds
+23 MB now. The last two bound the
 attributes hung off it, which neither of the others sees: attributes are cheap
 to write and the schema check downstream is quadratic in how many sit on one
 element, so 12,000 of them in a 27 KiB archive cost 13.6 seconds. `vdi2770.pdfread` has eight of its own for the PDF scan:

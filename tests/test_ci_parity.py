@@ -625,3 +625,34 @@ def test_the_reader_in_this_tree_is_the_one_its_version_names():
         f"the reader says it is {here}, `sdk-v{here}` is published, and these have "
         f"moved since: {changed}. Whoever installs {here} does not get them, and "
         f"the validator's pin would fetch that one. Bump the reader.")
+
+
+def test_a_gate_that_starts_python_does_not_leave_bytecode_behind():
+    """`__pycache__` is not where the bytecode goes on every machine.
+
+    `sys.pycache_prefix` moves it out of the tree entirely — on the machine this
+    was written on, to `~/Library/Caches`. A gate that clears `__pycache__` and
+    then re-reads a file it has just restored is relying on a directory that may
+    hold nothing, and CPython validates a cache on (mtime, size): restore a file
+    to its previous size inside the same second and the stale bytecode wins.
+
+    That is not hypothetical. It produced a `make check` failure that named a
+    budget as moved when the source on disk was correct, and 73,000 cache files
+    had accumulated outside the tree where no cleanup looks.
+
+    The mutation table already sets this. The others start Python the same way
+    and did not.
+    """
+    import re
+
+    for name in sorted(p.name for p in (ROOT / "tools").glob("*.py")):
+        body = (ROOT / "tools" / name).read_text(encoding="utf-8")
+        if not re.search(r"subprocess\.(run|Popen|check_)", body):
+            continue
+        if "sys.executable" not in body:
+            continue
+        assert "PYTHONDONTWRITEBYTECODE" in body, (
+            f"tools/{name} starts Python in a subprocess without "
+            f"PYTHONDONTWRITEBYTECODE, so it leaves bytecode wherever this "
+            f"interpreter puts it — which is not always a directory anything "
+            f"cleans")

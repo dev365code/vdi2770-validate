@@ -51,6 +51,13 @@ DISTRIBUTIONS = [
 # A container that produces findings, used to prove the installed wheel runs.
 SMOKE = ROOT / "corpus" / "examples" / "missingdocuments" / "folders.zip"
 
+# Bytecode goes wherever this interpreter puts it, and `sys.pycache_prefix`
+# can put it outside the tree entirely -- where nothing here cleans it and
+# where a same-size restore inside one second leaves a stale `.pyc` that
+# CPython still considers valid. Writing none is cheaper than chasing it.
+NO_BYTECODE = dict(os.environ, PYTHONDONTWRITEBYTECODE="1")
+
+
 
 def contents(project: Path, out: Path) -> tuple:
     # Before, not just after, and `*.egg-info` as well as `build`. `python -m
@@ -65,6 +72,7 @@ def contents(project: Path, out: Path) -> tuple:
         shutil.rmtree(stale, ignore_errors=True)
     build = subprocess.run(
         [sys.executable, "-m", "build", "--wheel", "--outdir", str(out), str(project)],
+        env=NO_BYTECODE,
         capture_output=True, text=True)
     if build.returncode:
         print(build.stdout[-2000:], build.stderr[-2000:], file=sys.stderr)
@@ -139,7 +147,7 @@ def smoke(wheels: list) -> list:
             return [f"the wheels do not install: {install.stderr[-800:]}"]
         found = []
 
-        env = dict(os.environ, PYTHONPATH=tmp)
+        env = dict(NO_BYTECODE, PYTHONPATH=tmp)
         env.pop("PYTHONHASHSEED", None)
         script = ("import sys, vdi2770_validate, vdi2770;"
                   "print(vdi2770_validate.__file__);"

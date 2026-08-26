@@ -98,10 +98,21 @@ def test_scope_md_states_the_limits_the_code_enforces():
     container" — and nothing derived any of them. It is the page a buyer reads
     to decide whether this tool will cope with their delivery.
     """
-    from vdi2770 import pdfread, zipread
+    from vdi2770 import pdfread, xmlread, zipread
     from vdi2770_validate.model import MAX_LISTED_PER_RULE
 
     prose = (ROOT / "docs" / "scope.md").read_text(encoding="utf-8")
+    # How many times one rule can be true. This sentence said "two hundred
+    # thousand" and had gone stale: `MAX_ELEMENTS` bounds one metadata document,
+    # so the real ceiling is just under a hundred thousand and the document is
+    # refused past it. Six of this page's numbers were derived here and this was
+    # not one of them -- which is the one that drifted.
+    assert xmlread.MAX_ELEMENTS == 100_000, (
+        "the element budget moved; the sentence about how many times one rule "
+        "can be true is derived from it")
+    assert "nearly a hundred thousand" in prose, (
+        "docs/scope.md no longer says how many times one rule can be true, or "
+        f"says it in words this cannot check; the budget is {xmlread.MAX_ELEMENTS}")
     mib, gib = 1 << 20, 1 << 30
     stated = {
         "containers in one read": (zipread.MAX_CONTAINERS, "a thousand containers"),
@@ -319,8 +330,8 @@ def test_no_document_cites_a_file_that_is_not_here():
     # A floor of 12 against a real count in the twenties lets ten citations vanish in
     # silence, which is the failure this whole file is about. Exact, and updated
     # when a citation is added or removed -- that is the point of it.
-    assert seen == 22, (
-        f"{seen} citations found, not 22. If you added or removed one, say so here; "
+    assert seen == 23, (
+        f"{seen} citations found, not 23. If you added or removed one, say so here; "
         f"if you did not, ten of them just stopped being checked.")
 
 

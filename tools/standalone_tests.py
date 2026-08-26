@@ -17,6 +17,7 @@ something new when a file gains an import.
 """
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -28,6 +29,13 @@ SUITES = [
      sorted((ROOT / "packages" / "vdi2770" / "tests").glob("test_*.py")),
      ["-c", "pyproject.toml"]),
 ]
+
+# Bytecode goes wherever this interpreter puts it, and `sys.pycache_prefix`
+# can put it outside the tree entirely -- where nothing here cleans it and
+# where a same-size restore inside one second leaves a stale `.pyc` that
+# CPython still considers valid. Writing none is cheaper than chasing it.
+NO_BYTECODE = dict(os.environ, PYTHONDONTWRITEBYTECODE="1")
+
 
 
 def main() -> int:
@@ -42,7 +50,7 @@ def main() -> int:
             done = subprocess.run(
                 [sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider",
                  *extra, str(rel)],
-                cwd=cwd, capture_output=True, text=True)
+                cwd=cwd, capture_output=True, text=True, env=NO_BYTECODE)
             ran += 1
             # 5 is "collected nothing", which is a file that has stopped being a
             # test rather than a file that passes.

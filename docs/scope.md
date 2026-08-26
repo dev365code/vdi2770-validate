@@ -40,7 +40,8 @@ failure — files that never claimed at all.
 ## Known limits of what *is* in scope
 
 - **A rule is listed at most a hundred times per container**: one rule fires once
-  per element, so a crafted file can make one rule true two hundred thousand times.
+  per element, so a crafted file can make one rule true nearly a hundred thousand
+  times — the element budget for one metadata file is what stops it going further.
   Past a hundred the finding is counted but not printed, and the report says how
   many it withheld (`notListed` in JSON). **The counts and the exit code are not
   capped** — a bounded listing must never become a quieter verdict. Reading past
