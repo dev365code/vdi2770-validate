@@ -281,6 +281,22 @@ def read(data: bytes, path: str, depth: int = 0, _budget: Optional[_Budget] = No
         return c
 
     infos = zf.infolist()
+    # An entry whose name is the empty string, before anything asks it a
+    # question. `ZipInfo.is_dir()` on Python 3.9 is `filename[-1] == "/"`, which
+    # raises `IndexError` on it -- out of the public `read`, naming CPython
+    # internals, taking the rest of a sweep with it; on 3.13 the same archive is
+    # accepted and the entry becomes a member called `""`. Two supported
+    # interpreters, two answers, and neither of them a fact about the archive.
+    #
+    # Filtered here rather than guarded at each of the four places that ask,
+    # because the next place to ask would not have the guard.
+    nameless = [i for i in infos if not i.filename]
+    if nameless:
+        infos = [i for i in infos if i.filename]
+        c.defects.append(Defect(
+            "nameless-member", c.where,
+            f"{len(nameless)} entr{'y' if len(nameless) == 1 else 'ies'} in "
+            f"this archive have no name; nothing can extract them"))
     if not budget.take_members(len(infos)):
         # The same answer `too-many-members` gives, for the same reason: we did
         # not read it, so we say nothing about what is in it. `kind` is what

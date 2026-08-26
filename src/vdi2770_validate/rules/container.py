@@ -63,6 +63,9 @@ DEFECT_TO_RULE = {
     "decompression-budget-exhausted": "Z5",
     "member-budget-exhausted": "Z5",
     "member-unreadable": "Z12",
+    # A name is how a member is asked for. An entry with none cannot be
+    # extracted by anything, which is what Z12 already says.
+    "nameless-member": "Z12",
     # Z10, which already says exactly this: two members of the archive have the
     # same name. No new rule -- the reader learned to refuse both entries rather
     # than silently reading the last one, and the rule for that was already here.
@@ -131,7 +134,22 @@ def check(container, declared, is_declared_payload) -> Iterator[Finding]:
     # drops anything that blew a budget or carried an unsafe name -- so an archive
     # whose only member we refused would otherwise be reported as having nothing
     # in it, with a remedy telling the user to add files they already sent.
-    if not container.members and not container.rejected:
+    # A `.zip` the parent declared as a `DigitalFile` is one of the document's
+    # *files*. What is inside it is its own business, the way a PDF's is, so the
+    # rules that judge how a *container* arranges itself have nothing to say
+    # about it. `Z3` and `Z11` already knew that and `Z2` and `Z9` did not: a
+    # conforming delivery carrying a parts bundle was told to store the bundle's
+    # members at the root, which flattens it, and an empty payload was reported
+    # as an empty container. One decision, made at one place, read by all four.
+    #
+    # `False` is the one value that does *not* make it opaque: it means the
+    # parent modelled its metadata and did not declare this archive, which is
+    # the undeclared inner container `Z3` exists to report. `True` is a declared
+    # payload and `None` is a parent nobody could model -- neither is something
+    # to judge the shape of.
+    opaque = container.kind is Kind.UNKNOWN and is_declared_payload is not False
+
+    if not container.members and not container.rejected and not opaque:
         r = rule("Z2")
         yield Finding(r, r.title, container.where)
         return
@@ -169,7 +187,7 @@ def check(container, declared, is_declared_payload) -> Iterator[Finding]:
     # this rule fire or not depending on which library wrote the archive rather
     # than on the archive's shape. A folder exists if a member sits in one.
     folders = set()
-    for m in container.members:
+    for m in container.members if not opaque else ():
         if len(folders) >= MAX_FOLDERS:
             break
         if m.is_dir:

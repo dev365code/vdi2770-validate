@@ -142,3 +142,26 @@ def test_the_case_table_exercises_both_sides(monkeypatch):
             refused.add(why)
     assert refused == REFUSING, f"the table's refusing cases moved: {sorted(refused)}"
     assert len(refused) >= 3, "too few cases where present and file_names differ"
+
+
+def test_an_entry_with_no_name_at_all_is_not_a_crash():
+    """A 98-byte archive whose one entry has a zero-length name.
+
+    `ZipFile(...)` is inside the guard that turns a malformed archive into a
+    defect; the loop over `infolist()` is not. On Python 3.9 `ZipInfo.is_dir()`
+    is `self.filename[-1] == '/'`, which raises `IndexError` on the empty
+    string -- out of the public `read`, naming CPython internals, taking the
+    rest of a sweep with it. On 3.13 the same input is accepted as a member
+    named `''`, so the two supported interpreters disagreed as well.
+    """
+    import struct
+
+    local = struct.pack("<IHHHHHIIIHH", 0x04034B50, 20, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    central = struct.pack("<IHHHHHHIIIHHHHHII", 0x02014B50, 0x031E, 20, 0, 0, 0,
+                          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    end = struct.pack("<IHHHHIIH", 0x06054B50, 0, 0, 1, 1, len(central), len(local), 0)
+
+    container = zipread.read(local + central + end, "nameless.zip")
+    assert container is not None
+    assert all(m.name for m in container.members), (
+        "an entry with no name was kept as a member")

@@ -60,7 +60,7 @@ DEFECT_KINDS = frozenset({
     "suspicious-compression", "archive-too-large", "metadata-too-large",
     "metadata-unreadable", "member-unreadable", "nesting-too-deep",
     "container-budget-exhausted", "decompression-budget-exhausted",
-    "member-budget-exhausted", "ambiguous-name",
+    "member-budget-exhausted", "ambiguous-name", "nameless-member",
 })
 
 

@@ -108,3 +108,44 @@ def test_a_declared_payload_that_is_a_real_container_is_still_validated(tmp_path
         ("documentcontainer.zip", DOC_BYTES), ("sub.zip", inner.getvalue())])
     assert "M2" in ids(p), f"the declared payload was skipped entirely: {ids(p)}"
     assert "Z3" not in ids(p)
+
+
+
+def _payload_container(tmp_path, name, inner):
+    """A document container declaring `cad.zip`, whose payload holds `inner`."""
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        for n, d in inner.items():
+            z.writestr(n, d)
+    meta = META.replace(
+        DECL_PDF, DECL_PDF + '<DigitalFile FileFormat="application/zip">cad.zip</DigitalFile>')
+    return build(tmp_path, name, [
+        ("VDI2770_Metadata.xml", meta), ("B.pdf", DOC.read("B.pdf")),
+        ("cad.zip", buf.getvalue())])
+
+
+def test_a_declared_payload_is_not_judged_on_how_it_arranges_itself(tmp_path):
+    """A CAD bundle keeps its own folders, and an empty one is not "the archive
+    is empty".
+
+    A `.zip` the metadata declares as a `DigitalFile` is one of the document's
+    *files*. Its inside is its own business, exactly as a PDF's is. `Z3` and
+    `Z11` already know this; `Z9` and `Z2` did not, so a conforming delivery
+    carrying `cad.zip` with `cad/part.step` in it drew *"The archive stores
+    files in folders -- store the members at the root of the archive"*.
+    Following that flattens a parts bundle and breaks the delivery; not
+    following it leaves a warning that never clears.
+    """
+    for name, inner in (("folders.zip", {"cad/part.step": b"ISO-10303-21;"}),
+                        ("empty.zip", {})):
+        got = ids(_payload_container(tmp_path, name, inner))
+        assert "Z9" not in got, (name, got)
+        assert "Z2" not in got, (name, got)
+
+
+def test_a_payload_that_is_unsafe_is_still_reported(tmp_path):
+    """The other half. Suppressing what a payload says about *structure* must
+    not suppress what it says about *bytes*: a member that cannot be handed
+    over safely is a delivery risk whatever the metadata calls the archive."""
+    got = ids(_payload_container(tmp_path, "unsafe.zip", {"../escape.txt": b"x"}))
+    assert "Z4" in got, got
