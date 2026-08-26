@@ -2,9 +2,16 @@
 
 ## The Developer Certificate of Origin
 
-Every commit carries a `Signed-off-by` line — `git commit -s`. That is a
+Sign your commits — `git commit -s`. That is a
 [certificate of origin](https://developercertificate.org/), not a transfer of
 rights; you keep the copyright in what you write.
+
+32 commits here do not carry the line. The practice was in place,
+lapsed for one afternoon, and resumed the next day; nothing caught it, because
+the check that exists for this reads pull requests and every one of those
+commits arrived by a direct push. The trailers were not added afterwards — a
+certificate of origin signed on somebody's behalf, later, certifies nothing. A
+test holds the lapse closed: it fails if any commit newer than it is unsigned.
 
 ## Before you open a pull request
 

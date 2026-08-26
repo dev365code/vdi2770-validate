@@ -74,3 +74,56 @@ def test_a_publishing_workflow_refuses_a_version_the_index_already_has():
         assert "tools/check_version_is_new.py" in body, (
             f"{path.name} publishes without asking whether the index already "
             f"has this version; a re-pointed tag would try to upload over it")
+
+
+def test_each_workflow_compares_the_tag_to_the_version_and_stops():
+    """The existing check asserts a shell variable is created, not that it is
+    used. Replace the comparison with `true` and nothing goes red.
+
+    Its own docstring says what that costs: *"A tag that says 0.2.0 publishing a
+    tree that says 0.1.9 is unrecoverable: the number is on PyPI forever and
+    does not match the code."* The assignment is not what prevents that.
+    """
+    import re
+
+    for path in (VALIDATOR, SDK):
+        body = path.read_text(encoding="utf-8")
+        assert re.search(r'test\s+"\$tag"\s*=\s*"\$pkg"', body), (
+            f"{path.name} builds $tag and $pkg and never compares them")
+        compare = re.search(r'test\s+"\$tag"\s*=\s*"\$pkg"[^\n]*', body).group(0)
+        assert "exit 1" in compare, (
+            f"{path.name} compares the tag to the version and does not stop on a "
+            f"mismatch: {compare!r}")
+
+
+def test_every_workflow_that_reads_the_tag_history_fetches_it():
+    """`fetch-depth: 0` is load-bearing in all three, and pinned by nothing.
+
+    A default checkout is `--depth 1 --no-tags`. Without the tags,
+    `check_release_order.py` and the API record refuse — they fail closed, which
+    is right — but the two assertions comparing this tree against `sdk-v*` do
+    not: they *skip*. That is the shape the comment in `ci.yml` describes as
+    "the only way a gate fails that nobody notices", and it was reachable by
+    changing one character in any of the three files.
+    """
+    import re
+    from pathlib import Path
+
+    # Not `"fetch-depth: 0" in body`. Two of these files explain the line in a
+    # comment above it, so that spelling is satisfied by the explanation while
+    # the checkout itself says `1`. Found by mutating the config line and
+    # watching this pass -- the first version of this test read the prose.
+    setting = re.compile(r"^\s*(?!#)[^\n#]*fetch-depth:\s*(\d+)", re.M)
+    reads_tags = ("make check", "check_release_order.py", "api_fingerprint.py")
+    for path in sorted(Path(VALIDATOR.parent).glob("*.yml")):
+        body = path.read_text(encoding="utf-8")
+        if not any(name in body for name in reads_tags):
+            continue
+        depths = setting.findall(body)
+        assert depths, (
+            f"{path.name} runs something that reads the tag history and does not "
+            f"set fetch-depth; a default checkout is --depth 1 --no-tags, and the "
+            f"assertions that compare against a tag will skip rather than fail")
+        assert all(d == "0" for d in depths), (
+            f"{path.name} checks out with fetch-depth {depths} and then runs "
+            f"something that reads the tag history")

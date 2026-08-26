@@ -446,6 +446,31 @@ TABLE = [
      "re-creating the archive reproduces the same encrypted member and the "
      "same finding"),
 
+    ("gates/a-tag-that-is-not-the-version-stops-the-release",
+     ".github/workflows/release.yml",
+     '          test "$tag" = "$pkg" || { echo "tag $tag != package $pkg"; exit 1; }',
+     "          true",
+     ["tests/test_two_packages_publish_separately.py"],
+     "the test asserted the shell variable was created, not that it was "
+     "compared: a tag saying 0.2.0 could publish a tree saying 0.1.9, and the "
+     "number is on the index forever"),
+
+    ("gates/a-release-checkout-can-see-its-tags",
+     ".github/workflows/release.yml",
+     "        with: { fetch-depth: 0 }",
+     "        with: { fetch-depth: 1 }",
+     ["tests/test_two_packages_publish_separately.py"],
+     "without the tags the assertions comparing this tree against sdk-v* skip "
+     "rather than fail, in the one workflow that authorises a publish"),
+
+    ("gates/ci-installs-the-reader-from-this-tree",
+     ".github/workflows/ci.yml",
+     "          python -m pip install -e packages/vdi2770\n",
+     "",
+     ["tests/test_ci_parity.py"],
+     "pip then resolves the pin from an index and every result in the run is "
+     "about a different reader than the commit's"),
+
     ("gates/an-exception-nobody-can-catch-by-name",
      "packages/vdi2770/src/vdi2770/__init__.py",
      '"XmlTooLarge",',

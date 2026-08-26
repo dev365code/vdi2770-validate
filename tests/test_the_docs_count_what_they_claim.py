@@ -418,3 +418,45 @@ def test_the_changelog_counts_the_trailer_shapes_it_claims_are_pinned():
     # Plus one: the sentence says "including the real encrypted PDF in the
     # corpus", which is a fixture rather than a parameter.
     assert said == real + 1, f"the CHANGELOG says {said}; there are {real} + 1"
+
+
+def test_contributing_is_right_about_who_signed_off():
+    """`CONTRIBUTING.md` said every commit carries a `Signed-off-by` line.
+
+    Thirty-two do not. The practice was in place, lapsed for one afternoon, and
+    resumed the next day — and nothing noticed, because `.github/dco.yml` checks
+    pull requests and every one of those commits arrived by a direct push. A
+    public file stating something about this repository that `git log` refutes
+    is the defect this suite exists for.
+
+    History is not being rewritten to make the sentence true, so the sentence
+    says what happened instead. Two halves are held here: the count in the prose
+    matches the log, and the lapse stays closed — nothing newer than it is
+    unsigned.
+    """
+    import subprocess
+
+    import pytest
+
+    got = subprocess.run(
+        ["git", "log", "--reverse", "--format=%H%x01%(trailers:key=Signed-off-by)"],
+        cwd=ROOT, capture_output=True, text=True)
+    if got.returncode != 0:
+        pytest.skip("not a git checkout; the log is not available here")
+    signed = [("Signed-off-by" in line.split("\x01", 1)[1])
+              for line in got.stdout.splitlines() if "\x01" in line]
+    assert signed, "no commits found; this test is looking in the wrong place"
+
+    unsigned = [i for i, ok in enumerate(signed) if not ok]
+    prose = (ROOT / "CONTRIBUTING.md").read_text(encoding="utf-8")
+
+    if not unsigned:
+        assert "do not carry it" not in prose, (
+            "every commit is signed now; the paragraph about the lapse is stale")
+        return
+
+    assert spelled(len(unsigned)) in prose.lower() or str(len(unsigned)) in prose, (
+        f"{len(unsigned)} commits carry no Signed-off-by line and CONTRIBUTING.md "
+        f"does not say so")
+    assert all(signed[i] for i in range(unsigned[-1] + 1, len(signed))), (
+        "a commit newer than the lapse is unsigned; the lapse has reopened")

@@ -288,6 +288,23 @@ have a class of its own.
   and send it again*, which reproduces the same member and the same finding. The
   detail already knew — it prints "password required" — and the remedy ignored
   it.
+- **Three release gates that could not fail, and the certificate that was not
+  signed.** The check that a tag is the version it publishes asserted only that
+  a shell variable had been created — replace the comparison with `true` and
+  nothing went red, while a tag saying one number could publish a tree saying
+  another, permanently. `fetch-depth: 0` is load-bearing in all three workflows
+  and pinned by nothing: without the tags, the assertions comparing this tree
+  against `sdk-v*` do not fail, they *skip*. And deleting the line that installs
+  the reader from this working tree left CI resolving the pin from an index, so
+  every result in the run would have been about a different reader than the
+  commit's.
+  `CONTRIBUTING.md` said every commit carries a `Signed-off-by` line. 32 do not
+  — the practice was in place, lapsed for one afternoon, and resumed the next
+  day, and the check that exists for it reads pull requests while every one of
+  those commits arrived by a direct push. The trailers were not added
+  afterwards, because a certificate of origin signed on somebody's behalf later
+  certifies nothing; the sentence says what happened, and a test holds the lapse
+  closed.
 - **Text arriving in pieces has a ceiling.** The tree had a bound on elements and
   none on how many times the parser handed back character data. 450,000 `&#120;`
   references — a **4.1 KiB** archive — held **48 MB**, because a byte count is not
@@ -660,7 +677,7 @@ below is measured on this machine, before and after, on the same input.
 Three gates that ask what `make check` cannot ask of itself.
 
 - **`make mutations`** takes every claim this project makes about a gate, breaks
-  the thing that gate protects, and checks the gate notices — 62 rows, each
+  the thing that gate protects, and checks the gate notices — 65 rows, each
   naming the pytest selection or the tool that has to go red. The harness checks
   itself as hard as it checks the code: a row whose anchor no longer appears
   exactly once is an error rather than a pass; every apply and restore clears

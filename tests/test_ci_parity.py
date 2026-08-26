@@ -656,3 +656,33 @@ def test_a_gate_that_starts_python_does_not_leave_bytecode_behind():
             f"PYTHONDONTWRITEBYTECODE, so it leaves bytecode wherever this "
             f"interpreter puts it — which is not always a directory anything "
             f"cleans")
+
+
+def test_ci_installs_both_halves_of_this_repository_from_the_tree():
+    """Deleting the reader's editable install from CI leaves nothing red.
+
+    The step's own comment says why it is there: *"The SDK first: the validator
+    depends on it, and installing it from the working tree is what proves this
+    commit's two halves fit together."* Without it, pip resolves the pin from an
+    index and every result in the run is about a different reader than the one
+    in the commit.
+
+    `test_contributing_installs_what_ci_installs` checks the other direction —
+    that whatever CI installs is written down — so removing an install shrinks
+    what it has to check and it passes.
+    """
+    editable = [c for c in ci_commands()
+                if c.startswith("python -m pip install -e ")]
+    reader = [i for i, c in enumerate(editable) if "packages/vdi2770" in c]
+    validator = [i for i, c in enumerate(editable) if "packages/vdi2770" not in c]
+
+    assert reader, (
+        f"CI does not install the reader from this tree; its editable installs "
+        f"are {editable}. The pin would then be resolved from an index and every "
+        f"result in the run would be about a different reader than this commit's.")
+    assert validator, (
+        f"CI does not install the validator from this tree; its editable "
+        f"installs are {editable}")
+    assert reader[0] < validator[0], (
+        f"CI installs the validator before the reader, so the pin is resolved "
+        f"from an index before this tree's reader is in place: {editable}")
