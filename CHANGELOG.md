@@ -4,8 +4,9 @@
 
 Things that were true of the code and not of what the project said about it,
 plus the guards that make each one say so next time. The count that used to open
-this section was written when it held six; it holds seventy now, and a number
-nobody re-derives is the kind of claim the rest of these entries are about.
+this section was written when it held six. Every count in it is now derived by a
+gate or dropped, because a number nobody re-derives is the kind of claim the
+rest of these entries are about — and that one was itself wrong twice.
 
 
 The trailer scan had been repaired four times, and each repair fixed the shape
@@ -31,8 +32,15 @@ have a class of its own.
   bound cannot hold both. `MAX_TRAILER_SCAN` is again per dictionary;
   `MAX_TRAILERS` bounds how many are read, **from the end**, because an
   incremental update appends and the newest trailer is the one that counts.
-  Worst case is 4 MiB walked, **0.07 s**; the ordinary case is **0.008 s** and
-  does not move when the input grows fivefold.
+  Worst case is **4 MiB walked** — 64 dictionaries at the per-dictionary cap —
+  and what that costs depends on what fills them: a dictionary of long comments
+  is **0.10 s** of CPU because the newline search is a `memchr`, and one of
+  repeated `/` is **2.0 s**, because every byte then starts a name token and
+  pays the whole branch chain. The first figure published here was the cheap
+  fill measured as though it were the worst. Ordinary files are far below
+  either: a 33 KiB PDF is 0.0008 s. That cost is linear in file size rather
+  than flat — `finditer` and `rfind` each scan the whole file once — so a
+  25-fold input is about 13-fold the cost.
 - **Two more misses in the same scan, both the same asymmetry.** Comments were
   skipped inside the dictionary but not between `trailer` and the `<<`, so a file
   that wrote one there had its dictionary declared absent. And the token was
@@ -49,13 +57,18 @@ have a class of its own.
   every other budget in this reader exists to refuse, reached along the one axis
   that had no name. Two bounds again, because one would not have held:
   `MAX_ATTRIBUTES_PER_ELEMENT` flattens the quadratic and `MAX_ATTRIBUTES` stops
-  a sender paying the flattened cost once per element. **0.04 s** and **0.53 s**
-  now. Across every `VDI2770_*.xml` in this repository's corpus the worst
-  element carries three attributes and the worst document fifty-one — so the
-  per-element cap sits 43× above the worst element seen, and the total 1,900×
-  above the worst document. (Naming the set matters: counting the loose XML
-  files beside the containers as well gives 74, and a number whose subject is
-  unstated cannot be re-derived from the sentence that states it.)
+  a sender paying the flattened cost once per element. That 27 KiB archive is
+  **0.004 s** now; a document sitting on *both* caps — 781 elements of 128
+  attributes, 0.80 MiB — is **2.7 s**, which is the ceiling this pair of bounds
+  actually buys.
+  Across every `VDI2770_*.xml` in this repository's corpus, counted the way the
+  budget counts (namespace declarations are not attributes to the parser this
+  reader uses), the worst element carries **three** and the worst document
+  **49** — so the per-element cap sits 43× above the worst element seen and the
+  total 2,000× above the worst document. Both halves of that sentence had to be
+  said: the same corpus gives 51 if namespace declarations are counted and 72
+  if the loose XML beside the containers is included, and a number whose set and
+  convention are unstated cannot be re-derived from the sentence stating it.
 - **One path that blocks no longer stops the sweep.** `cli` wraps each path in
   `try/except` so a bad one cannot stop the rest — but a hang is not an
   exception. Opening a FIFO with no writer waits forever, so a single named pipe
@@ -237,10 +250,12 @@ have a class of its own.
   they are **43×** the worst element seen and **1,900×** the worst document, which
   is one order and three, not two and two.
   The fourth was the interesting one. "The corpus's worst document carries
-  fifty-one attributes" is *true* — over every `VDI2770_*.xml`. Counting the loose
-  XML beside the containers gives 74. Both numbers are honest and the sentence
-  did not say which set it meant, so it could not be checked. Naming the set was
-  the repair; changing the number would have been a mistake.
+  fifty-one attributes" is *a* true number — for `VDI2770_*.xml` with namespace
+  declarations counted. The budget does not count those, so the figure that
+  describes it is **49**; the same corpus gives 72 if the loose XML beside the
+  containers is included. Four honest numbers, and the sentence named neither
+  the set nor the convention, so none of them could be checked against it.
+  Saying both was the repair.
 - **A gate that starts Python leaves no bytecode.** `__pycache__` is not where it
   goes on every machine: `sys.pycache_prefix` can put it outside the tree, where
   nothing cleans it and where a same-size restore inside one second leaves a
@@ -594,8 +609,10 @@ below is measured on this machine, before and after, on the same input.
   with `notListed` in the JSON. **The count is not capped**: the summary still
   reads 99,000 errors and the exit code is still 1, because a bounded listing
   must not become a quieter verdict. What memory remains is the parse tree, which
-  is bounded: measured at 18x the metadata bytes, so 0.3 GB at
-  `MAX_METADATA_BYTES` and 1.2 GB across the whole tree budget.
+  is bounded — measured at 18x the metadata bytes. The ceiling that binds is not
+  `MAX_METADATA_BYTES` but `MAX_ELEMENTS`: a document at the element cap holds
+  about 92 MiB whatever its byte size, so one tree is that and not the 0.3 GB
+  the bytes-ratio alone would suggest.
 - **Decompression is now budgeted across the whole read.** Every individual
   member was under its cap while the total was not, so 40 inner containers could
   demand 19,200 MiB between them. `MAX_TOTAL_DECOMPRESSED` is 4 GiB across one
@@ -604,8 +621,10 @@ below is measured on this machine, before and after, on the same input.
 - **Character data no longer accumulates quadratically.** `&#nnn;` forces one
   expat callback per reference and the parser appended to a string each time, so
   a 198 KB archive cost **60 s** for a clean verdict. Text is collected per open
-  element and joined once: 200k/400k/800k references are **0.020 / 0.040 /
-  0.079 s**, down from 0.317 / 1.085 / 4.724.
+  element and joined once: 200,000 references parse in **0.03 s**, down from
+  0.317. (400k and 800k were also measured here at the time; `MAX_TEXT_PIECES`
+  refuses them now, so those two figures describe a document this reader no
+  longer builds.)
 
 Three gates that ask what `make check` cannot ask of itself.
 

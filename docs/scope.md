@@ -62,14 +62,18 @@ failure — files that never claimed at all.
   scanning bytes and inflating a bounded stretch after each stream marker. A claim
   stored beyond what that scan reaches produces `P3`, whose title says exactly what
   happened — *this scan found no PDF/A claim in the file* — rather than the thing it
-  would be wrong to say, that the file makes none. The prefix bound to the PDF/A
-  namespace no longer matters, which used to be a second way to miss one. It cannot
+  would be wrong to say, that the file makes none. Which prefix is bound to the
+  PDF/A namespace no longer matters for the first four a packet declares, which
+  used to be a second way to miss a claim; a packet that binds more than four
+  gets four tries and then this scan stops looking. It cannot
   be *faked* by writing the words outside an XMP packet; that was possible once and
   is tested against now.
 - **Every byte is read**: to say a member is deliverable we decompress it, the
-  way `unzip -t` does. Measured at about 1.1 GB/s on real PDF content, so a
-  container at the 2 GiB ceiling costs roughly two seconds and the whole-read
-  ceiling of 4 GiB costs about four. Nothing is held: the bytes are discarded as
+  way `unzip -t` does. That is one pass of zlib over the member, so the rate is
+  your machine's: measured here at **0.6 GB/s** on real PDF content that barely
+  compresses (ratio 1.19), which puts a container at the 2 GiB ceiling at a few
+  seconds and the whole-read ceiling of 4 GiB at a few more. The figure once
+  published here, 1.1 GB/s, was above what zlib does on this content. Nothing is held: the bytes are discarded as
   they are read. Past that ceiling members are still listed but no longer checked
   for readability, and the report says so rather than going quiet.
 - **The guideline text**: VDI 2770 Blatt 1:2020-04 is sold by DIN Media. It was not

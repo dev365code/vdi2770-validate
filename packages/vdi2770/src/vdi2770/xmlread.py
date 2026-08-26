@@ -61,8 +61,8 @@ MAX_ELEMENTS = 100_000
 #
 # The cost is in the *pieces*, not the length: expat calls back once per
 # character reference, and each call is a transient `str` and a list slot. A
-# document of three elements whose text is `&#120;` 1.3 million times decodes to
-# 1.3 MB of characters -- nothing -- and cost 287 MB from a 4.2 KiB archive.
+# document of three elements whose text is `&#120;` 450,000 times decodes to
+# 450 KB of characters -- nothing -- and held 48 MB from a 4.1 KiB archive.
 # Counting characters would have missed it entirely, which is why this counts
 # what actually accumulates.
 #
@@ -82,10 +82,12 @@ MAX_TEXT_PIECES = 200_000
 # Two bounds, because the cost has two shapes and this reader has now learned
 # three times that one bound cannot hold both: the per-element cap flattens the
 # quadratic, and the total stops a sender from paying it once per element. At
-# both caps exactly, a 0.8 MiB document costs 1.25 s end to end.
+# both caps exactly, a 0.80 MiB document costs 2.7 s end to end.
 #
-# Measured over every metadata file in this repository's corpus: the worst
-# element carries three attributes and the worst document fifty-one.
+# Counted the way these budgets count -- expat is created with a namespace
+# separator, so it never reports a namespace declaration as an attribute --
+# every `VDI2770_*.xml` in this repository's corpus has at most three on one
+# element and 49 in one document.
 MAX_ATTRIBUTES_PER_ELEMENT = 128
 MAX_ATTRIBUTES = 100_000
 

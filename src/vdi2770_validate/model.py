@@ -112,11 +112,14 @@ class Finding:
 
 
 
-# One rule can have as many findings as the document has elements. A metadata
-# file of four hundred thousand empty DocumentIds produced four hundred thousand
-# byte-identical M10 lines: 923 MB of memory and 107 MB of output from a 225 KB
-# archive, and two such containers reached 3.98 GB. Nobody reads the four hundred
-# thousandth line, and nothing downstream needs it either — the count does.
+# One rule can have as many findings as the document has elements, which the
+# element budget now caps at just under a hundred thousand per container: 99,000
+# empty DocumentIds give 99,000 byte-identical M10 lines from a 116 KiB archive,
+# 26.7 KB of text and 75.2 KB of JSON. (The figures once here — four hundred
+# thousand lines, 923 MB, 3.98 GB across two containers — were measured before
+# that cap existed and describe a document this reader will no longer build.)
+# Nobody reads the ninety-nine thousandth line, and nothing downstream needs it
+# either — the count does.
 MAX_LISTED_PER_RULE = 100
 
 
