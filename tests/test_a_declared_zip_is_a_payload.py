@@ -291,3 +291,47 @@ def test_an_undeclared_payload_is_told_once_and_told_what_to_do():
     z11 = next(f for f in about if f.rule.id == "Z11")
     assert "application/zip" in (z11.remedy or ""), (
         f"the remedy does not offer the answer this tool accepts: {z11.remedy}")
+
+
+def test_z13_does_not_look_inside_a_declared_payload():
+    """`Z13` was lifted out of the documentation branch and past the guard.
+
+    The decision that keeps `Z2`, `Z3` and `Z9` quiet about a declared
+    `application/zip` member says what it is for: *what is inside it is its own
+    business, the way a PDF's is*. `Z13` sat above that guard, so a conforming
+    document container carrying a declared CAD bundle became exit 1 and its
+    supplier was told to restructure the inside of a parts bundle that is not a
+    VDI 2770 artefact at all.
+    """
+    import io
+    import re
+    import zipfile
+
+    from conftest import CLEAN_DOCUMENT
+    from vdi2770_validate.runner import check_bytes
+
+    src = zipfile.ZipFile(CLEAN_DOCUMENT)
+    meta = src.read("VDI2770_Metadata.xml").decode("utf-8")
+    one = re.search(r"(\s*)<DigitalFile[^>]*>B\.pdf</DigitalFile>", meta)
+    assert one, "the fixture no longer declares B.pdf"
+    meta = meta.replace(one.group(0), one.group(0) + one.group(1)
+                        + '<DigitalFile FileFormat="application/zip">cad.zip</DigitalFile>', 1)
+
+    payload = io.BytesIO()
+    with zipfile.ZipFile(payload, "w") as z:
+        z.writestr("partA/VDI2770_Metadata.xml", b"not vdi metadata")
+        z.writestr("partA/model.step", b"ISO-10303-21;\n")
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        for name in src.namelist():
+            z.writestr(name, meta.encode("utf-8") if name == "VDI2770_Metadata.xml"
+                       else src.read(name))
+        z.writestr("cad.zip", payload.getvalue())
+
+    report = check_bytes(buf.getvalue(), "payload.zip")
+    fired = {f.rule.id for f in report.findings}
+    assert "Z13" not in fired, (
+        f"a declared payload's insides were judged as a delivery: {sorted(fired)}")
+    assert report.clean, [f"{f.rule.id}: {f.message}" for f in report.findings
+                          if f.severity.value == "error"]

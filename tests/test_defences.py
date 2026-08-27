@@ -434,3 +434,107 @@ def test_a_container_we_declined_to_parse_is_not_then_schema_checked(monkeypatch
     assert len(calls) == 1, (
         f"{len(calls)} schema checks; only the container that was actually "
         f"parsed should get one")
+
+
+def _container_declaring_pdfs(how_many):
+    """A conforming-shaped container with `how_many` declared PDFs in it."""
+    import io
+    import zipfile
+
+    meta = ('<?xml version="1.0" encoding="UTF-8"?>'
+            '<Document xmlns="http://www.vdi.de/schemas/vdi2770"><DocumentVersion>'
+            + "".join(f'<DigitalFile FileFormat="application/pdf">a{i}.pdf</DigitalFile>'
+                      for i in range(how_many))
+            + "</DocumentVersion></Document>")
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr("VDI2770_Metadata.xml", meta)
+        for i in range(how_many):
+            z.writestr(f"a{i}.pdf", b"%PDF-1.4 x")
+    return buf.getvalue()
+
+
+def test_reading_the_declared_pdfs_parses_the_archive_once(monkeypatch):
+    """One central directory, parsed once per container — not once per PDF.
+
+    `member_bytes` builds a `ZipFile` every call, and the PDF rules ask it for
+    every declared PDF, so the cost was declared-files times members with no
+    budget measuring it: the bytes are tiny, the members are under the cap and
+    nothing inflates. Measured before the repair: 0.78, 1.29, 5.42 and 20.60
+    seconds for 250, 500, 1,000 and 2,000 declared PDFs, a clean 4× per
+    doubling, from a 210 KiB archive. A profile put 18.5 of those 20 seconds in
+    `_RealGetContents`, called 1,501 times.
+
+    This is not a hostile shape. A plant handover with a few thousand drawings
+    is the ordinary one.
+    """
+    import zipfile as zipfile_module
+
+    from vdi2770 import zipread
+    from vdi2770_validate.runner import check_bytes
+
+    built = []
+    real = zipfile_module.ZipFile
+
+    class Counting(real):
+        def __init__(self, *args, **kw):
+            built.append(1)
+            super().__init__(*args, **kw)
+
+    monkeypatch.setattr(zipread.zipfile, "ZipFile", Counting)
+
+    def cost(how_many):
+        built.clear()
+        check_bytes(_container_declaring_pdfs(how_many), "many.zip")
+        return len(built)
+
+    small, big = cost(20), cost(200)
+    assert big < small + 20, (
+        f"{small} archive parses for 20 declared PDFs and {big} for 200: the "
+        f"declared-file count is multiplying the member walk")
+
+
+def test_matching_the_declared_names_against_the_twins_is_not_quadratic(monkeypatch):
+    """`F2`'s collision set was declared-files times colliding members.
+
+    `any(extracts_to(n) == extracts_to(a) for a in accounted_for)`, run once per
+    colliding member, recomputes the split-and-join on *both* sides at every
+    pair. Measured: 0.82, 1.44 and 5.36 seconds for 500, 1,000 and 2,000
+    declared PDFs each also stored with a `./` in front, from a 423 KiB archive.
+    """
+    import io
+    import zipfile
+
+    from vdi2770_validate import names as names_module
+    from vdi2770_validate.rules import files as file_rules
+    from vdi2770_validate.runner import check_bytes
+
+    calls = []
+    real = names_module.extracts_to
+
+    def counting(name):
+        calls.append(name)
+        return real(name)
+
+    monkeypatch.setattr(file_rules, "extracts_to", counting)
+
+    def cost(how_many):
+        meta = ('<?xml version="1.0" encoding="UTF-8"?>'
+                '<Document xmlns="http://www.vdi.de/schemas/vdi2770"><DocumentVersion>'
+                + "".join(f'<DigitalFile FileFormat="application/pdf">a{i}.pdf</DigitalFile>'
+                          for i in range(how_many))
+                + "</DocumentVersion></Document>")
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+            z.writestr("VDI2770_Metadata.xml", meta)
+            for i in range(how_many):
+                z.writestr(f"a{i}.pdf", b"%PDF-1.4 x")
+                z.writestr(f"./a{i}.pdf", b"%PDF-1.4 y")
+        calls.clear()
+        check_bytes(buf.getvalue(), "twins.zip")
+        return len(calls)
+
+    small, big = cost(50), cost(200)
+    assert big < small * 8, (
+        f"{small} normalisations for 50 declared files and {big} for 200: the "
+        f"declaration count is multiplying the member walk")

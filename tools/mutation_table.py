@@ -595,16 +595,16 @@ TABLE = [
 
     ("rules/one-path-is-not-one-name",
      "src/vdi2770_validate/rules/container.py",
-     "            one_path = len({extracts_to(n) for n in group}) == 1",
-     "            one_path = True",
+     "            relation[key] = (len({extracts_to(n) for n in group}) == 1,",
+     "            relation[key] = (True,",
      ["tests/test_two_spellings_are_two_files.py"],
      "`Z10` grouped on `folder_path` and then said `extract to the same path` "
      "about members that land on two, in a report where `F2` treated them as two"),
 
     ("rules/one-name-is-not-one-path",
      "src/vdi2770_validate/rules/container.py",
-     "            one_name = len({nfc(n) for n in group}) == 1",
-     "            one_name = False",
+     "                             len({nfc(n) for n in group}) == 1)",
+     "                             False)",
      ["tests/test_two_spellings_are_two_files.py"],
      "the look-alike sentence is the one the rule exists for; forcing the branch "
      "off left a canonically equivalent pair described as something else"),
@@ -619,7 +619,7 @@ TABLE = [
 
     ("rules/collisions-are-joined-once",
      "src/vdi2770_validate/rules/container.py",
-     "            alike = sorted(n for n in joined[folder_path(name)] if n != name)",
+     "            alike = _partners(group, place[name])",
      "            alike = sorted(n for n in container.duplicate_names\n"
      "                           if folder_path(n) == folder_path(name) and n != name)",
      ["tests/test_two_spellings_are_two_files.py"],
@@ -636,11 +636,28 @@ TABLE = [
 
     ("rules/one-finding-does-not-name-the-whole-group",
      "src/vdi2770_validate/rules/container.py",
-     "    return (\", \".join(spell(n) for n in alike[:MAX_ALIKE])",
-     "    return (\", \".join(spell(n) for n in alike)",
+     "    stride = max(1, len(group) // MAX_ALIKE)",
+     "    stride = 0 if False else 1",
      ["tests/test_two_spellings_are_two_files.py"],
-     "naming every partner in every finding is quadratic in the group: 1.00 s "
-     "for 128 members of one group, from a 16 KiB archive"),
+     "a stride of one leaves the tail of a big group named by nobody: ten of a "
+     "hundred and ten appeared neither as a subject nor in anybody's list"),
+
+    ("runner/the-archive-is-parsed-once-per-container",
+     "src/vdi2770_validate/runner.py",
+     "    read_member = zipread.member_reader(raw, allowed=accepted)",
+     "    read_member = lambda name: zipread.member_bytes(raw, name, allowed=accepted)  # noqa: E731",
+     ["tests/test_defences.py"],
+     "asking for every declared PDF re-parsed the central directory each time: "
+     "20.6 s for 2,000 of them from a 210 KiB archive, 18.5 s of it in the parse"),
+
+    ("rules/the-declared-paths-are-normalised-once",
+     "src/vdi2770_validate/rules/files.py",
+     "    collides = {n for n in container.duplicate_names if extracts_to(n) in landed_on}",
+     "    collides = {n for n in container.duplicate_names\n"
+     "                if any(extracts_to(n) == extracts_to(a) for a in accounted_for)}",
+     ["tests/test_defences.py"],
+     "matching each colliding member against every declared path recomputed the "
+     "split-and-join on both sides at every pair"),
 
     # --- the canary -------------------------------------------------------
     ("canary/a-comment-nobody-reads",

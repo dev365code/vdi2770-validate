@@ -131,6 +131,11 @@ class Report:
     suppressed: Dict[Tuple[str, str], int] = field(default_factory=dict)
     _listed: Dict[Tuple[str, str], int] = field(default_factory=dict, repr=False)
     _suppressed_severity: Dict[Severity, int] = field(default_factory=dict, repr=False)
+    # And by axis, for the same reason the line above exists: the summary says
+    # how many of the errors are this tool declining to look, and counting that
+    # over `findings` counts only the ones the cap let through.
+    _suppressed_about: Dict[Tuple[Severity, About], int] = field(
+        default_factory=dict, repr=False)
     _suppressed_rule: Dict[Tuple[str, str], Rule] = field(default_factory=dict, repr=False)
 
     def add(self, f: Finding) -> None:
@@ -142,6 +147,8 @@ class Report:
             self._suppressed_rule[key] = f.rule
             self._suppressed_severity[f.severity] = (
                 self._suppressed_severity.get(f.severity, 0) + 1)
+            self._suppressed_about[(f.severity, f.about)] = (
+                self._suppressed_about.get((f.severity, f.about), 0) + 1)
             return
         self._listed[key] = self._listed.get(key, 0) + 1
         self.findings.append(f)
@@ -162,6 +169,12 @@ class Report:
     def count(self, sev: Severity) -> int:
         return (sum(1 for f in self.findings if f.severity is sev)
                 + self._suppressed_severity.get(sev, 0))
+
+    def count_about(self, sev: Severity, about: About) -> int:
+        """How many of `sev` are on `about`'s axis, listed or not."""
+        return (sum(1 for f in self.findings
+                    if f.severity is sev and f.about is about)
+                + self._suppressed_about.get((sev, about), 0))
 
     @property
     def clean(self) -> bool:

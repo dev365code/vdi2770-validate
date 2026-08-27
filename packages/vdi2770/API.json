@@ -489,6 +489,9 @@
     "member_bytes": {
       "signature": "(data: 'bytes', name: 'str', allowed: 'Optional[Set[str]]' = None) -> 'Optional[bytes]'"
     },
+    "member_reader": {
+      "signature": "(data: 'bytes', allowed: 'Optional[Set[str]]' = None)"
+    },
     "nfc": {
       "signature": "(name: 'str') -> 'str'"
     },

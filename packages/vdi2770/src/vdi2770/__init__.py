@@ -56,6 +56,7 @@ from .zipread import (
     Kind,
     Member,
     member_bytes,
+    member_reader,
     nfc,
 )
 from .zipread import read as read_container
@@ -67,5 +68,5 @@ __all__ = ["ClassName", "Classification", "Container", "DEFECT_KINDS", "Defect",
            "DigitalFile", "Document", "DocumentId", "DocumentVersion", "Kind", "Location",
            "MAIN_PDF", "MAIN_XML", "METADATA_XML", "Member", "NS", "Node", "PdfFacts",
            "REFUSAL_KINDS", "Tagged", "UnsafeXml", "XmlError", "XmlTooLarge", "__version__",
-           "build_document", "member_bytes", "nfc", "parse_xml", "read_container",
+           "build_document", "member_bytes", "member_reader", "nfc", "parse_xml", "read_container",
            "read_container_file", "read_pdf"]

@@ -6,8 +6,32 @@ import json
 from typing import Dict, List
 
 from .model import About, Report, Severity
+from .names import as_written
 
 MARK = {Severity.ERROR: "error", Severity.WARNING: "warn ", Severity.INFO: "info "}
+
+
+def _where(location) -> str:
+    """The location, with a member name that cannot forge lines of this report.
+
+    `Location.__str__` interpolates the name the archive stored, and a member
+    called `notes.txt\\n\\n  0 error(s)…\\n\\nsupplier-delivery.zip\\n  no findings`
+    put a summary and a second container's clean verdict inside a finding. A
+    supplier chose what a CI log appeared to say about somebody else's delivery.
+    `as_json` was never affected; this is the page people read.
+
+    `as_written`, not `escaped`: a newline draws nothing and gets spelled out,
+    and an ordinary name -- decomposed Korean included -- is left exactly as the
+    archive spells it, which is what a reader needs to find it in their listing.
+    Running this line through `escaped` would hex every filename in every report
+    from a delivery written on a Mac.
+    """
+    if location.member is None and not location.container:
+        return str(location)
+    shown = location.child(container=as_written(location.container),
+                           member=None if location.member is None
+                           else as_written(location.member))
+    return str(shown)
 
 
 def as_text(report: Report, show_info: bool = True) -> str:
@@ -23,7 +47,7 @@ def as_text(report: Report, show_info: bool = True) -> str:
                      else "  no findings")
     for f in findings:
         lines.append(f"  {MARK[f.severity]}  {f.rule.id}  {f.message}")
-        lines.append(f"         at {f.where}")
+        lines.append(f"         at {_where(f.where)}")
         if f.detail:
             lines.append(f"         {f.detail}")
         # Every finding carries its remedy. Printing it once per rule saved a few
@@ -40,8 +64,11 @@ def as_text(report: Report, show_info: bool = True) -> str:
     # titles says so, and the count did not. A supplier read `1 error(s)` under a
     # remedy opening "Nothing here is necessarily wrong with the container", and
     # the axis that reconciles the two lived only in the JSON.
-    ours = sum(1 for f in report.findings
-               if f.severity is Severity.ERROR and f.about is About.TOOL)
+    # `count_about`, not a walk over `findings`: the listing is capped and the
+    # count is not, so counting the axis over what was printed said "100 of the
+    # errors" under "150 error(s)" and handed a supplier fifty that were not
+    # theirs. The comment three lines above `count()` is about exactly this.
+    ours = report.count_about(Severity.ERROR, About.TOOL)
     said = (f"  {counts[Severity.ERROR]} error(s), {counts[Severity.WARNING]} warning(s), "
             f"{counts[Severity.INFO]} note(s)")
     if ours:

@@ -106,11 +106,22 @@ def _step(report, where, what: str, fn, *args, fix: Optional[str] = None):
 
 
 def _facts_for(raw: bytes, accepted):
+    """A PDF fact cache for one container, over one parse of its directory.
+
+    `member_bytes` opens the archive on every call, and this asks it for every
+    declared PDF — so the cost was declared files times members, with no budget
+    measuring it: the bytes are tiny, the members are under the cap and nothing
+    inflates. 0.78, 1.29, 5.42 and 20.60 seconds for 250, 500, 1,000 and 2,000
+    declared PDFs from a 210 KiB archive, and a profile put 18.5 of those 20
+    seconds in CPython's central-directory parse, called once per file. A plant
+    handover with a few thousand drawings is that shape.
+    """
+    read_member = zipread.member_reader(raw, allowed=accepted)
     cache = {}
 
     def get(name: str) -> Optional[pdfread.PdfFacts]:
         if name not in cache:
-            member = zipread.member_bytes(raw, name, allowed=accepted)
+            member = read_member(name)
             cache[name] = pdfread.read(member) if member is not None else None
         return cache[name]
 

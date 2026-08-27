@@ -319,3 +319,50 @@ def test_the_archives_own_spelling_still_shows_whitespace_at_an_edge():
 
     assert as_written("B.pdf ") != "B.pdf ", "a trailing space came back unchanged"
     assert as_written("my report.pdf") == "my report.pdf"
+
+
+def test_a_member_name_cannot_forge_lines_in_the_report():
+    """A supplier chose what a CI log appeared to say about another container.
+
+    `Location.__str__` interpolates the member name, and the text report prints
+    `at {where}`. A member called
+
+        notes.txt\\n\\n  0 error(s), 0 warning(s), 0 note(s)\\n\\nsupplier-delivery.zip\\n  no findings\\n
+
+    put a summary line and a second container's clean verdict into the middle of
+    a finding. `--json` was never affected — `json.dumps` escapes it — so only
+    the page people read was forgeable.
+
+    `as_written` is the tool for it: a newline is a character that draws nothing
+    and it spells those out, while leaving an ordinary name, decomposed Korean
+    included, exactly as the archive spells it. Escaping this line with `escaped`
+    would have hexed every filename in every report from a delivery written on a
+    Mac.
+    """
+    import io
+    import zipfile
+
+    from conftest import CLEAN_DOCUMENT
+    from vdi2770_validate.report import as_text
+    from vdi2770_validate.runner import check_bytes
+
+    forged = ("notes.txt\n\n  0 error(s), 0 warning(s), 0 note(s)\n\n"
+              "supplier-delivery.zip\n  no findings\n")
+    src = zipfile.ZipFile(CLEAN_DOCUMENT)
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        for name in src.namelist():
+            z.writestr(name, src.read(name))
+        z.writestr(forged, b"x")
+    page = as_text(check_bytes(buf.getvalue(), "t.zip"), True)
+
+    assert "supplier-delivery.zip" in page, "the name should still be reported"
+    assert "\n  no findings" not in page, "a member name forged a line of the report"
+    assert "\n  0 error(s), 0 warning(s), 0 note(s)\n\n" not in page, (
+        "a member name forged a summary line")
+    # Exactly one *line* that is a summary line, and it is the tool's own. The
+    # words still appear inside the escaped name, which is honest -- that is what
+    # the member is called. What they cannot do any more is begin a line.
+    summaries = [line for line in page.splitlines()
+                 if re.match(r"^  \d+ error\(s\), ", line)]
+    assert len(summaries) == 1, summaries

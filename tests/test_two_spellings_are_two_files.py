@@ -713,3 +713,96 @@ def test_one_collision_group_does_not_cost_its_own_size_twice():
     assert big < small * 16, (
         f"{small} characters of detail for 16 members and {big} for 128: the "
         f"group size is multiplying itself")
+
+
+def _one_group(how_many):
+    """`how_many` spellings of one name, all colliding with each other."""
+    import itertools
+    import unicodedata
+
+    out = []
+    for bits in itertools.product("01", repeat=12):
+        name = "".join(unicodedata.normalize("NFC" if bit == "1" else "NFD", "é")
+                       for bit in bits) + ".pdf"
+        if name not in out:
+            out.append(name)
+        if len(out) == how_many:
+            break
+    assert len(out) == how_many, "the fixture cannot build a group that big"
+    return out
+
+
+def _archive_of(names):
+    import io
+    import zipfile
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr("VDI2770_Metadata.xml", b"<x/>")
+        for name in names:
+            z.writestr(name, b"a")
+    return buf.getvalue()
+
+
+def test_one_collision_group_is_walked_once_per_member(monkeypatch):
+    """The partner list was rebuilt, filtered and sorted once per member.
+
+    Building the groups once removed the cost across *many* groups and left it
+    inside **one**: 0.57, 0.73, 2.27 and 7.08 seconds for a single group of 256,
+    512, 1,024 and 2,048, from a 296 KiB archive. The counted test written with
+    that repair could not see it — it counts `folder_path` calls, which stayed
+    at 3n while the wall time quadrupled, so it was linear on an axis that was
+    never the problem.
+
+    Counted on the axis that is: how much of the group each member's finding
+    touches.
+    """
+    from vdi2770_validate import names as names_module
+    from vdi2770_validate.rules import container as container_rules
+    from vdi2770_validate.runner import check_bytes
+
+    # Every normalisation the rule performs, not just the partner list. The
+    # first draft counted `folder_path` calls, which stayed at 3n while the wall
+    # time quadrupled — the cost had moved to `extracts_to` and `nfc`, recomputed
+    # over the whole group once per member, on an axis the counter could not see.
+    touched = []
+    for module, attr in ((container_rules, "extracts_to"),
+                         (container_rules, "nfc"),
+                         (container_rules, "folder_path")):
+        real = getattr(names_module, attr)
+        monkeypatch.setattr(module, attr,
+                            (lambda fn: lambda name: (touched.append(1), fn(name))[1])(real))
+
+    def cost(size):
+        touched.clear()
+        check_bytes(_archive_of(_one_group(size)), "g.zip")
+        return len(touched)
+
+    small, big = cost(64), cost(256)
+    assert big < small * 8, (
+        f"{small} normalisations for a group of 64 and {big} for 256: the group "
+        f"size is multiplying itself")
+
+
+def test_every_member_of_a_big_collision_is_named_somewhere():
+    """Two caps met and members fell between them.
+
+    `MAX_LISTED_PER_RULE` keeps a hundred findings and `MAX_ALIKE` names five
+    partners in each; before the second cap existed, a truncated listing still
+    named every member in the partner lists that survived. With both, ten
+    members of a group of a hundred and ten appeared neither as a subject nor in
+    anybody's list — the report counted them and never said what they were
+    called.
+    """
+    from vdi2770_validate.names import as_written, escaped
+    from vdi2770_validate.report import as_text
+    from vdi2770_validate.runner import check_bytes
+
+    names = _one_group(110)
+    page = as_text(check_bytes(_archive_of(names), "many.zip"), True)
+    # In whatever form the page spells them: a member stored decomposed is
+    # printed as code points, which is the whole point of the renderer.
+    missing = [n for n in names
+               if escaped(n) not in page and as_written(n) not in page]
+    assert not missing, (
+        f"{len(missing)} of {len(names)} colliding members are counted and never named")

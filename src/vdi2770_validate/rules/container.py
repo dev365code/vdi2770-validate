@@ -9,10 +9,33 @@ from ..model import MAIN_PDF, METADATA_XML, Finding, Kind
 from ..names import as_written, escaped, extracts_to, folder_path, ignoring_case, nfc
 
 
-def _named(alike, spell) -> str:
-    """The partners a finding names, bounded, in the voice `Z9` and `Z13` use."""
-    return (", ".join(spell(n) for n in alike[:MAX_ALIKE])
-            + (", ..." if len(alike) > MAX_ALIKE else ""))
+def _partners(group, index):
+    """The members `group[index]` collides with, bounded, starting after it.
+
+    Sliced out of a list sorted once, not filtered and sorted per member: doing
+    the latter left the cost inside a single group after the cost across many
+    groups had been removed -- 0.57, 0.73, 2.27 and 7.08 seconds for one group
+    of 256, 512, 1,024 and 2,048, from a 296 KiB archive.
+
+    Rotating rather than always naming the first few is what keeps every member
+    on the page. `MAX_LISTED_PER_RULE` keeps a hundred findings and this names
+    five partners in each, and with both caps a group of a hundred and ten left
+    ten members appearing neither as a subject nor in anybody's list: counted,
+    and never said what they were called.
+    """
+    # Spread across the group, not the next few. `MAX_LISTED_PER_RULE` keeps a
+    # hundred findings, so with a stride of one a group of a hundred and ten
+    # still left its last five members named by nobody. A stride of
+    # `len // MAX_ALIKE` walks the whole group from every starting point.
+    stride = max(1, len(group) // MAX_ALIKE)
+    return [group[(index + 1 + step * stride) % len(group)]
+            for step in range(min(MAX_ALIKE, len(group) - 1))]
+
+
+def _named(alike, spell, total) -> str:
+    """The partners a finding names, in the voice `Z9` and `Z13` use."""
+    return (", ".join(spell(n) for n in alike)
+            + (", ..." if total - 1 > len(alike) else ""))
 
 
 def folders_holding_metadata(container) -> list:
@@ -330,9 +353,18 @@ def check(container, declared, is_declared_payload) -> Iterator[Finding]:
         # pairs, a clean 4x per doubling, from a 316 KiB archive. Past every
         # budget the reader has, because not one of them measures this. The third
         # time this shape has been found here.
-        joined = {}
-        for member in container.duplicate_names:
-            joined.setdefault(folder_path(member), []).append(member)
+        joined, place, relation = {}, {}, {}
+        for member in sorted(container.duplicate_names):
+            group = joined.setdefault(folder_path(member), [])
+            # Where each member sits in its group, recorded as the groups are
+            # built. `group.index(member)` is a walk of the group per member,
+            # which is the same quadratic one level down: 0.71, 1.95, 6.53 and
+            # 23.53 seconds for one group of 512, 1,024, 2,048 and 4,000.
+            place[member] = len(group)
+            group.append(member)
+        for key, group in joined.items():
+            relation[key] = (len({extracts_to(n) for n in group}) == 1,
+                             len({nfc(n) for n in group}) == 1)
         for name in container.duplicate_names:
             # The reader refuses a repeated name outright now and says so with a
             # reason and a remedy; the loop at the top of this function already
@@ -357,7 +389,8 @@ def check(container, declared, is_declared_payload) -> Iterator[Finding]:
             # fell to the branch below -- the rule's bare title, no detail, no
             # remedy, twice, about two members the report never named. The branch
             # that says both was reached through a door it was not watching.
-            alike = sorted(n for n in joined[folder_path(name)] if n != name)
+            group = joined[folder_path(name)]
+            alike = _partners(group, place[name])
             if not alike:
                 # A name in `duplicate_names` has a partner there: the reader
                 # appends both spellings when a key collides. The one case that
@@ -369,7 +402,7 @@ def check(container, declared, is_declared_payload) -> Iterator[Finding]:
                 yield Finding(r, r.title,
                               container.where.child(member=name, subject=name))
                 continue
-            group = (name, *alike)
+            group = tuple(joined[folder_path(name)])
             # Three relations reach this loop and only one sentence used to be
             # said about them. `duplicate_names` is grouped on `folder_path`,
             # which is `nfc` *and* dropping segments that name nothing -- so the
@@ -380,13 +413,16 @@ def check(container, declared, is_declared_payload) -> Iterator[Finding]:
             # `Ä.pdf` written composed, which land on two paths, in a report
             # whose `F2` on the next line correctly treats them as two files.
             # `extracts_to` is the relation for one path; `nfc` for one glyph.
-            one_path = len({extracts_to(n) for n in group}) == 1
-            one_name = len({nfc(n) for n in group}) == 1
+            # Per group, not per member: these walk the whole group and were
+            # recomputed for every member of it, which is the same quadratic the
+            # partner list had. 0.90, 1.98, 6.74 and 22.02 seconds for one group
+            # of 512, 1,024, 2,048 and 4,000, from a 575 KiB archive.
+            one_path, one_name = relation[folder_path(name)]
             if one_path:
                 # Spelled the archive's way: the difference here is `.` segments,
                 # which are visible ASCII, and spelling out the rest turned two
                 # ordinary decomposed filenames into four walls of hex.
-                shown = _named(alike, as_written)
+                shown = _named(alike, as_written, len(group))
                 yield Finding(
                     r,
                     "Two members of the archive extract to the same path",
@@ -399,7 +435,7 @@ def check(container, declared, is_declared_payload) -> Iterator[Finding]:
                         "and nothing here can say which one you meant.")
                 continue
 
-            shown = _named(alike, escaped)
+            shown = _named(alike, escaped, len(group))
             if not one_name:
                 yield Finding(
                     r,
@@ -464,14 +500,14 @@ def check(container, declared, is_declared_payload) -> Iterator[Finding]:
         if len(distinct) < 2:
             continue
         r = rule("Z10")
-        for name in distinct:
-            alike = [n for n in distinct if n != name]
+        for index, name in enumerate(distinct):
+            alike = _partners(distinct, index)
             yield Finding(
                 r,
                 "Two members of the archive are one file where case is not kept apart",
                 container.where.child(member=name, subject=name),
                 detail=f"this is {as_written(name)}; the archive also holds "
-                       f"{_named(alike, as_written)} — {len(distinct)} entries "
+                       f"{_named(alike, as_written, len(distinct))} — {len(distinct)} entries "
                        f"that fold to one name, so a recipient on Windows, or on "
                        f"macOS as it ships, unpacks them into one file and keeps "
                        f"whichever their unzip tool wrote last",
@@ -501,7 +537,14 @@ def check(container, declared, is_declared_payload) -> Iterator[Finding]:
     # *document* container and its files left the report with nothing said about
     # them, which is the outcome the suppression exists to prevent. The reason
     # this rule gives has never had anything to do with the parent's kind.
-    as_folders = folders_holding_metadata(container)
+    # `not opaque`, like the folder walk above. Lifting this out of the
+    # documentation branch took it past the guard as well: the decision that
+    # keeps `Z2`, `Z3` and `Z9` quiet about a declared `application/zip` member
+    # says what it is for -- what is inside it is its own business, the way a
+    # PDF's is -- and a conforming document container carrying a declared CAD
+    # bundle became exit 1, with a remedy asking its supplier to restructure the
+    # inside of something that is not a VDI 2770 artefact.
+    as_folders = [] if opaque else folders_holding_metadata(container)
     if as_folders:
         r = rule("Z13")
         # Named the way `Z9` names it. The two rules were spelling one folder two

@@ -558,6 +558,53 @@ def read_file(path: str) -> Container:
         return read(fh.read(), path.rsplit("/", 1)[-1])
 
 
+def member_reader(data: bytes, allowed: Optional[Set[str]] = None):
+    """Read several members of one archive, with its directory parsed once.
+
+    `member_bytes` opens the archive on every call, which is right for one
+    member and quadratic for a caller that wants many: the validator asks for
+    every declared PDF, so a 210 KiB container of 2,000 of them cost 20.6
+    seconds, 18.5 of those inside CPython's central-directory parse, called once
+    per file. Nothing measured it -- the bytes are tiny, the members are under
+    the cap, and nothing inflates. A plant handover with a few thousand drawings
+    is that shape, and it is the ordinary one.
+
+    Every guard `member_bytes` applies is applied here, because this is where
+    they now live and that function is the one-member case of this one. A caller
+    that could reach past them would make the budget in `read()` worthless.
+    """
+    try:
+        archive = zipfile.ZipFile(io.BytesIO(data))
+        # Counted once. `getinfo` and `open` resolve a duplicated name to the
+        # *last* entry, while everything upstream -- the accepted `Member`, the
+        # budget charge, the allow-list -- came from the first. A 505 KiB archive
+        # whose second `d.zip` was 400 MB of zeros cost 1.25 GiB with the report
+        # saying the member had been refused. A name that means two entries
+        # identifies neither of them.
+        counted: Dict[str, int] = {}
+        for entry in archive.infolist():
+            counted[entry.filename] = counted.get(entry.filename, 0) + 1
+    except Exception:
+        return lambda name: None
+
+    def read_one(name: str) -> Optional[bytes]:
+        try:
+            if allowed is not None and name not in allowed:
+                return None
+            if counted.get(name) != 1:
+                return None
+            info = archive.getinfo(name)
+            if info.file_size > MAX_MEMBER_BYTES:
+                return None
+            with archive.open(name) as fh:
+                payload = fh.read(MAX_MEMBER_BYTES + 1)
+            return None if len(payload) > MAX_MEMBER_BYTES else payload
+        except Exception:
+            return None
+
+    return read_one
+
+
 def member_bytes(data: bytes, name: str, allowed: Optional[Set[str]] = None) -> Optional[bytes]:
     """Read one member — but only one the reader already accepted.
 
@@ -565,24 +612,9 @@ def member_bytes(data: bytes, name: str, allowed: Optional[Set[str]] = None) -> 
     and decompress whatever it likes. `allowed` is the set of members that
     survived those checks; anything else is refused here too, and the declared
     size is re-checked because a ZIP header can lie about it.
+
+    One member, one archive parse. `member_reader` is the same guards for a
+    caller that wants several, and this is its one-member case, so there is one
+    place that decides which members may be read.
     """
-    try:
-        zf = zipfile.ZipFile(io.BytesIO(data))
-        if allowed is not None and name not in allowed:
-            return None
-        # `getinfo` and `open` resolve a duplicated name to the *last* entry,
-        # while everything upstream -- the accepted `Member`, the budget charge,
-        # this allow-list -- came from the first. A 505 KiB archive whose second
-        # `d.zip` was 400 MB of zeros cost 1.25 GiB with the report saying the
-        # member had been refused. A name that means two entries identifies
-        # neither of them.
-        if sum(1 for i in zf.infolist() if i.filename == name) != 1:
-            return None
-        info = zf.getinfo(name)
-        if info.file_size > MAX_MEMBER_BYTES:
-            return None
-        with zf.open(name) as fh:
-            payload = fh.read(MAX_MEMBER_BYTES + 1)
-        return None if len(payload) > MAX_MEMBER_BYTES else payload
-    except Exception:
-        return None
+    return member_reader(data, allowed)(name)

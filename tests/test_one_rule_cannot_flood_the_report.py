@@ -89,3 +89,45 @@ def test_a_report_under_the_budget_says_nothing_about_unlisted_findings():
     assert rep.suppressed == {}
     assert "not listed" not in as_text(rep)
     assert json.loads(as_json(rep))["notListed"] == []
+
+
+def _tool_rule():
+    """The first `about: tool` error in the catalogue, whatever it is called."""
+    import json
+
+    from conftest import ROOT
+    from vdi2770_validate.catalog import rule as by_id
+
+    catalogue = json.loads(
+        (ROOT / "src" / "vdi2770_validate" / "data" / "rules.json").read_text(encoding="utf-8"))
+    for entry in catalogue["rules"]:
+        if entry["about"] == "tool" and entry["severity"] == "error":
+            return by_id(entry["id"])
+    raise AssertionError("no about:tool error in the catalogue")
+
+
+def test_the_axis_count_survives_the_listing_cap():
+    """The summary counts every error and counted only the errors it printed.
+
+    `count()` adds the findings the listing cap withheld — the comment above it
+    says why: "the listing is capped, the count is not, and printing the capped
+    number over an uncapped summary contradicts it". The sentence naming how
+    many of those errors are this tool declining to look was written an hour
+    later and walked `findings`, which is the capped list. So a container with
+    150 tool-axis errors read `150 error(s) … 100 of the errors are this tool
+    declining to look`, and a supplier took the other 50 as theirs.
+    """
+    from vdi2770_validate.model import About, Finding, Location, Report, Severity
+    from vdi2770_validate.report import as_text
+
+    rule = _tool_rule()
+    report = Report(target="deep.zip")
+    for _ in range(150):
+        report.add(Finding(rule, rule.title, Location(container="deep.zip")))
+
+    assert report.count(Severity.ERROR) == 150, report.count(Severity.ERROR)
+    summary = as_text(report, True).strip().splitlines()[-1]
+    assert "150 error(s)" in summary, summary
+    assert "150 of the errors" in summary, (
+        f"the axis was counted over the listing, not the count: {summary}")
+    assert About.TOOL is not None

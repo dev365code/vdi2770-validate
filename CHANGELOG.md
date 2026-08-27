@@ -86,6 +86,67 @@ rest of these entries are about — and that one was itself wrong twice.
   half that must not go with it: `_unswept` is a state `make check` tolerates and
   a release does not.
 
+- **The same quadratic, twice more, inside one collision group.** Building the
+  groups once removed the cost across many groups and left it inside a single
+  one: each member's finding walked the whole group to find its partners, and
+  the two relations that choose the sentence — *one path*, *one name* — were
+  recomputed over the whole group for every member of it. 0.90, 1.98, 6.74 and
+  22.02 seconds for one group of 512, 1,024, 2,048 and 4,000, from a 575 KiB
+  archive; 2.38 seconds at 4,000 now, and linear.
+
+  The counted test written with the first repair could not see either of them.
+  It counted one function's calls, which stayed at 3n while the wall time
+  quadrupled — linear on an axis that was never the problem. It counts every
+  normalisation the rule performs now.
+
+- **Two caps met and members fell between them.** The listing keeps a hundred
+  findings per rule and each names five partners, and with both a group of a
+  hundred and ten left ten members appearing neither as a subject nor in
+  anybody's list: counted, and never said what they were called. The partners
+  are chosen with a stride across the group instead of the next few along.
+
+- **A 952 KiB conforming container cost 590 seconds and exited 0.** Reading one
+  member opens the archive, and the PDF rules ask for every declared PDF — so
+  the cost was declared files times members, with no budget measuring it: the
+  bytes are tiny, the members are under the cap, nothing inflates and memory
+  stays flat. 0.78, 1.29, 5.42 and 20.60 seconds for 250, 500, 1,000 and 2,000
+  declared PDFs, a clean 4× per doubling, and a profile put 18.5 of those 20
+  seconds inside CPython's central-directory parse, called once per file. This
+  is not a hostile shape — a plant handover with a few thousand drawings is the
+  ordinary one. The reader now offers a way to read several members over one
+  parse, with every guard `member_bytes` applies applied in the same place, and
+  that function is its one-member case. 9,000 declared PDFs from a 952 KiB
+  archive: **1.02 seconds**, and linear.
+
+  A second one sat beside it: `F2`'s collision set matched each colliding member
+  against every declared path, normalising both sides at every pair — 5.36
+  seconds at 2,000, now 0.71 and linear.
+
+- **The summary counted the axis over the listing, not over the count.** The
+  line saying how many errors are this tool declining to look walked
+  `findings`, which the per-rule listing cap bounds, while the total beside it
+  came from `count()`, which the cap does not. A container with 150 tool-axis
+  errors read *150 error(s) … 100 of the errors are this tool declining to
+  look*, handing a supplier fifty that were not theirs. The comment three lines
+  above `count()` is about exactly this.
+
+- **`Z13` was firing inside a declared payload.** Lifting it out of the
+  documentation branch took it past the guard that keeps `Z2`, `Z3` and `Z9`
+  quiet about a declared `application/zip` member — *what is inside it is its
+  own business, the way a PDF's is* — so a conforming document container
+  carrying a declared CAD bundle became exit 1, with a remedy asking its
+  supplier to restructure the inside of something that is not a VDI 2770
+  artefact.
+
+- **A member name could forge lines of the text report.** The location line
+  interpolates the name the archive stored, so a member called
+  `notes.txt\n\n  0 error(s)…\n\nsupplier-delivery.zip\n  no findings` put a
+  summary and a second container's clean verdict inside a finding: a supplier
+  chose what a CI log appeared to say about somebody else's delivery. `--json`
+  was never affected. The page renders the location through the same helper that
+  spells out what draws nothing, which leaves an ordinary name — decomposed
+  Korean included — exactly as the archive spells it.
+
 - **The release sweep and the coverage gate walked the same trees differently.**
   One globbed fixed depths and the other walked recursively, so a container one
   directory deeper satisfied firing coverage, was counted in the documents, and
@@ -929,7 +990,7 @@ below is measured on this machine, before and after, on the same input.
 Three gates that ask what `make check` cannot ask of itself.
 
 - **`make mutations`** takes every claim this project makes about a gate, breaks
-  the thing that gate protects, and checks the gate notices — 76 rows, each
+  the thing that gate protects, and checks the gate notices — 78 rows, each
   naming the pytest selection or the tool that has to go red. The harness checks
   itself as hard as it checks the code: a row whose anchor no longer appears
   exactly once is an error rather than a pass; every apply and restore clears

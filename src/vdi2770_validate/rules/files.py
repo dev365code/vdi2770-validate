@@ -198,8 +198,13 @@ def check(container, document) -> Iterator[Finding]:
     # not undeclared -- the declaration reaches it too, and which of the two the
     # recipient ends up with is what `Z10` is reporting on the line above. Told
     # to "declare it or remove it", a sender would be declaring one path twice.
-    collides = {n for n in container.duplicate_names
-                if any(extracts_to(n) == extracts_to(a) for a in accounted_for)}
+    # The declared paths, normalised once. This asked `any(extracts_to(n) ==
+    # extracts_to(a) for a in accounted_for)` per colliding member, recomputing
+    # the split-and-join on both sides at every pair: 0.82, 1.44 and 5.36 seconds
+    # for 500, 1,000 and 2,000 declared files each also stored with a `./` in
+    # front, from a 423 KiB archive.
+    landed_on = {extracts_to(a) for a in accounted_for}
+    collides = {n for n in container.duplicate_names if extracts_to(n) in landed_on}
     # And the members a declaration reached without resolving to one of them.
     # `F1` says that declaration matches these two; `F2` then said, of the same
     # two members on the next lines, that no declaration names them. One report,
