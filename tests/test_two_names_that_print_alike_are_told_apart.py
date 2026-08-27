@@ -445,3 +445,45 @@ def test_free_text_has_no_path_segments():
     assert shown == "Technische / Spezifikation", shown
     # A member name is still a path, and a space at a segment edge still shows.
     assert escaped("docs /B.pdf") != "docs /B.pdf"
+
+
+def test_a_character_that_draws_nothing_and_no_property_finds():
+    """`U+2800 BRAILLE PATTERN BLANK` is `So`, printable and not whitespace.
+
+    Every other invisible character this function spells out is found by a
+    property — a format character, a mark, a filler. This one is a symbol whose
+    glyph is empty, so nothing but a list finds it, and it slipped through as
+    itself: `'B.pdf'` declared over `at blank.zip!/B.pdf⠀`, two lines that read
+    as a contradiction.
+    """
+    from vdi2770_validate.names import escaped
+
+    assert escaped("B.pdf⠀") != "B.pdf⠀"
+    assert "\\u2800" in escaped("B.pdf⠀")
+
+
+def test_the_observed_name_is_told_apart_from_the_first_published_one():
+    """Which published name the comparison uses is a decision, and it was free.
+
+    `_two_names`' docstring argues for the first: with two published spellings
+    there is no one differing run, and picking the closest would make the
+    report's rendering depend on which comparison happened to win. Nothing held
+    it — swapping `published[0]` for `published[-1]` left the whole suite green.
+
+    Class `04-01` is where it shows: its two published English renderings differ
+    only in the case of one letter, so the run that differs is not the same run
+    against each of them.
+    """
+    from vdi2770_validate.catalog import english_for
+    from vdi2770_validate.rules.metadata import _two_names
+
+    published = english_for("04-01")
+    assert len(published) == 2 and published[0] != published[-1], published
+
+    said = _two_names("Contract documentation", published, "04-01",
+                      "published renderings are")
+    first, rest = published[0], published[-1]
+    # The first spelling is the one it is measured against: it comes first in
+    # the sentence, and the others are listed as they are written.
+    assert said.index(f"'{first}'") < said.index(f"'{rest}'"), said
+    assert said.startswith("'Contract documentation' for class 04-01;"), said

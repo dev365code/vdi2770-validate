@@ -86,6 +86,17 @@ rest of these entries are about — and that one was itself wrong twice.
   half that must not go with it: `_unswept` is a state `make check` tolerates and
   a release does not.
 
+- **One invisible character no property finds, and two decisions nothing held.**
+  `U+2800 BRAILLE PATTERN BLANK` is a symbol whose glyph is empty — not a format
+  character, not a mark, not whitespace — so every property this looks at said it
+  was ordinary and it reached the page as itself. How many partners a collision
+  names could be cut to one, and which of several published class names the
+  comparison measures against could be swapped for another, with the whole suite
+  green either way; both are pinned now. And the case relation reads the running
+  interpreter's Unicode tables, which a newer filesystem's may outrun — measured,
+  every pair it misses that way is one the filesystem folds and it does not, never
+  the other way round, and the docstring says so.
+
 - **A documentation container delivered as an unzipped folder was not a folder.**
   The rule that says *this tool does not open folders* matched
   `VDI2770_Metadata.xml` and nothing else, so a handover holding `plantA/` whose

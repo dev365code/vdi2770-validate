@@ -43,11 +43,14 @@ def extracts_to(name: str) -> str:
 # control categories; the rest are marks and selectors Python calls printable and
 # a terminal draws as nothing, so a name carrying one prints exactly like the same
 # name without it. Python has no `Default_Ignorable_Code_Point` predicate, so the
-# ranges are written out.
+# ranges are written out. `U+2800 BRAILLE PATTERN BLANK` is not one of them --
+# it is `So`, printable, and not whitespace -- but it draws nothing, and it is
+# the one character in that description that no property finds.
 _INVISIBLE = ((0x034F, 0x034F),      # combining grapheme joiner
               (0x115F, 0x1160),      # Hangul choseong and jungseong fillers
               (0x17B4, 0x17B5),      # Khmer inherent vowels
               (0x180B, 0x180F),      # Mongolian free variation selectors
+              (0x2800, 0x2800),      # braille pattern blank
               (0x3164, 0x3164),      # Hangul filler
               (0xFE00, 0xFE0F),      # variation selectors
               (0xFFA0, 0xFFA0),      # halfwidth Hangul filler
@@ -293,6 +296,14 @@ def ignoring_case(name: str) -> str:
 
     Over `extracts_to`, not `folder_path`: `./B.PDF` beside `B.pdf` has to group,
     and so does a folder segment that differs only in case.
+
+    The relation is the running interpreter's, which is not always the
+    filesystem's: `casefold` reads Python's Unicode tables, and a volume built
+    against a newer release folds pairs an older interpreter does not. Measured
+    against this machine, the pairs it misses that way are all in scripts added
+    after Unicode 13 -- Vithkuqi, Garay, Medefaidrin, Glagolitic supplement --
+    and every miss is in that direction: it never claims a collision the
+    filesystem does not make.
     """
     return nfc(extracts_to(name).casefold())
 
