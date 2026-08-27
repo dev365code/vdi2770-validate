@@ -593,3 +593,36 @@ def test_a_near_miss_is_skipped_only_for_the_reason_that_names_it():
     assert z3, [f.rule.id for f in report.findings]
     assert "docs/VDI2770_Metadata.xml" in (z3[0].detail or ""), (
         f"the near-miss the reader knew is not on the page: {z3[0].detail!r}")
+
+
+def test_the_other_kinds_classifying_name_is_not_just_an_undeclared_file():
+    """An archive answering to both container kinds was silently one of them.
+
+    `VDI2770_Main.xml` and `VDI2770_Metadata.xml` side by side at the root:
+    classification prefers the documentation reading, the document metadata
+    drew a bare `F2` — *a file in the container is not named in the metadata* —
+    and following that finding's remedy ("declare it") produced a fully clean
+    report for an archive whose kind depends on which name a reader looks for
+    first.
+
+    `F2` still fires; what changes is that its sentence says what the file is.
+    The other kind's classifying name at the root is not an undeclared file, and
+    "declare it" is the one remedy that must not be offered for it.
+    """
+    from conftest import CLEAN_DOCUMENT, CLEAN_DOCUMENTATION
+
+    doc = zipfile.ZipFile(CLEAN_DOCUMENT)
+    docn = zipfile.ZipFile(CLEAN_DOCUMENTATION)
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        z.writestr("VDI2770_Main.xml", docn.read("VDI2770_Main.xml"))
+        z.writestr("VDI2770_Main.pdf", docn.read("VDI2770_Main.pdf"))
+        z.writestr("VDI2770_Metadata.xml", doc.read("VDI2770_Metadata.xml"))
+    report = check_bytes(buf.getvalue(), "both.zip")
+    f2 = [f for f in report.findings if f.rule.id == "F2"
+          and (f.where.member or "") == "VDI2770_Metadata.xml"]
+    assert f2, [f.rule.id for f in report.findings]
+    said = f"{f2[0].detail or ''} {f2[0].remedy or ''}"
+    assert "document container" in said, (
+        f"nothing says this is the other kind's classifying name: {said!r}")
+    assert "Declare the file" not in (f2[0].remedy or ""), f2[0].remedy

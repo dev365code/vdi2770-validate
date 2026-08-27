@@ -86,6 +86,14 @@ rest of these entries are about — and that one was itself wrong twice.
   half that must not go with it: `_unswept` is a state `make check` tolerates and
   a release does not.
 
+- **An archive answering to both container kinds was silently one of them.**
+  `VDI2770_Main.xml` beside `VDI2770_Metadata.xml` at the root classifies as a
+  documentation container, and the document metadata drew `F2`'s bare title —
+  whose remedy, *declare it*, produced a fully clean report for an archive whose
+  kind depends on which name a reader looks for first. `F2` still fires; its
+  sentence now says what the file is, and the remedy is to remove or rename the
+  classifying name the sender did not mean.
+
 - **"Unreachable" modelled an operation the reader does not perform.** A
   declaration is read `f.text.strip()` — whitespace off the two ends of the
   whole name, nowhere else. The helper stripped every path segment, so

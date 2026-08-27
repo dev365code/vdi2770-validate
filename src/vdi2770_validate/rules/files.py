@@ -5,7 +5,7 @@ from typing import Iterator
 
 from ..catalog import rule
 from ..model import MAIN_PDF, MAIN_XML, METADATA_XML, About, Finding, Kind
-from ..names import Members, escaped, extracts_to, folder_path, nfc, without_edge_space
+from ..names import Members, as_written, escaped, extracts_to, folder_path, nfc, without_edge_space
 from .container import MAX_ALIKE, _inside
 
 EXTENSION_FOR = {"application/pdf": ".pdf", "application/zip": ".zip"}
@@ -255,6 +255,26 @@ def check(container, document) -> Iterator[Finding]:
         if _inside(folder_path(name), unopened):
             continue
         r = rule("F2")
+        # The other kind's classifying name at the root is not an undeclared
+        # file. `VDI2770_Main.xml` beside `VDI2770_Metadata.xml` classifies as a
+        # documentation container -- silently -- and the document metadata drew
+        # this rule's bare title, whose remedy ("declare it") produced a fully
+        # clean report for an archive whose kind depends on which name a reader
+        # looks for first. `F2` still fires; the sentence says what the file is.
+        if (container.kind is Kind.DOCUMENTATION
+                and folder_path(name) == METADATA_XML):
+            yield Finding(
+                r, r.title, container.where.child(member=name, subject=name),
+                detail=f"{as_written(name)} is the name that classifies a "
+                       f"document container. This archive also holds "
+                       f"{MAIN_XML}, so this tool read it as a documentation "
+                       f"container — and a reader that looks for "
+                       f"{METADATA_XML} first opens it as the other kind",
+                fix="Remove or rename the classifying name you did not mean. "
+                    "An archive that answers to both kinds is a different "
+                    "delivery depending on who opens it, and declaring this "
+                    "file would only make that silent.")
+            continue
         # And "declare it" is not on offer for a member whose name carries a
         # space at its edge: the metadata's text is read with that removed, so
         # whatever the sender writes comes back without it. Half a remedy that
