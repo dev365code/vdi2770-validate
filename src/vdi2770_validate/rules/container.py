@@ -187,7 +187,7 @@ REMEDY_FOR_DEFECT = {
         "Split the delivery: this archive lists more members than this tool will open "
         "in one container.",
     "member-too-large":
-        "That one member is larger than this tool will read. Send it on its own, or "
+        "The archive declares that member larger than this tool will read — nothing here inflated it to check. Send it on its own, or "
         "check it with something that has no such limit — the rest of the container "
         "was read normally.",
     "suspicious-compression":

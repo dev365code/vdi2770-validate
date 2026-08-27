@@ -86,6 +86,16 @@ rest of these entries are about — and that one was itself wrong twice.
   half that must not go with it: `_unswept` is a state `make check` tolerates and
   a release does not.
 
+- **A 120 KiB archive said one of its members was 629,145,600 bytes.** Every
+  size in the readability sweep comes from the central directory, which is
+  whatever the writer put there. `member_bytes` re-checks a declared size against
+  the bytes it inflates and says in its own docstring that a ZIP header can lie
+  about it; the sweep quoted the number as a measurement. Nothing here can be
+  cheaper — checking means inflating the member, which is the work the budget
+  exists to avoid — so the sentence says whose number it is. A recipient
+  comparing the old one against the file in their hand found a contradiction and
+  no way to tell which half was wrong.
+
 - **One invisible character no property finds, and two decisions nothing held.**
   `U+2800 BRAILLE PATTERN BLANK` is a symbol whose glyph is empty — not a format
   character, not a mark, not whitespace — so every property this looks at said it

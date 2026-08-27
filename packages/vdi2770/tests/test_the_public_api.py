@@ -854,3 +854,42 @@ def test_a_file_with_no_startxref_is_still_read():
     """
     assert vdi2770.read_pdf(b"%PDF-1.4\ntrailer\n<< /Encrypt 4 0 R >>\n").encrypted is True
     assert vdi2770.read_pdf(b"%PDF-1.4\ntrailer\n<< /Size 9 >>\n").encrypted is False
+
+
+def test_a_size_the_archive_only_claims_is_not_stated_as_fact():
+    """A 120 KiB archive said one of its members was 629,145,600 bytes.
+
+    Every size in the readability sweep comes from the central directory, which
+    is whatever the writer put there. `member_bytes` re-checks the declared size
+    against the bytes it actually inflates and says in its own docstring that a
+    ZIP header can lie about it; the sweep quotes the number and does not.
+
+    Nothing here can be cheaper — checking would mean inflating the member,
+    which is the work the budget exists to avoid — so the sentence has to say
+    whose number it is. A recipient cannot compare *629,145,600 bytes* against
+    the file in their hand and find anything but a contradiction.
+    """
+    import io
+    import struct
+    import zipfile
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        z.writestr("VDI2770_Metadata.xml", b"<x/>")
+        z.writestr("B.pdf", b"%PDF-1.4\n")
+    raw = bytearray(buf.getvalue())
+    at = raw.rfind(b"PK\x01\x02")
+    while at != -1:
+        length = struct.unpack("<H", bytes(raw[at + 28:at + 30]))[0]
+        if bytes(raw[at + 46:at + 46 + length]) == b"B.pdf":
+            raw[at + 24:at + 28] = struct.pack("<I", 600 * 1024 * 1024)
+            break
+        at = raw.rfind(b"PK\x01\x02", 0, at)
+    else:
+        raise AssertionError("could not find B.pdf in the central directory")
+
+    box = vdi2770.read_container(bytes(raw), "forged.zip")
+    said = " ".join(d.detail or "" for d in box.rejected.values())
+    assert "629145600" in said, said
+    assert "says" in said or "claims" in said, (
+        f"a size the archive only claims is stated as fact: {said}")

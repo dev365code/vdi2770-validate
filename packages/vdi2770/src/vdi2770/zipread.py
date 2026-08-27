@@ -375,20 +375,33 @@ def read(data: bytes, path: str, depth: int = 0, _budget: Optional[_Budget] = No
             c.rejected[i.filename] = _refuse(
                 c, "unsafe-member-name", c.where.child(member=i.filename), reason)
             continue
+        # Whose number this is. Every size here comes from the central
+        # directory, which is whatever the writer put there -- `member_bytes`
+        # re-checks the declared size against the bytes it inflates and says so
+        # in its own docstring, and this cannot: checking would mean inflating
+        # the member, which is the work the budget exists to avoid. A 120 KiB
+        # archive said one of its members was 629,145,600 bytes, and a recipient
+        # comparing that against the file in their hand finds a contradiction
+        # and no way to tell which half is wrong.
         if i.file_size > MAX_MEMBER_BYTES:
             c.rejected[i.filename] = _refuse(
                 c, "member-too-large", c.where.child(member=i.filename),
-                f"{i.file_size} bytes, over the {MAX_MEMBER_BYTES} byte limit")
+                f"the archive says {i.file_size} bytes, over the "
+                f"{MAX_MEMBER_BYTES} byte limit; nothing here inflated it to "
+                f"find out")
             continue
         if (i.compress_size > 0 and i.file_size > MIN_SUSPICIOUS_BYTES
                 and i.file_size // max(i.compress_size, 1) > MAX_RATIO):
             c.rejected[i.filename] = _refuse(
                 c, "suspicious-compression", c.where.child(member=i.filename),
-                f"expands {i.file_size // max(i.compress_size, 1)}x, over {MAX_RATIO}x")
+                f"the archive says it expands "
+                f"{i.file_size // max(i.compress_size, 1)}x, over {MAX_RATIO}x")
             continue
         total += i.file_size
         if total > MAX_TOTAL_BYTES:
-            c.defects.append(Defect("archive-too-large", c.where, f"over {MAX_TOTAL_BYTES} bytes"))
+            c.defects.append(Defect("archive-too-large", c.where,
+                                    f"the sizes this archive declares add up to "
+                                    f"over {MAX_TOTAL_BYTES} bytes"))
             # The names past here are still in the archive's directory. Dropping
             # them made `present` -- whose whole promise is "every name the
             # archive declares" -- omit them, and a caller then had no way to

@@ -383,7 +383,9 @@ class Members:
     #: a refusal to a user is a report's job, not a reader's.
     SAID = {
         "unsafe-member-name": "its name would escape the extraction directory",
-        "member-too-large": "it is larger than this tool will read",
+        # The archive's claim, not a measurement: the size comes from the
+        # central directory and nothing inflated the member to check it.
+        "member-too-large": "the archive declares it larger than this tool will read",
         "suspicious-compression": "it expands further than this tool will allow",
         "member-unreadable": "it is in the archive but could not be read",
         "metadata-too-large": "it is larger than this tool will parse",
