@@ -86,6 +86,36 @@ rest of these entries are about — and that one was itself wrong twice.
   half that must not go with it: `_unswept` is a state `make check` tolerates and
   a release does not.
 
+- **"Unreachable" modelled an operation the reader does not perform.** A
+  declaration is read `f.text.strip()` — whitespace off the two ends of the
+  whole name, nowhere else. The helper stripped every path segment, so
+  `sub /B.pdf`, which can be declared verbatim and resolves, was reported as a
+  name no declaration reaches, with `F2` withdrawing the one remedy that works —
+  while ` sub /B.pdf `, which really is unreachable, stripped to something that
+  matched no declaration and kept the very contradiction the helper exists to
+  remove. The predicate is now the reader's own operation.
+
+- **A near-miss was skipped for every refusal, not only the one that names it.**
+  A metadata file stored twice is refused as `ambiguous-name` — a fact about the
+  archive holding it twice, not about the name — and *it must sit at the root*
+  is as true and as useful for it as ever. Skipping every refusal erased the one
+  line saying the archive nearly has a metadata file. Only an unsafe name is not
+  a near-miss.
+
+- **Two spellings of one folder are two folders again.** Fixing the double count
+  normalised both branches of the folder walk, and that folded `Prüfbericht`
+  written NFC beside NFD — two directory entries, two folders on any preserving
+  filesystem — into one, the exact loss the names module's first lines warn
+  about. Both branches keep the archive's spelling now; a folder that shares its
+  canonical spelling with another is rendered as code points so the two lines
+  can be told apart, and the rest stay readable.
+
+- **One list in a finding had no bound.** Nine thousand members whose names
+  carry edge whitespace put a 270,135-character line into one detail; the list
+  is capped the way every other one is, with the sentence's count exact. The
+  reader's own notes on `near_misses` now name all four kinds and say the
+  matched name is the whole member name, which it is.
+
 - **Three more doors let an archive's own strings forge report lines, and four
   sentences named the wrong thing.** A *folder* named with newlines reached the
   page raw through `Z9`'s and `Z13`'s details, and an inner container's name
@@ -133,13 +163,13 @@ rest of these entries are about — and that one was itself wrong twice.
   comparing the old one against the file in their hand found a contradiction and
   no way to tell which half was wrong.
 
-- **One invisible character no property finds, and two decisions nothing held.**
+- **One invisible character no property finds, and a decision nothing held.**
   `U+2800 BRAILLE PATTERN BLANK` is a symbol whose glyph is empty — not a format
   character, not a mark, not whitespace — so every property this looks at said it
-  was ordinary and it reached the page as itself. How many partners a collision
-  names could be cut to one, and which of several published class names the
-  comparison measures against could be swapped for another, with the whole suite
-  green either way; both are pinned now. And the case relation reads the running
+  was ordinary and it reached the page as itself. And which of several published
+  class names the comparison measures against could be swapped for another with
+  the whole suite green; it is pinned now. (Cutting the partner list to one was
+  already caught — by the stride test, whose job that is.) And the case relation reads the running
   interpreter's Unicode tables, which a newer filesystem's may outrun — measured,
   every pair it misses that way is one the filesystem folds and it does not, never
   the other way round, and the docstring says so.
@@ -1114,7 +1144,7 @@ below is measured on this machine, before and after, on the same input.
 Three gates that ask what `make check` cannot ask of itself.
 
 - **`make mutations`** takes every claim this project makes about a gate, breaks
-  the thing that gate protects, and checks the gate notices — 84 rows, each
+  the thing that gate protects, and checks the gate notices — 85 rows, each
   naming the pytest selection or the tool that has to go red. The harness checks
   itself as hard as it checks the code: a row whose anchor no longer appears
   exactly once is an error rather than a pass; every apply and restore clears

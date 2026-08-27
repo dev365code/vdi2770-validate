@@ -519,3 +519,77 @@ def test_z3_offers_only_the_near_misses_that_decide_the_kind():
     z3 = [f for f in report.findings if f.rule.id == "Z3"]
     assert z3, [f.rule.id for f in report.findings]
     assert "vdi2770_main.pdf" not in (z3[0].detail or ""), z3[0].detail
+
+
+def _one_file_container(member, declared):
+    meta = ('<?xml version="1.0" encoding="UTF-8"?>'
+            '<Document xmlns="http://www.vdi.de/schemas/vdi2770"><DocumentVersion>'
+            f'<DigitalFile FileFormat="application/pdf">{declared}</DigitalFile>'
+            '</DocumentVersion></Document>')
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        z.writestr("VDI2770_Metadata.xml", meta)
+        z.writestr(member, b"%PDF-1.4\n")
+    return buf.getvalue()
+
+
+def test_unreachable_means_what_the_reader_actually_strips():
+    """The helper stripped every segment; the reader strips the whole string.
+
+    A declaration is read as `f.text.strip()` — whitespace removed from the two
+    ends of the whole name, nowhere else. So `sub /B.pdf` **can** be declared,
+    verbatim, and it resolves; the helper stripped each segment and said no
+    declaration can reach it, with `F2` withdrawing the one remedy that works.
+    And ` sub /B.pdf ` — genuinely unreachable — stripped to `sub/B.pdf`, which
+    matches no declaration, so the very contradiction the helper exists to
+    remove was still on the page for it.
+    """
+    from vdi2770_validate.names import without_edge_space
+
+    # The predicate is the reader's own operation.
+    assert without_edge_space("sub /B.pdf") == "sub /B.pdf"
+    assert without_edge_space(" sub /B.pdf ") == "sub /B.pdf"
+
+    # A member with an interior segment edge, declared verbatim: reachable.
+    report = check_bytes(_one_file_container("sub /B.pdf", "sub /B.pdf"), "a.zip")
+    assert not [f for f in report.findings if f.rule.id in ("F1", "F2")], (
+        [f"{f.rule.id}: {f.message}" for f in report.findings])
+
+    # The same member, declared with the space collapsed: missing, plainly.
+    report = check_bytes(_one_file_container("sub /B.pdf", "sub/B.pdf"), "b.zip")
+    f1 = [f for f in report.findings if f.rule.id == "F1"]
+    assert f1 and "no declaration can" not in f"{f1[0].message} {f1[0].detail}", (
+        f1[0].detail)
+
+    # Whole-name edge whitespace: unreachable, and the report says so.
+    report = check_bytes(_one_file_container(" sub /B.pdf ", "sub /B.pdf"), "c.zip")
+    f1 = [f for f in report.findings if f.rule.id == "F1"]
+    assert f1, [f.rule.id for f in report.findings]
+    said = f"{f1[0].message} {f1[0].detail} {f1[0].remedy}"
+    assert "no declaration can" in said, said
+    f2 = [f for f in report.findings if f.rule.id == "F2"]
+    assert f2 and "Rename" in (f2[0].remedy or ""), (
+        f"F2's remedy still offers the declaration that cannot work: "
+        f"{f2[0].remedy}")
+
+
+def test_a_near_miss_is_skipped_only_for_the_reason_that_names_it():
+    """`_classify` skipped every refused name; only an unsafe one is not a
+    near-miss.
+
+    `docs/VDI2770_Metadata.xml` stored twice is refused as `ambiguous-name` — a
+    refusal about the archive holding it twice, not about the name — and the
+    diagnosis *it must sit at the root* is as true and as useful as ever. The
+    skip erased it, and for a wrong-case copy in a subfolder nothing on the page
+    said the archive nearly has a metadata file at all.
+    """
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        z.writestr("B.pdf", b"%PDF-1.4\n")
+        z.writestr("docs/VDI2770_Metadata.xml", b"<x/>")
+        z.writestr("docs/VDI2770_Metadata.xml", b"<y/>")
+    report = check_bytes(buf.getvalue(), "twice.zip")
+    z3 = [f for f in report.findings if f.rule.id == "Z3"]
+    assert z3, [f.rule.id for f in report.findings]
+    assert "docs/VDI2770_Metadata.xml" in (z3[0].detail or ""), (
+        f"the near-miss the reader knew is not on the page: {z3[0].detail!r}")

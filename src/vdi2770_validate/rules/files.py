@@ -22,8 +22,13 @@ BUDGET_REFUSALS = frozenset({
 
 
 def _named_members(names) -> str:
-    """Members as the archive spells them, with what draws nothing spelled out."""
-    return " and ".join(f"'{escaped(n)}'" for n in names)
+    """Members as the archive spells them, with what draws nothing spelled out.
+
+    Bounded like every other list a finding carries: nine thousand edge-space
+    members put a 270,135-character line into one detail.
+    """
+    return (", ".join(f"'{escaped(n)}'" for n in names[:MAX_ALIKE])
+            + (", ..." if len(names) > MAX_ALIKE else ""))
 
 
 def check(container, document) -> Iterator[Finding]:

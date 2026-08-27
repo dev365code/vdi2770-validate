@@ -342,7 +342,7 @@ def check(container, declared, is_declared_payload) -> Iterator[Finding]:
             # "1 folder: ./" with a remedy the archive already obeys. The path
             # branch below drops `.` segments; this one is the same miss, one
             # line apart.
-            segments = [seg for seg in nfc(m.name).split("/") if seg not in ("", ".")]
+            segments = [seg for seg in m.name.split("/") if seg not in ("", ".")]
             if segments:
                 folders.add("/".join(segments) + "/")
         # Every folder on the path, not just the last one: `a/b/x.pdf` puts the
@@ -355,14 +355,15 @@ def check(container, declared, is_declared_payload) -> Iterator[Finding]:
         # thousand times cost 1.2 GB. Neither cap changes what a real archive
         # reports -- a hundred distinct folders is already a strange delivery, and
         # the finding names five of them.
-        # `nfc`, as the directory-entry branch above already does. One
-        # normalising and one not put a folder whose name is not ASCII into the
-        # set twice -- "2 folders: Prüfbericht/, Prüfbericht/", one folder, and
-        # two names that print the same so nothing said what the second was.
-        # macOS writes filenames decomposed and its `zip -r` emits the directory
-        # entry, so this is the ordinary shape there rather than a strange one.
+        # The archive's own spelling, in *both* branches -- that is the repair.
+        # One branch normalising and the other not put one NFD folder into the
+        # set twice ("2 folders: Prüfbericht/, Prüfbericht/"); normalising both
+        # then folded two genuinely distinct folders, NFC beside NFD, into one,
+        # which is the loss the names module's first lines warn about. Raw in
+        # both branches counts each spelling the archive holds exactly once, and
+        # the rendering below is what tells look-alikes apart.
         prefix = ""
-        for part in nfc(m.name).rstrip("/").split("/")[:-1][:MAX_FOLDER_DEPTH]:
+        for part in m.name.rstrip("/").split("/")[:-1][:MAX_FOLDER_DEPTH]:
             # `./name` is at the root. Some writers emit the prefix and it is not
             # a folder, so counting it invented one and told the sender to move a
             # file that had not gone anywhere.
@@ -394,20 +395,34 @@ def check(container, declared, is_declared_payload) -> Iterator[Finding]:
         # archive" flattens a document container, and a reader with two findings
         # and no order between them can do exactly that.
         unopened = {folder_path(f) + "/" for f, _ in folders_holding_metadata(container)}
-        also_a_container = sorted(unopened & folders)
+        also_a_container = sorted(f for f in folders
+                                  if folder_path(f) in unopened or f in unopened)
+        # `escaped` for a folder that shares its canonical spelling with
+        # another, `as_written` for the rest: two folders named NFC and NFD of
+        # one word print identically, and a page that says "2 folders" over two
+        # indistinguishable names has said nothing.
+        crowded = {key for key in map(folder_path, named)
+                   if sum(1 for f in named if folder_path(f) == key) > 1}
+        shown = [escaped(f) if folder_path(f) in crowded else as_written(f)
+                 for f in named[:5]]
         yield Finding(r, r.title, container.where,
                       detail=f"{'at least ' if capped else ''}{len(named)} "
                              f"folder{'' if len(named) == 1 else 's'}: "
-                             + ", ".join(as_written(f) for f in named[:5])
+                             + ", ".join(shown)
                              + (", ..." if len(named) > 5 else ""),
                       fix=None if not also_a_container else
                       (rule("Z9").remedy + " Not by hand for "
                        + ", ".join(as_written(f) for f in also_a_container[:5])
                        + (", ..." if len(also_a_container) > 5 else "")
-                       + ": the finding beside this one says that folder is a "
-                         "container this tool did not open, and zipping it into "
-                         "a .zip member is what removes the folder without "
-                         "flattening what is inside it."))
+                       + (": the finding beside this one says that folder is a "
+                          "container this tool did not open, and zipping it into "
+                          "a .zip member is what removes the folder without "
+                          "flattening what is inside it."
+                          if len(also_a_container) == 1 else
+                          ": the finding beside this one says those folders are "
+                          "containers this tool did not open, and zipping each "
+                          "into its own .zip member is what removes the folders "
+                          "without flattening what is inside them.")))
 
     if container.duplicate_names:
         r = rule("Z10")

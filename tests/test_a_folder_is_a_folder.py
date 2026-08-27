@@ -239,3 +239,41 @@ def test_a_folder_this_tool_did_not_open_says_which_remedy_to_follow():
              if f.rule.id == "Z9"]
     assert plain, "premise: an ordinary folder still draws Z9"
     assert "the finding beside this one" not in (plain[0].remedy or ""), plain[0].remedy
+
+
+def test_two_folders_that_differ_in_spelling_are_two_folders():
+    """Fixing the double count folded genuinely distinct folders into one.
+
+    One folder spelled NFD in both its directory entry and its members was
+    counted twice because one branch normalised and the other did not; the
+    repair normalised both, and then `Prüfbericht(NFC)/a.pdf` beside
+    `Prüfbericht(NFD)/b.pdf` — two directory entries, two folders on any
+    preserving filesystem — was counted as one. The module that owns these
+    names says it in its first lines: mapping every member onto its canonical
+    spelling loses a file when an archive holds both spellings.
+
+    Two, then — and rendered so the two lines can be told apart, which is what
+    `escaped` is for.
+    """
+    import io
+    import unicodedata
+    import zipfile
+
+    from vdi2770_validate.runner import check_bytes
+
+    composed = unicodedata.normalize("NFC", "Prüfbericht")
+    decomposed = unicodedata.normalize("NFD", "Prüfbericht")
+    assert composed != decomposed
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        z.writestr("VDI2770_Metadata.xml", b"<x/>")
+        z.writestr(composed + "/a.pdf", b"%PDF-1.4\n")
+        z.writestr(decomposed + "/b.pdf", b"%PDF-1.4\n")
+    report = check_bytes(buf.getvalue(), "twins.zip")
+    z9 = [f for f in report.findings if f.rule.id == "Z9"]
+    assert z9, [f.rule.id for f in report.findings]
+    assert z9[0].detail.startswith("2 folders"), z9[0].detail
+    # And the two names on the page are not the same line twice.
+    listed = z9[0].detail.split(": ", 1)[1].split(", ")
+    assert len(set(listed)) == 2, z9[0].detail

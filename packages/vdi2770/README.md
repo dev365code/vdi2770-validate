@@ -63,7 +63,7 @@ supplier archive does not cost you the other four hundred.
 | `children`, `walk()` | inner containers, opened to three levels |
 | `defects` | what the reader could not do, and why |
 | `rejected` | members present in the archive but refused, and why |
-| `near_misses` | reserved name → `(kind, the name that nearly matched)`, kind being `in-a-subfolder`, `path-prefixed` or `case-differs`. `vdi2770_metadata.xml` in an archive with no metadata is worth saying; how to say it is yours, not ours |
+| `near_misses` | reserved name → `(kind, the member name that nearly matched, as the archive spells it)`, kind being `in-a-subfolder`, `path-prefixed`, `case-differs` or `case-differs-elsewhere`. `vdi2770_metadata.xml` in an archive with no metadata is worth saying; how to say it is yours, not ours |
 | `duplicate_names` | a ZIP may carry the same name twice; readers disagree about which one wins |
 
 `build_document(node, where)` returns a `Document` whose every node carries a

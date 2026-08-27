@@ -52,8 +52,8 @@ TABLE = [
 
     ("reader/refused-member-is-still-present",
      "packages/vdi2770/src/vdi2770/zipread.py",
-     "    c.kind, c.near_misses = _classify(c.present, set(c.rejected))",
-     "    c.kind, c.near_misses = _classify(c.file_names, set(c.rejected))",
+     "        c.present,",
+     "        c.file_names,",
      ["tests/test_a_refused_member_is_still_in_the_archive.py"],
      "one bad CRC made a container 'not a VDI 2770 container at all'"),
 
@@ -706,6 +706,14 @@ TABLE = [
      ["tests/test_a_declared_zip_is_a_payload.py"],
      "at the depth limit an innermost documentation container holding only its "
      "declared payload delivered nothing, and nothing said so"),
+
+    ("reader/a-near-miss-is-skipped-only-for-an-unsafe-name",
+     "packages/vdi2770/src/vdi2770/zipread.py",
+     '         if defect.kind == "unsafe-member-name"})',
+     '         if True})',
+     ["tests/test_a_finding_says_something_true.py"],
+     "skipping every refusal erased the one line saying the archive nearly has "
+     "a metadata file"),
 
     # --- the canary -------------------------------------------------------
     ("canary/a-comment-nobody-reads",

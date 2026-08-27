@@ -265,18 +265,25 @@ def escaped(name: str) -> str:
 
 
 def without_edge_space(name: str) -> str:
-    """`name` with whitespace removed from the edge of every segment.
+    """`name` as a declaration of it would be read back.
 
-    What a declaration of this member would have to be, and cannot be. The
-    metadata's text is read with the whitespace around it removed -- it has to
-    be, because `<DigitalFile>\\n    B.pdf\\n  </DigitalFile>` is how a
-    pretty-printer writes an ordinary declaration -- and the schema types that
-    element `xs:string`, which preserves whitespace. So the stripping is a
-    choice every implementation makes, and its consequence is that a member
-    whose name carries a space at its edge cannot be declared by anybody:
-    whatever the sender writes is read back without it.
+    The metadata's text is read `f.text.strip()` -- whitespace removed from the
+    two ends of the whole name and **nowhere else** -- because
+    `<DigitalFile>\\n    B.pdf\\n  </DigitalFile>` is how a pretty-printer writes
+    an ordinary declaration, and the schema types the element `xs:string`, which
+    preserves whitespace. So the stripping is a choice every implementation
+    makes, and its consequence is that a member whose name carries whitespace at
+    *its* edge cannot be declared by anybody: whatever the sender writes is read
+    back without it.
+
+    The whole string, not each segment. A first version stripped segment edges
+    too, and modelled an operation the reader does not perform: `sub /B.pdf`
+    *can* be declared, verbatim, and was reported as a name no declaration
+    reaches -- while ` sub /B.pdf `, which really is unreachable, stripped to
+    something that matched no declaration and kept the very contradiction this
+    helper exists to remove.
     """
-    return "/".join(segment.strip() for segment in name.split("/"))
+    return name.strip()
 
 
 def ignoring_case(name: str) -> str:

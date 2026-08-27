@@ -103,7 +103,11 @@ class Container:
     children: List[Container] = field(default_factory=list)
     defects: List[Defect] = field(default_factory=list)
     # reserved name -> (kind, the name that nearly matched). Kinds:
-    # `in-a-subfolder`, `path-prefixed`, `case-differs`.
+    # `in-a-subfolder`, `path-prefixed`, `case-differs`, and
+    # `case-differs-elsewhere` for a name that is both wrongly cased and in a
+    # subfolder. The matched name is the whole member name as the archive
+    # spells it -- it used to be the basename, which named a member the
+    # listing does not hold.
     near_misses: Dict[str, Tuple[str, str]] = field(default_factory=dict)
     # Members we refused, mapped to the `Defect` that refused them. Kept so the
     # report can say "present but rejected" rather than the untrue "not in the
@@ -206,12 +210,14 @@ def _classify(names: Tuple[str, ...],
         if wanted in exact:
             continue
         for n in names:
-            # Not a name the reader refused for what it is. A `../` member is
+            # Not a name the reader refused *for what it is*. A `../` member is
             # not a file that merely sits in the wrong folder -- those bytes were
-            # never read, and the caller has its own finding for the name. The
-            # folder walk one layer up learned this; this table did not, so one
-            # report said the name was refused outright and, two lines on, that
-            # it was *found at* a place and just needed moving.
+            # never read, and the caller has its own finding for the name.
+            # Only that reason: a metadata file stored twice is refused as
+            # `ambiguous-name`, which is about the archive holding it twice, and
+            # "it must sit at the root" is as true and as useful for it as ever.
+            # Skipping every refusal erased the one line that said the archive
+            # nearly has a metadata file.
             if refused and n in refused:
                 continue
             base = n.rsplit("/", 1)[-1]
@@ -483,7 +489,10 @@ def read(data: bytes, path: str, depth: int = 0, _budget: Optional[_Budget] = No
     c.duplicate_names = tuple(dupes)
     # `present`, not `file_names`: what kind of container this is follows from
     # the names the archive declares, not from which of them we could inflate.
-    c.kind, c.near_misses = _classify(c.present, set(c.rejected))
+    c.kind, c.near_misses = _classify(
+        c.present,
+        {name for name, defect in c.rejected.items()
+         if defect.kind == "unsafe-member-name"})
 
     wanted = MAIN_XML if c.kind is Kind.DOCUMENTATION else METADATA_XML if c.kind is Kind.DOCUMENT else None
     # `_classify` reads `present`, so a member we refused can decide the kind --
