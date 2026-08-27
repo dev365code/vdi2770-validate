@@ -49,6 +49,39 @@ rest of these entries are about — and that one was itself wrong twice.
   told to add `VDI2770_Main.pdf`, which on the sender's own machine is not an
   action they can take.
 
+- **The summary says how many of the errors are this tool declining to look.**
+  Seven rules are `about: tool` and all seven are errors, so that exit 0 can
+  never mean *checked* — a policy this release does not change. Every one of
+  their titles says the tool declined. The count did not: a supplier read
+  `1 error(s)` as the last line of a report whose only error carried a remedy
+  opening *Nothing here is necessarily wrong with the container*, and the field
+  that reconciles those two sentences was in the JSON and nowhere on the page.
+
+- **A space at the end of a name draws nothing, and was printed as itself.** So
+  a report could carry *`'B.pdf'` is declared but not in the archive* directly
+  above *`B.pdf` is in the container but not named in the metadata* — two lines
+  that read as a contradiction, about two names differing by a character the
+  page cannot show. Whitespace is spelled out where it sits at the edge of a
+  name or of a path segment, which is where there is nothing beside it to be
+  seen against; in the middle of `my report.pdf` it is ordinary and is left
+  alone.
+
+- **A class name that differed where nothing showed.** One Cyrillic `е` among
+  the Latin ones and `M3` read *'Tеchnische Spezifikation' … published name is
+  'Technische Spezifikation'* — the name it was asking for, twice, and a supplier
+  told to find a difference the page does not show. This is the repair below
+  arriving through a door it cannot watch: `escaped` sees one string at a time,
+  and both of these are their own NFC with every character printable and
+  non-combining, so nothing about either one on its own is wrong.
+
+  The rule that fixes it is about the pair, because the call site holds both: a
+  difference that does not change the length, and sits inside otherwise
+  identical text, is one a reader can miss, so that run is written out as code
+  points on both sides and everything around it is left readable. A name that
+  differs plainly still prints plainly. No table of confusable characters and no
+  guess about what a font draws — neither is knowable from code points, and the
+  question this can answer is the one that matters.
+
 - **`Z10` grouped by one relation and asserted another.** `duplicate_names` is
   keyed on canonical form *and* dropping path segments that name nothing, and
   the new branch said *extract to the same path* about the whole group. `./Ä.pdf`
@@ -832,7 +865,7 @@ below is measured on this machine, before and after, on the same input.
 Three gates that ask what `make check` cannot ask of itself.
 
 - **`make mutations`** takes every claim this project makes about a gate, breaks
-  the thing that gate protects, and checks the gate notices — 72 rows, each
+  the thing that gate protects, and checks the gate notices — 73 rows, each
   naming the pytest selection or the tool that has to go red. The harness checks
   itself as hard as it checks the code: a row whose anchor no longer appears
   exactly once is an error rather than a pass; every apply and restore clears

@@ -192,3 +192,130 @@ def test_the_report_tells_two_look_alike_members_apart():
     assert len(said) == 2, said
     assert shown(said[0]) != shown(said[1]), (
         f"both findings print as {shown(said[0])!r}")
+
+
+def _container_declaring_class_name(german: str):
+    """The clean document container with its German class name replaced."""
+    import io
+    import zipfile
+
+    from conftest import CLEAN_DOCUMENT
+
+    src = zipfile.ZipFile(CLEAN_DOCUMENT)
+    meta = src.read("VDI2770_Metadata.xml").decode("utf-8")
+    assert meta.count("Technische Spezifikation") == 1, "the fixture no longer names the class"
+    meta = meta.replace("Technische Spezifikation", german, 1)
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        for name in src.namelist():
+            z.writestr(name, meta.encode("utf-8") if name == "VDI2770_Metadata.xml"
+                       else src.read(name))
+    return buf.getvalue()
+
+
+def test_a_class_name_that_differs_where_nothing_shows_is_spelled_out():
+    """`M3` printed two strings that draw the same and said they differ.
+
+    One Cyrillic `е` (U+0435) among the Latin ones and the finding read
+
+        'Tеchnische Spezifikation' for class 02-01; published name is
+        'Technische Spezifikation'
+
+    which asks a supplier to find a difference they cannot see. This is the
+    failure the Hangul repair was about, arriving through a different door:
+    there the two spellings were canonically equivalent and `escaped` could tell
+    them apart on its own, and here they are not — both strings are their own
+    NFC and every character is printable and non-combining, so no rule that
+    looks at one string at a time can see anything wrong.
+
+    What this call site has that `escaped` does not is *both* strings. The
+    difference is a position, and a position can be spelled.
+    """
+    from vdi2770_validate.runner import check_bytes
+
+    latin = "Technische Spezifikation"
+    # Built from the code point, never typed: a Cyrillic letter among Latin ones
+    # is exactly the character an editor, a paste, or a shell heredoc silently
+    # turns back into its look-alike, and then this asserts nothing.
+    cyrillic = latin[:1] + "\u0435" + latin[2:]
+    assert len(latin) == len(cyrillic), "the fixture changed the length"
+    apart = [i for i, (a, b) in enumerate(zip(latin, cyrillic)) if a != b]
+    assert apart == [1], f"the fixture no longer differs in exactly one place: {apart}"
+
+    report = check_bytes(_container_declaring_class_name(cyrillic), "homoglyph.zip")
+    m3 = [f for f in report.findings if f.rule.id == "M3"]
+    assert m3, [f.rule.id for f in report.findings]
+
+    quoted = re.findall(r"'([^']*)'", m3[0].detail or "")
+    assert len(quoted) >= 2, m3[0].detail
+    observed, published = quoted[0], quoted[1]
+
+    # The property, stated the only way it can be checked. What a terminal draws
+    # is not knowable from code points -- `shown()` above says so, and comparing
+    # them would call a Cyrillic `е` different from a Latin one, which on the
+    # page it is not. What *is* checkable: the two lines differ **only** inside
+    # escapes. Strip the escapes and what is left is identical, so every
+    # character a reader can see is the same and every difference is spelled.
+    def without_escapes(text):
+        return re.sub(r"\\u[0-9a-f]{4}|\\U[0-9a-f]{8}", "", text)
+
+    assert "\\u" in observed and "\\u" in published, (
+        f"neither string spells anything out: {m3[0].detail}")
+    assert without_escapes(observed) == without_escapes(published), (
+        f"the two differ somewhere other than in the escapes: {m3[0].detail}")
+    assert observed != published, m3[0].detail
+
+
+def test_a_class_name_that_is_plainly_wrong_is_left_readable():
+    """The other half. A name that differs visibly needs no code points, and
+    spelling one out would bury the difference the reader can already see."""
+    from vdi2770_validate.runner import check_bytes
+
+    report = check_bytes(_container_declaring_class_name("Betriebsanleitung"),
+                         "plain.zip")
+    m3 = [f for f in report.findings if f.rule.id == "M3"]
+    assert m3, [f.rule.id for f in report.findings]
+    assert "\\u" not in (m3[0].detail or ""), (
+        f"a plainly different name was printed as code points: {m3[0].detail}")
+
+
+def test_whitespace_at_the_edge_of_a_name_is_spelled_out():
+    """A trailing space draws nothing, and `escaped` printed it as itself.
+
+    So a report could carry
+
+        F1  'B.pdf' is declared but not in the archive
+        F2  at space.zip!/B.pdf
+
+    two lines that read as a contradiction, about two names that differ by a
+    character the page cannot show. It is the promise in this function's first
+    line — *a name a reader can tell apart from anything that prints like it* —
+    and a space at the end of a name is the cheapest way to break it.
+
+    In the middle of a name a space is ordinary and visible, and spelling it
+    there would make every `my report.pdf` unreadable. The rule is about the
+    edges: of the name, and of each path segment, which is where a space has
+    nothing beside it to be seen against.
+    """
+    for name, why in ((" B.pdf", "leading"),
+                      ("B.pdf ", "trailing"),
+                      ("docs /B.pdf", "at the end of a segment"),
+                      ("docs/ B.pdf", "at the start of a segment"),
+                      ("B.pdf\t", "a tab")):
+        rendered = escaped(name)
+        assert "\\u" in rendered, f"{why}: {name!r} rendered as {rendered!r}"
+        assert rendered != name, f"{why}: {name!r} came back unchanged"
+
+    for ordinary in ("my report.pdf", "docs/my report.pdf", "B.pdf"):
+        assert escaped(ordinary) == ordinary, (
+            f"a space where it can be seen was spelled out: {escaped(ordinary)!r}")
+
+
+def test_the_archives_own_spelling_still_shows_whitespace_at_an_edge():
+    """`as_written` makes the same promise one function up, for the case where
+    the difference between two names is not a spelling difference. A space at
+    the end of a name is invisible there too."""
+    from vdi2770_validate.names import as_written
+
+    assert as_written("B.pdf ") != "B.pdf ", "a trailing space came back unchanged"
+    assert as_written("my report.pdf") == "my report.pdf"

@@ -34,7 +34,7 @@ folders.zip
 
   … 1 more Z9 warning
 
-  3 error(s), 1 warning(s), 0 note(s)
+  3 error(s), 1 warning(s), 0 note(s) — 1 of the errors is this tool declining to look, not the container
 ```
 
 That is real output on a container that ships with this repository, so the same command works after cloning.

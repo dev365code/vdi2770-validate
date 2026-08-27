@@ -22,7 +22,8 @@ from typing import Dict, List, Mapping, Optional, Sequence, Tuple
 from vdi2770 import nfc
 from vdi2770.model import Defect
 
-__all__ = ["Members", "as_written", "escaped", "extracts_to", "folder_path", "nfc"]
+__all__ = ["Members", "as_written", "escaped", "extracts_to", "folder_path",
+           "nfc", "told_apart"]
 
 
 def extracts_to(name: str) -> str:
@@ -68,6 +69,66 @@ def _spelled(c: str) -> str:
     return f"\\U{ord(c):08x}" if ord(c) > 0xFFFF else f"\\u{ord(c):04x}"
 
 
+def told_apart(observed: str, published: str):
+    """`(observed, published)`, rendered so a reader can see what differs.
+
+    `escaped` looks at one string. That is enough when the two are canonically
+    equivalent -- exactly one of them is its own NFC, so exactly one is spelled
+    out -- and it is not enough for anything else. One Cyrillic `е` among the
+    Latin ones is its own NFC, printable and non-combining on both sides, so
+    `escaped` left both alone and a finding read
+
+        'Tеchnische Spezifikation' … published name is 'Technische Spezifikation'
+
+    which asks its reader to find a difference nothing on the page shows.
+
+    A caller holding *both* strings knows something `escaped` cannot: where they
+    differ. The rule is one sentence -- **a difference that does not change the
+    length, and sits inside otherwise identical text, is one a reader can miss**,
+    so that run is written out as code points on both sides and everything around
+    it is left alone. A difference that shortens or lengthens the name, or that
+    shares neither a prefix nor a suffix with it, is one nobody needs help
+    seeing, and spelling it would bury it.
+
+    No table of confusable characters, and no attempt to decide whether two
+    glyphs are drawn alike: neither is knowable from code points, and the
+    question this can answer -- *is this difference easy to overlook* -- is the
+    one that matters. Longest common prefix and suffix rather than a diff,
+    because an alignment algorithm chooses between equally good answers and a
+    report that changes its mind about where a difference sits cannot be compared
+    against yesterday's.
+    """
+    shown_observed, shown_published = escaped(observed), escaped(published)
+    if shown_observed != observed or shown_published != published:
+        # `escaped` has already spelled something out, which it does only when a
+        # name is not the canonical spelling of itself or carries something that
+        # draws nothing -- and in either case exactly one side of a pair gets
+        # spelled, so the difference is on the page.
+        return shown_observed, shown_published
+    if len(observed) != len(published):
+        return shown_observed, shown_published
+
+    head = 0
+    while head < len(observed) and observed[head] == published[head]:
+        head += 1
+    tail = 0
+    while tail < len(observed) - head and observed[-1 - tail] == published[-1 - tail]:
+        tail += 1
+    if head == 0 and tail == 0:
+        return shown_observed, shown_published     # alike in nothing
+
+    stop = len(observed) - tail
+    return (_spelling_from(observed, head, stop),
+            _spelling_from(published, head, stop))
+
+
+def _spelling_from(text: str, start: int, stop: int) -> str:
+    """`escaped`'s per-character rule, plus everything in `[start, stop)`."""
+    return "".join(
+        _spelled(c) if start <= i < stop or c == "\\" or _draws_nothing(c) else c
+        for i, c in enumerate(text))
+
+
 def as_written(name: str) -> str:
     """The archive's own spelling, with only what draws nothing spelled out.
 
@@ -81,11 +142,38 @@ def as_written(name: str) -> str:
     characters. macOS writes every filename decomposed, so this was the ordinary
     case for exactly the reader it hurt most.
 
-    What is still spelled out is what draws nothing, and a backslash, because a
-    name is not something a reader can act on while part of it is invisible.
+    What is still spelled out is what draws nothing, a backslash, and whitespace
+    at an edge -- because a name is not something a reader can act on while part
+    of it is invisible, and that is as true here as it is one function down.
     """
-    return "".join(_spelled(c) if c == "\\" or _draws_nothing(c) else c
-                   for c in name)
+    edges = _at_an_edge(name)
+    return "".join(_spelled(c) if c == "\\" or _draws_nothing(c) or i in edges
+                   else c
+                   for i, c in enumerate(name))
+
+
+def _at_an_edge(name: str) -> frozenset:
+    """The indices of whitespace that begins or ends the name, or a segment of it.
+
+    A space in the middle of `my report.pdf` is ordinary and visible. At an edge
+    it draws nothing a reader can locate: `B.pdf ` and `B.pdf` are one line as
+    far as the page is concerned, and a report could carry *`'B.pdf'` is declared
+    and not in the archive* directly above *`B.pdf` is in the container and not
+    named in the metadata*, which reads as a contradiction and is two names.
+    Segment edges too, because `docs /B.pdf` hides it just as well.
+    """
+    edges, start = set(), 0
+    for stop in [i for i, c in enumerate(name) if c == "/"] + [len(name)]:
+        front = start
+        while front < stop and name[front].isspace():
+            edges.add(front)
+            front += 1
+        back = stop - 1
+        while back >= start and name[back].isspace():
+            edges.add(back)
+            back -= 1
+        start = stop + 1
+    return frozenset(edges)
 
 
 def escaped(name: str) -> str:
@@ -123,11 +211,12 @@ def escaped(name: str) -> str:
     """
     hidden = any(_draws_nothing(c) for c in name)
     all_of_it = hidden or nfc(name) != name
+    edges = _at_an_edge(name)
     return "".join(
-        _spelled(c) if c == "\\" or _draws_nothing(c)
+        _spelled(c) if c == "\\" or _draws_nothing(c) or i in edges
         or (all_of_it and not c.isascii())
         else c
-        for c in name)
+        for i, c in enumerate(name))
 
 
 def folder_path(name: str) -> str:

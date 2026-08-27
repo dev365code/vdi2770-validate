@@ -609,6 +609,14 @@ TABLE = [
      "the look-alike sentence is the one the rule exists for; forcing the branch "
      "off left a canonically equivalent pair described as something else"),
 
+    ("rules/a-difference-nobody-can-see-is-spelled-out",
+     "src/vdi2770_validate/names.py",
+     "    if len(observed) != len(published):",
+     "    if True:",
+     ["tests/test_two_names_that_print_alike_are_told_apart.py"],
+     "one Cyrillic letter among the Latin ones made `M3` name the name it was "
+     "asking for, and `escaped` cannot see it -- both sides are their own NFC"),
+
     # --- the canary -------------------------------------------------------
     ("canary/a-comment-nobody-reads",
      "src/vdi2770_validate/report.py",

@@ -10,7 +10,7 @@ from typing import Iterator
 
 from ..catalog import CLASSIFICATION_SYSTEM, ISO_639_1, document_classes, english_for, german_for, rule
 from ..model import Finding, Kind
-from ..names import escaped, nfc
+from ..names import escaped, nfc, told_apart
 
 RELEASED = "Released"
 
@@ -22,6 +22,20 @@ def _iso_ok(code: str) -> bool:
     if c in ISO_639_1:
         return True
     return len(c) == 3 and all("a" <= ch <= "z" for ch in c)
+
+
+def _two_names(text: str, published, class_id: str, lead: str) -> str:
+    """The observed class name beside the published one, told apart.
+
+    Rendered against the first published spelling, because the run that differs
+    is a fact about a pair: with two published names there is no one run, and
+    picking the closest would make the report's rendering depend on which name a
+    comparison happened to choose. The rest are shown as they are written.
+    """
+    observed, first = told_apart(text, published[0])
+    rest = [f"'{escaped(w)}'" for w in published[1:]]
+    return (f"'{observed}' for class {class_id}; {lead} "
+            + " / ".join([f"'{first}'"] + rest))
 
 
 def check(container, document) -> Iterator[Finding]:
@@ -86,10 +100,17 @@ def check(container, document) -> Iterator[Finding]:
             if low.startswith("de"):
                 if text not in want_de:
                     r = rule("M3")
-                    published = " / ".join(f"'{escaped(w)}'" for w in want_de)
+                    # Both strings, side by side, rendered so the difference is
+                    # on the page. `escaped` sees one string at a time and one
+                    # Cyrillic `е` among the Latin ones defeats it -- both sides
+                    # are their own NFC and every character is printable and
+                    # non-combining, so it left them alone and the finding named
+                    # the name it was asking for. This call site holds both, and
+                    # `told_apart` spells the run that differs when the run is
+                    # one a reader can miss.
                     yield Finding(r, r.title, where,
-                                  detail=f"'{escaped(text)}' for class {c.class_id}; "
-                                         f"published name is {published}")
+                                  detail=_two_names(text, want_de, c.class_id,
+                                                    "published name is"))
             # Not `not (startswith("de") or startswith("en"))`: the `de` half
             # is already False on this branch, and the `en` test below could
             # never be False either. Two conditions that cannot fail read as two
@@ -100,10 +121,9 @@ def check(container, document) -> Iterator[Finding]:
                               detail=f"{text!r} is tagged {lang!r}, which this tool does not check")
             elif text not in want_en:
                 r = rule("M4")
-                both = " / ".join(f"'{escaped(w)}'" for w in want_en)
                 yield Finding(r, r.title, where,
-                              detail=f"'{escaped(text)}' for class {c.class_id}; "
-                                     f"published renderings are {both}")
+                              detail=_two_names(text, want_en, c.class_id,
+                                                "published renderings are"))
 
     for v in document.versions:
         for tag in v.languages:

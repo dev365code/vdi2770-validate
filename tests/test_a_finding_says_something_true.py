@@ -295,3 +295,37 @@ def test_a_locked_member_is_not_told_to_send_the_same_archive_again():
         assert "send it again" not in (f.remedy or ""), (
             f"a locked member was told to re-send the same archive: {f.remedy}")
         assert "password" in (f.remedy or "").lower(), f.remedy
+
+
+def test_the_summary_says_how_many_errors_are_this_tool_declining():
+    """`1 error(s)` and exit 1, over a remedy opening *Nothing here is
+    necessarily wrong with the container*.
+
+    Seven rules are `about: tool` and all seven are errors, on the documented
+    ground that exit 0 must never mean "checked". Every one of their titles says
+    the tool declined — *the schema check could not run*, *this tool did not
+    build a model*, *which this tool does not open*. What said nothing was the
+    count. A supplier reads the last line of the report, sees one error against
+    their delivery, and the axis lives only in the JSON.
+    """
+    from conftest import CLEAN_DOCUMENT, CLEAN_DOCUMENTATION
+    from vdi2770_validate.report import as_text
+
+    docn = zipfile.ZipFile(CLEAN_DOCUMENTATION)
+    doc = zipfile.ZipFile(CLEAN_DOCUMENT)
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        z.writestr("VDI2770_Main.xml", docn.read("VDI2770_Main.xml"))
+        z.writestr("VDI2770_Main.pdf", docn.read("VDI2770_Main.pdf"))
+        for name in doc.namelist():
+            z.writestr("doc1/" + name, doc.read(name))
+    report = check_bytes(buf.getvalue(), "folders.zip")
+    assert "Z13" in {f.rule.id for f in report.findings}, "premise"
+    summary = as_text(report, True).strip().splitlines()[-1]
+    assert "declin" in summary, f"the summary hides the axis: {summary!r}"
+
+    # And a container whose errors really are its own says nothing of the kind.
+    ordinary = check_bytes(zipfile.ZipFile(CLEAN_DOCUMENT).read("VDI2770_Metadata.xml"),
+                           "notazip.zip")
+    line = as_text(ordinary, True).strip().splitlines()[-1]
+    assert "declin" not in line, f"a container-axis error was excused: {line!r}"

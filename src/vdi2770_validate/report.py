@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from typing import Dict, List
 
-from .model import Report, Severity
+from .model import About, Report, Severity
 
 MARK = {Severity.ERROR: "error", Severity.WARNING: "warn ", Severity.INFO: "info "}
 
@@ -34,8 +34,21 @@ def as_text(report: Report, show_info: bool = True) -> str:
                      f"{container}, counted below but not listed")
     counts = {s: report.count(s) for s in Severity}
     lines.append("")
-    lines.append(f"  {counts[Severity.ERROR]} error(s), {counts[Severity.WARNING]} warning(s), "
-                 f"{counts[Severity.INFO]} note(s)")
+    # And how many of the errors are this tool declining to look rather than
+    # anything the sender packed. Seven rules are `about: tool` and all seven are
+    # errors, so that exit 0 can never mean "checked" -- every one of their
+    # titles says so, and the count did not. A supplier read `1 error(s)` under a
+    # remedy opening "Nothing here is necessarily wrong with the container", and
+    # the axis that reconciles the two lived only in the JSON.
+    ours = sum(1 for f in report.findings
+               if f.severity is Severity.ERROR and f.about is About.TOOL)
+    said = (f"  {counts[Severity.ERROR]} error(s), {counts[Severity.WARNING]} warning(s), "
+            f"{counts[Severity.INFO]} note(s)")
+    if ours:
+        said += (f" — {ours} of the errors "
+                 f"{'is' if ours == 1 else 'are'} this tool declining to look, "
+                 f"not the container")
+    lines.append(said)
     return "\n".join(lines)
 
 
