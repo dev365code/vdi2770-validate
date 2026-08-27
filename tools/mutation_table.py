@@ -611,8 +611,8 @@ TABLE = [
 
     ("rules/a-difference-nobody-can-see-is-spelled-out",
      "src/vdi2770_validate/names.py",
-     "    if len(observed) != len(published):",
-     "    if True:",
+     "        if differing and easy_to_miss:",
+     "        if False:",
      ["tests/test_two_names_that_print_alike_are_told_apart.py"],
      "one Cyrillic letter among the Latin ones made `M3` name the name it was "
      "asking for, and `escaped` cannot see it -- both sides are their own NFC"),
@@ -658,6 +658,22 @@ TABLE = [
      ["tests/test_defences.py"],
      "matching each colliding member against every declared path recomputed the "
      "split-and-join on both sides at every pair"),
+
+    ("rules/a-difference-a-reader-can-see-is-left-alone",
+     "src/vdi2770_validate/names.py",
+     "                                and published[plain_p[k]].isascii())",
+     "                                and False)",
+     ["tests/test_two_names_that_print_alike_are_told_apart.py"],
+     "spelling an all-ASCII difference buries the one character that matters: "
+     "`identification` against `Identification` came back as two walls of hex"),
+
+    ("rules/free-text-has-no-path-segments",
+     "src/vdi2770_validate/names.py",
+     "    stops = ([i for i, c in enumerate(name) if c == \"/\"] if segments else []) + [len(name)]",
+     "    stops = [i for i, c in enumerate(name) if c == \"/\"] + [len(name)]",
+     ["tests/test_two_names_that_print_alike_are_told_apart.py"],
+     "splitting a class name on `/` made the ordinary spaces around it the edges "
+     "of segments, and spelled them out while the slash stayed plain"),
 
     # --- the canary -------------------------------------------------------
     ("canary/a-comment-nobody-reads",

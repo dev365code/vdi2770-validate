@@ -83,49 +83,85 @@ def told_apart(observed: str, published: str):
     which asks its reader to find a difference nothing on the page shows.
 
     A caller holding *both* strings knows something `escaped` cannot: where they
-    differ. The rule is one sentence -- **a difference that does not change the
-    length, and sits inside otherwise identical text, is one a reader can miss**,
-    so that run is written out as code points on both sides and everything around
-    it is left alone. A difference that shortens or lengthens the name, or that
-    shares neither a prefix nor a suffix with it, is one nobody needs help
-    seeing, and spelling it would bury it.
+    differ. The question this can answer is not *are these drawn alike* -- no
+    rule over code points can answer that -- but **is this difference one a
+    reader can miss**, and that has two shapes:
 
-    No table of confusable characters, and no attempt to decide whether two
-    glyphs are drawn alike: neither is knowable from code points, and the
-    question this can answer -- *is this difference easy to overlook* -- is the
-    one that matters. Longest common prefix and suffix rather than a diff,
-    because an alignment algorithm chooses between equally good answers and a
-    report that changes its mind about where a difference sits cannot be compared
+    * The same characters in the same places but for a few positions, at least
+      one of which is not ASCII. A Cyrillic letter sitting among Latin ones is
+      that, and so is a Greek question mark among semicolons. Those positions are
+      spelled out on both sides and nothing else is. An all-ASCII difference is
+      not spelled: `identification` against `Identification` needs no help, and
+      hexing it buries the one character that matters.
+    * A difference that changes the length and is made entirely of whitespace --
+      a doubled space. Nothing else that changes the length qualifies: a name
+      that is shorter, longer or wholly different is one nobody needs help
+      seeing.
+
+    The comparison runs over the characters `escaped` leaves alone, so a trailing
+    space and a homoglyph in one name are both named rather than the first
+    hiding the second. Longest common prefix and suffix rather than a diff:
+    an alignment algorithm chooses between equally good answers, and a report
+    that changes its mind about where a difference sits cannot be compared
     against yesterday's.
     """
-    shown_observed, shown_published = escaped(observed), escaped(published)
-    if shown_observed != observed or shown_published != published:
-        # `escaped` has already spelled something out, which it does only when a
-        # name is not the canonical spelling of itself or carries something that
-        # draws nothing -- and in either case exactly one side of a pair gets
-        # spelled, so the difference is on the page.
-        return shown_observed, shown_published
-    if len(observed) != len(published):
-        return shown_observed, shown_published
+    plain_o, plain_p = _plain_positions(observed), _plain_positions(published)
+
+    if len(plain_o) == len(plain_p):
+        differing = [k for k in range(len(plain_o))
+                     if observed[plain_o[k]] != published[plain_p[k]]]
+        easy_to_miss = any(not (observed[plain_o[k]].isascii()
+                                and published[plain_p[k]].isascii())
+                           for k in differing)
+        if differing and easy_to_miss:
+            return (_spelling_at(observed, {plain_o[k] for k in differing}),
+                    _spelling_at(published, {plain_p[k] for k in differing}))
+        return _as_text(observed), _as_text(published)
 
     head = 0
-    while head < len(observed) and observed[head] == published[head]:
+    while (head < len(observed) and head < len(published)
+           and observed[head] == published[head]):
         head += 1
     tail = 0
-    while tail < len(observed) - head and observed[-1 - tail] == published[-1 - tail]:
+    while (tail < len(observed) - head and tail < len(published) - head
+           and observed[-1 - tail] == published[-1 - tail]):
         tail += 1
-    if head == 0 and tail == 0:
-        return shown_observed, shown_published     # alike in nothing
+    runs = observed[head:len(observed) - tail] + published[head:len(published) - tail]
+    if runs and all(c.isspace() for c in runs):
+        return (_spelling_at(observed, set(range(head, len(observed) - tail))),
+                _spelling_at(published, set(range(head, len(published) - tail))))
+    return _as_text(observed), _as_text(published)
 
-    stop = len(observed) - tail
-    return (_spelling_from(observed, head, stop),
-            _spelling_from(published, head, stop))
+
+def _as_text(text: str) -> str:
+    """`escaped` for something that is not a path."""
+    return _spelling_at(text, ())
 
 
-def _spelling_from(text: str, start: int, stop: int) -> str:
-    """`escaped`'s per-character rule, plus everything in `[start, stop)`."""
+def _plain_positions(text: str) -> list:
+    """The indices `escaped` leaves as they are — the visible skeleton.
+
+    Comparing the raw strings let one difference hide another: a trailing space
+    is spelled by `escaped`, and a name carrying both that and a homoglyph came
+    back with the space explained and the homoglyph drawn as its look-alike. The
+    supplier strips the space, resubmits, and fails again for a reason the report
+    showed them once and never named.
+    """
+    edges = _at_an_edge(text, segments=False)
+    return [i for i, c in enumerate(text)
+            if not (c == "\\" or _draws_nothing(c) or i in edges)]
+
+
+def _spelling_at(text: str, positions) -> str:
+    """`escaped`'s per-character rule, plus everything in `positions`.
+
+    Free text, so no segment edges: a `/` in a class name is a character, not a
+    path separator.
+    """
+    edges = _at_an_edge(text, segments=False)
     return "".join(
-        _spelled(c) if start <= i < stop or c == "\\" or _draws_nothing(c) else c
+        _spelled(c) if i in positions or c == "\\" or _draws_nothing(c) or i in edges
+        else c
         for i, c in enumerate(text))
 
 
@@ -152,7 +188,7 @@ def as_written(name: str) -> str:
                    for i, c in enumerate(name))
 
 
-def _at_an_edge(name: str) -> frozenset:
+def _at_an_edge(name: str, segments: bool = True) -> frozenset:
     """The indices of whitespace that begins or ends the name, or a segment of it.
 
     A space in the middle of `my report.pdf` is ordinary and visible. At an edge
@@ -160,10 +196,16 @@ def _at_an_edge(name: str) -> frozenset:
     far as the page is concerned, and a report could carry *`'B.pdf'` is declared
     and not in the archive* directly above *`B.pdf` is in the container and not
     named in the metadata*, which reads as a contradiction and is two names.
-    Segment edges too, because `docs /B.pdf` hides it just as well.
+    Segment edges too, because `docs /B.pdf` hides it just as well -- but only
+    when the string is a path. `escaped` also renders free text: a class name
+    written `Technische / Spezifikation` had both of its ordinary spaces spelled
+    out, because splitting on `/` had made each of them the edge of a "segment",
+    and the difference that mattered -- a slash where nothing belongs -- was left
+    for the reader to find among the escapes.
     """
     edges, start = set(), 0
-    for stop in [i for i, c in enumerate(name) if c == "/"] + [len(name)]:
+    stops = ([i for i, c in enumerate(name) if c == "/"] if segments else []) + [len(name)]
+    for stop in stops:
         front = start
         while front < stop and name[front].isspace():
             edges.add(front)

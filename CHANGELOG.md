@@ -86,6 +86,28 @@ rest of these entries are about — and that one was itself wrong twice.
   half that must not go with it: `_unswept` is a state `make check` tolerates and
   a release does not.
 
+- **The repair for an invisible difference started hexing visible ones, and
+  still missed two invisible ones.** Spelling every same-length difference that
+  shares a prefix or a suffix printed `identification` against `Identification`
+  as two walls of hex — the only content that changed across forty-six corpus
+  containers, and it changed for the worse. Two homoglyphs, one at each end,
+  shared neither prefix nor suffix and were read as *alike in nothing* and left
+  raw, which is the finding the repair exists to remove. A trailing space
+  short-circuited the whole comparison, so a name carrying both that and a
+  homoglyph had the space explained and the homoglyph drawn as its look-alike. A
+  doubled space changed the length and went unremarked.
+
+  The question is not *are these drawn alike* — no rule over code points can
+  answer that — but **is this difference one a reader can miss**, and it has two
+  shapes: a few positions differing where at least one is not ASCII, and a
+  length change made entirely of whitespace. The comparison runs over the
+  characters that survive `escaped`, so one invisible difference no longer hides
+  another.
+
+  And a class name is not a path: splitting on `/` had made the ordinary spaces
+  around a slash the edges of segments and spelled them out, leaving the slash —
+  the thing that is actually wrong — for the reader to find among the escapes.
+
 - **The same quadratic, twice more, inside one collision group.** Building the
   groups once removed the cost across many groups and left it inside a single
   one: each member's finding walked the whole group to find its partners, and
@@ -990,7 +1012,7 @@ below is measured on this machine, before and after, on the same input.
 Three gates that ask what `make check` cannot ask of itself.
 
 - **`make mutations`** takes every claim this project makes about a gate, breaks
-  the thing that gate protects, and checks the gate notices — 78 rows, each
+  the thing that gate protects, and checks the gate notices — 80 rows, each
   naming the pytest selection or the tool that has to go red. The harness checks
   itself as hard as it checks the code: a row whose anchor no longer appears
   exactly once is an error rather than a pass; every apply and restore clears

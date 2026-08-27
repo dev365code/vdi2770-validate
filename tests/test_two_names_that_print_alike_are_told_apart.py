@@ -366,3 +366,82 @@ def test_a_member_name_cannot_forge_lines_in_the_report():
     summaries = [line for line in page.splitlines()
                  if re.match(r"^  \d+ error\(s\), ", line)]
     assert len(summaries) == 1, summaries
+
+
+def test_a_difference_a_reader_can_see_is_left_readable():
+    """The repair for one invisible difference started hexing visible ones.
+
+    `identification` against `Identification` differs in one ASCII letter, and
+    printing `'\\u0069dentification'` beside `'\\u0049dentification'` buries the
+    one character that matters. It reached this project's own corpus: the `M4`
+    finding for `demo_invalid_doc_type_names.zip` was the only content that
+    changed in forty-six containers, and it changed for the worse.
+    """
+    from vdi2770_validate.names import told_apart
+
+    for observed, published in (("identification", "Identification"),
+                                ("Technische Spezifikatiom", "Technische Spezifikation"),
+                                ("Betriebsanleitung", "Technische Spezifikation"),
+                                ("Technische Spezifikationen", "Technische Spezifikation")):
+        shown, against = told_apart(observed, published)
+        assert "\\u" not in shown and "\\u" not in against, (
+            f"a difference a reader can see was spelled out: {shown!r} / {against!r}")
+
+
+def test_a_difference_at_both_ends_is_still_spelled():
+    """`head == 0 and tail == 0` was read as *alike in nothing* and left raw.
+
+    Two homoglyphs, one at each end, share neither a prefix nor a suffix — and
+    that is not "alike in nothing", it is the case where the whole string is the
+    differing run. `Вauteilе` against `Bauteile`, Cyrillic В and е, came back
+    unspelled on both sides: the finding named the name it was asking for.
+    """
+    from vdi2770_validate.names import told_apart
+
+    observed = "Вauteilе"          # Cyrillic В … е
+    published = "Bauteile"
+    assert len(observed) == len(published)
+    shown, against = told_apart(observed, published)
+    assert "\\u0412" in shown and "\\u0042" in against, (shown, against)
+    assert "\\u0435" in shown and "\\u0065" in against, (shown, against)
+    # And only those: the letters in between are plain and stay plain.
+    assert "auteil" in shown and "auteil" in against, (shown, against)
+
+
+def test_one_invisible_difference_does_not_hide_another():
+    """A trailing space explained, and the homoglyph beside it drawn as Latin.
+
+    The early return fired when `escaped` had changed *something*, not when it
+    had shown *the* difference. The supplier strips the space, resubmits, and
+    fails again for a reason the report showed them once and never named.
+    """
+    from vdi2770_validate.names import told_apart
+
+    shown, against = told_apart("Tеchnische Spezifikation ",
+                                "Technische Spezifikation")
+    assert "\\u0020" in shown, shown          # the trailing space
+    assert "\\u0435" in shown and "\\u0065" in against, (shown, against)
+
+
+def test_a_length_change_made_only_of_whitespace_is_spelled():
+    """A doubled space is a difference nobody can see, and it changes the length,
+    so the length test alone let it through."""
+    from vdi2770_validate.names import told_apart
+
+    shown, against = told_apart("Technische  Spezifikation", "Technische Spezifikation")
+    assert "\\u0020" in shown, shown
+    assert "\\u" not in against, against
+
+
+def test_free_text_has_no_path_segments():
+    """`escaped` renders member names and class names, and only one of them is a
+    path. Splitting on `/` made both spaces around a slash in a class name the
+    edge of a *segment*, so they were spelled out while the slash — the thing
+    that is actually wrong — was left for the reader to find among the escapes.
+    """
+    from vdi2770_validate.names import escaped, told_apart
+
+    shown, _ = told_apart("Technische / Spezifikation", "Technische Spezifikation")
+    assert shown == "Technische / Spezifikation", shown
+    # A member name is still a path, and a space at a segment edge still shows.
+    assert escaped("docs /B.pdf") != "docs /B.pdf"
