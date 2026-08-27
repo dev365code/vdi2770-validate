@@ -538,3 +538,66 @@ def test_matching_the_declared_names_against_the_twins_is_not_quadratic(monkeypa
     assert big < small * 8, (
         f"{small} normalisations for 50 declared files and {big} for 200: the "
         f"declaration count is multiplying the member walk")
+
+
+def test_naming_the_spellings_of_a_declaration_is_bounded(monkeypatch):
+    """Two more products of declarations and members, in the same file.
+
+    A declaration that matches a whole group of spellings rendered **every one
+    of them** into its detail, once per declaration — 4.79, 18.12 and 69.71
+    seconds for 100×500, 200×1000 and 400×2000, from a 290 KiB archive — and
+    the missing-declaration branch scanned every member per declaration to ask
+    whether an unreachable name explains it. Both are the shape this file has
+    now seen six times: a per-container collection walked per item, bounded by
+    nothing that any budget measures.
+
+    Counted on the axis that exploded: how many names the file-set rules
+    normalise or render.
+    """
+    import io
+    import itertools
+    import unicodedata
+    import zipfile
+
+    from vdi2770_validate import names as names_module
+    from vdi2770_validate.rules import files as file_rules
+    from vdi2770_validate.runner import check_bytes
+
+    touched = []
+    for attr in ("escaped", "without_edge_space"):
+        real = getattr(names_module, attr)
+        monkeypatch.setattr(file_rules, attr,
+                            (lambda fn: lambda text: (touched.append(1), fn(text))[1])(real))
+
+    def one_name_many_ways(how_many):
+        out = []
+        for bits in itertools.product("01", repeat=12):
+            name = "".join(unicodedata.normalize("NFC" if bit == "1" else "NFD", "é")
+                           for bit in bits) + ".pdf"
+            if name not in out:
+                out.append(name)
+            if len(out) == how_many:
+                break
+        assert len(out) == how_many
+        return out
+
+    def cost(declarations, group):
+        declared = unicodedata.normalize("NFC", "é" * 12) + ".pdf"
+        meta = ('<?xml version="1.0" encoding="UTF-8"?>'
+                '<Document xmlns="http://www.vdi.de/schemas/vdi2770"><DocumentVersion>'
+                + f'<DigitalFile FileFormat="application/pdf">{declared}</DigitalFile>'
+                * declarations
+                + "</DocumentVersion></Document>")
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+            z.writestr("VDI2770_Metadata.xml", meta)
+            for name in one_name_many_ways(group):
+                z.writestr(name, b"a")
+        touched.clear()
+        check_bytes(buf.getvalue(), "s.zip")
+        return len(touched)
+
+    small, big = cost(25, 125), cost(100, 500)
+    assert big < small * 8, (
+        f"{small} names touched at 25x125 and {big} at 100x500: the group size "
+        f"is multiplying the declaration loop")

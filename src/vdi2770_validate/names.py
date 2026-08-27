@@ -353,6 +353,12 @@ class Members:
         self._by_nfc: Dict[str, List[str]] = {}
         for name in self.present:
             self._by_nfc.setdefault(folder_path(name), []).append(name)
+        # Sorted here, once. `spelled_more_than_one_way` sorted its group on
+        # every call, and it is called once per declaration: four hundred
+        # declarations of one name against two thousand spellings of it paid
+        # four hundred sorts of a two-thousand-member list.
+        for group in self._by_nfc.values():
+            group.sort()
         self._rejected = dict(rejected or {})
         self._rejected_by_nfc: Dict[str, List[str]] = {}
         for name in self._rejected:
@@ -415,7 +421,7 @@ class Members:
         if declared in self._exact:
             return ()
         candidates = self._by_nfc.get(folder_path(declared), ())
-        return tuple(sorted(candidates)) if len(candidates) > 1 else ()
+        return tuple(candidates) if len(candidates) > 1 else ()
 
     def refused_by(self, declared: str) -> Optional[Defect]:
         """The `Defect` behind a refusal, for a caller that needs to know *which*

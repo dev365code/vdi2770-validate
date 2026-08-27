@@ -334,8 +334,8 @@ TABLE = [
 
     ("rules/two-rules-name-one-folder-one-way",
      "src/vdi2770_validate/rules/container.py",
-     '        named = [folder_path(f) + "/" for f in as_folders[:5]]',
-     "        named = list(as_folders[:5])",
+     '        named = [folder_path(f) + "/" for f, _ in as_folders[:5]]',
+     "        named = [f for f, _ in as_folders[:5]]",
      ["tests/test_documents_delivered_as_folders.py"],
      "`Z9` said `AB393/` and `Z13` said `./AB393/` in one report, and a reader "
      "has to work out they are the same place"),
@@ -682,6 +682,30 @@ TABLE = [
      ["tests/test_a_reserved_name_at_the_root_is_at_the_root.py"],
      "one report said a `../` name was refused outright and, two lines on, that "
      "the file was found at a place and just needed moving"),
+
+    ("rules/an-unopened-folders-member-is-not-judged-by-the-root",
+     "src/vdi2770_validate/rules/container.py",
+     "            if _inside(folder_path(m.name), unopened_here):",
+     "            if False:",
+     ["tests/test_a_declared_zip_is_a_payload.py"],
+     "a folder whose unread metadata declares `cad.zip` drew `Z3`/`Z11` beside "
+     "the `Z13` saying nobody looked"),
+
+    ("rules/declared-a-file-and-classified-a-container-is-a-disagreement",
+     "src/vdi2770_validate/rules/container.py",
+     "            if child is not None and child.kind in (Kind.DOCUMENT, Kind.DOCUMENTATION):",
+     "            if False:",
+     ["tests/test_a_declared_zip_is_a_payload.py"],
+     "a document container inside a document container shipped with exit 0, by "
+     "the exact instruction the rule's own remedy gives"),
+
+    ("rules/a-declared-payload-is-not-a-candidate-container",
+     "src/vdi2770_validate/rules/container.py",
+     "                and _candidate(d.where.member)",
+     "                and True",
+     ["tests/test_a_declared_zip_is_a_payload.py"],
+     "at the depth limit an innermost documentation container holding only its "
+     "declared payload delivered nothing, and nothing said so"),
 
     # --- the canary -------------------------------------------------------
     ("canary/a-comment-nobody-reads",

@@ -25,6 +25,7 @@ from .rules import files as r_files
 from .rules import metadata as r_metadata
 from .rules import pdf as r_pdf
 from .rules import schema as r_schema
+from .rules.container import _inside, folders_holding_metadata
 
 
 def _into(report, findings, where, what: str) -> None:
@@ -290,7 +291,23 @@ def check_bytes(data: bytes, name: str) -> Report:
         # whether it declared this one. Unknown suppresses the rule; empty does
         # not.
         parent_declared = declared_of.get(id(c.parent))
-        unknown_parent = c.parent is not None and parent_declared is None
+        # A member of a folder that holds its own metadata is governed by that
+        # metadata -- the file this tool did not open -- and not by the parent's.
+        # Judged against the parent's declarations, `AB393/cad.zip` drew `Z3`
+        # ("the parent modelled its metadata and did not declare this") beside
+        # the `Z13` saying `AB393/` was never read. Unknown, not undeclared.
+        governed_elsewhere = (
+            bool(c.member_name) and c.parent is not None
+            # By name, not through the module attribute: the crash-guard test
+            # replaces `r_container` wholesale with a stub that has only
+            # `check`, and reaching through the attribute made the runner
+            # itself fall over inside that test.
+            and _inside(
+                folder_path(c.member_name),
+                {folder_path(f)
+                 for f, _ in folders_holding_metadata(c.parent)} - {""}))
+        unknown_parent = (c.parent is not None
+                          and (parent_declared is None or governed_elsewhere))
         is_payload = (bool(c.member_name) and parent_declared is not None
                       and folder_path(c.member_name) in parent_declared)
 

@@ -54,8 +54,12 @@ def as_text(report: Report, show_info: bool = True) -> str:
         # lines and quietly broke the promise the docs make.
         lines.append(f"         -> {f.remedy}")
     for rid, container, n in report.not_listed(show_info):
+        # `as_written`, like the `at` line above: this string is an archive's
+        # own name and an inner container called `a\n\n  0 error(s)…` put a
+        # forged summary on the page through this door after the other one was
+        # closed.
         lines.append(f"  ... {n} more {rid} finding{'' if n == 1 else 's'} in "
-                     f"{container}, counted below but not listed")
+                     f"{as_written(container)}, counted below but not listed")
     counts = {s: report.count(s) for s in Severity}
     lines.append("")
     # And how many of the errors are this tool declining to look rather than

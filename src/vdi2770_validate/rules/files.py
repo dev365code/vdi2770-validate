@@ -6,7 +6,7 @@ from typing import Iterator
 from ..catalog import rule
 from ..model import MAIN_PDF, MAIN_XML, METADATA_XML, About, Finding, Kind
 from ..names import Members, escaped, extracts_to, folder_path, nfc, without_edge_space
-from .container import MAX_FOLDER_DEPTH
+from .container import MAX_ALIKE, _inside
 
 EXTENSION_FOR = {"application/pdf": ".pdf", "application/zip": ".zip"}
 
@@ -21,32 +21,6 @@ BUDGET_REFUSALS = frozenset({
 })
 
 
-def _inside(here: str, unopened) -> bool:
-    """Whether the normalised member path `here` sits in one of `unopened`.
-
-    By asking about *this path's* ancestors rather than scanning every folder.
-    The scan was `any(here == f or here.startswith(f + "/") for f in unopened)`,
-    run once per undeclared member, with `unopened` bounded only by
-    `MAX_MEMBERS` -- so cost was members times folders and a 900 KB archive of
-    four thousand each cost 24 seconds, past every budget the reader has,
-    because none of them measures this.
-
-    A path has at most `MAX_FOLDER_DEPTH` ancestors, which is the bound `Z9`
-    already puts on the same walk one file away. Both sides go through
-    `folder_path` first: `startswith` on raw names made `docdirX/B.pdf` look like
-    it was inside `docdir/`, and a `./` on either side made a file inside one
-    look like it was outside.
-    """
-    if here in unopened:
-        return True
-    prefix = ""
-    for segment in here.split("/")[:-1][:MAX_FOLDER_DEPTH]:
-        prefix = f"{prefix}/{segment}" if prefix else segment
-        if prefix in unopened:
-            return True
-    return False
-
-
 def _named_members(names) -> str:
     """Members as the archive spells them, with what draws nothing spelled out."""
     return " and ".join(f"'{escaped(n)}'" for n in names)
@@ -59,6 +33,16 @@ def check(container, document) -> Iterator[Finding]:
     members = Members(container.file_names, container.rejected)
     accounted_for = set()
     reached_ambiguously = set()
+    # Built once: the missing-declaration branch asked, per declaration, whether
+    # any member's name explains the miss because its edge whitespace cannot be
+    # declared -- a scan of every member through `without_edge_space`, once per
+    # missing declaration. Only names whose stripped form differs can explain
+    # anything, and there are few of those in any honest archive.
+    unreachable_as = {}
+    for candidate in members.present:
+        stripped = without_edge_space(candidate)
+        if stripped != candidate:
+            unreachable_as.setdefault(stripped, []).append(candidate)
 
     for f in document.all_files:
         if not f.file_name:
@@ -130,8 +114,8 @@ def check(container, document) -> Iterator[Finding]:
             elif twice:
                 message = ("A file named in the metadata is in the container more "
                            "than once")
-                fix = ("Remove the repeat. The name denotes two members with different "
-                       "bytes, and which one a reader extracts is its own business — so "
+                fix = ("Remove the repeats. The name denotes more than one member, "
+                       "and which one a reader extracts is its own business — so "
                        "this tool will not say which of them you declared.")
                 whose = None
             elif because is None:
@@ -179,16 +163,25 @@ def check(container, document) -> Iterator[Finding]:
                        "the metadata is right; the bytes behind the name are not readable.")
                 whose = None
             if spellings and not twice:
-                shown = " and ".join(escaped(n) for n in spellings)
+                # Bounded the way `Z10` bounds its partner list: rendering the
+                # whole group put every spelling into every declaration's
+                # detail, and the product ran to 69.71 seconds from a 290 KiB
+                # archive. The count in the sentence stays exact.
+                shown = (" and ".join(escaped(n) for n in spellings[:MAX_ALIKE])
+                         + (", ..." if len(spellings) > MAX_ALIKE else ""))
                 how = "print alike" if look_alike else "extract to the same path"
                 detail = (f"{f.file_name!r} matches {len(spellings)} members "
                           f"that {how}: {shown}")
             elif twice:
-                # The count, not the word `two`: a name stored four times names
-                # four members, and `present` lists every entry, repeats and all.
-                held = sum(1 for n in container.present
-                           if folder_path(n) == folder_path(f.file_name))
-                detail = f"{f.file_name!r} names {held} members of the archive"
+                # The reader's sentence, which carries the true count. A count
+                # taken from `container.present` could only ever be 1 here:
+                # `present` is built over `rejected`, a dict keyed by name, so a
+                # repeated name collapses to one entry -- and the finding said
+                # *names 1 members* under a headline saying *more than once*,
+                # beside a Z10 whose detail says four.
+                detail = (f"{f.file_name!r}: {because.detail}" if because is not None
+                          else f"{f.file_name!r} names more than one member of "
+                               f"the archive")
             elif rejected:
                 detail = f"{f.file_name!r} is in the archive but was refused: {rejected}"
             else:
@@ -197,9 +190,7 @@ def check(container, document) -> Iterator[Finding]:
                 # declared `B.pdf `, and this said the file was not there while
                 # `F2` said it was not named -- two findings about one file that
                 # is both present and declared.
-                unnameable = sorted(
-                    n for n in members.present
-                    if n != f.file_name and without_edge_space(n) == f.file_name)
+                unnameable = sorted(unreachable_as.get(f.file_name, ()))
                 if unnameable:
                     message = ("A file named in the metadata is in the container "
                                "under a name no declaration can reach")
@@ -233,7 +224,8 @@ def check(container, document) -> Iterator[Finding]:
     # so calling them undeclared is a statement about a file we did not read.
     # `Z13` says we did not read it.
     from .container import folders_holding_metadata
-    unopened = frozenset(folder_path(f) for f in folders_holding_metadata(container)) - {""}
+    unopened = frozenset(folder_path(f)
+                         for f, _ in folders_holding_metadata(container)) - {""}
     # A member that shares its extracted path with one the metadata declared is
     # not undeclared -- the declaration reaches it too, and which of the two the
     # recipient ends up with is what `Z10` is reporting on the line above. Told

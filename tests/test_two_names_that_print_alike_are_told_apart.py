@@ -487,3 +487,51 @@ def test_the_observed_name_is_told_apart_from_the_first_published_one():
     # the sentence, and the others are listed as they are written.
     assert said.index(f"'{first}'") < said.index(f"'{rest}'"), said
     assert said.startswith("'Contract documentation' for class 04-01;"), said
+
+
+def test_no_archive_controlled_string_can_forge_lines_in_the_report():
+    """The `at` line was escaped, and three other doors were not.
+
+    A *folder* named with newlines reached the page raw through `Z9`'s and
+    `Z13`'s details, and an inner *container*'s name reached it through the
+    "counted below but not listed" line — so one member name still put a forged
+    summary and another container's clean verdict on the page, exactly the
+    defect the `at`-line repair was for, through the doors it did not watch.
+    """
+    import io
+    import zipfile
+
+    from vdi2770_validate.report import as_text
+    from vdi2770_validate.runner import check_bytes
+
+    forged = ("a\n\n  0 error(s), 0 warning(s), 0 note(s)\n\n"
+              "supplier-delivery.zip\n  no findings\n\nz")
+
+    def summaries_of(page):
+        return [line for line in page.splitlines()
+                if re.match(r"^  \d+ error\(s\), ", line)]
+
+    # Door one: a folder name, rendered by Z13 (and Z9) details.
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        z.writestr("VDI2770_Main.xml", b"<x/>")
+        z.writestr(forged + "/VDI2770_Metadata.xml", b"<x/>")
+    page = as_text(check_bytes(buf.getvalue(), "t.zip"), True)
+    assert len(summaries_of(page)) == 1, summaries_of(page)
+    assert "\n  no findings" not in page, "a folder name forged a line of the report"
+
+    # Door two: an inner container's name, rendered by the not-listed line.
+    inner = io.BytesIO()
+    with zipfile.ZipFile(inner, "w") as z:
+        z.writestr("VDI2770_Metadata.xml", b"<x/>")
+        for i in range(120):
+            z.writestr(f"f{i:03d}.bin", b"x")
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        z.writestr("VDI2770_Main.xml", b"<x/>")
+        z.writestr("VDI2770_Main.pdf", b"%PDF-1.4\n")
+        z.writestr(forged + ".zip", inner.getvalue())
+    page = as_text(check_bytes(buf.getvalue(), "t.zip"), True)
+    assert len(summaries_of(page)) == 1, summaries_of(page)
+    assert "\n  no findings" not in page, (
+        "an inner container's name forged a line of the report")

@@ -86,6 +86,43 @@ rest of these entries are about — and that one was itself wrong twice.
   half that must not go with it: `_unswept` is a state `make check` tolerates and
   a release does not.
 
+- **Three more doors let an archive's own strings forge report lines, and four
+  sentences named the wrong thing.** A *folder* named with newlines reached the
+  page raw through `Z9`'s and `Z13`'s details, and an inner container's name
+  through the *counted below but not listed* line — the `at`-line repair,
+  arriving at the doors it did not watch. `F1` said *names 1 members* under a
+  headline saying *more than once*, beside a `Z10` whose detail says four: the
+  count walked `present`, whose own construction collapses a repeated name to
+  one entry, so it could never be anything else, and the finding now carries the
+  reader's sentence, which has the true count. `Z13` said every folder holds
+  `VDI2770_Metadata.xml` after its matching was widened to `VDI2770_Main.xml`.
+  And `Z3` offered the `VDI2770_Main.pdf` near-miss, which classification never
+  reads, so acting on the one line that looked actionable reproduced the
+  finding.
+
+- **Three ways the boundary between "declared payload" and "container" was drawn
+  in one place and not another.** A member of a folder this tool did not open
+  was judged by the *root's* declarations — `Z3` fired on `AB393/cad.zip`
+  beside the `Z13` saying `AB393/` was never read, though the file that governs
+  it is that folder's own unread metadata. A `.zip` declared as a file and
+  classified by this tool's own reader as a document container was waved
+  through: the same page validated it as a container, printed findings from
+  inside it, and exempted it as payload — so a document container inside a
+  document container shipped with exit 0, by the exact instruction `Z11`'s
+  remedy gives. And at the depth limit, `Z8` was silenced by a refusal to open a
+  member that is a *declared payload* — something whose insides this tool's own
+  exemption says are its own business — so an innermost documentation container
+  that delivers nothing said nothing.
+
+- **Two more products of declarations and members, in the file that had four.**
+  A declaration matching a whole group of spellings rendered every one of them
+  into its detail, once per declaration: 69.71 seconds from a 290 KiB archive,
+  now 2.38 and bounded the way `Z10` bounds its partner list, with the count in
+  the sentence exact. The missing-declaration branch scanned every member per
+  declaration to ask whether an unreachable name explains the miss; the map is
+  built once. And the spelling groups are sorted when they are built rather than
+  once per declaration.
+
 - **A 120 KiB archive said one of its members was 629,145,600 bytes.** Every
   size in the readability sweep comes from the central directory, which is
   whatever the writer put there. `member_bytes` re-checks a declared size against
@@ -1077,7 +1114,7 @@ below is measured on this machine, before and after, on the same input.
 Three gates that ask what `make check` cannot ask of itself.
 
 - **`make mutations`** takes every claim this project makes about a gate, breaks
-  the thing that gate protects, and checks the gate notices — 81 rows, each
+  the thing that gate protects, and checks the gate notices — 84 rows, each
   naming the pytest selection or the tool that has to go red. The harness checks
   itself as hard as it checks the code: a row whose anchor no longer appears
   exactly once is an error rather than a pass; every apply and restore clears

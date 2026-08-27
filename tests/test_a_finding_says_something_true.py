@@ -446,3 +446,76 @@ def test_a_member_no_declaration_can_name_is_told_so():
     assert "declare" in page.lower(), page
     assert "rename" in page.lower(), (
         f"nothing tells the sender the one thing that can fix it: {page}")
+
+
+def test_one_name_stored_four_times_is_counted_the_same_way_twice():
+    """`F1` said *names 1 members* under a headline saying *more than once*,
+    beside a `Z10` whose detail says four entries.
+
+    The count walked `container.present`, whose own construction collapses a
+    repeated name to one entry — `rejected` is a dict keyed by name — so on this
+    branch it could never be anything but 1, and the comment defending it was
+    false. The reader's refusal already carries the true count; the finding now
+    carries the reader's sentence instead of a number it cannot know.
+    """
+    meta = ('<?xml version="1.0" encoding="UTF-8"?>'
+            '<Document xmlns="http://www.vdi.de/schemas/vdi2770"><DocumentVersion>'
+            '<DigitalFile FileFormat="application/pdf">B.pdf</DigitalFile>'
+            '</DocumentVersion></Document>')
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        z.writestr("VDI2770_Metadata.xml", meta)
+        for _ in range(4):
+            z.writestr("B.pdf", b"%PDF-1.4 x")
+    report = check_bytes(buf.getvalue(), "four.zip")
+    f1 = [f for f in report.findings if f.rule.id == "F1"]
+    assert f1, [f.rule.id for f in report.findings]
+    said = f"{f1[0].detail} {f1[0].remedy}"
+    assert "1 members" not in said and "two members" not in said, said
+    assert "4 entries" in said, f"the true count is nowhere in the finding: {said}"
+
+    z10 = [f for f in report.findings if f.rule.id == "Z10"]
+    assert z10 and "Two entries share" not in (z10[0].remedy or ""), (
+        z10[0].remedy)
+
+
+def test_z13_names_the_reserved_file_each_folder_actually_holds():
+    """The detail always said `VDI2770_Metadata.xml`, whichever file the folder
+    holds — widened matching, unwidened sentence. A reader grepped their ZIP
+    listing for a name that is not in it."""
+    from conftest import CLEAN_DOCUMENTATION
+
+    docn = zipfile.ZipFile(CLEAN_DOCUMENTATION)
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        z.writestr("VDI2770_Main.xml", docn.read("VDI2770_Main.xml"))
+        z.writestr("VDI2770_Main.pdf", docn.read("VDI2770_Main.pdf"))
+        z.writestr("plantA/VDI2770_Main.xml", b"<x/>")
+    report = check_bytes(buf.getvalue(), "docnfolder.zip")
+    z13 = [f for f in report.findings if f.rule.id == "Z13"]
+    assert z13, [f.rule.id for f in report.findings]
+    assert "VDI2770_Main.xml" in (z13[0].detail or ""), z13[0].detail
+    assert "VDI2770_Metadata.xml" not in (z13[0].detail or ""), z13[0].detail
+
+
+def test_z3_offers_only_the_near_misses_that_decide_the_kind():
+    """`Z3` rendered the `VDI2770_Main.pdf` near-miss, and acting on it
+    reproduces the finding: only the two XML names classify an archive, so
+    fixing the PDF's case changes nothing. The one line that looked actionable
+    was the one that could not help."""
+    from conftest import CLEAN_DOCUMENTATION
+
+    docn = zipfile.ZipFile(CLEAN_DOCUMENTATION)
+    inner = io.BytesIO()
+    with zipfile.ZipFile(inner, "w") as z:
+        z.writestr("vdi2770_main.pdf", b"%PDF-1.4\n")
+        z.writestr("a.txt", b"x")
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        z.writestr("VDI2770_Main.xml", docn.read("VDI2770_Main.xml"))
+        z.writestr("VDI2770_Main.pdf", docn.read("VDI2770_Main.pdf"))
+        z.writestr("inner.zip", inner.getvalue())
+    report = check_bytes(buf.getvalue(), "case.zip")
+    z3 = [f for f in report.findings if f.rule.id == "Z3"]
+    assert z3, [f.rule.id for f in report.findings]
+    assert "vdi2770_main.pdf" not in (z3[0].detail or ""), z3[0].detail

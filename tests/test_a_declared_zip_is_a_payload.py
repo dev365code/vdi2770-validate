@@ -335,3 +335,143 @@ def test_z13_does_not_look_inside_a_declared_payload():
         f"a declared payload's insides were judged as a delivery: {sorted(fired)}")
     assert report.clean, [f"{f.rule.id}: {f.message}" for f in report.findings
                           if f.severity.value == "error"]
+
+
+def _folder_meta_declaring(name):
+    return ('<?xml version="1.0" encoding="UTF-8"?>'
+            '<Document xmlns="http://www.vdi.de/schemas/vdi2770"><DocumentVersion>'
+            f'<DigitalFile FileFormat="application/zip">{name}</DigitalFile>'
+            '</DocumentVersion></Document>').encode()
+
+
+def test_a_member_of_an_unopened_folder_is_not_judged_by_the_roots_metadata():
+    """`Z13` said the folder was never opened; `Z3` judged its member anyway.
+
+    `Z3` fires when the parent modelled its metadata and did not declare the
+    member. The parent that governs `AB393/cad.zip` is `AB393/`'s own
+    `VDI2770_Metadata.xml` — the file `Z13` says on the line above was not read,
+    and which does declare it. Judging the member against the *root*'s
+    declarations is a claim about a file this tool did not open, which is the
+    same sentence `F2`'s suppression was built on.
+    """
+    import io
+    import zipfile
+
+    from conftest import CLEAN_DOCUMENT, CLEAN_DOCUMENTATION
+    from vdi2770_validate.runner import check_bytes
+
+    doc = zipfile.ZipFile(CLEAN_DOCUMENT)
+    docn = zipfile.ZipFile(CLEAN_DOCUMENTATION)
+    payload = io.BytesIO()
+    with zipfile.ZipFile(payload, "w") as z:
+        z.writestr("part.step", b"ISO-10303-21;\n")
+
+    for root_kind, root_entries in (
+            ("documentation", (("VDI2770_Main.xml", docn.read("VDI2770_Main.xml")),
+                               ("VDI2770_Main.pdf", docn.read("VDI2770_Main.pdf")))),
+            ("document", tuple((n, doc.read(n)) for n in doc.namelist()))):
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w") as z:
+            for name, body in root_entries:
+                z.writestr(name, body)
+            z.writestr("AB393/VDI2770_Metadata.xml", _folder_meta_declaring("cad.zip"))
+            z.writestr("AB393/B.pdf", doc.read("B.pdf"))
+            z.writestr("AB393/cad.zip", payload.getvalue())
+        report = check_bytes(buf.getvalue(), "folder.zip")
+        fired = {f.rule.id for f in report.findings}
+        assert "Z13" in fired, (root_kind, sorted(fired))
+        judged = {f.rule.id for f in report.findings
+                  if (f.where.member or f.where.container or "").endswith("cad.zip")
+                  and f.rule.id in ("Z3", "Z11", "Z2", "Z9")}
+        assert not judged, (
+            f"{root_kind}: members of a folder this tool did not open were "
+            f"judged by the root's metadata: {sorted(judged)}")
+
+
+def test_a_declared_payload_that_is_a_container_is_said_to_be_one():
+    """The report held both claims at once, and the verdict was clean.
+
+    `cad.zip` was declared `application/zip`, so `Z11`'s exemption treated it as
+    a file — while the same page validated it as a document container and
+    printed `t.zip!/cad.zip!/B.pdf`. A document container inside a document
+    container shipped with exit 0, and the instruction for producing that state
+    is `Z11`'s own remedy.
+
+    The exemption is for payload. This tool's own reader classified the child,
+    so the rule can ask: declared a file and classified a container is a
+    disagreement the sender has to resolve, not one to wave through.
+    """
+    import io
+    import re
+    import zipfile
+
+    from conftest import CLEAN_DOCUMENT
+    from vdi2770_validate.runner import check_bytes
+
+    doc = zipfile.ZipFile(CLEAN_DOCUMENT)
+    meta = doc.read("VDI2770_Metadata.xml").decode("utf-8")
+    one = re.search(r"(\s*)<DigitalFile[^>]*>B\.pdf</DigitalFile>", meta)
+    meta = meta.replace(one.group(0), one.group(0) + one.group(1)
+                        + '<DigitalFile FileFormat="application/zip">cad.zip</DigitalFile>', 1)
+    inner = io.BytesIO()
+    with zipfile.ZipFile(inner, "w") as z:
+        for name in doc.namelist():
+            z.writestr(name, doc.read(name))
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        for name in doc.namelist():
+            z.writestr(name, meta.encode("utf-8") if name == "VDI2770_Metadata.xml"
+                       else doc.read(name))
+        z.writestr("cad.zip", inner.getvalue())
+
+    report = check_bytes(buf.getvalue(), "payload.zip")
+    z11 = [f for f in report.findings if f.rule.id == "Z11"]
+    assert z11, "a document container inside a document container came back clean"
+    assert not report.clean
+    assert "declared" in (z11[0].detail or ""), z11[0].detail
+
+
+def test_a_documentation_container_holding_only_a_declared_payload_delivers_nothing():
+    """`Z8` was silenced by the depth limit, about a member that is not a
+    candidate container.
+
+    At the depth limit the reader records `nesting-too-deep` and `Z8` stays
+    quiet — a refusal to look is not an absence. But the member it declined to
+    open here is a *declared payload*: this tool's own `Z6` exemption says its
+    insides are its own business, so "it might have been a document container"
+    is true of nothing, and the innermost documentation container delivers
+    nothing with no finding saying so.
+    """
+    import io
+    import zipfile
+
+    from conftest import CLEAN_DOCUMENTATION
+    from vdi2770_validate.runner import check_bytes
+
+    docn = zipfile.ZipFile(CLEAN_DOCUMENTATION)
+    main_xml = docn.read("VDI2770_Main.xml").decode("utf-8")
+    declaring = main_xml.replace(
+        "</DocumentVersion>",
+        '<DigitalFile FileFormat="application/zip">payload.zip</DigitalFile>'
+        "</DocumentVersion>", 1)
+    payload = io.BytesIO()
+    with zipfile.ZipFile(payload, "w") as z:
+        z.writestr("part.step", b"ISO-10303-21;\n")
+
+    def documentation(extra, main=main_xml):
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w") as z:
+            z.writestr("VDI2770_Main.xml", main.encode("utf-8"))
+            z.writestr("VDI2770_Main.pdf", docn.read("VDI2770_Main.pdf"))
+            for name, body in extra:
+                z.writestr(name, body)
+        return buf.getvalue()
+
+    innermost = documentation([("payload.zip", payload.getvalue())], main=declaring)
+    nested = documentation([("mid.zip", documentation([("inner.zip", innermost)]))])
+
+    report = check_bytes(nested, "deep.zip")
+    z8 = [f for f in report.findings if f.rule.id == "Z8"]
+    assert z8, (
+        "the innermost documentation container delivers nothing and nothing "
+        f"said so: {[f.rule.id for f in report.findings]}")

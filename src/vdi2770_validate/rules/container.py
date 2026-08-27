@@ -38,6 +38,31 @@ def _named(alike, spell, total) -> str:
             + (", ..." if total - 1 > len(alike) else ""))
 
 
+def _inside(here: str, unopened) -> bool:
+    """Whether the normalised member path `here` sits in one of `unopened`.
+
+    By asking about *this path's* ancestors rather than scanning every folder.
+    The scan was `any(here == f or here.startswith(f + "/") for f in unopened)`,
+    run once per undeclared member, with `unopened` bounded only by
+    `MAX_MEMBERS` -- so cost was members times folders and a 900 KB archive of
+    four thousand each cost 24 seconds, past every budget the reader has,
+    because none of them measures this.
+
+    A path has at most `MAX_FOLDER_DEPTH` ancestors, which is the bound `Z9`
+    already puts on the same walk one file away. Both sides go through
+    `folder_path` first: `startswith` on raw names made `docdirX/B.pdf` look like
+    it was inside `docdir/`, and a `./` on either side made a file inside one
+    look like it was outside.
+    """
+    if here in unopened:
+        return True
+    prefix = ""
+    for segment in here.split("/")[:-1][:MAX_FOLDER_DEPTH]:
+        prefix = f"{prefix}/{segment}" if prefix else segment
+        if prefix in unopened:
+            return True
+    return False
+
 def folders_holding_metadata(container) -> list:
     """Folders that hold a reserved container name — a container that was not
     zipped.
@@ -78,6 +103,7 @@ def folders_holding_metadata(container) -> list:
         prefix, sep, leaf = nfc(name).rpartition("/")
         if not sep or leaf not in (METADATA_XML, MAIN_XML):
             continue
+        found = leaf
         # `./VDI2770_Metadata.xml` *is* at the root. Some writers spell it that
         # way and the file has not gone anywhere, so reporting it as delivered in
         # a folder said this tool had not looked inside something it had read.
@@ -93,7 +119,7 @@ def folders_holding_metadata(container) -> list:
         # a user has to find in their ZIP listing.
         if not folder_path(prefix + "/"):
             continue
-        out.append(prefix + "/")
+        out.append((prefix + "/", found))
     return sorted(set(out))
 
 
@@ -177,9 +203,10 @@ NEAR_MISS = {
 
 REMEDY_FOR_DEFECT = {
     "ambiguous-name":
-        "Rebuild the archive with one entry per name. Two entries share this one, "
-        "so nothing here can say which bytes you meant and neither was read — a "
-        "reader that guessed would show you one file and your unpacker another.",
+        "Rebuild the archive with one entry per name. More than one entry shares "
+        "this one, so nothing here can say which bytes you meant and none was "
+        "read — a reader that guessed would show you one file and your unpacker "
+        "another.",
     "member-budget-exhausted":
         "Split the delivery. This tool holds a record for every file named across "
         "the whole tree of containers, and this one names more than it will hold.",
@@ -295,7 +322,11 @@ def check(container, declared, is_declared_payload) -> Iterator[Finding]:
             # to fill it some other way, and this is not where that should
             # become a report that differs between runs.)
             for wanted, (kind, found) in sorted(container.near_misses.items())
-            if kind in NEAR_MISS) or None
+            # Only the names that decide the kind. `VDI2770_Main.pdf` is
+            # recorded too -- `Z7` reads it -- but classification never looks at
+            # it, so offering its near-miss here sent a sender to fix a case
+            # difference and meet the identical finding on the next run.
+            if kind in NEAR_MISS and wanted in (MAIN_XML, METADATA_XML)) or None
         yield Finding(r, r.title, container.where, detail=detail)
 
     # A directory entry is optional in the ZIP format, so testing for one made
@@ -362,12 +393,12 @@ def check(container, declared, is_declared_payload) -> Iterator[Finding]:
         # this rule too. Read on its own, "store the members at the root of the
         # archive" flattens a document container, and a reader with two findings
         # and no order between them can do exactly that.
-        unopened = {folder_path(f) + "/" for f in folders_holding_metadata(container)}
+        unopened = {folder_path(f) + "/" for f, _ in folders_holding_metadata(container)}
         also_a_container = sorted(unopened & folders)
         yield Finding(r, r.title, container.where,
                       detail=f"{'at least ' if capped else ''}{len(named)} "
                              f"folder{'' if len(named) == 1 else 's'}: "
-                             + ", ".join(named[:5])
+                             + ", ".join(as_written(f) for f in named[:5])
                              + (", ..." if len(named) > 5 else ""),
                       fix=None if not also_a_container else
                       (rule("Z9").remedy + " Not by hand for "
@@ -552,16 +583,49 @@ def check(container, declared, is_declared_payload) -> Iterator[Finding]:
                     "by side, so there is nothing there to rename.")
 
     if container.kind is Kind.DOCUMENT:
+        unopened_here = {folder_path(f)
+                         for f, _ in folders_holding_metadata(container)} - {""}
         for m in container.members:
             # Z11 exists because an undeclared container is "a way to carry
             # something past a check that only looks at declared files". A
             # declared one is not past that check, so its own argument excuses it.
             if declared is None:
                 continue        # we did not model this container's own metadata
-            if (m.name.lower().endswith(".zip")
-                    and folder_path(m.name) not in declared):
+            if not m.name.lower().endswith(".zip"):
+                continue
+            # Not a member of a folder this tool did not open: what governs it
+            # is that folder's own metadata, the file `Z13` says was never read,
+            # and the root's declarations cannot speak about it -- the same
+            # sentence `F2`'s suppression is built on. Judged anyway, a folder
+            # whose unread metadata declares `cad.zip` drew `Z3` beside the
+            # `Z13` saying nobody looked.
+            if _inside(folder_path(m.name), unopened_here):
+                continue
+            if folder_path(m.name) not in declared:
                 r = rule("Z11")
                 yield Finding(r, r.title, container.where.child(member=m.name, subject=m.name))
+                continue
+            # Declared -- but the exemption is for *payload*, and the reader has
+            # already classified what this member turned out to be. Declared a
+            # file and classified a container is a disagreement: the same page
+            # was validating `cad.zip` as a document container, printing
+            # findings from inside it, while this rule treated it as a file --
+            # and a document container inside a document container shipped with
+            # exit 0, by the exact instruction this rule's remedy gives.
+            child = next((k for k in container.children
+                          if k.member_name == m.name), None)
+            if child is not None and child.kind in (Kind.DOCUMENT, Kind.DOCUMENTATION):
+                r = rule("Z11")
+                yield Finding(
+                    r, r.title, container.where.child(member=m.name, subject=m.name),
+                    detail=f"{as_written(m.name)} is declared as a DigitalFile "
+                           f"and it is a "
+                           f"{'document' if child.kind is Kind.DOCUMENT else 'documentation'} "
+                           f"container: its root holds the reserved name that "
+                           f"makes every reader of this format open it as one",
+                    fix="Move it up into the documentation container if it is a "
+                        "container, or — if it is genuinely payload — rename the "
+                        "reserved file inside it, which is what makes it one.")
 
     # Whatever kind of container this is. `files.py` keeps `F2` quiet about every
     # file inside a folder that holds its own metadata, in any container, because
@@ -586,12 +650,26 @@ def check(container, declared, is_declared_payload) -> Iterator[Finding]:
         # has to work out that the tool is not talking about two places. The list
         # itself keeps the archive's prefix, because `files.py` matches it against
         # member names to suppress `F2`; it is the sentence that is rendered.
-        named = [folder_path(f) + "/" for f in as_folders[:5]]
+        # The file each folder actually holds. The matching was widened to
+        # `VDI2770_Main.xml` and the sentence still said `VDI2770_Metadata.xml`
+        # for every folder, so a reader grepped their listing for a name that is
+        # not in it. And `as_written`, because a folder's name is the archive's
+        # own string and one spelled with newlines forged report lines through
+        # this door.
+        leaves = {leaf for _, leaf in as_folders}
+        named = [folder_path(f) + "/" for f, _ in as_folders[:5]]
+        if len(leaves) == 1:
+            what = leaves.pop()
+            listed = ", ".join(as_written(f) for f in named)
+        else:
+            what = "a container's own file"
+            listed = ", ".join(f"{as_written(folder_path(f) + '/')} ({leaf})"
+                               for f, leaf in as_folders[:5])
         yield Finding(r, r.title, container.where,
                       detail=f"{len(as_folders)} folder"
                              f"{'' if len(as_folders) == 1 else 's'} "
                              f"{'holds' if len(as_folders) == 1 else 'hold'} "
-                             f"{METADATA_XML}: " + ", ".join(named)
+                             f"{what}: " + listed
                              + (", ..." if len(as_folders) > 5 else ""))
 
     if container.kind is Kind.DOCUMENTATION:
@@ -620,10 +698,22 @@ def check(container, declared, is_declared_payload) -> Iterator[Finding]:
         # remove a `.zip` before the descent loop ever sees it. `rejected` holds
         # every member the reader refused, whatever the reason, including ones
         # added after this was written.
+        # "We declined to open something that might have been a document
+        # container" -- and a declared payload is not that something. The `Z6`
+        # exemption above says its insides are its own business, so at the depth
+        # limit an innermost documentation container holding only its declared
+        # payload delivered nothing, and nothing said so: `Z6` excused, `Z8`
+        # silenced by the very refusal the exemption disowns.
+        def _candidate(member):
+            return not (declared is not None and member
+                        and folder_path(member) in declared)
+
         stopped = (
             any(d.kind in ("nesting-too-deep", "container-budget-exhausted")
+                and _candidate(d.where.member)
                 for d in container.defects)
-            or any(name.lower().endswith(".zip") for name in container.rejected)
+            or any(name.lower().endswith(".zip") and _candidate(name)
+                   for name in container.rejected)
             # A child we opened but could not read might have been a document
             # container. Z12 says we could not read it; saying there are none
             # would be a second, different, and false claim.
