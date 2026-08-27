@@ -86,6 +86,50 @@ rest of these entries are about — and that one was itself wrong twice.
   half that must not go with it: `_unswept` is a state `make check` tolerates and
   a release does not.
 
+- **A documentation container delivered as an unzipped folder was not a folder.**
+  The rule that says *this tool does not open folders* matched
+  `VDI2770_Metadata.xml` and nothing else, so a handover holding `plantA/` whose
+  `VDI2770_Main.xml` is not XML and whose `VDI2770_Main.pdf` is not a PDF came
+  back with two warnings and a clean verdict — with `Z8` on top of it saying the
+  container holds no document containers while looking at one. Nothing said a
+  folder had gone unexamined, and a `.zip` inside such a folder *is* opened and
+  reported on, so a reader takes the rest as checked too.
+
+- **A file that is present and declared was reported as missing and as
+  undeclared.** The metadata's text is read with the whitespace around it
+  removed — it has to be, because that is how a pretty-printer writes an
+  ordinary declaration — and the schema types the element `xs:string`, which
+  preserves whitespace. So a member whose name carries a space at its edge
+  cannot be declared **by anybody**: whatever the sender writes is read back
+  without it. The report now says that, and both remedies say the one thing that
+  works. Before, `F2` asked the sender to declare a file they had already
+  declared.
+
+- **A declared name that would escape the extraction directory was called
+  unreadable.** The bytes are fine; the *name* is what this tool refused, which
+  the detail on the next line said in as many words. The remedy claimed *the
+  metadata is right* — contradicting `Z4` two lines away, since the metadata is
+  what names `../evil.pdf` — and offered *re-create the archive and send it
+  again*, the loop already removed for a locked member and for a repeated name.
+
+- **`Z9` counted one folder twice and gave a remedy that undoes `Z13`'s.** The
+  directory-entry branch normalised the name and the path branch three lines
+  below did not, so a folder whose name is not ASCII — written the way macOS
+  writes it, which is also what its `zip -r` emits a directory entry for — landed
+  in the set twice: *2 folders: Prüfbericht/, Prüfbericht/*, one folder, two
+  names that print the same. And `Z9`'s *store the members at the root* read on
+  its own flattens a document container that `Z13` has just declined to open.
+  Both still fire — the reference implementation warns about folders whatever is
+  in them — and `Z9` now says which of the two is the specific one.
+
+- **A near-miss named a member the listing does not hold, and a refused one as
+  merely misplaced.** The reader recorded the *basename*, so an archive holding
+  `sub/vdi2770_main.pdf` was told the file was found as `vdi2770_main.pdf`,
+  which nothing in it is called — and fixing the case, as the sentence said,
+  left the next run saying it must sit at the root. A `../` member, refused
+  outright by the reader, was reported in the same breath as *found at* a place
+  and just needing to be moved.
+
 - **The repair for an invisible difference started hexing visible ones, and
   still missed two invisible ones.** Spelling every same-length difference that
   shares a prefix or a suffix printed `identification` against `Identification`
@@ -1012,7 +1056,7 @@ below is measured on this machine, before and after, on the same input.
 Three gates that ask what `make check` cannot ask of itself.
 
 - **`make mutations`** takes every claim this project makes about a gate, breaks
-  the thing that gate protects, and checks the gate notices — 80 rows, each
+  the thing that gate protects, and checks the gate notices — 81 rows, each
   naming the pytest selection or the tool that has to go red. The harness checks
   itself as hard as it checks the code: a row whose anchor no longer appears
   exactly once is an error rather than a pass; every apply and restore clears

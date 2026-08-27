@@ -189,7 +189,8 @@ def _unsafe(name: str) -> Optional[str]:
     return None
 
 
-def _classify(names: Tuple[str, ...]) -> Tuple[Kind, Dict[str, Tuple[str, str]]]:
+def _classify(names: Tuple[str, ...],
+              refused: Optional[Set[str]] = None) -> Tuple[Kind, Dict[str, Tuple[str, str]]]:
     """The reference implementation matches these names exactly and
     case-sensitively, with no path component. We do the same, but we also record
     what *nearly* matched so a caller can say why it did not.
@@ -205,18 +206,36 @@ def _classify(names: Tuple[str, ...]) -> Tuple[Kind, Dict[str, Tuple[str, str]]]
         if wanted in exact:
             continue
         for n in names:
+            # Not a name the reader refused for what it is. A `../` member is
+            # not a file that merely sits in the wrong folder -- those bytes were
+            # never read, and the caller has its own finding for the name. The
+            # folder walk one layer up learned this; this table did not, so one
+            # report said the name was refused outright and, two lines on, that
+            # it was *found at* a place and just needed moving.
+            if refused and n in refused:
+                continue
             base = n.rsplit("/", 1)[-1]
-            if base == wanted and "/" in n:
-                # `./name` is at the root: some writers emit the prefix and it
-                # is not a folder. Reporting it as a subfolder made the caller
-                # tell a sender to move a file that had not gone anywhere, so
-                # the two are different kinds and the caller writes each its own
-                # sentence.
-                head = n[:-(len(base))].strip("/")
-                kind = "path-prefixed" if head in (".", "") else "in-a-subfolder"
-                near[wanted] = (kind, n)
-            elif base.lower() == wanted.lower() and base != wanted:
-                near[wanted] = ("case-differs", base)
+            head = n[:-(len(base))].strip("/")
+            # `./name` is at the root: some writers emit the prefix and it is
+            # not a folder. Reporting it as a subfolder made the caller tell a
+            # sender to move a file that had not gone anywhere, so the two are
+            # different kinds and the caller writes each its own sentence.
+            elsewhere = "/" in n and head not in (".", "")
+            prefixed = "/" in n and head in (".", "")
+            wrong_case = base.lower() == wanted.lower() and base != wanted
+            # The whole member name, never the basename: an archive holding
+            # `sub/vdi2770_main.pdf` was told the file was "found as
+            # 'vdi2770_main.pdf'", which nothing in its listing is called. And
+            # both differences at once get both, because fixing the case alone
+            # left the next run saying the file must sit at the root.
+            if wrong_case and elsewhere:
+                near[wanted] = ("case-differs-elsewhere", n)
+            elif wrong_case:
+                near[wanted] = ("case-differs", n)
+            elif base == wanted and elsewhere:
+                near[wanted] = ("in-a-subfolder", n)
+            elif base == wanted and prefixed:
+                near[wanted] = ("path-prefixed", n)
     if MAIN_XML in exact:
         return Kind.DOCUMENTATION, near
     if METADATA_XML in exact:
@@ -451,7 +470,7 @@ def read(data: bytes, path: str, depth: int = 0, _budget: Optional[_Budget] = No
     c.duplicate_names = tuple(dupes)
     # `present`, not `file_names`: what kind of container this is follows from
     # the names the archive declares, not from which of them we could inflate.
-    c.kind, c.near_misses = _classify(c.present)
+    c.kind, c.near_misses = _classify(c.present, set(c.rejected))
 
     wanted = MAIN_XML if c.kind is Kind.DOCUMENTATION else METADATA_XML if c.kind is Kind.DOCUMENT else None
     # `_classify` reads `present`, so a member we refused can decide the kind --

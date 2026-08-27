@@ -157,3 +157,85 @@ def test_an_archive_with_no_files_says_nothing_about_folders(tmp_path):
     said = [f for f in check_bytes(buf.getvalue(), "dir.zip").findings if f.rule.id == "Z9"]
     assert said and "a/" in (said[0].detail or ""), (
         [f.rule.id for f in check_bytes(buf.getvalue(), "dir.zip").findings])
+
+
+def _handover_with_folder(folder):
+    """A documentation container holding one unzipped document folder."""
+    import io
+    import zipfile
+
+    from conftest import CLEAN_DOCUMENT, CLEAN_DOCUMENTATION
+
+    doc = zipfile.ZipFile(CLEAN_DOCUMENT)
+    docn = zipfile.ZipFile(CLEAN_DOCUMENTATION)
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        z.writestr("VDI2770_Main.xml", docn.read("VDI2770_Main.xml"))
+        z.writestr("VDI2770_Main.pdf", docn.read("VDI2770_Main.pdf"))
+        z.writestr(folder + "/", b"")           # an explicit directory entry
+        for name in doc.namelist():
+            z.writestr(folder + "/" + name, doc.read(name))
+    return buf.getvalue()
+
+
+def test_one_folder_is_counted_once_however_its_name_is_spelled():
+    """`Z9` said *2 folders: Prüfbericht/, Prüfbericht/* about one folder.
+
+    The directory-entry branch normalises the name and the path branch three
+    lines below does not, so a folder whose name is not ASCII — written the way
+    macOS writes it, which is also what `zip -r` there emits a directory entry
+    for — landed in the set twice. The count was wrong and the two names printed
+    identically, so nothing on the page said what the second one was.
+    """
+    import unicodedata
+
+    from vdi2770_validate.runner import check_bytes
+
+    decomposed = unicodedata.normalize("NFD", "Prüfbericht")
+    assert decomposed != "Prüfbericht", "the fixture no longer decomposes"
+
+    report = check_bytes(_handover_with_folder(decomposed), "nfd.zip")
+    z9 = [f for f in report.findings if f.rule.id == "Z9"]
+    assert z9, [f.rule.id for f in report.findings]
+    assert z9[0].detail.startswith("1 folder"), z9[0].detail
+    # And the two names it prints are one name, not two that look alike.
+    named = z9[0].detail.split(": ", 1)[1]
+    assert "," not in named, named
+
+
+def test_a_folder_this_tool_did_not_open_says_which_remedy_to_follow():
+    """Two remedies about one folder, and no order between them.
+
+    `Z13` says to zip that folder into a `.zip` member — which removes the
+    folder, so it answers `Z9` as well. Read on its own, `Z9`'s *store the
+    members at the root of the archive* flattens a document container, and a
+    reader with two findings in front of them and nothing saying which is the
+    more specific can do exactly that.
+
+    Both still fire: the reference implementation warns about folders whatever
+    is in them, and dropping the finding would drop that. What was missing was
+    the sentence tying them together.
+    """
+    from vdi2770_validate.runner import check_bytes
+
+    report = check_bytes(_handover_with_folder("docdir"), "plain.zip")
+    said = {f.rule.id: f for f in report.findings if f.rule.id in ("Z9", "Z13")}
+    assert set(said) == {"Z9", "Z13"}, sorted(said)
+    assert "docdir/" in said["Z9"].remedy, said["Z9"].remedy
+    assert ".zip member" in said["Z9"].remedy, said["Z9"].remedy
+
+    # And an ordinary folder, with no container in it, keeps the plain remedy.
+    import io
+    import zipfile
+
+    from conftest import CLEAN_DOCUMENT
+
+    doc = zipfile.ZipFile(CLEAN_DOCUMENT)
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        for name in doc.namelist():
+            z.writestr(("extras/" + name) if name == "B.docx" else name, doc.read(name))
+    plain = [f for f in check_bytes(buf.getvalue(), "flat.zip").findings
+             if f.rule.id == "Z9"]
+    assert plain, "premise: an ordinary folder still draws Z9"
+    assert "the finding beside this one" not in (plain[0].remedy or ""), plain[0].remedy

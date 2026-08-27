@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Iterator
 
 from ..catalog import rule
-from ..model import MAIN_PDF, METADATA_XML, Finding, Kind
+from ..model import MAIN_PDF, MAIN_XML, METADATA_XML, Finding, Kind
 from ..names import as_written, escaped, extracts_to, folder_path, ignoring_case, nfc
 
 
@@ -39,8 +39,17 @@ def _named(alike, spell, total) -> str:
 
 
 def folders_holding_metadata(container) -> list:
-    """Folders that hold a reserved metadata name — a document container that was
-    not zipped.
+    """Folders that hold a reserved container name — a container that was not
+    zipped.
+
+    Both reserved names, not only `VDI2770_Metadata.xml`. A *documentation*
+    container delivered as an unzipped folder was not a folder as far as this
+    function was concerned, so a handover holding `plantA/` whose
+    `VDI2770_Main.xml` is not XML and whose `VDI2770_Main.pdf` is not a PDF came
+    back with two warnings and a clean verdict — with `Z8` on top of it saying
+    the container holds no document containers while looking at one. Nothing
+    said a folder had gone unexamined, and a `.zip` inside such a folder *is*
+    opened and reported on, so a reader takes the rest as checked too.
 
     The reader opens `.zip` members and nothing else, so nothing inside one of
     these was checked. Two rules used to speak about them anyway: `Z8` said the
@@ -67,7 +76,7 @@ def folders_holding_metadata(container) -> list:
         if refusal is not None and refusal.kind == "unsafe-member-name":
             continue
         prefix, sep, leaf = nfc(name).rpartition("/")
-        if not sep or leaf != METADATA_XML:
+        if not sep or leaf not in (METADATA_XML, MAIN_XML):
             continue
         # `./VDI2770_Metadata.xml` *is* at the root. Some writers spell it that
         # way and the file has not gone anywhere, so reporting it as delivered in
@@ -161,6 +170,9 @@ NEAR_MISS = {
                      "name carries a path in front of it and readers match the "
                      "name exactly",
     "case-differs": "{wanted} found as {found!r} — the name is case-sensitive",
+    "case-differs-elsewhere": "{wanted} found as {found!r} — the name is "
+                              "case-sensitive, and it must sit at the root of "
+                              "the archive",
 }
 
 REMEDY_FOR_DEFECT = {
@@ -312,8 +324,14 @@ def check(container, declared, is_declared_payload) -> Iterator[Finding]:
         # thousand times cost 1.2 GB. Neither cap changes what a real archive
         # reports -- a hundred distinct folders is already a strange delivery, and
         # the finding names five of them.
+        # `nfc`, as the directory-entry branch above already does. One
+        # normalising and one not put a folder whose name is not ASCII into the
+        # set twice -- "2 folders: Prüfbericht/, Prüfbericht/", one folder, and
+        # two names that print the same so nothing said what the second was.
+        # macOS writes filenames decomposed and its `zip -r` emits the directory
+        # entry, so this is the ordinary shape there rather than a strange one.
         prefix = ""
-        for part in m.name.rstrip("/").split("/")[:-1][:MAX_FOLDER_DEPTH]:
+        for part in nfc(m.name).rstrip("/").split("/")[:-1][:MAX_FOLDER_DEPTH]:
             # `./name` is at the root. Some writers emit the prefix and it is not
             # a folder, so counting it invented one and told the sender to move a
             # file that had not gone anywhere.
@@ -338,11 +356,27 @@ def check(container, declared, is_declared_payload) -> Iterator[Finding]:
         # hundred folders was reported as having 256. `report.py` makes the same
         # argument about the listing cap.
         capped = len(named) >= MAX_FOLDERS
+        # And which of two remedies to follow, when one of these folders is a
+        # container `Z13` has just declined to open. `Z13` says to zip that
+        # folder into a `.zip` member -- which removes the folder, so it answers
+        # this rule too. Read on its own, "store the members at the root of the
+        # archive" flattens a document container, and a reader with two findings
+        # and no order between them can do exactly that.
+        unopened = {folder_path(f) + "/" for f in folders_holding_metadata(container)}
+        also_a_container = sorted(unopened & folders)
         yield Finding(r, r.title, container.where,
                       detail=f"{'at least ' if capped else ''}{len(named)} "
                              f"folder{'' if len(named) == 1 else 's'}: "
                              + ", ".join(named[:5])
-                             + (", ..." if len(named) > 5 else ""))
+                             + (", ..." if len(named) > 5 else ""),
+                      fix=None if not also_a_container else
+                      (rule("Z9").remedy + " Not by hand for "
+                       + ", ".join(as_written(f) for f in also_a_container[:5])
+                       + (", ..." if len(also_a_container) > 5 else "")
+                       + ": the finding beside this one says that folder is a "
+                         "container this tool did not open, and zipping it into "
+                         "a .zip member is what removes the folder without "
+                         "flattening what is inside it."))
 
     if container.duplicate_names:
         r = rule("Z10")

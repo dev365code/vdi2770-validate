@@ -329,3 +329,120 @@ def test_the_summary_says_how_many_errors_are_this_tool_declining():
                            "notazip.zip")
     line = as_text(ordinary, True).strip().splitlines()[-1]
     assert "declin" not in line, f"a container-axis error was excused: {line!r}"
+
+
+def test_a_documentation_folder_is_a_folder_this_tool_did_not_open_too():
+    """Exit 0 on a delivery whose nested documentation container is junk.
+
+    `folders_holding_metadata` matched `VDI2770_Metadata.xml` and nothing else,
+    so a *documentation* container delivered as an unzipped folder was not a
+    folder as far as this tool was concerned. A handover holding `plantA/` whose
+    `VDI2770_Main.xml` is not XML and whose `VDI2770_Main.pdf` is not a PDF came
+    back with two warnings and a clean verdict — and `Z8` on top of it, saying
+    the container holds no document containers while looking at one.
+
+    Nothing in that report said a folder had gone unexamined, and the `.zip`
+    inside such a folder *is* opened and reported on, so a reader takes the rest
+    as checked too.
+    """
+    from conftest import CLEAN_DOCUMENTATION
+
+    docn = zipfile.ZipFile(CLEAN_DOCUMENTATION)
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        z.writestr("VDI2770_Main.xml", docn.read("VDI2770_Main.xml"))
+        z.writestr("VDI2770_Main.pdf", docn.read("VDI2770_Main.pdf"))
+        z.writestr("plantA/VDI2770_Main.xml", b"<<< not even XML >>>")
+        z.writestr("plantA/VDI2770_Main.pdf", b"this is not a pdf")
+
+    report = check_bytes(buf.getvalue(), "handover.zip")
+    fired = {f.rule.id for f in report.findings}
+    assert "Z13" in fired, (
+        f"nothing said the folder had not been opened: {sorted(fired)}")
+    assert not report.clean, "a delivery nobody looked inside came back clean"
+    assert "F2" not in fired, (
+        "files inside a folder we did not open were called undeclared")
+    assert "Z8" not in fired, (
+        "the container was said to hold no document containers while holding one")
+
+
+def test_a_declared_name_that_escapes_is_not_said_to_be_unreadable():
+    """`F1` said the bytes could not be read and that the metadata was right.
+
+    Both false, and the second contradicts `Z4` two lines away: the metadata is
+    what names `../evil.pdf`. The bytes are fine — the *name* is what this tool
+    refused, which the detail on the next line says in as many words. And the
+    remedy, *re-create the archive and send it again*, is the loop this project
+    already removed for a locked member and for a repeated name: re-zipping the
+    same tree produces the same name and the same finding.
+    """
+    import re
+
+    from conftest import CLEAN_DOCUMENT
+
+    src = zipfile.ZipFile(CLEAN_DOCUMENT)
+    meta = src.read("VDI2770_Metadata.xml").decode("utf-8")
+    assert meta.count(">B.pdf<") == 1, "the fixture no longer declares B.pdf once"
+
+    for escaping in ("../evil.pdf", "/etc/passwd.pdf"):
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w") as z:
+            for name in src.namelist():
+                if name == "B.pdf":
+                    z.writestr(escaping, src.read(name))
+                elif name == "VDI2770_Metadata.xml":
+                    z.writestr(name, meta.replace(">B.pdf<", f">{escaping}<").encode("utf-8"))
+                else:
+                    z.writestr(name, src.read(name))
+        report = check_bytes(buf.getvalue(), "escape.zip")
+        f1 = [f for f in report.findings if f.rule.id == "F1"]
+        assert f1, [f.rule.id for f in report.findings]
+        said = f"{f1[0].message} {f1[0].remedy}"
+        assert "could not be read" not in said, said
+        assert "the metadata is right" not in said, said
+        assert "send it again" not in said, said
+        assert re.search(r"escape|name", f1[0].message), f1[0].message
+
+
+def test_a_member_no_declaration_can_name_is_told_so():
+    """One file, present and declared, reported as missing *and* undeclared.
+
+    The metadata's text is read with the whitespace around it removed — it has
+    to be, because `<DigitalFile>\\n    B.pdf\\n  </DigitalFile>` is how a
+    pretty-printer writes an ordinary declaration. The schema types the element
+    `xs:string`, which preserves whitespace, so that stripping is this tool's
+    choice and every other implementation's too. The consequence is that a
+    member whose name carries a space at its edge **cannot be declared by
+    anyone**: whatever the sender writes is read back without it.
+
+    So the archive held `B.pdf␠`, the metadata declared `B.pdf␠`, and the report
+    said `'B.pdf' is declared but not in the archive` over `B.pdf` is in the
+    container but not named in the metadata — two findings that cannot both be
+    true, and a remedy asking the sender to do the thing they had already done.
+    """
+    from conftest import CLEAN_DOCUMENT
+
+    src = zipfile.ZipFile(CLEAN_DOCUMENT)
+    meta = src.read("VDI2770_Metadata.xml").decode("utf-8")
+    assert meta.count(">B.pdf<") == 1, "the fixture no longer declares B.pdf once"
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        for name in src.namelist():
+            if name == "B.pdf":
+                z.writestr("B.pdf ", src.read(name))
+            elif name == "VDI2770_Metadata.xml":
+                z.writestr(name, meta.replace(">B.pdf<", ">B.pdf <").encode("utf-8"))
+            else:
+                z.writestr(name, src.read(name))
+
+    report = check_bytes(buf.getvalue(), "space.zip")
+    said = {f.rule.id: f for f in report.findings if f.rule.id in ("F1", "F2")}
+    assert said, [f.rule.id for f in report.findings]
+
+    # Whatever is reported, the page has to name the member as the archive
+    # spells it and say why no declaration reaches it.
+    page = " ".join(f"{f.message} {f.detail or ''} {f.remedy or ''}" for f in said.values())
+    assert "\\u0020" in page, f"the trailing space is nowhere on the page: {page}"
+    assert "declare" in page.lower(), page
+    assert "rename" in page.lower(), (
+        f"nothing tells the sender the one thing that can fix it: {page}")

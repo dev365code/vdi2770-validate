@@ -5,7 +5,7 @@ from typing import Iterator
 
 from ..catalog import rule
 from ..model import MAIN_PDF, MAIN_XML, METADATA_XML, About, Finding, Kind
-from ..names import Members, escaped, extracts_to, folder_path, nfc
+from ..names import Members, escaped, extracts_to, folder_path, nfc, without_edge_space
 from .container import MAX_FOLDER_DEPTH
 
 EXTENSION_FOR = {"application/pdf": ".pdf", "application/zip": ".zip"}
@@ -45,6 +45,11 @@ def _inside(here: str, unopened) -> bool:
         if prefix in unopened:
             return True
     return False
+
+
+def _named_members(names) -> str:
+    """Members as the archive spells them, with what draws nothing spelled out."""
+    return " and ".join(f"'{escaped(n)}'" for n in names)
 
 
 def check(container, document) -> Iterator[Finding]:
@@ -139,6 +144,21 @@ def check(container, document) -> Iterator[Finding]:
                        "this one says which. Send it separately, or check it with "
                        "something that will read it.")
                 whose = About.TOOL
+            elif because.kind == "unsafe-member-name":
+                # The name, not the bytes. This fell into the generic branch and
+                # came back as *could not be read* over a remedy saying "the
+                # metadata is right" -- which `Z4`, two lines away, contradicts:
+                # the metadata is what names `../evil.pdf`. And "send it again"
+                # is the loop already removed for a locked member and a repeated
+                # name; re-zipping the same tree produces the same name.
+                message = ("A file named in the metadata has a name that would "
+                           "escape the extraction directory")
+                fix = ("Rename the member and the DigitalFile that names it, to "
+                       "a plain relative path inside the container. This tool "
+                       "never read those bytes: the name is what it refused, and "
+                       "the finding beside this one says why. Re-creating the "
+                       "archive from the same tree writes the same name.")
+                whose = None
             elif "encrypted" in (because.detail or "").lower():
                 # A member the sender locked is not a truncated transfer. The
                 # bytes are intact and re-zipping the same directory produces the
@@ -172,7 +192,27 @@ def check(container, document) -> Iterator[Finding]:
             elif rejected:
                 detail = f"{f.file_name!r} is in the archive but was refused: {rejected}"
             else:
-                detail = f"{f.file_name!r} is declared but not in the archive"
+                # A member no declaration can reach is a different thing from a
+                # file nobody sent. The archive held `B.pdf ` and the metadata
+                # declared `B.pdf `, and this said the file was not there while
+                # `F2` said it was not named -- two findings about one file that
+                # is both present and declared.
+                unnameable = sorted(
+                    n for n in members.present
+                    if n != f.file_name and without_edge_space(n) == f.file_name)
+                if unnameable:
+                    message = ("A file named in the metadata is in the container "
+                               "under a name no declaration can reach")
+                    detail = (f"'{escaped(f.file_name)}' is declared; the archive "
+                              f"holds {_named_members(unnameable)}, which no "
+                              f"declaration can name — the metadata's text is "
+                              f"read with the whitespace at its edge removed")
+                    fix = ("Rename the member to the name you declared. Writing "
+                           "the space into the metadata does not help: it is "
+                           "read back without it, which is what lets an ordinary "
+                           "indented declaration work at all.")
+                else:
+                    detail = f"{f.file_name!r} is declared but not in the archive"
             yield Finding(r, message, f.src.child(container=container.path,
                                                   member=container.metadata_name),
                           detail=detail, fix=fix, as_about=whose)
@@ -218,7 +258,16 @@ def check(container, document) -> Iterator[Finding]:
         if _inside(folder_path(name), unopened):
             continue
         r = rule("F2")
-        yield Finding(r, r.title, container.where.child(member=name, subject=name))
+        # And "declare it" is not on offer for a member whose name carries a
+        # space at its edge: the metadata's text is read with that removed, so
+        # whatever the sender writes comes back without it. Half a remedy that
+        # cannot be followed is worse than the half that can.
+        yield Finding(r, r.title, container.where.child(member=name, subject=name),
+                      fix=None if without_edge_space(name) == name else
+                      ("Rename the member: whitespace at the edge of a name "
+                       "cannot be declared, because the metadata's text is read "
+                       "with it removed. Or remove the member from the "
+                       "container."))
 
     for f in document.all_files:
         want = EXTENSION_FOR.get(f.file_format.split(";")[0].strip().lower())

@@ -52,8 +52,8 @@ TABLE = [
 
     ("reader/refused-member-is-still-present",
      "packages/vdi2770/src/vdi2770/zipread.py",
-     "    c.kind, c.near_misses = _classify(c.present)",
-     "    c.kind, c.near_misses = _classify(c.file_names)",
+     "    c.kind, c.near_misses = _classify(c.present, set(c.rejected))",
+     "    c.kind, c.near_misses = _classify(c.file_names, set(c.rejected))",
      ["tests/test_a_refused_member_is_still_in_the_archive.py"],
      "one bad CRC made a container 'not a VDI 2770 container at all'"),
 
@@ -674,6 +674,14 @@ TABLE = [
      ["tests/test_two_names_that_print_alike_are_told_apart.py"],
      "splitting a class name on `/` made the ordinary spaces around it the edges "
      "of segments, and spelled them out while the slash stayed plain"),
+
+    ("reader/a-refused-name-is-not-a-near-miss",
+     "packages/vdi2770/src/vdi2770/zipread.py",
+     "            if refused and n in refused:",
+     "            if False:",
+     ["tests/test_a_reserved_name_at_the_root_is_at_the_root.py"],
+     "one report said a `../` name was refused outright and, two lines on, that "
+     "the file was found at a place and just needed moving"),
 
     # --- the canary -------------------------------------------------------
     ("canary/a-comment-nobody-reads",

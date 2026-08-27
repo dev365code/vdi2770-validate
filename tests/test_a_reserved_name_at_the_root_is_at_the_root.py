@@ -92,3 +92,69 @@ def test_a_main_document_that_differs_only_in_case_is_said_so():
     assert z7, [f.rule.id for f in report.findings]
     assert "vdi2770_main.pdf" in (z7[0].detail or ""), (
         f"the near-miss the reader recorded is not in the report: {z7[0].detail}")
+
+
+def _handover(*entries):
+    import io
+    import zipfile
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        for name, body in entries:
+            z.writestr(name, body)
+    return buf.getvalue()
+
+
+def _document_container():
+    import io
+    import zipfile
+
+    from conftest import CLEAN_DOCUMENT
+
+    src = zipfile.ZipFile(CLEAN_DOCUMENT)
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        for name in src.namelist():
+            z.writestr(name, src.read(name))
+    return buf.getvalue()
+
+
+def test_a_near_miss_names_a_member_the_listing_holds():
+    """The detail named a basename, and the listing has no such entry.
+
+    `_classify` recorded `n.rsplit("/", 1)[-1]` for the case branch, so an
+    archive holding `sub/vdi2770_main.pdf` was told `found as
+    'vdi2770_main.pdf'` — a name nothing in it is called. And the diagnosis was
+    half of one: fix only the case, as the sentence says, and the next run says
+    the file must sit at the root.
+    """
+    src = zipfile.ZipFile(CLEAN_DOCUMENTATION)
+    data = _handover(("VDI2770_Main.xml", src.read("VDI2770_Main.xml")),
+                     ("sub/vdi2770_main.pdf", src.read("VDI2770_Main.pdf")),
+                     ("doc.zip", _document_container()))
+    z7 = [f for f in check_bytes(data, "near.zip").findings if f.rule.id == "Z7"]
+    assert z7, "premise"
+    said = z7[0].detail or ""
+    assert "sub/vdi2770_main.pdf" in said, said
+    assert "case" in said and "root" in said, (
+        f"the sentence names half the difference: {said}")
+
+
+def test_a_refused_name_is_not_reported_as_merely_misplaced():
+    """`Z4` says the name was refused outright; `Z7` said it was *found at* a
+    place and just needs moving.
+
+    `folders_holding_metadata` learned this — a `../` member is not a folder
+    somebody delivered — and the near-miss table did not. The tool never read
+    those bytes, and `..` is not a subfolder.
+    """
+    src = zipfile.ZipFile(CLEAN_DOCUMENTATION)
+    data = _handover(("VDI2770_Main.xml", src.read("VDI2770_Main.xml")),
+                     ("../VDI2770_Main.pdf", src.read("VDI2770_Main.pdf")),
+                     ("doc.zip", _document_container()))
+    report = check_bytes(data, "escape.zip")
+    fired = {f.rule.id for f in report.findings}
+    assert "Z4" in fired, sorted(fired)
+    z7 = [f for f in report.findings if f.rule.id == "Z7"]
+    assert z7, "premise"
+    assert "found at" not in (z7[0].detail or ""), z7[0].detail
