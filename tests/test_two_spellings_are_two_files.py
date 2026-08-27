@@ -543,3 +543,55 @@ def test_a_path_collision_does_not_spell_out_a_blameless_name():
         assert "\\u" not in (f.detail or ""), (
             f"a name with nothing wrong with its spelling was printed as code "
             f"points: {f.detail}")
+
+
+def test_joining_the_members_that_collide_does_not_scan_them_all():
+    """Counted, and independent of how many collisions there are.
+
+    `Z10` found each member's partners by filtering `duplicate_names` inside a
+    loop over `duplicate_names`, normalising both sides at every step. Cost was
+    collisions times collisions, bounded only by `MAX_MEMBERS`: measured at 0.51,
+    0.92, 3.31 and 12.86 seconds for 200, 400, 800 and 1,600 pairs — a clean 4×
+    per doubling, from a 316 KiB archive, past every budget the reader has
+    because not one of them measures this. It is the third time this shape has
+    been found here; `files.py::_inside` and `Z9`'s prefix walk were the others.
+
+    Counted rather than timed: a stopwatch assertion in this project has twice
+    failed under load and said nothing about the bound it was written to defend.
+    """
+    import io
+    import zipfile
+
+    from vdi2770_validate import names as names_module
+    from vdi2770_validate.rules import container as container_rules
+    from vdi2770_validate.runner import check_bytes
+
+    calls = []
+    real = names_module.folder_path
+
+    def counting(name):
+        calls.append(name)
+        return real(name)
+
+    def cost(pairs, monkey):
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+            z.writestr("VDI2770_Metadata.xml", b"<x/>")
+            for i in range(pairs):
+                z.writestr(f"f{i:05d}.pdf", b"a")
+                z.writestr(f"./f{i:05d}.pdf", b"b")
+        calls.clear()
+        monkey.setattr(container_rules, "folder_path", counting)
+        check_bytes(buf.getvalue(), "many.zip")
+        return len(calls)
+
+    import pytest
+    with pytest.MonkeyPatch.context() as monkey:
+        small = cost(50, monkey)
+    with pytest.MonkeyPatch.context() as monkey:
+        big = cost(200, monkey)
+
+    # Four times the collisions must not cost sixteen times the work.
+    assert big < small * 8, (
+        f"{small} normalisations for 50 pairs and {big} for 200: the collision "
+        f"count is multiplying the member loop")

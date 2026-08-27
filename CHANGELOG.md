@@ -66,6 +66,15 @@ rest of these entries are about — and that one was itself wrong twice.
   seen against; in the middle of `my report.pdf` it is ordinary and is left
   alone.
 
+- **Joining the members that collide cost collisions times collisions.** `Z10`
+  found each member's partners by filtering the collision list inside a loop over
+  the collision list, normalising both sides at every step, with `MAX_MEMBERS`
+  the only bound: 0.51, 0.92, 3.31 and 12.86 seconds for 200, 400, 800 and 1,600
+  pairs — a clean 4× per doubling, from a 316 KiB archive, past every budget the
+  reader has because not one of them measures this. The groups are built once
+  now: 0.39 seconds at 1,600 pairs and 0.97 at 3,200, which is linear. The third
+  time this shape has been found here, and the third rule that had it.
+
 - **A class name that differed where nothing showed.** One Cyrillic `е` among
   the Latin ones and `M3` read *'Tеchnische Spezifikation' … published name is
   'Technische Spezifikation'* — the name it was asking for, twice, and a supplier
@@ -865,7 +874,7 @@ below is measured on this machine, before and after, on the same input.
 Three gates that ask what `make check` cannot ask of itself.
 
 - **`make mutations`** takes every claim this project makes about a gate, breaks
-  the thing that gate protects, and checks the gate notices — 73 rows, each
+  the thing that gate protects, and checks the gate notices — 74 rows, each
   naming the pytest selection or the tool that has to go red. The harness checks
   itself as hard as it checks the code: a row whose anchor no longer appears
   exactly once is an error rather than a pass; every apply and restore clears

@@ -617,6 +617,15 @@ TABLE = [
      "one Cyrillic letter among the Latin ones made `M3` name the name it was "
      "asking for, and `escaped` cannot see it -- both sides are their own NFC"),
 
+    ("rules/collisions-are-joined-once",
+     "src/vdi2770_validate/rules/container.py",
+     "            alike = sorted(n for n in joined[folder_path(name)] if n != name)",
+     "            alike = sorted(n for n in container.duplicate_names\n"
+     "                           if folder_path(n) == folder_path(name) and n != name)",
+     ["tests/test_two_spellings_are_two_files.py"],
+     "filtering the collisions inside a loop over them cost 12.86 s for 1,600 "
+     "pairs from a 316 KiB archive, past every budget the reader has"),
+
     # --- the canary -------------------------------------------------------
     ("canary/a-comment-nobody-reads",
      "src/vdi2770_validate/report.py",
