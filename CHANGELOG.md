@@ -75,6 +75,17 @@ rest of these entries are about — and that one was itself wrong twice.
   seen against; in the middle of `my report.pdf` it is ordinary and is left
   alone.
 
+- **A release gate had been dragged into `make check`.** `--check-swept` refuses
+  while any container waits for the reference implementation, which is right —
+  it is the release gate, and it is deliberately outside `make check` because it
+  needs a JDK, Maven and another project's checkout. Its premise test asserted a
+  clean exit against the recording exactly as it stands, so parking a container
+  in `_unswept` — which is what that mechanism is *for*, while the workflow runs
+  — turned `make check` red on a repository behaving as designed. The premise now
+  builds the honest recording it means to describe, and a second test holds the
+  half that must not go with it: `_unswept` is a state `make check` tolerates and
+  a release does not.
+
 - **The release sweep and the coverage gate walked the same trees differently.**
   One globbed fixed depths and the other walked recursively, so a container one
   directory deeper satisfied firing coverage, was counted in the documents, and

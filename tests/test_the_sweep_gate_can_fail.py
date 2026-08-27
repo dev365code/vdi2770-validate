@@ -35,9 +35,31 @@ def swept(tmp_path, doctor):
 
 def test_an_honest_recording_passes(tmp_path):
     """The premise. Without it every case below could be passing for the wrong
-    reason -- a copy the tool cannot read at all also exits non-zero."""
-    done = swept(tmp_path, lambda body: None)
+    reason -- a copy the tool cannot read at all also exits non-zero.
+
+    `_unswept` is emptied first, and that is the point. `--check-swept` refuses
+    while anything sits there, correctly: it is the *release* gate, and the
+    module's own docstring keeps it out of `make check` because it needs a JDK,
+    Maven and another project's checkout. Asserting rc 0 against the recording
+    exactly as it stands dragged that refusal back into `make check` — park a
+    container in `_unswept`, which is what the mechanism is for while the oracle
+    workflow runs, and this went red on a repository that was behaving as
+    designed. The claim here is about the tool, not about what the recording
+    happens to hold today.
+    """
+    done = swept(tmp_path, lambda body: body.pop("_unswept", None))
     assert done.returncode == 0, done.stdout + done.stderr
+
+
+def test_a_container_waiting_for_the_oracle_is_refused_at_release(tmp_path):
+    """And the half that must not go with it: `_unswept` is a state `make check`
+    tolerates and a release does not."""
+    def park(body):
+        body.setdefault("_unswept", {})["z-waiting.zip"] = "the oracle workflow has not run"
+
+    done = swept(tmp_path, park)
+    assert done.returncode == 1, done.stdout + done.stderr
+    assert "never been through the reference implementation" in done.stderr, done.stderr
 
 
 def test_a_container_the_sweep_never_saw_is_refused(tmp_path):
