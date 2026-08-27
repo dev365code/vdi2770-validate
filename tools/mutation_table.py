@@ -626,6 +626,22 @@ TABLE = [
      "filtering the collisions inside a loop over them cost 12.86 s for 1,600 "
      "pairs from a 316 KiB archive, past every budget the reader has"),
 
+    ("rules/case-is-a-collision-somewhere",
+     "src/vdi2770_validate/rules/container.py",
+     "        folded.setdefault(ignoring_case(member), []).append(member)",
+     "        folded.setdefault(member, []).append(member)",
+     ["tests/test_two_spellings_are_two_files.py"],
+     "two members a recipient's disk stores as one file came back clean, exit 0, "
+     "and following the remedy that was offered made the report cleaner still"),
+
+    ("rules/one-finding-does-not-name-the-whole-group",
+     "src/vdi2770_validate/rules/container.py",
+     "    return (\", \".join(spell(n) for n in alike[:MAX_ALIKE])",
+     "    return (\", \".join(spell(n) for n in alike)",
+     ["tests/test_two_spellings_are_two_files.py"],
+     "naming every partner in every finding is quadratic in the group: 1.00 s "
+     "for 128 members of one group, from a 16 KiB archive"),
+
     # --- the canary -------------------------------------------------------
     ("canary/a-comment-nobody-reads",
      "src/vdi2770_validate/report.py",

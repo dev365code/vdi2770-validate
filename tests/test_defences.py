@@ -92,7 +92,11 @@ SCHEMA_BUDGETS = {"MAX_SCHEMA_ERRORS": (100, 100_000)}
 # Nine hundred document containers of real corpus metadata come to about
 # 48,000 elements, so the floor here is ten times a plant handover.
 RUNNER_BUDGETS = {"MAX_TOTAL_ELEMENTS": (450_000, 50_000_000)}
-RULE_BUDGETS = {"MAX_FOLDER_DEPTH": (4, 256), "MAX_FOLDERS": (16, 4_096)}
+# `MAX_ALIKE` bounds the list of partners one collision finding names, not
+# the count it reports. The floor is one: below that a finding about two
+# members would name neither.
+RULE_BUDGETS = {"MAX_FOLDER_DEPTH": (4, 256), "MAX_FOLDERS": (16, 4_096),
+                "MAX_ALIKE": (1, 64)}
 # The bytes were bounded and the tree built out of them was not. The corpus's
 # largest metadata file has 53 elements; the floor here is a thousand times that,
 # because a limit tight enough to refuse a real delivery is its own defect.

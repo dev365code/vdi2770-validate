@@ -595,3 +595,121 @@ def test_joining_the_members_that_collide_does_not_scan_them_all():
     assert big < small * 8, (
         f"{small} normalisations for 50 pairs and {big} for 200: the collision "
         f"count is multiplying the member loop")
+
+
+def _fired(members, declared=None):
+    """The rule ids a document container holding `members` produces."""
+    from vdi2770_validate.runner import check_bytes
+
+    data = _document_holding(*members, declared=declared or members[0])
+    report = check_bytes(data, "case.zip")
+    return {f.rule.id for f in report.findings}, report
+
+
+def test_two_members_that_a_recipient_stores_as_one_file_are_reported():
+    """`B.pdf` beside `b.pdf` came back clean, exit 0.
+
+    They are one file on macOS as it ships and on every Windows filesystem, so
+    the recipient keeps whichever their unzip tool wrote last and the other
+    declaration names a path that will not exist. The tool said `F2` about the
+    second member — a warning — so a sender who followed `F2`'s remedy and
+    declared both got a report with nothing wrong in it at all, for a delivery
+    that loses a file.
+
+    Measured on this machine before the rule was written: `B.pdf` and `b.pdf`
+    created in one directory are one inode.
+    """
+    fired, report = _fired(["B.pdf", "b.pdf"])
+    assert "Z10" in fired, sorted(fired)
+    assert not report.clean, "a delivery that loses a file came back clean"
+
+    said = [f for f in report.findings if f.rule.id == "Z10"]
+    for f in said:
+        assert f.detail and f.remedy, f.message
+        assert "case" in f"{f.message} {f.detail}".lower(), f.detail
+
+
+def test_a_pair_this_filesystem_keeps_apart_is_not_called_one_file():
+    """The test that stops the relation being widened until it fires on anything.
+
+    `str.upper` maps the Turkish dotless `ı` onto `I`, so an upper-case relation
+    reports these as one file. Measured: two inodes. Full case folding gets it
+    right, and `str.lower` gets `ß`/`ss` and `ﬁ`/`fi` wrong in the other
+    direction — both of which this volume really does fold into one file.
+    """
+    fired, report = _fired(["I.pdf", "ı.pdf"])
+    assert "Z10" not in fired, (
+        "two members the filesystem keeps apart were called one file")
+
+    # And the folds that are real, which `lower` would miss.
+    for pair in (["straße.pdf", "STRASSE.pdf"], ["ﬁle.pdf", "file.pdf"]):
+        fired, _ = _fired(pair)
+        assert "Z10" in fired, f"{pair} really is one file and was not reported"
+
+
+def test_a_pair_that_does_not_fold_together_is_left_alone():
+    """Compatibility equivalence is not case folding. A fullwidth `ａ` prints
+    like `a` and stays two files — measured — so calling them one would be a
+    finding about a collision that does not happen."""
+    fired, _ = _fired(["ａ.pdf", "a.pdf"])
+    assert "Z10" not in fired, "a pair that stays two files was reported as one"
+
+
+def test_a_path_twin_keeps_the_sentence_that_is_true_of_it():
+    """`B.pdf` beside `./B.pdf` collides on every filesystem, not only on one
+    that folds case. It keeps the stronger sentence and is reported once."""
+    fired, report = _fired(["B.pdf", "./B.pdf"])
+    said = [f for f in report.findings if f.rule.id == "Z10"]
+    assert said, sorted(fired)
+    for f in said:
+        assert "extract to the same path" in f.message, f.message
+        assert "case" not in (f.detail or "").lower(), f.detail
+
+
+def test_one_collision_group_does_not_cost_its_own_size_twice():
+    """Naming every partner in every finding is quadratic in the group.
+
+    A group is one name spelled many ways, and `MAX_MEMBERS` is the only bound
+    on how many. Measured before the cap, one group of 8, 16, 32, 64 and 128
+    members cost 0.43, 0.02, 0.07, 0.28 and 1.00 seconds — 4× per doubling from
+    a 16 KiB archive, which at the permitted extreme is over an hour from about
+    a megabyte. `MAX_LISTED_PER_RULE` caps how many findings are *printed* and
+    does not stop each one being built.
+
+    The count stays exact; it is the list of names that is cut, the way `Z9` and
+    `Z13` already cut theirs. Counted rather than timed.
+    """
+    import io
+    import itertools
+    import unicodedata
+    import zipfile
+
+    from vdi2770_validate.runner import check_bytes
+
+    def one_name_many_ways(how_many):
+        out = []
+        for bits in itertools.product("01", repeat=8):
+            name = "".join(unicodedata.normalize("NFC" if bit == "1" else "NFD", "é")
+                           for bit in bits) + ".pdf"
+            if name not in out:
+                out.append(name)
+            if len(out) == how_many:
+                break
+        return out
+
+    def characters_rendered(how_many):
+        names = one_name_many_ways(how_many)
+        assert len(names) == how_many, "the fixture cannot build a group that big"
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+            z.writestr("VDI2770_Metadata.xml", b"<x/>")
+            for name in names:
+                z.writestr(name, b"a")
+        report = check_bytes(buf.getvalue(), "one.zip")
+        return sum(len(f.detail or "") for f in report.findings if f.rule.id == "Z10")
+
+    small, big = characters_rendered(16), characters_rendered(128)
+    # Eight times the members must not cost sixty-four times the prose.
+    assert big < small * 16, (
+        f"{small} characters of detail for 16 members and {big} for 128: the "
+        f"group size is multiplying itself")

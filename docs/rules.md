@@ -96,9 +96,9 @@ Reference implementation: `processor:ZU_MESSAGE_001` (displayed as `ZU_001`). Ci
 
 *error* · obligation `ours`
 
-Why this is ours: ZIP allows it and readers disagree about which one wins, so the container can show one thing to this tool and another to whoever unpacks it. Nothing good is ever delivered this way.
+Why this is ours: ZIP allows it and readers disagree about which one wins, so the container can show one thing to this tool and another to whoever unpacks it. Nothing good is ever delivered this way. Four relations reach this rule and each gets the sentence that is true of it: two entries that extract to one path, two spellings of one name, names that come to one once both are settled, and names that are one file wherever case is not kept apart — macOS as it ships, and every Windows filesystem. The last is the only one the archive itself keeps apart, which is why the sentence names the condition instead of calling them the same name.
 
-**Remedy.** Rebuild the archive with one entry per name. If two files genuinely differ, give them different names and declare both.
+**Remedy.** Rebuild the archive with one entry per name, and with no two entries sharing a name once case is folded. If two files genuinely differ, give them names that differ by more than case, and declare both.
 
 ### `Z11` — A document container carries another container inside it
 

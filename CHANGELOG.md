@@ -2,10 +2,19 @@
 
 ## 0.7.0 — 2026-08-25
 
-**Upgrading from 0.6.0 will turn some green runs red.** Three rules can do it:
-`X6` and `Z13`, both new errors, and `Z6`, promoted from warning to error. (`X5`
-is new and an error too, but no container can ask for it — it fires only when a
-rule in this tool raises.) All three are `about: tool`, meaning this tool is
+**Upgrading from 0.6.0 will turn some green runs red.** Four rules can do it:
+`X6` and `Z13`, both new errors, `Z6`, promoted from warning to error, and `Z10`,
+which now also reports two members that are one file wherever case is not kept
+apart. (`X5` is new and an error too, but no container can ask for it — it fires
+only when a rule in this tool raises.) `Z10` is the one of the four that is about
+the delivery rather than about this tool: `B.pdf` beside `b.pdf` is one file on
+macOS as it ships and on every Windows filesystem, so the recipient keeps
+whichever their unzip tool wrote last. 0.6.0 said `F2` about the second member —
+a warning, exit 0 — and a sender who followed `F2`'s remedy and declared both got
+a clean report for a delivery that loses a file. It is `about: container`, so
+filtering the tool axis will not hide it, and it should not.
+
+The other three are `about: tool`, meaning this tool is
 saying it declined to look rather than that your container is wrong; the exit
 code does not distinguish the two, so a CI job that gates on it will fail on a
 delivery nothing is wrong with. `about` is itself new here, so there is nothing
@@ -65,6 +74,32 @@ rest of these entries are about — and that one was itself wrong twice.
   name or of a path segment, which is where there is nothing beside it to be
   seen against; in the middle of `my report.pdf` it is ordinary and is left
   alone.
+
+- **Two members that are one file for the recipient came back clean, exit 0.**
+  `B.pdf` beside `b.pdf` is two entries in the archive and one file on macOS as
+  it ships and on every Windows filesystem — measured here, one inode. The
+  recipient keeps whichever their unzip tool wrote last and the other declaration
+  names a path they do not have. The tool said `F2` about the second member, a
+  warning, so a sender who followed `F2`'s remedy and declared both got a report
+  with nothing wrong in it, for a delivery that loses a file.
+
+  `Z10` reports it, because `Z10` is already a family of sentences about two
+  members a recipient may receive as one, and its own reason — *readers disagree
+  about which one wins, so the container can show one thing to this tool and
+  another to whoever unpacks it* — is this case in as many words. The reader's
+  grouping is untouched: whether a volume folds case is a fact about somebody
+  else's machine, not about the archive, and that key also drives the refusal of
+  a repeated name, which is about a ZIP reader not knowing which entry is meant.
+  It knows perfectly well which `b.pdf` is.
+
+  The relation is full case folding, then canonical form, measured against this
+  machine's own volume rather than reasoned about. `str.lower` misses `ß`/`ss`
+  and `ﬁ`/`fi`, which really are one file. `str.upper` merges the Turkish dotless
+  `ı` with `I`, and NFKC merges a fullwidth `ａ` with `a` — both of those stay two
+  files, so both would be findings about a collision that does not happen. A
+  trailing space and a trailing dot also stay two files here; Windows is said to
+  strip them, and until that can be measured it is a different complaint with a
+  different sentence.
 
 - **Joining the members that collide cost collisions times collisions.** `Z10`
   found each member's partners by filtering the collision list inside a loop over
@@ -874,7 +909,7 @@ below is measured on this machine, before and after, on the same input.
 Three gates that ask what `make check` cannot ask of itself.
 
 - **`make mutations`** takes every claim this project makes about a gate, breaks
-  the thing that gate protects, and checks the gate notices — 74 rows, each
+  the thing that gate protects, and checks the gate notices — 76 rows, each
   naming the pytest selection or the tool that has to go red. The harness checks
   itself as hard as it checks the code: a row whose anchor no longer appears
   exactly once is an error rather than a pass; every apply and restore clears

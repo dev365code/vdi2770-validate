@@ -23,7 +23,7 @@ from vdi2770 import nfc
 from vdi2770.model import Defect
 
 __all__ = ["Members", "as_written", "escaped", "extracts_to", "folder_path",
-           "nfc", "told_apart"]
+           "ignoring_case", "nfc", "told_apart"]
 
 
 def extracts_to(name: str) -> str:
@@ -217,6 +217,27 @@ def escaped(name: str) -> str:
         or (all_of_it and not c.isascii())
         else c
         for i, c in enumerate(name))
+
+
+def ignoring_case(name: str) -> str:
+    """The one file a filesystem that folds case stores this member as.
+
+    macOS as it ships and every Windows filesystem keep `B.pdf` and `b.pdf` as
+    one file, so a container holding both delivers one of them and the other
+    declaration names a path the recipient does not have.
+
+    `casefold` before `nfc`, and both: measured against this machine's own
+    volume, `str.lower` misses `ß`/`ss` and `ﬁ`/`fi`, which really do fold into
+    one file; `str.upper` merges the Turkish dotless `ı` with `I`, which stay
+    two; and NFKC-casefold merges a fullwidth `ａ` with `a`, which also stay two.
+    Both of the last two are false alarms about a collision that does not happen.
+    Folding first matters for the rare case where a fold exposes a composition
+    that composing first would have hidden.
+
+    Over `extracts_to`, not `folder_path`: `./B.PDF` beside `B.pdf` has to group,
+    and so does a folder segment that differs only in case.
+    """
+    return nfc(extracts_to(name).casefold())
 
 
 def folder_path(name: str) -> str:

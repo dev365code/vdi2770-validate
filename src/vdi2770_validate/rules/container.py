@@ -6,7 +6,13 @@ from typing import Iterator
 
 from ..catalog import rule
 from ..model import MAIN_PDF, METADATA_XML, Finding, Kind
-from ..names import as_written, escaped, extracts_to, folder_path, nfc
+from ..names import as_written, escaped, extracts_to, folder_path, ignoring_case, nfc
+
+
+def _named(alike, spell) -> str:
+    """The partners a finding names, bounded, in the voice `Z9` and `Z13` use."""
+    return (", ".join(spell(n) for n in alike[:MAX_ALIKE])
+            + (", ..." if len(alike) > MAX_ALIKE else ""))
 
 
 def folders_holding_metadata(container) -> list:
@@ -116,6 +122,16 @@ def _remedy_for(defect):
 # since they existed; `Z7` did not, and told a supplier to add `VDI2770_Main.pdf`
 # to an archive holding `vdi2770_main.pdf` -- which on their own machine is not
 # an action they can take, because the file already answers to that name.
+# How many of a collision's partners one finding names. The count it reports is
+# exact; this cuts the list, the way `Z9` and `Z13` already cut theirs. Naming
+# every partner in every finding is quadratic in the group, and a group is one
+# name spelled many ways with `MAX_MEMBERS` the only bound on how many: measured
+# at 0.07, 0.28 and 1.00 seconds for 32, 64 and 128 members of one group, which
+# at the permitted extreme is over an hour from about a megabyte.
+# `MAX_LISTED_PER_RULE` caps how many findings are printed and does not stop each
+# one being built.
+MAX_ALIKE = 5
+
 NEAR_MISS = {
     "in-a-subfolder": "{wanted} found at {found!r} — it must sit at the root of the archive",
     "path-prefixed": "{wanted} found at {found!r} — it is at the root, but the "
@@ -370,7 +386,7 @@ def check(container, declared, is_declared_payload) -> Iterator[Finding]:
                 # Spelled the archive's way: the difference here is `.` segments,
                 # which are visible ASCII, and spelling out the rest turned two
                 # ordinary decomposed filenames into four walls of hex.
-                shown = " and ".join(as_written(n) for n in alike)
+                shown = _named(alike, as_written)
                 yield Finding(
                     r,
                     "Two members of the archive extract to the same path",
@@ -383,7 +399,7 @@ def check(container, declared, is_declared_payload) -> Iterator[Finding]:
                         "and nothing here can say which one you meant.")
                 continue
 
-            shown = " and ".join(escaped(n) for n in alike)
+            shown = _named(alike, escaped)
             if not one_name:
                 yield Finding(
                     r,
@@ -420,6 +436,50 @@ def check(container, declared, is_declared_payload) -> Iterator[Finding]:
                 fix="Store one spelling. A reader asking for the name as you "
                     "wrote it may get either member, and nothing here can say "
                     "which one you meant.")
+
+    # And the collision the reader does not group on, because it is not a fact
+    # about the archive: `B.pdf` beside `b.pdf` is two entries here and one file
+    # on macOS as it ships and on every Windows filesystem. The recipient keeps
+    # whichever their unzip tool wrote last, and the other declaration names a
+    # path they do not have. The tool said `F2` about the second member -- a
+    # warning -- so a sender who followed `F2`'s remedy and declared both got a
+    # report with nothing wrong in it, for a delivery that loses a file.
+    #
+    # `Z10`'s id, not a new one: the rule is already a family of sentences about
+    # two members a recipient may receive as one, and its `whyOurs` -- "readers
+    # disagree about which one wins, so the container can show one thing to this
+    # tool and another to whoever unpacks it" -- is this case in as many words.
+    # The reader's own key is left alone. Widening it would say something about
+    # somebody else's filesystem in a layer whose job is facts about an archive,
+    # and its `duplicate_names` drives the refusal of a repeated name, which is
+    # about `zf.open` not knowing which entry is meant -- and `zf.open("b.pdf")`
+    # knows perfectly well.
+    folded = {}
+    for member in container.present:
+        folded.setdefault(ignoring_case(member), []).append(member)
+    for _key, together in sorted(folded.items()):
+        # One member per group `Z10` has already joined above, so a pair that
+        # differs in case *and* in path gets one finding rather than two.
+        distinct = sorted({folder_path(n): n for n in together}.values())
+        if len(distinct) < 2:
+            continue
+        r = rule("Z10")
+        for name in distinct:
+            alike = [n for n in distinct if n != name]
+            yield Finding(
+                r,
+                "Two members of the archive are one file where case is not kept apart",
+                container.where.child(member=name, subject=name),
+                detail=f"this is {as_written(name)}; the archive also holds "
+                       f"{_named(alike, as_written)} — {len(distinct)} entries "
+                       f"that fold to one name, so a recipient on Windows, or on "
+                       f"macOS as it ships, unpacks them into one file and keeps "
+                       f"whichever their unzip tool wrote last",
+                fix="Rebuild the archive with one entry per name once case is "
+                    "folded, and name each DigitalFile after the entry you kept. "
+                    "Rename as you write the archive rather than on disk: a "
+                    "filesystem that folds case cannot hold both of these side "
+                    "by side, so there is nothing there to rename.")
 
     if container.kind is Kind.DOCUMENT:
         for m in container.members:
