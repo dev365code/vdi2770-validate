@@ -39,8 +39,18 @@ CODE = re.compile(r"^([A-Z]{1,4}_\d{3})\b")     # D_002 has a one-letter prefix
 
 
 def containers() -> list:
-    out = sorted(ROOT.glob("corpus/examples/*/*.zip")) + sorted(ROOT.glob("corpus/examples/*.zip"))
-    return out + sorted(ROOT.glob("tests/fixtures/*.zip"))
+    """Every container in the two trees, walked the way the coverage gate walks.
+
+    This globbed fixed depths while `tools/rule_coverage.py` and the documents
+    gate walk recursively, so a container one directory deeper satisfied firing
+    coverage, was counted in the documents, and was invisible here -- and this
+    went on saying "our half of the oracle sweep is current: 46 containers" with
+    a forty-seventh in the tree. A container nobody compares against the
+    reference implementation is one this project has no second opinion about,
+    and the gate that says so could be made quiet by choosing a directory.
+    """
+    return (sorted((ROOT / "corpus").rglob("*.zip"))
+            + sorted((ROOT / "tests" / "fixtures").rglob("*.zip")))
 
 
 def their_verdicts(reference: Path, java_home: str, paths: list) -> dict:

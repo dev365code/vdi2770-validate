@@ -113,3 +113,32 @@ def test_a_sweep_of_nothing_over_nothing_is_not_a_complete_sweep(tmp_path):
                           cwd=tree, capture_output=True, text=True, env=under_test())
     assert done.returncode != 0, done.stdout + done.stderr
     assert "0 containers has a reference verdict" not in done.stdout, done.stdout
+
+
+def test_the_sweep_looks_at_every_container_the_coverage_gate_does():
+    """Two walks over one set of containers, and they were not the same walk.
+
+    `capture_oracle.containers()` globbed fixed depths — `corpus/examples/*.zip`,
+    `corpus/examples/*/*.zip`, `tests/fixtures/*.zip` — while
+    `tools/rule_coverage.py` and the docs gate walk both trees recursively. So a
+    container one directory deeper satisfied firing coverage, was counted in the
+    documents, and was **invisible to the release sweep**, which went on saying
+    *our half of the oracle sweep is current: 46 containers* with a
+    forty-seventh sitting in the tree. Verified by putting one there.
+
+    A container nobody compares against the reference implementation is a
+    container this project has no second opinion about, and the gate that exists
+    to say so could be made quiet by choosing a directory.
+    """
+    import sys
+
+    sys.path.insert(0, str(ROOT / "tools"))
+    from capture_oracle import containers
+    from conftest import CORPUS, FIXTURES
+
+    walked = {p.resolve() for p in containers()}
+    everywhere = {p.resolve() for p in
+                  list(CORPUS.rglob("*.zip")) + list(FIXTURES.rglob("*.zip"))}
+    missed = sorted(str(p.relative_to(ROOT)) for p in everywhere - walked)
+    assert not missed, (
+        "containers the coverage gate counts and the sweep never sees: " + ", ".join(missed))

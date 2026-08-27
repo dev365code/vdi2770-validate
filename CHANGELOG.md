@@ -75,6 +75,15 @@ rest of these entries are about — and that one was itself wrong twice.
   seen against; in the middle of `my report.pdf` it is ordinary and is left
   alone.
 
+- **The release sweep and the coverage gate walked the same trees differently.**
+  One globbed fixed depths and the other walked recursively, so a container one
+  directory deeper satisfied firing coverage, was counted in the documents, and
+  was invisible to the sweep — which went on reporting the same count with an
+  extra container in the tree. Verified by putting one there. A container nobody
+  compares against the reference implementation is one this project has no
+  second opinion about, and the gate that says so could be made quiet by
+  choosing a directory.
+
 - **Two members that are one file for the recipient came back clean, exit 0.**
   `B.pdf` beside `b.pdf` is two entries in the archive and one file on macOS as
   it ships and on every Windows filesystem — measured here, one inode. The
