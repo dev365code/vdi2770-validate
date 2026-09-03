@@ -81,7 +81,15 @@ def check(container, document, facts_for) -> Iterator[Finding]:
         where = container.where.child(member=name, subject=name)
         if not facts.is_pdf:
             r = rule("P1")
-            yield Finding(r, r.title, where, detail=why)
+            # A file that never claimed to be a PDF and one that begins with the
+            # header and carries no document are both "not a PDF", and a sender
+            # looking at the second reads the first sentence, sees `%PDF-` in
+            # their own file, and stops believing the report.
+            yield Finding(r, r.title, where,
+                          detail=why if not facts.header else
+                          f"{why}; it begins with the header {facts.header!r} and "
+                          f"carries no indirect object, so there is no PDF "
+                          f"document after it")
             continue
         if facts.encrypted:
             r = rule("P2")

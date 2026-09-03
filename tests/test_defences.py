@@ -66,6 +66,9 @@ PDF_BUDGETS = {
     "MAX_TRAILER_BYTES": (1 << 16, 256 << 20),
     "MAX_XMP_PACKETS": (4, 4096),
     "MAX_PDFA_PREFIXES": (1, 64),
+    # Occurrences of `obj` looked behind before a file is called "no
+    # objects here". The floor is one; the ceiling keeps it a bound.
+    "MAX_OBJ_PROBES": (1, 1 << 20),
 }
 
 

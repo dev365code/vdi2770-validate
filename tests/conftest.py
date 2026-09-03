@@ -88,3 +88,11 @@ def newest_changelog_section() -> str:
         else:
             return "".join(lines[start:n])
     return "".join(lines[start:]) if start is not None else ""
+
+
+# The least a file can be and still be a PDF: a header and one indirect object.
+# Tests that need "a PDF" and wrote only the header were asserting against a
+# reader that agreed the header was enough, which it no longer does -- see
+# `pdfread._read`. Not valid enough to render; valid enough to be the thing the
+# test says it is.
+A_PDF = b"%PDF-1.7\n1 0 obj\n<< /Type /Catalog >>\nendobj\ntrailer\n%%EOF\n"

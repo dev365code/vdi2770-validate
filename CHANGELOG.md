@@ -86,6 +86,30 @@ rest of these entries are about — and that one was itself wrong twice.
   half that must not go with it: `_unswept` is a state `make check` tolerates and
   a release does not.
 
+- **Eight bytes named `VDI2770_Main.pdf`, and the container was clean.** The
+  reserved main document being scanned by nobody was closed once — *an
+  eighteen-byte text file passed with exit 0* — and that repair made the file
+  reachable, not judged: the whole test for being a PDF was
+  `data.startswith(b"%PDF-")`. The same eighteen bytes with five different ones
+  at the front went through, on the one file a recipient's system certainly
+  opens. ISO 32000-1 puts a document catalog in every PDF and a catalog is an
+  indirect object, so a file carrying no `N G obj` is not a PDF document —
+  that, and nothing stronger: a truncated PDF is a damaged PDF and this is not
+  the tool to say otherwise. Every PDF in the corpus and the fixtures still
+  passes, measured. `P1` now distinguishes a file that never claimed to be a PDF
+  from one that claimed it and is not, because a sender who reads *not a PDF*
+  and then sees `%PDF-` in their own file stops believing the report.
+
+- **And that repair was one line from shipping a worse defect.** The obvious
+  spelling — turning the existing `\d+\s+\d+\s+obj` on the whole file — is
+  quadratic: 200 KB of digits with no match spends **192.9 seconds**, measured,
+  because at each start position `\d+` swallows the rest and hands it back one
+  character at a time. The pattern is safe where it was already used, anchored
+  at a known offset by the trailer walk. Searching with it is a denial of
+  service. It finds the literal and looks back over a fixed window instead:
+  0.0000 seconds on the same input, same answer, and the test that pins it
+  counts look-behinds rather than watching a clock.
+
 - **The test that proves the coverage gate acts on its judgement was passing on
   a traceback.** It copies the gate, points it at a baseline the catalogue
   cannot satisfy, and asserts the command exits 1 with `rules` in what it
@@ -1178,7 +1202,7 @@ below is measured on this machine, before and after, on the same input.
 Three gates that ask what `make check` cannot ask of itself.
 
 - **`make mutations`** takes every claim this project makes about a gate, breaks
-  the thing that gate protects, and checks the gate notices — 85 rows, each
+  the thing that gate protects, and checks the gate notices — 87 rows, each
   naming the pytest selection or the tool that has to go red. The harness checks
   itself as hard as it checks the code: a row whose anchor no longer appears
   exactly once is an error rather than a pass; every apply and restore clears

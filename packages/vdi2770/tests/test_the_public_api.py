@@ -12,6 +12,10 @@ import pytest
 
 import vdi2770
 
+# A file that is a PDF, for the tests that assert `is_pdf`: a header alone stopped
+# being one when `read_pdf` learned that a PDF has indirect objects in it.
+A_PDF = b"%PDF-1.7\n1 0 obj\n<< /Type /Catalog >>\nendobj\n"
+
 META = b"""<?xml version="1.0" encoding="utf-8"?>
 <Document xmlns="http://www.vdi.de/schemas/vdi2770">
   <DocumentId DomainId="acme">D-1</DocumentId>
@@ -219,7 +223,7 @@ def test_no_socket_is_opened(monkeypatch):
 # -- what a PDF claims, and only that ----------------------------------------
 
 def test_the_pdf_reader_reports_a_claim_and_never_a_verdict():
-    facts = vdi2770.read_pdf(b"%PDF-1.7\n<?xpacket begin='' id='W5M0'?>"
+    facts = vdi2770.read_pdf(A_PDF + b"<?xpacket begin='' id='W5M0'?>"
                              b"<x><pdfaid:part>3</pdfaid:part>"
                              b"<pdfaid:conformance>A</pdfaid:conformance></x>"
                              b"<?xpacket end='w'?>")
@@ -268,7 +272,7 @@ def test_an_unterminated_xmp_opener_does_not_cost_quadratic_time():
     """
     import time
 
-    evil = b"%PDF-1.7\n" + (b"<?xpacket begin='" * (256 * 1024 // 17))
+    evil = A_PDF + (b"<?xpacket begin='" * (256 * 1024 // 17))
     start = time.perf_counter()
     facts = vdi2770.read_pdf(evil)
     elapsed = time.perf_counter() - start
@@ -284,7 +288,7 @@ def test_a_real_packet_is_still_found_after_a_broken_one():
             b"<rdf:Description xmlns:pdfaid='http://www.aiim.org/pdfa/ns/id/'>"
             b"<pdfaid:part>2</pdfaid:part><pdfaid:conformance>B</pdfaid:conformance>"
             b"</rdf:Description></x:xmpmeta>")
-    assert vdi2770.read_pdf(b"%PDF-1.7\n<?xpacket begin='no end here'\n" + good).pdfa_claim == "2b"
+    assert vdi2770.read_pdf(A_PDF + b"<?xpacket begin='no end here'\n" + good).pdfa_claim == "2b"
 
 
 def test_text_of_many_character_references_is_linear():
@@ -392,9 +396,9 @@ def test_a_malformed_document_says_where_it_went_wrong():
 def test_the_pdf_reader_reads_the_file_rather_than_assuming():
     """`encrypted` hard-coded to True would have passed this distribution's suite
     in every build."""
-    plain = vdi2770.read_pdf(b"%PDF-1.7\nnothing to see here\n")
+    plain = vdi2770.read_pdf(A_PDF + b"nothing to see here\n")
     assert plain.is_pdf and not plain.encrypted and plain.pdfa_claim is None
-    locked = vdi2770.read_pdf(b"%PDF-1.7\ntrailer\n<< /Encrypt 12 0 R >>\n")
+    locked = vdi2770.read_pdf(A_PDF + b"trailer\n<< /Encrypt 12 0 R >>\n")
     assert locked.encrypted, "an encrypted PDF was read as plain"
 
 

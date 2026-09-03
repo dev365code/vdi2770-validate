@@ -8,7 +8,7 @@ import io
 import time
 import zipfile
 
-from conftest import CLEAN_DOCUMENT
+from conftest import A_PDF, CLEAN_DOCUMENT
 from vdi2770 import pdfread, zipread
 from vdi2770_validate.runner import check_bytes
 
@@ -30,7 +30,7 @@ def test_an_inflated_pdf_stream_is_bounded():
     of a PDF; we do not need to inflate all of it to do that."""
     payload = b"A" * (200 * 1024 * 1024)
     import zlib
-    body = b"%PDF-1.7\n" + b"stream\n" + zlib.compress(payload) + b"\nendstream\n"
+    body = A_PDF + b"stream\n" + zlib.compress(payload) + b"\nendstream\n"
     sizes = [len(h) for h in pdfread._haystacks(body)]
     # A ceiling with no floor passes when the scanner does nothing: a
     # `_haystacks` that yielded an empty list satisfied the bound below, and a
@@ -42,7 +42,7 @@ def test_an_inflated_pdf_stream_is_bounded():
 
 
 def test_a_pdf_full_of_stream_markers_does_not_take_forever():
-    body = b"%PDF-1.7\n" + b"stream\n" * 400_000
+    body = A_PDF + b"stream\n" * 400_000
     started = time.monotonic()
     facts = pdfread.read(body)
     assert time.monotonic() - started < 5, "scanning stream markers should not be quadratic"
@@ -101,3 +101,53 @@ def test_a_member_named_as_a_deep_path_does_not_cost_the_machine():
     named = int(z9[0].detail.split()[0])
     assert named <= MAX_FOLDERS, f"{named} folders derived, cap is {MAX_FOLDERS}"
     assert MAX_FOLDER_DEPTH < 20_000, "the depth cap has to be the thing that bit"
+
+
+def test_looking_for_an_indirect_object_does_not_backtrack(monkeypatch):
+    """The repair that made `is_pdf` mean something nearly shipped a worse bug.
+
+    `_OBJ_HEADER` is `\\d+\\s+\\d+\\s+obj`, and it is used anchored at a known
+    offset by the trailer walk, where it costs one attempt. Turned on a whole
+    file it is quadratic: 200 KB of digits with no match spends **192.9
+    seconds**, measured — at each of 200,000 start positions `\\d+` swallows the
+    rest and hands it back one character at a time.
+
+    Counted, not timed: a stopwatch here has twice failed under load. The claim
+    is that the work per occurrence of `obj` is bounded and that occurrences are
+    what bound the loop — so a file of nothing but digits does no regex work at
+    all, and a file of nothing but `obj` does one bounded look-behind each,
+    capped.
+    """
+    looks = []
+    real = pdfread._OBJ_BEFORE
+
+    class Counting:
+        def search(self, window, *a, **k):
+            looks.append(len(window))
+            return real.search(window, *a, **k)
+
+    monkeypatch.setattr(pdfread, "_OBJ_BEFORE", Counting())
+
+    # First, and deliberately: an implementation that went back to searching
+    # with the quadratic pattern does no look-behinds at all, and this fails on
+    # the line below rather than after three minutes on the line after it.
+    assert not pdfread._has_an_indirect_object(b"obj" * 350_000)
+    assert len(looks) == pdfread.MAX_OBJ_PROBES, (
+        f"{len(looks)} look-behinds; the loop is not what bounds this")
+    assert max(looks) <= 48, f"a look-behind read {max(looks)} bytes"
+
+    looks.clear()
+    assert not pdfread._has_an_indirect_object(b"1" * 200_000)
+    assert looks == [], f"digits carry no `obj` and cost {len(looks)} look-behinds"
+
+    # And it still answers yes to the thing it is looking for.
+    assert pdfread._has_an_indirect_object(b"%PDF-1.7\n12 0 obj\n<< >>\nendobj\n")
+
+
+def test_the_object_probe_gives_up_rather_than_scanning_forever(monkeypatch):
+    """The cap is a cap: past it the answer is no, not a longer search."""
+    monkeypatch.setattr(pdfread, "MAX_OBJ_PROBES", 3)
+    decoys = b"obj " * 10
+    assert not pdfread._has_an_indirect_object(decoys + b"1 0 obj\n")
+    monkeypatch.setattr(pdfread, "MAX_OBJ_PROBES", 64)
+    assert pdfread._has_an_indirect_object(decoys + b"1 0 obj\n")

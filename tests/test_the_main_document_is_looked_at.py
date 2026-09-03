@@ -10,7 +10,7 @@ other PDF is schema-legal, so an eighteen-byte text file called
 import io
 import zipfile
 
-from conftest import CLEAN_DOCUMENT, CLEAN_DOCUMENTATION
+from conftest import A_PDF, CLEAN_DOCUMENT, CLEAN_DOCUMENTATION
 from vdi2770_validate.runner import check_file
 
 DOCN = zipfile.ZipFile(CLEAN_DOCUMENTATION)
@@ -61,7 +61,7 @@ def test_an_undeclared_main_document_that_is_not_a_pdf_is_caught(tmp_path):
 def test_an_undeclared_main_document_is_scanned_like_any_other_pdf(tmp_path):
     """Not only P1: if the recipient cannot open it, that matters more here than
     for any other file in the delivery."""
-    p = undeclared(tmp_path, "no_claim.zip", b"%PDF-1.7\n% no xmp here\n")
+    p = undeclared(tmp_path, "no_claim.zip", A_PDF + b"% no xmp here\n")
     assert "P3" in {f.rule.id for f in at(p, "VDI2770_Main.pdf")}
 
 
@@ -135,3 +135,37 @@ def test_the_name_is_only_reserved_in_a_documentation_container(tmp_path):
         ("VDI2770_Main.pdf", b"not a pdf, and not a main document either\n")])
     assert "P1" not in {f.rule.id for f in check_file(p).findings}, \
         [(f.rule.id, str(f.where)) for f in check_file(p).findings]
+
+
+def test_a_pdf_header_with_no_document_after_it_is_not_a_pdf(tmp_path):
+    """Eight bytes named `VDI2770_Main.pdf`, and the container was clean.
+
+    `_targets` closed the case where the reserved main document was scanned by
+    nobody -- "an eighteen-byte text file passed with exit 0". That repair made
+    the file *reachable*. It did not make it *judged*: the whole test for being a
+    PDF was `data.startswith(b"%PDF-")`, so the same eighteen bytes with five
+    different ones at the front went through, and the one file a recipient's
+    system certainly opens was a header and nothing else.
+
+    ISO 32000-1 puts a document catalog in every PDF, and a catalog is an
+    indirect object. Bytes carrying no `N G obj` at all are not a PDF document,
+    which is a claim this tool can make and defend -- and `P1` is the sentence
+    for it, cited from the reference implementation's own check.
+    """
+    from conftest import CLEAN_DOCUMENTATION
+
+    base = zipfile.ZipFile(CLEAN_DOCUMENTATION)
+    shell = tmp_path / "shell.zip"
+    with zipfile.ZipFile(shell, "w") as z:
+        for name in base.namelist():
+            z.writestr(name, b"%PDF-1.4" if name == "VDI2770_Main.pdf"
+                       else base.read(name))
+    report = check_file(str(shell))
+    main = [f for f in report.findings
+            if f.rule.id == "P1" and f.where.member == "VDI2770_Main.pdf"]
+    assert main, (
+        "a header with no document after it was reported as a PDF: "
+        f"{sorted(f.rule.id for f in report.findings)}")
+    # And the sentence has to survive the sender looking at the file, which does
+    # begin with the four bytes everyone knows.
+    assert "header" in (main[0].detail or ""), main[0].detail

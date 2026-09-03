@@ -373,6 +373,39 @@ class PdfFacts:
     pdfa_claim: Optional[str] = None   # e.g. "2b" — a CLAIM, never a verdict
 
 
+# `_OBJ_HEADER` cannot be turned on a whole file. `\d+\s+\d+\s+obj` over 200 KB
+# of digits and no match spends **192.9 seconds**, measured: at every one of the
+# 200,000 start positions `\d+` swallows the rest and gives it back one character
+# at a time. Anchored at a known offset, as the trailer walk uses it, that is one
+# attempt and fine. Asked to search, it is a denial of service -- and this repair
+# was one line away from shipping it.
+#
+# So: find the literal, then look backwards over a fixed window. `bytes.find` is
+# linear and the window is 48 bytes, so the work per occurrence is constant and
+# the bounded repetitions cannot backtrack into the same shape. 0.0000 seconds
+# on the same input, same answer.
+MAX_OBJ_PROBES = 4096     # occurrences of `obj` examined before answering no
+_OBJ_BEFORE = re.compile(rb"\d{1,10}[\x00\t\n\f\r ]{1,16}\d{1,5}[\x00\t\n\f\r ]{1,16}$")
+
+
+def _has_an_indirect_object(data: bytes) -> bool:
+    """Does anything in here look like `12 0 obj`?
+
+    A PDF has a document catalog and a catalog is an indirect object, so a file
+    with none is not a PDF document however it begins.
+    """
+    at = tried = 0
+    while tried < MAX_OBJ_PROBES:
+        at = data.find(b"obj", at)
+        if at < 0:
+            return False
+        if _OBJ_BEFORE.search(data[max(0, at - 48):at]):
+            return True
+        at += 3
+        tried += 1
+    return False
+
+
 def _haystacks(data: bytes, allowance: Optional[List[int]] = None):
     """The raw bytes, then each stream inflated — under a budget.
 
@@ -491,6 +524,22 @@ def _read(data: bytes, allowance: Optional[List[int]]) -> PdfFacts:
     if not data.startswith(b"%PDF-"):
         return PdfFacts(is_pdf=False)
     header = data[:8].decode("latin-1", "replace")
+    # The magic is a claim, and this package does not report a claim as a fact.
+    # `is_pdf` was that claim spelled another way, so eight bytes -- `%PDF-1.4`
+    # and nothing else -- were a PDF, and a documentation container whose
+    # reserved main document was those eight bytes returned exit 0.
+    #
+    # ISO 32000-1 puts a document catalog in every PDF and a catalog is an
+    # indirect object, so bytes carrying no `N G obj` are not a PDF document.
+    # That is the whole strengthening: not "conformant", not "openable", not
+    # "has an end-of-file marker" -- a truncated PDF is a damaged PDF and this
+    # package is not the one to say otherwise. Every PDF in the corpus and the
+    # fixtures passes it, measured.
+    #
+    # The other three facts are still read. A caller asking what a file claims
+    # about itself gets the same four answers it always did; only `is_pdf`
+    # changed its mind about what it is answering.
+    is_pdf = _has_an_indirect_object(data)
     encrypted = _is_encrypted(data)
     claim = None
     for hay in _haystacks(data, allowance):
@@ -500,4 +549,5 @@ def _read(data: bytes, allowance: Optional[List[int]]) -> PdfFacts:
                 break
         if claim:
             break
-    return PdfFacts(is_pdf=True, header=header, encrypted=encrypted, pdfa_claim=claim)
+    return PdfFacts(is_pdf=is_pdf, header=header, encrypted=encrypted,
+                    pdfa_claim=claim)

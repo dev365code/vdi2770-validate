@@ -715,6 +715,20 @@ TABLE = [
      "skipping every refusal erased the one line saying the archive nearly has "
      "a metadata file"),
 
+    ("reader/an-indirect-object-is-what-makes-it-a-pdf",
+     "packages/vdi2770/src/vdi2770/pdfread.py",
+     "    is_pdf = _has_an_indirect_object(data)",
+     "    is_pdf = True",
+     ["tests/test_the_main_document_is_looked_at.py"],
+     "eight bytes named VDI2770_Main.pdf were a PDF, and the container was clean"),
+
+    ("reader/the-object-probe-looks-behind-before-it-agrees",
+     "packages/vdi2770/src/vdi2770/pdfread.py",
+     "        if _OBJ_BEFORE.search(data[max(0, at - 48):at]):",
+     "        if True:",
+     ["tests/test_amplification.py"],
+     "any occurrence of the word `obj` would have made a text file a PDF"),
+
     # --- the canary -------------------------------------------------------
     ("canary/a-comment-nobody-reads",
      "src/vdi2770_validate/report.py",

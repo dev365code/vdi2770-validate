@@ -21,13 +21,13 @@ import zlib
 
 import pytest
 
-from conftest import CLEAN_DOCUMENT
+from conftest import A_PDF, CLEAN_DOCUMENT
 from vdi2770 import pdfread
 from vdi2770_validate.runner import check_bytes
 
 # Ten streams, so one file wants ten times what a single stream may become.
 _BLOB = zlib.compress(b"A" * 400_000)
-_GREEDY = b"%PDF-1.4\n" + b"".join(b"stream\n" + _BLOB for _ in range(10))
+_GREEDY = A_PDF + b"".join(b"stream\n" + _BLOB for _ in range(10))
 
 
 def _container(count: int) -> bytes:

@@ -5,7 +5,7 @@ severity, the guess has to be a good deal better than a substring.
 
 import pytest
 
-from conftest import CORPUS
+from conftest import A_PDF, CORPUS
 from vdi2770 import pdfread
 
 VALID = (CORPUS / "Valid.pdf").read_bytes()
@@ -54,13 +54,13 @@ def test_a_file_with_no_claim_still_has_none(name):
 def test_a_claim_outside_an_xmp_packet_is_not_a_claim():
     """`P3` is an error, so silencing it must take more than writing the words
     in a comment. A PDF/A identification lives in the XMP metadata."""
-    stub = (b"%PDF-1.7\n"
-            b"% <pdfaid:part>3</pdfaid:part><pdfaid:conformance>a</pdfaid:conformance>\n")
+    stub = (A_PDF
+            + b"% <pdfaid:part>3</pdfaid:part><pdfaid:conformance>a</pdfaid:conformance>\n")
     assert pdfread.read(stub).pdfa_claim is None
 
 
 def test_a_claim_in_a_real_xmp_packet_is_read():
-    packet = (b"%PDF-1.7\n<?xpacket begin='' id='W5M0MpCehiHzreSzNTczkc9d'?>"
+    packet = (A_PDF + b"<?xpacket begin='' id='W5M0MpCehiHzreSzNTczkc9d'?>"
               b"<x:xmpmeta xmlns:x='adobe:ns:meta/'><rdf:RDF "
               b"xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'>"
               b"<rdf:Description xmlns:pdfaid='http://www.aiim.org/pdfa/ns/id/'>"
