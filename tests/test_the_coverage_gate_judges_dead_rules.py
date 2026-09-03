@@ -97,8 +97,18 @@ def test_the_gate_run_as_a_command_uses_its_own_judgement(tmp_path):
     So `main()` could compute the judgement and drop it — one line, `problems =
     []` — and the command exited 0, the whole suite passed, and the mutation
     table reported everything caught. A gate is what it does when you run it.
+
+    And a subprocess has to be *able* to run it. This spawned the copy with
+    whatever `sys.path` the ambient installation gave it; on a machine where
+    this package is not installed the copy died on its own import, exited 1 for
+    that reason, and printed a traceback whose source line reads `import rules`
+    — which satisfied both assertions. The gate never ran, the mutation that
+    blanks the judgement survived, and the table reported it. So the path is
+    handed over explicitly now, and the sentence asserted is one only the
+    judgement produces.
     """
     import json
+    import os
     import shutil
     import subprocess
     import sys
@@ -118,12 +128,20 @@ def test_the_gate_run_as_a_command_uses_its_own_judgement(tmp_path):
     tool.write_text(text.replace('BASELINE = ROOT / "docs" / "rule-coverage.json"',
                                  f'BASELINE = Path({str(bad)!r})'), encoding="utf-8")
 
+    # The copy's own `ROOT` would be `tmp_path`'s parent, where there is no
+    # corpus to observe; point it back so the gate looks at the real tree.
+    tool.write_text(tool.read_text(encoding="utf-8").replace(
+        "ROOT = Path(__file__).resolve().parent.parent",
+        f"ROOT = Path({str(ROOT)!r})"), encoding="utf-8")
+    env = dict(os.environ, PYTHONPATH=os.pathsep.join(
+        [str(ROOT / "src"), str(ROOT / "packages" / "vdi2770" / "src")]))
     done = subprocess.run([sys.executable, str(tool), "--check"],
-                          cwd=ROOT, capture_output=True, text=True)
+                          cwd=ROOT, capture_output=True, text=True, env=env)
     assert done.returncode == 1, (
         f"the gate ran with a baseline it disagrees with and exited "
         f"{done.returncode}: {done.stdout} {done.stderr}")
-    assert "rules" in (done.stderr or ""), done.stderr
+    # `judge()`'s own sentence, which an import error cannot counterfeit.
+    assert "the catalogue has" in (done.stderr or ""), done.stderr
 
 
 def test_an_excuse_is_only_available_to_a_rule_about_this_tool(rule_coverage):

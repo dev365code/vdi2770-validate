@@ -86,6 +86,17 @@ rest of these entries are about — and that one was itself wrong twice.
   half that must not go with it: `_unswept` is a state `make check` tolerates and
   a release does not.
 
+- **The test that proves the coverage gate acts on its judgement was passing on
+  a traceback.** It copies the gate, points it at a baseline the catalogue
+  cannot satisfy, and asserts the command exits 1 with `rules` in what it
+  printed. The copy inherited whatever import path the machine happened to
+  offer; where this package is not installed it died on its own first import,
+  exited 1 for that reason, and printed a source line reading `import rules` —
+  satisfying both assertions with the gate never having run. The path is handed
+  over explicitly now, and the sentence asserted is one only the judgement
+  produces. The mutation that blanks that judgement had begun surviving, which
+  is how this surfaced.
+
 - **A second door inflated without a whole-read budget behind it.** The scope
   page sells "4 GiB inflated, in one read" as a ceiling that bounds the *tree*,
   and the archive reader keeps it — for the bytes *it* expands. The PDF scan
