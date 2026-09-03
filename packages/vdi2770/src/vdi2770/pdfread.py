@@ -358,10 +358,17 @@ MAX_INFLATED_TOTAL = 32_000_000       # the whole budget for one file
 # does not watch, because the members it hands over are 38 KiB each and it is
 # the PDF scan that expands them.
 #
-# 4 GiB, the same number `docs/scope.md` already promises for one read, and a
-# ceiling no legitimate delivery approaches: the scan stops at the first PDF/A
-# claim it finds, VDI 2770 requires PDF/A, and every PDF in the corpus carries
-# its claim in bytes that were never compressed -- 0 inflated, measured.
+# 4 GiB, the same number `docs/scope.md` already promises for one read. It is
+# reachable by ordinary input and the first version of this note said otherwise:
+# "the scan stops at the first PDF/A claim it finds, and every PDF in the corpus
+# carries its claim in uncompressed bytes -- 0 inflated, measured". That is
+# circular. The scan short-circuits only on files that carry a claim, which are
+# the ones that would have passed anyway; a file with no claim is scanned to the
+# per-file cap, and files with no claim are what the report exists to name.
+# Measured over the PDFs on one ordinary machine: a third of them inflate past a
+# megabyte and the largest reaches the 32 MB cap, so about 126 documents spend
+# this ceiling. The budget therefore has to cost as little as possible when it
+# runs out, which is why it stops inflation and nothing else.
 MAX_INFLATED_PER_READ = 4 * 1024 * 1024 * 1024
 
 
@@ -388,22 +395,41 @@ MAX_OBJ_PROBES = 4096     # occurrences of `obj` examined before answering no
 _OBJ_BEFORE = re.compile(rb"\d{1,10}[\x00\t\n\f\r ]{1,16}\d{1,5}[\x00\t\n\f\r ]{1,16}$")
 
 
-def _has_an_indirect_object(data: bytes) -> bool:
-    """Does anything in here look like `12 0 obj`?
+#: What may follow `obj` and leave it a token: whitespace, a PDF delimiter, or
+#: the end of the file. Without this, `find` matched inside a longer word and
+#: `1 0 objx` was a PDF -- the eighteen-byte text file this check exists to
+#: catch, needing only different bytes.
+_AFTER_OBJ = b"\x00\t\n\f\r ()<>[]{}/%"
+
+
+def _has_an_indirect_object(data: bytes) -> Optional[bool]:
+    """Does anything in here look like `12 0 obj`? `None` if we stopped looking.
 
     A PDF has a document catalog and a catalog is an indirect object, so a file
     with none is not a PDF document however it begins.
+
+    Three answers, not two. The cap has to stay -- 64 MB of `obj` costs 15.6
+    seconds uncapped, and a member may be 512 MB -- and reporting its exhaustion
+    as `False` made a budget into a fact about the file: a conforming PDF whose
+    only oddity is a long comment holding 4096 occurrences of the word was
+    reported as carrying no indirect object -- an error about the container, on
+    the one file whose remedy says there is no second option. That is a budget
+    made into a fact about a file, which is the category error this package
+    exists to keep out of a caller's report. `None` is "we did not finish
+    looking", and a caller must not turn it into an accusation.
     """
     at = tried = 0
     while tried < MAX_OBJ_PROBES:
         at = data.find(b"obj", at)
         if at < 0:
             return False
-        if _OBJ_BEFORE.search(data[max(0, at - 48):at]):
+        after = data[at + 3:at + 4]
+        if (not after or after in _AFTER_OBJ) and \
+                _OBJ_BEFORE.search(data[max(0, at - 48):at]):
             return True
         at += 3
         tried += 1
-    return False
+    return None
 
 
 def _haystacks(data: bytes, allowance: Optional[List[int]] = None):
@@ -508,10 +534,23 @@ def reader(allowance: int) -> Callable[[bytes], Optional[PdfFacts]]:
     """
     left = [allowance]
 
-    def read_one(data: bytes) -> Optional[PdfFacts]:
-        if left[0] <= 0:
-            return None
-        return _read(data, left)
+    def read_one(data: bytes):
+        """`(facts, cut_short)`. The budget bounds inflating, nothing else.
+
+        It used to answer `None` for a file the allowance no longer reached,
+        before the file was looked at -- and `is_pdf`, the header and the
+        encryption flag are read from bytes no stream has to be inflated for.
+        So a delivery of ordinary documents, each inflated to the per-file cap
+        because it carries no PDF/A claim to stop at, spent the read's budget
+        and the caller then had nothing to judge the reserved main document by.
+        126 files of the kind an ordinary machine is full of reach 4 GiB, so
+        this was not a hypothetical.
+
+        `cut_short` says the search for a claim did not run, which is the one
+        thing the allowance can take away.
+        """
+        spent = left[0] <= 0
+        return _read(data, left), spent
 
     return read_one
 
@@ -539,7 +578,9 @@ def _read(data: bytes, allowance: Optional[List[int]]) -> PdfFacts:
     # The other three facts are still read. A caller asking what a file claims
     # about itself gets the same four answers it always did; only `is_pdf`
     # changed its mind about what it is answering.
-    is_pdf = _has_an_indirect_object(data)
+    # `is not False`, so a search that did not finish is not an accusation. We
+    # say "this is not a PDF" only having looked all the way through.
+    is_pdf = _has_an_indirect_object(data) is not False
     encrypted = _is_encrypted(data)
     claim = None
     for hay in _haystacks(data, allowance):

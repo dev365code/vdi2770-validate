@@ -119,7 +119,6 @@ def _facts_for(raw: bytes, accepted, read_pdf):
     handover with a few thousand drawings is that shape.
     """
     read_member = zipread.member_reader(raw, allowed=accepted)
-    stopped = Stopped(pdfread.MAX_INFLATED_PER_READ)
     cache = {}
 
     def get(name: str):
@@ -128,11 +127,11 @@ def _facts_for(raw: bytes, accepted, read_pdf):
             if member is None:
                 cache[name] = None            # refused; a Z finding already says so
             else:
-                # `None` from here means something else: the read's inflation
-                # allowance is gone. Two causes wearing one answer is what let a
-                # file nobody opened be reported as a file with no claim in it.
-                facts = read_pdf(member)
-                cache[name] = facts if facts is not None else stopped
+                # The budget bounds inflating a file, not reading one, so the
+                # facts come back either way and only the claim search is lost.
+                facts, cut_short = read_pdf(member)
+                cache[name] = (Stopped(pdfread.MAX_INFLATED_PER_READ, facts)
+                               if cut_short else facts)
         return cache[name]
 
     return get

@@ -236,11 +236,27 @@ def test_a_rule_about_this_tool_explains_itself():
 
 
 def test_every_defect_that_maps_to_z5_carries_its_own_remedy():
-    """Z5 is reached seven ways and its own remedy fits none of them: "split the
+    """Z5 is reached eight ways and its own remedy fits none of them: "split the
     delivery into several containers" does nothing for one member that expands
     past the ratio floor, and `test_a_member_we_cannot_read_is_not_a_pass.py`
-    says so in as many words. A Finding may carry its own."""
+    says so in as many words. A Finding may carry its own.
+
+    Seven of the eight are reader defects. The eighth is the PDF layer's own
+    inflation ceiling, which this sweep cannot see -- it reads `DEFECT_TO_RULE`,
+    and that route has no defect. It was shipped passing `fix=rule("Z5").remedy`,
+    which `Finding.remedy` resolves to the same string it would have used
+    anyway: a no-op wearing the shape of the thing this test asks for.
+    """
+    import inspect
+
+    from vdi2770_validate.rules import pdf as r_pdf
     from vdi2770_validate.rules.container import DEFECT_TO_RULE, REMEDY_FOR_DEFECT
+
+    where = inspect.getsource(r_pdf.check)
+    assert 'rule("Z5")' in where, "the P layer no longer reaches Z5; drop this half"
+    assert 'fix=rule("Z5").remedy' not in where, (
+        "the P layer's Z5 carries the catalogue's general remedy, which is what "
+        "this test exists to prevent -- and passing it as `fix` changes nothing")
 
     to_z5 = {k for k, v in DEFECT_TO_RULE.items() if v == "Z5"}
     missing = sorted(to_z5 - set(REMEDY_FOR_DEFECT))

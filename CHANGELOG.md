@@ -39,6 +39,28 @@ gate or dropped, because a number nobody re-derives is the kind of claim the
 rest of these entries are about — and that one was itself wrong twice.
 
 
+- **A budget running out was reported as a fact about the file — twice.** The
+  read-wide PDF inflation ceiling switched the scan *off* rather than switching
+  *inflating* off, so whether a file is a PDF at all, whether it is encrypted,
+  and its header — none of which costs any inflation — were discarded with it.
+  Spending the budget therefore deleted `P1` from `VDI2770_Main.pdf`: an archive
+  of ordinary documents hid an eight-byte main document behind a ceiling. And
+  the ceiling is reachable by ordinary input; the argument that it was not was
+  circular, since the scan stops early only on files that carry a PDF/A claim —
+  the ones that would have passed anyway. Measured on one ordinary machine, a
+  third of its PDFs inflate past a megabyte and the largest reaches the per-file
+  cap. The budget now bounds inflating and nothing else, and the search for a
+  claim is the one thing it withholds.
+
+- **And the search for an indirect object reported its own cap as an answer.**
+  `MAX_OBJ_PROBES` has to stay — 64 MB of `obj` costs 15.6 seconds without it
+  and a member may be 512 MB — but exhausting it answered *there are none*: a
+  conforming PDF whose only oddity is a long comment was reported as carrying no
+  PDF document, at error severity, on the file whose remedy says there is no
+  second option. Three answers now, and the third is not an accusation. The
+  token is also matched as a whole word: `1 0 objx` was a PDF, so the
+  eighteen-byte text file was still passing, in different bytes.
+
 - **Four sentences that were not true of what the report was looking at.** An
   archive whose only entry had no name was called *empty*, beside the finding
   saying there was an entry in it — the one refusal recorded as a bare defect

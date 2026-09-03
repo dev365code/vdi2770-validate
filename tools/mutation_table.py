@@ -724,8 +724,8 @@ TABLE = [
 
     ("reader/the-object-probe-looks-behind-before-it-agrees",
      "packages/vdi2770/src/vdi2770/pdfread.py",
-     "        if _OBJ_BEFORE.search(data[max(0, at - 48):at]):",
-     "        if True:",
+     "                _OBJ_BEFORE.search(data[max(0, at - 48):at]):",
+     "                True:",
      ["tests/test_amplification.py"],
      "any occurrence of the word `obj` would have made a text file a PDF"),
 

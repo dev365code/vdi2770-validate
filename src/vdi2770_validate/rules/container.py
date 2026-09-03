@@ -153,7 +153,8 @@ DEFECT_TO_RULE = {
 }
 
 
-# One rule, seven ways to reach it. Z5's own remedy has to fit them all and ends
+# One rule, eight ways to reach it -- seven reader defects and the PDF layer's
+# own inflation ceiling, which carries its own remedy at its own call site. Z5's own remedy has to fit them all and ends
 # up fitting none: "split the delivery into several containers" does nothing for
 # a single member that expands past the ratio floor, and the project's own tests
 # say so. A Finding may carry its own remedy, so each kind carries the one that

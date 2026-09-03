@@ -131,7 +131,10 @@ def test_looking_for_an_indirect_object_does_not_backtrack(monkeypatch):
     # First, and deliberately: an implementation that went back to searching
     # with the quadratic pattern does no look-behinds at all, and this fails on
     # the line below rather than after three minutes on the line after it.
-    assert not pdfread._has_an_indirect_object(b"obj" * 350_000)
+    # `obj ` and not `obj`: without the space the delimiter check rejects each
+    # occurrence before the look-behind is reached, which is cheaper still but
+    # measures the wrong half. This input reaches the look-behind every time.
+    assert not pdfread._has_an_indirect_object(b"obj " * 350_000)
     assert len(looks) == pdfread.MAX_OBJ_PROBES, (
         f"{len(looks)} look-behinds; the loop is not what bounds this")
     assert max(looks) <= 48, f"a look-behind read {max(looks)} bytes"

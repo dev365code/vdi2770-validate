@@ -108,12 +108,11 @@ def test_the_gate_run_as_a_command_uses_its_own_judgement(tmp_path):
     judgement produces.
     """
     import json
-    import os
     import shutil
     import subprocess
     import sys
 
-    from conftest import ROOT
+    from conftest import ROOT, under_test
 
     tool = tmp_path / "rule_coverage.py"
     shutil.copy(ROOT / "tools" / "rule_coverage.py", tool)
@@ -125,16 +124,22 @@ def test_the_gate_run_as_a_command_uses_its_own_judgement(tmp_path):
     baseline["rules"] = baseline["rules"] + 7
     bad = tmp_path / "rule-coverage.json"
     bad.write_text(json.dumps(baseline), encoding="utf-8")
-    tool.write_text(text.replace('BASELINE = ROOT / "docs" / "rule-coverage.json"',
-                                 f'BASELINE = Path({str(bad)!r})'), encoding="utf-8")
+    swapped = text.replace('BASELINE = ROOT / "docs" / "rule-coverage.json"',
+                           f'BASELINE = Path({str(bad)!r})')
+    assert swapped != text, "the gate no longer names its baseline that way"
+    tool.write_text(swapped, encoding="utf-8")
 
     # The copy's own `ROOT` would be `tmp_path`'s parent, where there is no
-    # corpus to observe; point it back so the gate looks at the real tree.
-    tool.write_text(tool.read_text(encoding="utf-8").replace(
+    # corpus to observe; point it back so the gate looks at the real tree. Both
+    # substitutions are asserted, because `str.replace` on a miss is a silent
+    # no-op and this test's whole subject is a check that passed without
+    # running — the discipline the mutation table applies to its own anchors.
+    anchored = tool.read_text(encoding="utf-8").replace(
         "ROOT = Path(__file__).resolve().parent.parent",
-        f"ROOT = Path({str(ROOT)!r})"), encoding="utf-8")
-    env = dict(os.environ, PYTHONPATH=os.pathsep.join(
-        [str(ROOT / "src"), str(ROOT / "packages" / "vdi2770" / "src")]))
+        f"ROOT = Path({str(ROOT)!r})")
+    assert "ROOT = Path(__file__)" not in anchored, "the gate no longer sets ROOT that way"
+    tool.write_text(anchored, encoding="utf-8")
+    env = under_test()
     done = subprocess.run([sys.executable, str(tool), "--check"],
                           cwd=ROOT, capture_output=True, text=True, env=env)
     assert done.returncode == 1, (

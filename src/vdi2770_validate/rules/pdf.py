@@ -12,19 +12,23 @@ UNVERIFIED = "this tool cannot verify PDF/A conformance"
 
 @dataclass(frozen=True)
 class Stopped:
-    """The answer for a declared PDF this read stopped short of opening.
+    """A declared PDF whose *claim search* this read stopped short of running.
 
-    Distinct from `None`, which means the archive reader refused the member and
-    said so as a `Z` finding. Both were `None` once, and a file nobody opened
-    drew `P3` -- "this scan found no PDF/A claim in the file" -- which is a fact
-    about a scan that did not happen.
+    Not "a file nobody opened": the allowance bounds inflating streams, and the
+    header, the indirect objects and the encryption flag are all read from bytes
+    no stream has to be inflated for. Withholding those too made spending the
+    budget delete `P1` from the reserved main document -- a worse answer than
+    the `P3` this class was invented to prevent, which is "this scan found no
+    PDF/A claim in the file" over a scan that did not happen.
 
-    It carries the ceiling rather than reading it, because a rule module may not
-    import a parser: the layer that spends a budget is the layer that knows what
-    it was, and this one only says so.
+    So the facts travel with it and every rule but `P3` is judged from them. It
+    carries the ceiling rather than reading it, because a rule module may not
+    import a parser: the layer that spends a budget knows what it was, and this
+    one only says so.
     """
 
     ceiling: int
+    facts: object
 
 # The most files one finding will name before it counts the rest, as everywhere
 # else a finding lists members.
@@ -75,9 +79,16 @@ def check(container, document, facts_for) -> Iterator[Finding]:
         facts = facts_for(name)
         if facts is None:
             continue          # the reader refused it, and said so as a Z finding
-        if isinstance(facts, Stopped):
-            unopened.append((name, facts))
-            continue
+        cut_short = isinstance(facts, Stopped)
+        if cut_short:
+            # A claim sitting in bytes no stream had to be inflated for is found
+            # whether or not the allowance is spent, so the budget took nothing
+            # away from this file and counting it among the cut-short ones would
+            # be a report saying it looked away from a file it read.
+            stopped, facts = facts, facts.facts
+            cut_short = facts.pdfa_claim is None
+            if cut_short:
+                unopened.append((name, stopped))
         where = container.where.child(member=name, subject=name)
         if not facts.is_pdf:
             r = rule("P1")
@@ -103,6 +114,8 @@ def check(container, document, facts_for) -> Iterator[Finding]:
             # we do not get to say.
             pass
         elif facts.pdfa_claim is None:
+            if cut_short:
+                continue      # the search for one did not run; `Z5` says so
             r = rule("P3")
             yield Finding(r, r.title, where,
                           detail="no pdfaid identification found in the XMP metadata")
@@ -120,14 +133,19 @@ def check(container, document, facts_for) -> Iterator[Finding]:
         # `about: tool`, because the ceiling is ours. Saying it once with a count
         # beats one line per file, and saying nothing was the defect.
         r = rule("Z5")
+        gib = unopened[0][1].ceiling / (1024 ** 3)
+        one = len(unopened) == 1
         yield Finding(
             r, r.title, container.where,
-            detail=f"this read spent its {unopened[0][1].ceiling}-byte "
-                   f"budget for inflating PDF streams, so "
+            detail=f"this read spent its {gib:g} GiB budget for inflating PDF "
+                   f"streams, so the search for a PDF/A claim inside "
                    f"{len(unopened)} declared PDF "
-                   f"file{'' if len(unopened) == 1 else 's'} "
-                   f"{'was' if len(unopened) == 1 else 'were'} not opened: "
+                   f"file{'' if one else 's'} was cut short for: "
                    + ", ".join(as_written(n) for n, _ in unopened[:MAX_NAMED])
                    + (", ..." if len(unopened) > MAX_NAMED else "")
-                   + ". Nothing is claimed about them",
-            fix=rule("Z5").remedy)
+                   + f". Nothing is said about whether "
+                     f"{'it carries' if one else 'they carry'} one",
+            fix="Split the delivery into several containers, or produce the "
+                "documents as PDF/A: the scan stops at the first PDF/A claim it "
+                "finds, so a delivery of conforming files does not approach this "
+                "budget. Every other check on these files still ran.")
