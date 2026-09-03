@@ -173,3 +173,44 @@ def test_the_catalogue_cannot_be_emptied_by_a_caller():
         with pytest.raises(TypeError):
             family()["POISON"] = None
         assert len(family()) == before
+
+
+def test_a_document_with_too_many_violations_is_not_told_to_simplify_itself(
+        tmp_path, monkeypatch):
+    """Two failures wore one flag once. Three do.
+
+    This file exists because "the checker gave up" and "your installation is
+    broken" shared `broken` and one of them blamed the wrong party. The listing
+    limit was later added to the surviving flag, and it is a third thing: the
+    check reached the end of what this tool will list, and everything it listed
+    was a real violation of the sender's document.
+
+    The report says so a thousand times and then hands over `X4`'s remedy —
+    *simplify the metadata so the checker can reach the end of it* — for a
+    document that is not complex but wrong, closing with *the limit that gave up
+    belongs to this tool, not to VDI 2770*, which is the one sentence a reader
+    of a thousand genuine violations must not act on.
+    """
+    from vdi2770_validate import xsdvalidate
+
+    monkeypatch.setattr(xsdvalidate, "MAX_SCHEMA_ERRORS", 3)
+    meta = CLEAN_DOCUMENT.read_bytes()
+    box = zipfile.ZipFile(io.BytesIO(meta))
+    text = box.read("VDI2770_Metadata.xml").decode("utf-8")
+    one = text[text.index("<DocumentVersion>"):
+                text.index("</DocumentVersion>") + len("</DocumentVersion>")]
+    text = text.replace(one, one.replace("<DocumentVersion>",
+                                         '<DocumentVersion Bogus="1">') * 8, 1)
+    zpath = tmp_path / "many.zip"
+    with zipfile.ZipFile(zpath, "w") as z:
+        for name in box.namelist():
+            z.writestr(name, text if name == "VDI2770_Metadata.xml" else box.read(name))
+
+    report = check_file(str(zpath))
+    stopped = [f for f in report.findings if f.rule.id == "X4"]
+    assert stopped, sorted({f.rule.id for f in report.findings})
+    assert [f for f in report.findings if f.rule.id == "X2"], (
+        "the premise: the violations it did list are the sender's")
+    said = stopped[0].remedy or ""
+    assert "Simplify the metadata" not in said, said
+    assert "limit that gave up belongs to this tool" not in said, said

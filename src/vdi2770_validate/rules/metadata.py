@@ -10,7 +10,7 @@ from typing import Iterator
 
 from ..catalog import CLASSIFICATION_SYSTEM, ISO_639_1, document_classes, english_for, german_for, rule
 from ..model import Finding, Kind
-from ..names import escaped, nfc, told_apart
+from ..names import as_written, escaped, nfc, told_apart
 
 RELEASED = "Released"
 
@@ -52,7 +52,7 @@ def check(container, document) -> Iterator[Finding]:
         elif (ident.domain_id, ident.id) in seen:
             r = rule("M9")
             yield Finding(r, r.title, at.child(subject=ident.id),
-                          detail=f"{ident.id!r} appears more than once "
+                          detail=f"'{as_written(ident.id)}' appears more than once "
                                  f"in domain {ident.domain_id!r}")
         seen.add((ident.domain_id, ident.id))
 
@@ -75,7 +75,7 @@ def check(container, document) -> Iterator[Finding]:
             r = rule("M2")
             yield Finding(r, r.title, c.src.child(container=container.path,
                                                   member=container.metadata_name),
-                          detail=f"ClassId {c.class_id!r}")
+                          detail=f"ClassId '{as_written(c.class_id)}'")
             continue
         want_de = german_for(c.class_id)
         want_en = english_for(c.class_id)
@@ -90,7 +90,14 @@ def check(container, document) -> Iterator[Finding]:
             # `names` exists to settle, and the metadata layer was comparing text
             # that had not been through it. The published names are composed, so
             # nothing that used to match stops matching.
-            lang, text = nm.language, nfc(nm.text)
+            # Compare normalised, quote what the sender wrote. Printing the
+            # normalisation put a string on the page that is not in the file
+            # the report just read -- a `Pläne` a search for will not find --
+            # and it also blinded the rendering: `escaped` spells a name out
+            # only when it is not its own NFC, and `nfc()` had just made it
+            # one, so the helper that exists to tell two canonically equivalent
+            # spellings apart could no longer see there were two.
+            lang, text, written = nm.language, nfc(nm.text), nm.text
             if lang is None:
                 continue          # no Language attribute at all; X2 says so
             # The name's own location, not the classification's. Several names
@@ -109,7 +116,7 @@ def check(container, document) -> Iterator[Finding]:
                     # `told_apart` spells the run that differs when the run is
                     # one a reader can miss.
                     yield Finding(r, r.title, where,
-                                  detail=_two_names(text, want_de, c.class_id,
+                                  detail=_two_names(written, want_de, c.class_id,
                                                     "published name is"))
             # Not `not (startswith("de") or startswith("en"))`: the `de` half
             # is already False on this branch, and the `en` test below could
@@ -118,11 +125,13 @@ def check(container, document) -> Iterator[Finding]:
             elif not low.startswith("en"):
                 r = rule("M8")
                 yield Finding(r, r.title, where,
-                              detail=f"{text!r} is tagged {lang!r}, which this tool does not check")
+                              detail=f"'{as_written(written)}' is tagged "
+                                     f"'{as_written(lang)}', which this tool "
+                                     f"does not check")
             elif text not in want_en:
                 r = rule("M4")
                 yield Finding(r, r.title, where,
-                              detail=_two_names(text, want_en, c.class_id,
+                              detail=_two_names(written, want_en, c.class_id,
                                                 "published renderings are"))
 
     for v in document.versions:
@@ -131,7 +140,7 @@ def check(container, document) -> Iterator[Finding]:
                 r = rule("M5")
                 yield Finding(r, r.title, tag.src.child(container=container.path,
                                                         member=container.metadata_name),
-                              detail=f"Language {tag.code!r}")
+                              detail=f"Language '{as_written(tag.code)}'")
         for d in v.descriptions:
             # `and d.language` here let an empty attribute switch the check
             # off, which is the shape M8's own whyOurs warns about. `is not
@@ -141,7 +150,7 @@ def check(container, document) -> Iterator[Finding]:
                 r = rule("M5")
                 yield Finding(r, r.title, d.src.child(container=container.path,
                                                       member=container.metadata_name),
-                              detail=f"DocumentDescription Language {d.language!r}")
+                              detail=f"DocumentDescription Language '{as_written(d.language)}'")
         if not any(f.file_format.split(";")[0].strip().lower() == "application/pdf" for f in v.files):
             r = rule("M6")
             yield Finding(r, r.title, v.src.child(container=container.path,
@@ -161,4 +170,4 @@ def check(container, document) -> Iterator[Finding]:
             r = rule("M7")
             yield Finding(r, r.title, v.life_cycle_src.child(container=container.path,
                                                              member=container.metadata_name),
-                          detail=f"LifeCycleStatus is {v.life_cycle_status!r}")
+                          detail=f"LifeCycleStatus is '{as_written(v.life_cycle_status)}'")

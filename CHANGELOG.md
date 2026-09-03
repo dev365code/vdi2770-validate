@@ -86,6 +86,33 @@ rest of these entries are about — and that one was itself wrong twice.
   half that must not go with it: `_unswept` is a state `make check` tolerates and
   a release does not.
 
+- **The metadata layer quoted its own normalisation.** It compares class names
+  through `nfc`, rightly — a published name and the name in front of us can
+  spell one word two legal ways — and then printed what it had normalised, so a
+  report said the sender's class name was `'Zeichnungen, Pläne'` when their file
+  holds the decomposed spelling of those bytes and a search for the quoted
+  string finds nothing. The normalisation also blinded the rendering: `escaped`
+  spells a name out only when it is not its own NFC, and `nfc()` had just made
+  it one, so the helper written to tell two canonically equivalent spellings
+  apart could no longer see there were two. It compares normalised and quotes
+  what the sender wrote now.
+
+- **And five details printed a bare `repr()`.** `U+3164 HANGUL FILLER` is a
+  letter with an empty glyph, so `M2` read `ClassId '02-01'` — the very value
+  its remedy then asks the sender to use, which makes the finding look like a
+  bug in this tool. `M3` and `M4` had gone through the names module for exactly
+  this; `M2`, `M5`, `M8`, `M9` and `M7` had not. (A homoglyph in a value with no
+  published counterpart — a Cyrillic `е` in a language code — still prints as
+  itself: telling *that* apart takes both strings, and there is only one.)
+
+- **A third failure wore the "the check could not finish" flag.** More
+  violations than this tool will list is not a document the checker would not
+  follow to the end, and `X4`'s remedy — *simplify the metadata so the checker
+  can reach the end of it*, closing with *the limit that gave up belongs to this
+  tool, not to VDI 2770* — is the one instruction a sender of a thousand genuine
+  violations must not act on. Truncation carries its own flag and its own
+  remedy: correct what is listed and run it again.
+
 - **Eight bytes named `VDI2770_Main.pdf`, and the container was clean.** The
   reserved main document being scanned by nobody was closed once — *an
   eighteen-byte text file passed with exit 0* — and that repair made the file
@@ -1212,7 +1239,7 @@ Three gates that ask what `make check` cannot ask of itself.
   broken row, not a kill; and **one row must survive**, because a harness that
   reports red for a change that does not matter is reporting red for everything.
   It found two holes on its first full run.
-- **`make standalone`** runs each of the 62 test files on its own. A suite is a
+- **`make standalone`** runs each of the 63 test files on its own. A suite is a
   shared process, so a file can pass because an earlier one imported something —
   `tests/test_offline.py` did exactly that for weeks, patching `socket.socket`
   and then importing `urllib.request`, which breaks `class SSLSocket(socket)`

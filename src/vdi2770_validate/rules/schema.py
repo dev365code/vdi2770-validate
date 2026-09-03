@@ -29,8 +29,17 @@ def check(container, parse_error, schema_errors) -> Iterator[Finding]:
         blame = err.get("broken")
         if blame:
             r = rule("X0" if blame == "install" else "X4")
+            # `X4`'s remedy is written for a document the checker would not
+            # follow to the end. It is the wrong instruction for one that simply
+            # broke the schema more times than this tool will list: nothing here
+            # needs simplifying, and every violation above belongs to the sender.
             yield Finding(r, r.title, container.where.child(member=container.metadata_name),
-                          detail=err.get("reason"))
+                          detail=err.get("reason"),
+                          fix=None if blame != "listing" else
+                          "Correct the violations this report does list and run it "
+                          "again; the ones past the limit are reported once there "
+                          "is room for them. They are your document's, not this "
+                          "tool's — only the stopping is ours.")
             continue
         r = rule("X2")
         where = container.where.child(member=container.metadata_name,

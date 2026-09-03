@@ -155,11 +155,17 @@ def validate(data: bytes, tree: Node) -> List[dict]:
 
     out = _rendered(errors, tree)
     if stopped:
-        # `broken: document` is the flag the rules layer reads to say the check
-        # could not finish. A truncated check that said nothing would leave the
-        # reader taking the count as the document's error count, which is the
-        # quieter-verdict failure in another costume.
-        out.append({"broken": "document", "line": None, "column": None, "path": "",
+        # Its own flag, not `document`. Both mean "the check did not finish", and
+        # the rules layer says so with one rule -- but the *reason* differs and
+        # so does what the sender should do. A document the checker would not
+        # follow to the end is one to simplify; a document with more violations
+        # than this tool will list is one to correct, and telling its sender to
+        # simplify a file that is not complex but wrong -- closing with "the
+        # limit that gave up belongs to this tool, not to VDI 2770" over a
+        # thousand genuine violations -- is the one sentence they must not act
+        # on. A truncated check that said nothing at all would be worse still:
+        # the reader would take the count for the document's error count.
+        out.append({"broken": "listing", "line": None, "column": None, "path": "",
                     "reason": f"the schema check stopped after {MAX_SCHEMA_ERRORS} "
                               f"violations; there are more"})
     return out
