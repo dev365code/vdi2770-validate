@@ -168,6 +168,21 @@ def _spelling_at(text: str, positions) -> str:
         for i, c in enumerate(text))
 
 
+def spelled_where_not_ascii(value: str) -> str:
+    """`value` with every character outside ASCII written as its code point.
+
+    For a value a standard defines as ASCII -- a language tag, a class id --
+    where a character that is not ASCII is itself the defect. Neither of the
+    other two renderings reaches it: `escaped` spells a name out only when it is
+    not its own NFC, and one Cyrillic `е` among Latin letters is its own NFC;
+    `told_apart` needs a second string to align against, and a tag this tool
+    says it does not check has none. So the report read "is tagged 'en', which
+    this tool does not check" over a tag that is not `en`, which is nonsense on
+    its face.
+    """
+    return "".join(c if c.isascii() else _spelled(c) for c in value)
+
+
 def as_written(name: str) -> str:
     """The archive's own spelling, with only what draws nothing spelled out.
 

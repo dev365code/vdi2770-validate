@@ -10,7 +10,7 @@ from typing import Iterator
 
 from ..catalog import CLASSIFICATION_SYSTEM, ISO_639_1, document_classes, english_for, german_for, rule
 from ..model import Finding, Kind
-from ..names import as_written, escaped, nfc, told_apart
+from ..names import as_written, escaped, nfc, spelled_where_not_ascii, told_apart
 
 RELEASED = "Released"
 
@@ -32,7 +32,18 @@ def _two_names(text: str, published, class_id: str, lead: str) -> str:
     picking the closest would make the report's rendering depend on which name a
     comparison happened to choose. The rest are shown as they are written.
     """
-    observed, first = told_apart(text, published[0])
+    # `told_apart` aligns position by position and gives up when the lengths
+    # differ. Quoting what the sender wrote rather than its normalisation is
+    # what makes them differ -- a name with a decomposed umlaut is one character
+    # longer than the published one -- and a Cyrillic `е` in the same name then
+    # went unspelled, which is the failure that helper exists to prevent.
+    # `escaped` is the answer for exactly this input: a name that is not its own
+    # NFC has every character outside ASCII spelled out, and the Cyrillic one is
+    # outside it.
+    if nfc(text) != text:
+        observed, first = escaped(text), escaped(published[0])
+    else:
+        observed, first = told_apart(text, published[0])
     rest = [f"'{escaped(w)}'" for w in published[1:]]
     return (f"'{observed}' for class {class_id}; {lead} "
             + " / ".join([f"'{first}'"] + rest))
@@ -75,7 +86,7 @@ def check(container, document) -> Iterator[Finding]:
             r = rule("M2")
             yield Finding(r, r.title, c.src.child(container=container.path,
                                                   member=container.metadata_name),
-                          detail=f"ClassId '{as_written(c.class_id)}'")
+                          detail=f"ClassId '{spelled_where_not_ascii(c.class_id)}'")
             continue
         want_de = german_for(c.class_id)
         want_en = english_for(c.class_id)
@@ -125,9 +136,9 @@ def check(container, document) -> Iterator[Finding]:
             elif not low.startswith("en"):
                 r = rule("M8")
                 yield Finding(r, r.title, where,
-                              detail=f"'{as_written(written)}' is tagged "
-                                     f"'{as_written(lang)}', which this tool "
-                                     f"does not check")
+                              detail=f"'{escaped(written)}' is tagged "
+                                     f"'{spelled_where_not_ascii(lang)}', which "
+                                     f"this tool does not check")
             elif text not in want_en:
                 r = rule("M4")
                 yield Finding(r, r.title, where,
@@ -140,7 +151,7 @@ def check(container, document) -> Iterator[Finding]:
                 r = rule("M5")
                 yield Finding(r, r.title, tag.src.child(container=container.path,
                                                         member=container.metadata_name),
-                              detail=f"Language '{as_written(tag.code)}'")
+                              detail=f"Language '{spelled_where_not_ascii(tag.code)}'")
         for d in v.descriptions:
             # `and d.language` here let an empty attribute switch the check
             # off, which is the shape M8's own whyOurs warns about. `is not
@@ -150,7 +161,7 @@ def check(container, document) -> Iterator[Finding]:
                 r = rule("M5")
                 yield Finding(r, r.title, d.src.child(container=container.path,
                                                       member=container.metadata_name),
-                              detail=f"DocumentDescription Language '{as_written(d.language)}'")
+                              detail=f"DocumentDescription Language '{spelled_where_not_ascii(d.language)}'")
         if not any(f.file_format.split(";")[0].strip().lower() == "application/pdf" for f in v.files):
             r = rule("M6")
             yield Finding(r, r.title, v.src.child(container=container.path,

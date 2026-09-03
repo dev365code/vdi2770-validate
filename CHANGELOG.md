@@ -101,9 +101,22 @@ rest of these entries are about — and that one was itself wrong twice.
   letter with an empty glyph, so `M2` read `ClassId '02-01'` — the very value
   its remedy then asks the sender to use, which makes the finding look like a
   bug in this tool. `M3` and `M4` had gone through the names module for exactly
-  this; `M2`, `M5`, `M8`, `M9` and `M7` had not. (A homoglyph in a value with no
-  published counterpart — a Cyrillic `е` in a language code — still prints as
-  itself: telling *that* apart takes both strings, and there is only one.)
+  this; `M2`, `M5`, `M8`, `M9` and `M7` had not. A value a standard defines as
+  ASCII — a language tag, a class id — now spells out every character that is
+  not one, because neither of the other renderings reaches a Cyrillic `е` among
+  Latin letters: it is its own NFC, so nothing is escaped, and a tag this tool
+  says it does not check has no counterpart to be told apart from. The report
+  read *is tagged 'en', which this tool does not check* over a tag that is not
+  `en`.
+
+- **And quoting the sender's spelling blinded the comparison that spells.**
+  `told_apart` aligns two strings position by position and gives up when the
+  lengths differ — which is exactly what quoting the un-normalised spelling
+  makes happen, since a decomposed umlaut is one character longer. A class name
+  carrying both that and a Cyrillic `е` then printed as two lines nobody can
+  tell apart, which is the failure that helper exists to prevent. `escaped` is
+  the answer for that input and is used for it: a name that is not its own NFC
+  has every character outside ASCII spelled out.
 
 - **A third failure wore the "the check could not finish" flag.** More
   violations than this tool will list is not a document the checker would not
