@@ -35,7 +35,7 @@ failure — files that never claimed at all.
 | **IEC 61406 identification links** | A self-contained URL-grammar problem with its own corpus needs. Named for a later milestone, not forgotten. |
 | **Rendering PDF reports** | Not a validator's job. |
 | **Container nesting beyond three levels** | Reported rather than opened. Three levels occur in real containers; deeper is a budget, not a verdict. |
-| **More than a thousand containers, 64 MiB of metadata, or 4 GiB inflated, in one read** | Same answer: reported, not opened. Every other limit bounds one archive; these three bound the tree, because a few hundred kilobytes of nested containers could otherwise ask for more memory — or more CPU — than the machine has. The third was missing until it was measured: a 6.4 MB file inflated two terabytes and returned a clean verdict. |
+| **More than a thousand containers, 64 MiB of metadata, or 4 GiB inflated, in one read** | Same answer: reported, not opened. Every other limit bounds one archive; these three bound the tree, because a few hundred kilobytes of nested containers could otherwise ask for more memory — or more CPU — than the machine has. The third was missing until it was measured: a 6.4 MB file inflated two terabytes and returned a clean verdict. It is two ceilings, not one, because two layers inflate: the archive reader expands members, and the PDF scan then expands the streams *inside* a member it was handed. The second was charged per file and not per read, so 150 declared PDFs in a 5.7 MB archive inflated 4.47 GiB — past a ceiling that was only ever watching the other door — and returned exit 0. Each layer now stops at 4 GiB and says which files it did not open. |
 
 ## Known limits of what *is* in scope
 
@@ -78,8 +78,8 @@ failure — files that never claimed at all.
   0.36–0.47 GB/s end to end; a third mix on the same machine reached 0.73. The
   figure below is the low end of that, so the seconds it gives are the slow
   answer rather than the flattering one. At 0.5 GB/s a container reaching the
-  2 GiB ceiling costs about **4 seconds** and the whole-read ceiling of 4 GiB
-  about **9**. Both figures are that division and nothing else, so a machine half
+  2 GiB ceiling costs about **4 seconds** and either whole-read ceiling of 4 GiB
+  about **9** — so a read that spends both stops at roughly twice that. Both figures are that division and nothing else, so a machine half
   this speed takes twice as long. The figure once published here, 1.1 GB/s, was
   above what zlib does on this content, and the 0.6 GB/s that replaced it was
   still above what this machine does. Nothing is held: the bytes are discarded as

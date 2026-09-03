@@ -19,6 +19,7 @@ from conftest import CLEAN_DOCUMENT, under_test
 from vdi2770 import pdfread, xmlread, zipread
 from vdi2770_validate import model, xsdvalidate
 from vdi2770_validate.rules import container as r_container
+from vdi2770_validate.rules import pdf as r_pdf
 
 BASE = {n: zipfile.ZipFile(CLEAN_DOCUMENT).read(n)
         for n in zipfile.ZipFile(CLEAN_DOCUMENT).namelist()}
@@ -53,6 +54,10 @@ PDF_BUDGETS = {
     "MAX_STREAM_SCAN": (1 << 10, 8 << 20),
     "MAX_INFLATED_PER_STREAM": (1 << 20, 64 << 20),
     "MAX_INFLATED_TOTAL": (1 << 20, 256 << 20),
+    # And the same across one read, however many files it opens. The floor
+    # is one file's worth: a read allowed less than that could not finish
+    # the first PDF it was given.
+    "MAX_INFLATED_PER_READ": (32_000_000, 64 << 30),
     "MAX_STREAMS": (16, 100_000),
     "MAX_TRAILER_SCAN": (256, 1 << 20),
     "MAX_TRAILERS": (8, 4_096),
@@ -74,7 +79,7 @@ def test_every_budget_constant_is_in_one_of_those_tables():
     # whole job is to notice a new cap.
     for module, table in ((zipread, BUDGETS), (pdfread, PDF_BUDGETS),
                           (model, REPORT_BUDGETS), (r_container, RULE_BUDGETS),
-                          (xsdvalidate, SCHEMA_BUDGETS)):
+                          (r_pdf, PDF_RULE_BUDGETS), (xsdvalidate, SCHEMA_BUDGETS)):
         declared = {n for n in vars(module)
                     if n.startswith(("MAX_", "MIN_")) and isinstance(getattr(module, n), int)}
         missing = sorted(declared - set(table))
@@ -97,6 +102,11 @@ RUNNER_BUDGETS = {"MAX_TOTAL_ELEMENTS": (450_000, 50_000_000)}
 # members would name neither.
 RULE_BUDGETS = {"MAX_FOLDER_DEPTH": (4, 256), "MAX_FOLDERS": (16, 4_096),
                 "MAX_ALIKE": (1, 64)}
+# The P layer's own list bound, the same idea as `MAX_ALIKE`: how many files the
+# one finding about an exhausted budget names before it counts the rest. Its own
+# table, because the completeness sweep below reads each table against the module
+# that must declare every name in it.
+PDF_RULE_BUDGETS = {"MAX_NAMED": (1, 64)}
 # The bytes were bounded and the tree built out of them was not. The corpus's
 # largest metadata file has 53 elements; the floor here is a thousand times that,
 # because a limit tight enough to refuse a real delivery is its own defect.
@@ -108,10 +118,12 @@ XML_BUDGETS = {"MAX_ELEMENTS": (50_000, 5_000_000),
 
 @pytest.mark.parametrize("where,name,bounds", sorted(
     [("model", k, v) for k, v in REPORT_BUDGETS.items()]
-    + [("rules.container", k, v) for k, v in RULE_BUDGETS.items()]))
+    + [("rules.container", k, v) for k, v in RULE_BUDGETS.items()]
+    + [("rules.pdf", k, v) for k, v in PDF_RULE_BUDGETS.items()]))
 def test_a_validator_budget_is_a_budget(where, name, bounds):
     low, high = bounds
-    value = getattr(model if where == "model" else r_container, name)
+    value = getattr({"model": model, "rules.container": r_container,
+                     "rules.pdf": r_pdf}[where], name)
     assert low <= value <= high, (
         f"{where}.{name} is {value}; outside {low}..{high} it is not protecting anyone")
 
@@ -330,7 +342,7 @@ def test_no_module_in_either_package_holds_an_unpinned_budget():
             if caps:
                 seen[info.name] = caps
 
-    pinned = set(BUDGETS) | set(PDF_BUDGETS) | set(REPORT_BUDGETS) | set(RULE_BUDGETS) \
+    pinned = set(BUDGETS) | set(PDF_BUDGETS) | set(REPORT_BUDGETS) | set(RULE_BUDGETS) | set(PDF_RULE_BUDGETS) \
         | set(SCHEMA_BUDGETS) | set(XML_BUDGETS) | set(RUNNER_BUDGETS)
     unpinned = {m: sorted(c - pinned) for m, c in seen.items() if c - pinned}
     assert not unpinned, f"budgets no table pins: {unpinned}"

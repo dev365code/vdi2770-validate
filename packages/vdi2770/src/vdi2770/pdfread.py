@@ -15,7 +15,7 @@ from __future__ import annotations
 import re
 import zlib
 from dataclasses import dataclass
-from typing import Optional
+from typing import Callable, List, Optional
 
 # A PDF/A identification is identified by its namespace URI. The prefix bound to
 # that URI is a local choice -- `pa:part` says exactly what `pdfaid:part` says --
@@ -350,6 +350,19 @@ MAX_STREAM_SCAN = 400_000        # compressed bytes read after each stream marke
 MAX_INFLATED_PER_STREAM = 4_000_000   # and what we will let one of them become
 MAX_STREAMS = 512                     # zlib is cheap per call; a million calls are not
 MAX_INFLATED_TOTAL = 32_000_000       # the whole budget for one file
+# And the whole budget for one read, however many files it opens. The line above
+# bounds a file; a container declares many, and a caller that reads them all
+# spends that cap once per file with nothing measuring the product. A 5.7 MB
+# archive of 150 declared PDFs inflated 4.47 GiB in 12.7 seconds and returned
+# exit 0 -- through a door the archive reader's own 4 GiB whole-read ceiling
+# does not watch, because the members it hands over are 38 KiB each and it is
+# the PDF scan that expands them.
+#
+# 4 GiB, the same number `docs/scope.md` already promises for one read, and a
+# ceiling no legitimate delivery approaches: the scan stops at the first PDF/A
+# claim it finds, VDI 2770 requires PDF/A, and every PDF in the corpus carries
+# its claim in bytes that were never compressed -- 0 inflated, measured.
+MAX_INFLATED_PER_READ = 4 * 1024 * 1024 * 1024
 
 
 @dataclass(frozen=True)
@@ -360,18 +373,26 @@ class PdfFacts:
     pdfa_claim: Optional[str] = None   # e.g. "2b" — a CLAIM, never a verdict
 
 
-def _haystacks(data: bytes):
+def _haystacks(data: bytes, allowance: Optional[List[int]] = None):
     """The raw bytes, then each stream inflated — under a budget.
 
     A PDF stream can expand about a thousandfold, and we are looking for one
     short XMP packet. Inflating everything to find it lets a 3 MB file cost
     gigabytes, so both the per-stream and the total output are bounded, and so
     is the number of streams we will even try.
+
+    `allowance` is a one-element list holding what the whole read may still
+    inflate, and it is decremented here. Passing it in rather than returning a
+    total is what lets the *next* file in the same read start from what is left:
+    a caller that only learned the cost afterwards would have already paid it,
+    once per file, which is the shape this bound exists to stop.
     """
     yield data
     spent = 0
+    cap = (MAX_INFLATED_TOTAL if allowance is None
+           else min(MAX_INFLATED_TOTAL, allowance[0]))
     for seen, m in enumerate(_STREAM.finditer(data)):
-        if seen >= MAX_STREAMS or spent >= MAX_INFLATED_TOTAL:
+        if seen >= MAX_STREAMS or spent >= cap:
             return
         chunk = data[m.end():m.end() + MAX_STREAM_SCAN]
         try:
@@ -379,6 +400,8 @@ def _haystacks(data: bytes):
         except zlib.error:
             continue
         spent += len(out)
+        if allowance is not None:
+            allowance[0] -= len(out)
         yield out
 
 
@@ -438,13 +461,39 @@ def _claim_in(xmp: bytes) -> Optional[str]:
     return None
 
 
+def reader(allowance: int) -> Callable[[bytes], Optional[PdfFacts]]:
+    """`read`, with what it inflates charged to one allowance for the whole read.
+
+    Answers `None` for a file the allowance no longer reaches. That is not the
+    same answer as "no claim in it", and the caller has to say which: a scan
+    that did not run found nothing, and reporting that as a fact about the file
+    is the shape `PdfFacts` exists to keep out of a report.
+
+    A factory rather than a parameter on `read`, because `read` is a name this
+    package has published and a signature it has promised; the pin that admits
+    a patch release would carry a changed one onto installed machines.
+    """
+    left = [allowance]
+
+    def read_one(data: bytes) -> Optional[PdfFacts]:
+        if left[0] <= 0:
+            return None
+        return _read(data, left)
+
+    return read_one
+
+
 def read(data: bytes) -> PdfFacts:
+    return _read(data, None)
+
+
+def _read(data: bytes, allowance: Optional[List[int]]) -> PdfFacts:
     if not data.startswith(b"%PDF-"):
         return PdfFacts(is_pdf=False)
     header = data[:8].decode("latin-1", "replace")
     encrypted = _is_encrypted(data)
     claim = None
-    for hay in _haystacks(data):
+    for hay in _haystacks(data, allowance):
         for packet in _packets(hay):
             claim = _claim_in(packet)
             if claim:

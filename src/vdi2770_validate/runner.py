@@ -26,6 +26,7 @@ from .rules import metadata as r_metadata
 from .rules import pdf as r_pdf
 from .rules import schema as r_schema
 from .rules.container import _inside, folders_holding_metadata
+from .rules.pdf import Stopped
 
 
 def _into(report, findings, where, what: str) -> None:
@@ -106,7 +107,7 @@ def _step(report, where, what: str, fn, *args, fix: Optional[str] = None):
         return _CRASHED
 
 
-def _facts_for(raw: bytes, accepted):
+def _facts_for(raw: bytes, accepted, read_pdf):
     """A PDF fact cache for one container, over one parse of its directory.
 
     `member_bytes` opens the archive on every call, and this asks it for every
@@ -118,12 +119,20 @@ def _facts_for(raw: bytes, accepted):
     handover with a few thousand drawings is that shape.
     """
     read_member = zipread.member_reader(raw, allowed=accepted)
+    stopped = Stopped(pdfread.MAX_INFLATED_PER_READ)
     cache = {}
 
-    def get(name: str) -> Optional[pdfread.PdfFacts]:
+    def get(name: str):
         if name not in cache:
             member = read_member(name)
-            cache[name] = pdfread.read(member) if member is not None else None
+            if member is None:
+                cache[name] = None            # refused; a Z finding already says so
+            else:
+                # `None` from here means something else: the read's inflation
+                # allowance is gone. Two causes wearing one answer is what let a
+                # file nobody opened be reported as a file with no claim in it.
+                facts = read_pdf(member)
+                cache[name] = facts if facts is not None else stopped
         return cache[name]
 
     return get
@@ -174,6 +183,10 @@ def check_bytes(data: bytes, name: str) -> Report:
     # container in this walk is reachable from `root`, so no id is reused while
     # the loop runs.
     elements = 0         # parsed across this read; see MAX_TOTAL_ELEMENTS
+    # One allowance for the whole walk, not one per container: "this read" is
+    # what `MAX_INFLATED_PER_READ` bounds, and a tree of containers each paying
+    # its own ceiling is the same unbounded product one level up.
+    read_pdf = pdfread.reader(pdfread.MAX_INFLATED_PER_READ)
     raw_of = {}          # id(container) -> (depth, its own bytes or None)
     declared_of = {}     # id(container) -> the names its metadata declares
 
@@ -353,7 +366,8 @@ def check_bytes(data: bytes, name: str) -> Report:
         _into(report, r_metadata.check(c, document), c.where, "metadata")
 
         if raw is not None:
-            _into(report, r_pdf.check(c, document, _facts_for(raw, set(c.file_names))),
+            _into(report,
+                  r_pdf.check(c, document, _facts_for(raw, set(c.file_names), read_pdf)),
                   c.where, "pdf")
 
     return report

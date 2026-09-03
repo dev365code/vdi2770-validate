@@ -86,6 +86,21 @@ rest of these entries are about — and that one was itself wrong twice.
   half that must not go with it: `_unswept` is a state `make check` tolerates and
   a release does not.
 
+- **A second door inflated without a whole-read budget behind it.** The scope
+  page sells "4 GiB inflated, in one read" as a ceiling that bounds the *tree*,
+  and the archive reader keeps it — for the bytes *it* expands. The PDF scan
+  expands the streams inside a member it was handed, on its own 32 MB allowance,
+  once per declared file, and nothing measured the product. Measured: a 5.7 MB
+  archive declaring 150 PDFs inflated **4.47 GiB in 12.7 seconds and returned
+  exit 0**; at the member cap the same shape reaches roughly 300 GiB. The
+  allowance is now spent across the whole read, and a file the read stopped
+  short of opening is reported as one — it used to draw `P3`, *this scan found
+  no PDF/A claim in the file*, which is a fact about a scan that never ran.
+  Legitimate deliveries do not come near the ceiling: the scan stops at the
+  first PDF/A claim it finds, VDI 2770 requires PDF/A, and every PDF in the
+  corpus carries its claim in bytes that were never compressed — 0 inflated,
+  measured.
+
 - **An archive answering to both container kinds was silently one of them.**
   `VDI2770_Main.xml` beside `VDI2770_Metadata.xml` at the root classifies as a
   documentation container, and the document metadata drew `F2`'s bare title —
@@ -1162,7 +1177,7 @@ Three gates that ask what `make check` cannot ask of itself.
   broken row, not a kill; and **one row must survive**, because a harness that
   reports red for a change that does not matter is reporting red for everything.
   It found two holes on its first full run.
-- **`make standalone`** runs each of the 61 test files on its own. A suite is a
+- **`make standalone`** runs each of the 62 test files on its own. A suite is a
   shared process, so a file can pass because an earlier one imported something —
   `tests/test_offline.py` did exactly that for weeks, patching `socket.socket`
   and then importing `urllib.request`, which breaks `class SSLSocket(socket)`

@@ -1,13 +1,34 @@
 """PDF rules (P). We report what a PDF claims. We never report a claim as a verdict."""
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Iterator
 
 from ..catalog import rule
 from ..model import MAIN_PDF, Finding, Kind
-from ..names import Members, folder_path
+from ..names import Members, as_written, folder_path
 
 UNVERIFIED = "this tool cannot verify PDF/A conformance"
+
+@dataclass(frozen=True)
+class Stopped:
+    """The answer for a declared PDF this read stopped short of opening.
+
+    Distinct from `None`, which means the archive reader refused the member and
+    said so as a `Z` finding. Both were `None` once, and a file nobody opened
+    drew `P3` -- "this scan found no PDF/A claim in the file" -- which is a fact
+    about a scan that did not happen.
+
+    It carries the ceiling rather than reading it, because a rule module may not
+    import a parser: the layer that spends a budget is the layer that knows what
+    it was, and this one only says so.
+    """
+
+    ceiling: int
+
+# The most files one finding will name before it counts the rest, as everywhere
+# else a finding lists members.
+MAX_NAMED = 5
 
 
 def _targets(container, document):
@@ -49,10 +70,14 @@ def _targets(container, document):
 
 
 def check(container, document, facts_for) -> Iterator[Finding]:
+    unopened = []
     for name, why in _targets(container, document):
         facts = facts_for(name)
         if facts is None:
             continue          # the reader refused it, and said so as a Z finding
+        if isinstance(facts, Stopped):
+            unopened.append((name, facts))
+            continue
         where = container.where.child(member=name, subject=name)
         if not facts.is_pdf:
             r = rule("P1")
@@ -80,3 +105,21 @@ def check(container, document, facts_for) -> Iterator[Finding]:
                    f"read from an XMP packet in the file; PDF/A-3 files carry "
                    f"attachments with packets of their own, and this tool cannot "
                    f"tell one from the other")
+
+    if unopened:
+        # `Z5`, the sentence this tool already uses for every limit it declines
+        # to spend: same statement, same remedy -- split the delivery -- and
+        # `about: tool`, because the ceiling is ours. Saying it once with a count
+        # beats one line per file, and saying nothing was the defect.
+        r = rule("Z5")
+        yield Finding(
+            r, r.title, container.where,
+            detail=f"this read spent its {unopened[0][1].ceiling}-byte "
+                   f"budget for inflating PDF streams, so "
+                   f"{len(unopened)} declared PDF "
+                   f"file{'' if len(unopened) == 1 else 's'} "
+                   f"{'was' if len(unopened) == 1 else 'were'} not opened: "
+                   + ", ".join(as_written(n) for n, _ in unopened[:MAX_NAMED])
+                   + (", ..." if len(unopened) > MAX_NAMED else "")
+                   + ". Nothing is claimed about them",
+            fix=rule("Z5").remedy)
