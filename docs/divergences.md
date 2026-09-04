@@ -178,6 +178,25 @@ alongside `refCodes` (display only).
 
 ## 5. What the reference reports that we do not
 
+Three containers in the sweep draw a warning or an error from the reference and
+nothing louder than a note from us. One is the PDF/A conformance policy in §2
+(`REP_038` on `document-invalid-pdfa-b.zip`). The other two are open:
+
+| container | reference | us |
+| --- | --- | --- |
+| `documentcontainer-invalid.zip` | `REP_018` (warning) | a PDF/A note, nothing else |
+| `objectreferences.zip` | `D_010` (warning) | a PDF/A note, nothing else |
+
+We cannot say here what those two assert. The reference's message *keys* are what
+the sweep records, and the file vendored into this repository holds its message
+*values* — see §4 — so the sentence behind a key is not something this repository
+can print. Naming them unexplained is better than averaging them away, and a test
+in this repository fails if the sweep ever grows a fourth that this page does not
+name.
+
+### The rest are progress lines
+
+
 The reference's message catalogue is largely a log, not a finding stream: most of
 its messages are exceptions and progress lines (`REP_009 "DocumentId: {0}"`, both
 in the vendored list) rather than verdicts. We do not emit progress. A comparison

@@ -4,6 +4,8 @@ The first one was hand-written: it showed one remedy for three findings, wrapped
 a line the renderer never wraps, and quoted a column number that cannot occur.
 A fabricated sample is a screenshot of a program that does not exist.
 """
+import contextlib
+import io
 import re
 
 from conftest import ROOT, ordinal, under_test
@@ -167,3 +169,47 @@ def test_the_reader_readmes_snippet_prints_what_it_says_it_prints():
                 f"an identifier is (domain, value) and the README shows {pair!r}")
         assert isinstance(shown_classes, list) and shown_classes, line
         assert all(isinstance(k, str) and "-" in k for k in shown_classes), line
+
+
+def test_a_reader_who_has_only_installed_it_can_run_the_first_command():
+    """The first command a stranger runs must not need a file they do not have.
+
+    `pip install` was followed straight away by a check on `corpus/…`, which the
+    wheel does not carry — so the first thing the README asks for produced
+    `cannot read it — No such file or directory`. The sentence that mentions a
+    clone came *after* the command, and no `git clone` line appeared anywhere.
+    """
+    text = README
+    first = re.search(r"vdi2770-validate check (corpus|tests)/", text)
+    if first is None:
+        return                    # no repo-relative example to get wrong
+    clone = text.find("git clone")
+    assert clone >= 0, (
+        "the README runs commands against paths inside this repository and "
+        "never says how to get them")
+    assert clone < first.start(), (
+        "the README asks for a file from this repository before it says how to "
+        "obtain one")
+
+
+def test_the_readme_states_the_exit_codes_the_tool_really_returns(tmp_path):
+    """It is sold as something to drop into a CI job, and the numbers a CI job
+    reads were written down in one source docstring and nowhere a user looks."""
+    from conftest import CLEAN_DOCUMENT, FIXTURES
+    from vdi2770_validate.cli import main
+
+    text = README
+    measured = {}
+    for label, path in (("clean", str(CLEAN_DOCUMENT)),
+                        ("error", str(FIXTURES / "m2-unknown-class-id.zip")),
+                        ("unreadable", str(tmp_path / "nope.zip"))):
+        with contextlib.redirect_stdout(io.StringIO()), \
+                contextlib.redirect_stderr(io.StringIO()):
+            measured[label] = main(["check", path])
+    assert sorted(measured.values()) == [0, 1, 2], measured
+
+    where = text.lower()
+    assert "exit" in where, "the README never mentions the exit codes"
+    for code in sorted(set(measured.values())):
+        assert f"`{code}`" in text or f" {code} " in text, (
+            f"exit code {code} is returned and not written down")

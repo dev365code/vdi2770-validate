@@ -39,6 +39,21 @@ gate or dropped, because a number nobody re-derives is the kind of claim the
 rest of these entries are about — and that one was itself wrong twice.
 
 
+- **The page that promises to write every disagreement down was kept by hand.**
+  Three containers in the reference sweep draw a warning or an error there and
+  nothing louder than a note here; one is the documented PDF/A policy and two
+  were on no page at all. They are named now — including the fact that this
+  repository cannot print what they assert, because the sweep records the
+  reference's message *keys* and the vendored file holds its *values*. A test
+  fails if the sweep ever grows a fourth the page does not name.
+
+- **A stranger's first command failed.** `pip install` was followed straight
+  away by a check on a path only a clone provides, and the sentence mentioning a
+  clone came after the command, with no `git clone` line anywhere. The first
+  block now runs on a file the reader already has, and the exit codes — the
+  numbers a CI job actually reads — are on the page rather than in a source
+  docstring.
+
 - **A remedy that could not be followed.** `Z11` told the sender of an inner
   container that declaring it as payload is *what tells this tool which of the
   two you meant* — and it stopped being true when the rule learned to report a
@@ -1380,7 +1395,7 @@ Three gates that ask what `make check` cannot ask of itself.
   broken row, not a kill; and **one row must survive**, because a harness that
   reports red for a change that does not matter is reporting red for everything.
   It found two holes on its first full run.
-- **`make standalone`** runs each of the 65 test files on its own. A suite is a
+- **`make standalone`** runs each of the 66 test files on its own. A suite is a
   shared process, so a file can pass because an earlier one imported something —
   `tests/test_offline.py` did exactly that for weeks, patching `socket.socket`
   and then importing `urllib.request`, which breaks `class SSLSocket(socket)`

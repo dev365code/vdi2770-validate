@@ -15,6 +15,19 @@ Names are used descriptively.
 
 ```bash
 pip install vdi2770-validate
+vdi2770-validate check YOUR-CONTAINER.zip
+```
+
+It exits `0` when it found no error, `1` when it found at least one or could not
+read a path you gave it, and `2` when it could read none of them. A warning does
+not move the number, so `0` means *no error*, not *nothing to look at* — the
+report says what it found either way.
+
+The rest of this page runs on containers that ship here, so to follow along:
+
+```bash
+git clone https://github.com/dev365code/vdi2770-validate
+cd vdi2770-validate
 ```
 
 ```
@@ -37,7 +50,7 @@ folders.zip
   3 error(s), 1 warning(s), 0 note(s) — 1 of the errors is this tool declining to look, not the container
 ```
 
-That is real output on a container that ships with this repository, so the same command works after cloning.
+That is real output, not a hand-written sample: a test in this repository runs the command and compares.
 
 ## What it will not tell you
 
