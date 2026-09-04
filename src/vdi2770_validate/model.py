@@ -130,9 +130,30 @@ MAX_LISTED_PER_RULE = 100
 
 
 @dataclass
+class Read:
+    """What this read opened, and what the archive says was there to open.
+
+    Both halves come from the archive's own directory rather than from how far
+    this tool got, which is the property that makes the pair worth printing: a
+    sender can check `1 of 3 metadata files` with `unzip -l`, and giving up
+    cannot improve it. A figure counted over this tool's own machinery has the
+    opposite sign — a file that is not a ZIP calls for one check, that check
+    runs, and the worst input this tool sees scores full marks.
+    """
+
+    archives_found: int = 0
+    archives_opened: int = 0
+    metadata_found: int = 0
+    metadata_read: int = 0
+    pdfs_declared: int = 0
+    pdfs_opened: int = 0
+
+
+@dataclass
 class Report:
     target: str
     findings: list = field(default_factory=list)
+    read: Read = field(default_factory=Read)
     # (rule id, container) -> how many findings were counted but not kept.
     suppressed: Dict[Tuple[str, str], int] = field(default_factory=dict)
     _listed: Dict[Tuple[str, str], int] = field(default_factory=dict, repr=False)

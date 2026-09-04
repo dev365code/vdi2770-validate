@@ -39,6 +39,20 @@ gate or dropped, because a number nobody re-derives is the kind of claim the
 rest of these entries are about — and that one was itself wrong twice.
 
 
+- **The report says how much of the container it read.** `0 error(s)` is a
+  statement about findings, not about reach: a file this tool could not open at
+  all printed the same shape as a container with one small thing wrong, and six
+  of this repository's own fixtures report a full stop that way. Every report
+  now carries what was opened beside what the archive's own directory said was
+  there — `read 1 of 3 metadata files` — and both halves are the sender's
+  material, so a reader can check the pair with `unzip -l` and giving up cannot
+  improve it. That last property decided the shape: a figure counted over this
+  tool's own machinery scores a file that is not a ZIP at one out of one, so the
+  worst input it ever sees would score full marks. The line is not a finding —
+  `--quiet` and the listing cap both leave it alone — and the same numbers are
+  in `--json` under `read`, with a `complete` flag that is not derivable from
+  them.
+
 - **The page that promises to write every disagreement down was kept by hand.**
   Three containers in the reference sweep draw a warning or an error there and
   nothing louder than a note here; one is the documented PDF/A policy and two
@@ -1395,7 +1409,7 @@ Three gates that ask what `make check` cannot ask of itself.
   broken row, not a kill; and **one row must survive**, because a harness that
   reports red for a change that does not matter is reporting red for everything.
   It found two holes on its first full run.
-- **`make standalone`** runs each of the 65 test files on its own. A suite is a
+- **`make standalone`** runs each of the 66 test files on its own. A suite is a
   shared process, so a file can pass because an earlier one imported something —
   `tests/test_offline.py` did exactly that for weeks, patching `socket.socket`
   and then importing `urllib.request`, which breaks `class SSLSocket(socket)`

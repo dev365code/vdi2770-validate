@@ -18,7 +18,7 @@ from vdi2770.zipread import Kind
 
 from . import xsdvalidate
 from .catalog import rule
-from .model import NS, Finding, Location, Report
+from .model import MAIN_XML, METADATA_XML, NS, Finding, Location, Report
 from .names import folder_path
 from .rules import container as r_container
 from .rules import files as r_files
@@ -160,6 +160,15 @@ def check_bytes(data: bytes, name: str) -> Report:
                      "archive if you can share it.")
     if root is _CRASHED:
         return report
+
+    # What the archive says was there to open, counted from its own directory,
+    # and what this read actually opened. Both halves are the sender's material:
+    # a name ending in one of the two reserved metadata names is one a reader can
+    # count with `unzip -l`, so the pair cannot be flattered by this tool giving
+    # up. Counting instead over this tool's own machinery has the opposite sign —
+    # a file that is not a ZIP calls for one check, that check runs, and the
+    # worst input this tool ever sees would score full marks.
+    report.read.archives_found = 1
     # Keyed by the container each entry belongs to, and pruned as the walk
     # leaves a subtree, so at most one root-to-here chain is ever held. Two
     # earlier versions keyed this differently and both were wrong:
@@ -190,6 +199,21 @@ def check_bytes(data: bytes, name: str) -> Report:
     declared_of = {}     # id(container) -> the names its metadata declares
 
     for c in root.walk():
+        # Every container the walk reaches was opened, and every `.zip` member
+        # inside one is an archive that was there to open whether or not this
+        # read reached it. `UNREADABLE` is the one the walk still visits and
+        # nobody opened: the reader hands back a container so the refusal has
+        # somewhere to live, and counting it as opened would say this tool read
+        # a file it could not read.
+        if c.kind is not Kind.UNREADABLE:
+            report.read.archives_opened += 1
+        report.read.archives_found += sum(
+            1 for n in c.file_names if n.lower().endswith(".zip"))
+        report.read.metadata_found += sum(
+            1 for n in c.file_names
+            if folder_path(n).rsplit("/", 1)[-1] in (METADATA_XML, MAIN_XML))
+        if c.metadata_bytes is not None:
+            report.read.metadata_read += 1
         # Leaving a subtree: everything at this depth or below is finished.
         for key in [k for k, (d, _) in raw_of.items() if d >= c.depth]:
             del raw_of[key]

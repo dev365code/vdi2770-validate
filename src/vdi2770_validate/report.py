@@ -80,6 +80,16 @@ def as_text(report: Report, show_info: bool = True) -> str:
                  f"{'is' if ours == 1 else 'are'} this tool declining to look, "
                  f"not the container")
     lines.append(said)
+    # And what this read opened, beside what the archive said was there. Both
+    # halves come from the sender's own directory listing, so the pair says
+    # something a reader can check and this tool cannot flatter. It is not a
+    # finding: `--quiet` filters notes and the listing cap bounds what is
+    # printed, and a statement about how much of the tool ran must survive both.
+    r = report.read
+    parts = [f"{r.archives_opened} of {r.archives_found} archives"]
+    if r.metadata_found:
+        parts.append(f"{r.metadata_read} of {r.metadata_found} metadata files")
+    lines.append("  read " + ", ".join(parts))
     return "\n".join(lines)
 
 
@@ -93,6 +103,19 @@ def as_json(report: Report, show_info: bool = True) -> str:
         "pdfaVerified": False,
         "pdfaNote": "This tool reports PDF/A claims. It does not verify them.",
         "summary": {s.value: report.count(s) for s in Severity},
+        # What was opened, beside what the archive's own directory said was
+        # there. `show_info` does not reach it: this is a statement about how
+        # much of the tool ran, and a flag that hides notes must not change it.
+        "read": {
+            "archives": {"opened": report.read.archives_opened,
+                         "found": report.read.archives_found},
+            "metadataFiles": {"read": report.read.metadata_read,
+                              "found": report.read.metadata_found},
+            "complete": (report.read.archives_opened == report.read.archives_found
+                         and report.read.metadata_read == report.read.metadata_found),
+            "note": "Counted from the archive's own directory, not from how far "
+                    "this tool got: `found` does not shrink when it gives up.",
+        },
         # Counted in the summary above, and deliberately not listed below: one
         # rule can fire once per element, and four hundred thousand identical
         # findings serve nobody.
