@@ -39,6 +39,15 @@ gate or dropped, because a number nobody re-derives is the kind of claim the
 rest of these entries are about — and that one was itself wrong twice.
 
 
+- **`--quiet` deleted the one refusal this project leads with.** *This tool
+  cannot verify PDF/A conformance* is said by `P3` and `P4`, which are notes,
+  and `--quiet` — the flag a CI log reaches for — hides notes. Measured: zero
+  mentions of PDF/A in the whole output. The run says it once now, whatever the
+  flags and however many paths were given, outside the findings channel where a
+  filter cannot reach it and where it moves no count and no exit code. The same
+  shape as the coverage line, for the same reason: a statement about what this
+  tool does is not a finding about a container.
+
 - **The README's sample was a real session with its ending removed.** The gate
   that keeps it honest asserts every line shown is a line the tool prints, which
   cannot see a line the tool prints and the page leaves out — so the sample
@@ -1424,7 +1433,7 @@ below is measured on this machine, before and after, on the same input.
 Three gates that ask what `make check` cannot ask of itself.
 
 - **`make mutations`** takes every claim this project makes about a gate, breaks
-  the thing that gate protects, and checks the gate notices — 97 rows, each
+  the thing that gate protects, and checks the gate notices — 98 rows, each
   naming the pytest selection or the tool that has to go red. The harness checks
   itself as hard as it checks the code: a row whose anchor no longer appears
   exactly once is an error rather than a pass; every apply and restore clears

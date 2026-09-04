@@ -390,3 +390,43 @@ def test_findings_are_ordered_the_way_a_reader_counts(tmp_path, capsys):
         rep.add(Finding(r, r.title, Location(container="x.zip")))
     got = [f.rule.id for f in rep.sorted()]
     assert got == ["Z2", "Z11", "Z13"], got
+
+
+def test_the_run_says_what_it_never_verifies_however_it_is_asked(capsys):
+    """The one refusal this tool leads with is carried only by notes.
+
+    `P4` and `P3` say *this tool cannot verify PDF/A conformance* on every file
+    where it matters, and `--quiet` — the flag a CI log reaches for — removes
+    every one of them. The README promises the tool says so on every line where
+    it matters, and under that flag it says so nowhere: measured, zero mentions
+    of PDF/A in the whole output.
+
+    A statement about what this tool never does is not a finding about a
+    container. It belongs to the run, said once however many paths were given,
+    and it does not move a count or an exit code.
+    """
+    box = str(CORPUS / "demo_vdi.zip")
+    for argv in (["check", box], ["check", "--quiet", box],
+                 ["check", "--quiet", box, box]):
+        code, out = run(capsys, argv)
+        assert code == 0, out
+        assert out.lower().count("pdf/a") >= 1, (
+            f"{argv} says nothing about PDF/A:\n{out}")
+    # Once for the run, not once per path.
+    _, two = run(capsys, ["check", "--quiet", box, box])
+    assert two.count("This tool does not verify PDF/A") == 1, two
+
+
+def test_that_standing_line_is_not_a_finding(capsys):
+    """It must not move a count, an exit code, or the JSON's finding list."""
+    import json as _json
+
+    box = str(CORPUS / "demo_vdi.zip")
+    code, out = run(capsys, ["check", "--quiet", box])
+    assert "0 error(s), 0 warning(s), 3 note(s)" in out, out
+    assert code == 0
+
+    code, raw = run(capsys, ["check", "--json", "--quiet", box])
+    payload = _json.loads(raw)
+    assert payload[0]["pdfaVerified"] is False
+    assert all(f["rule"] != "PDFA" for f in payload[0]["findings"])

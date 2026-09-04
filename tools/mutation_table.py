@@ -808,6 +808,14 @@ TABLE = [
      ["tests/test_the_report_says_how_much_it_read.py"],
      "the flag that hides notes hid the line that says how much of this tool ran"),
 
+    ("cli/the-run-says-what-it-never-verifies",
+     "src/vdi2770_validate/cli.py",
+     '        print("This tool does not verify PDF/A conformance. It reports the "',
+     '        _unused = ("This tool does not verify PDF/A conformance. It reports the "',
+     ["tests/test_cli.py"],
+     "the refusal this project leads with was carried only by notes, and the "
+     "flag a CI log reaches for removes every one of them"),
+
     # --- the canary -------------------------------------------------------
     ("canary/a-comment-nobody-reads",
      "src/vdi2770_validate/report.py",
