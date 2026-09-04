@@ -121,11 +121,28 @@ def check(container, document, facts_for) -> Iterator[Finding]:
                           detail="no pdfaid identification found in the XMP metadata")
         else:
             r = rule("P4")
-            yield Finding(r, r.title, where,
-                          detail=f"claims PDF/A-{facts.pdfa_claim} — {UNVERIFIED}. The claim is "
-                   f"read from an XMP packet in the file; PDF/A-3 files carry "
-                   f"attachments with packets of their own, and this tool cannot "
-                   f"tell one from the other")
+            if facts.pdfa_claim.endswith("?"):
+                # `?` is the reader saying "a part, and no level with it".
+                # Printing it inside the claim quotes the file for a level it
+                # does not name; parts 1 to 3 require one, so its absence is the
+                # thing to say, and saying it is not "the claim is well-formed".
+                yield Finding(
+                    r, r.title, where,
+                    detail=f"claims PDF/A part {facts.pdfa_claim[:-1]} and names "
+                           f"no conformance level — {UNVERIFIED}, and this claim "
+                           f"is incomplete besides",
+                    fix="Parts 1, 2 and 3 of PDF/A each require a conformance "
+                        "level beside the part. Re-export with a producer that "
+                        "writes one into the XMP metadata, then run a PDF/A "
+                        "validator such as veraPDF if you need the claim itself "
+                        "verified.")
+            else:
+                yield Finding(
+                    r, r.title, where,
+                    detail=f"claims PDF/A-{facts.pdfa_claim} — {UNVERIFIED}. The "
+                           f"claim is read from an XMP packet in the file; PDF/A-3 "
+                           f"files carry attachments with packets of their own, "
+                           f"and this tool cannot tell one from the other")
 
     if unopened:
         # `Z5`, the sentence this tool already uses for every limit it declines

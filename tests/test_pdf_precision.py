@@ -3,9 +3,12 @@ this project refuses to do about PDF/A. If a guess is going to carry error
 severity, the guess has to be a good deal better than a substring.
 """
 
+import io
+import zipfile
+
 import pytest
 
-from conftest import A_PDF, CORPUS
+from conftest import A_PDF, CLEAN_DOCUMENT, CORPUS
 from vdi2770 import pdfread
 
 VALID = (CORPUS / "Valid.pdf").read_bytes()
@@ -119,3 +122,51 @@ def test_the_real_encrypted_pdf_in_the_corpus_is_still_found():
     assert body.exists(), body
     facts = read_pdf(body.read_bytes())
     assert facts.is_pdf and facts.encrypted, facts
+
+
+def _packet(part: str, conformance: str = "") -> bytes:
+    """One XMP packet claiming a PDF/A part, and a conformance level or none."""
+    conf = (f"<pdfaid:conformance>{conformance}</pdfaid:conformance>"
+            if conformance else "")
+    return (A_PDF + b"<?xpacket begin='' id='W5M0MpCehiHzreSzNTczkc9d'?>"
+            b"<x:xmpmeta xmlns:x='adobe:ns:meta/'><rdf:RDF "
+            b"xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'>"
+            b"<rdf:Description xmlns:pdfaid='http://www.aiim.org/pdfa/ns/id/'>"
+            + f"<pdfaid:part>{part}</pdfaid:part>{conf}".encode()
+            + b"</rdf:Description></rdf:RDF></x:xmpmeta><?xpacket end='w'?>\n")
+
+
+def test_a_conformance_level_this_reader_did_not_know_was_read_past():
+    """`E` and `F` are PDF/A-4's two levels and the pattern accepted neither, so
+    a file claiming `4F` was recorded as claiming `4?` — a level it does not
+    claim, built out of a conformance the reader had just read and discarded."""
+    assert pdfread.read(_packet("4", "E")).pdfa_claim == "4e"
+    assert pdfread.read(_packet("4", "F")).pdfa_claim == "4f"
+    assert pdfread.read(_packet("2", "b")).pdfa_claim == "2b"
+
+
+def test_no_conformance_level_is_what_part_4_is_supposed_to_look_like():
+    """ISO 19005-4 drops the conformance level: a PDF/A-4 file that carries none
+    is claiming exactly what it should, and `4?` said otherwise about every one
+    of them."""
+    assert pdfread.read(_packet("4")).pdfa_claim == "4"
+
+
+def test_a_part_that_requires_a_level_and_carries_none_is_still_not_a_level():
+    """Parts 1 to 3 do require one, so its absence is worth keeping — but `?` is
+    the reader's punctuation, not the file's, and a report that prints
+    `claims PDF/A-1?` is quoting the file for something the file does not say."""
+    assert pdfread.read(_packet("1")).pdfa_claim == "1?"
+
+    from vdi2770_validate.runner import check_bytes
+    box = io.BytesIO()
+    with zipfile.ZipFile(box, "w") as z:
+        base = zipfile.ZipFile(CLEAN_DOCUMENT)
+        for name in base.namelist():
+            z.writestr(name, _packet("1") if name == "B.pdf" else base.read(name))
+    said = [f for f in check_bytes(box.getvalue(), "half.zip").findings
+            if f.rule.id == "P4" and f.where.member == "B.pdf"]
+    assert said, "the premise"
+    assert "PDF/A-1?" not in (said[0].detail or ""), said[0].detail
+    assert "conformance" in (said[0].detail or ""), said[0].detail
+    assert "well-formed" not in (said[0].remedy or ""), said[0].remedy

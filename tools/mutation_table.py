@@ -746,6 +746,13 @@ TABLE = [
      "a prefix declared on the root and left off every element read as a "
      "document with nothing in it"),
 
+    ("reader/part-four-names-no-conformance-level-on-purpose",
+     "packages/vdi2770/src/vdi2770/pdfread.py",
+     '        return part.group(1).decode() + ("" if part.group(1) == b"4" else "?")',
+     '        return part.group(1).decode() + "?"',
+     ["tests/test_pdf_precision.py"],
+     "every PDF/A-4 file was recorded as claiming a level it does not claim"),
+
     # --- the canary -------------------------------------------------------
     ("canary/a-comment-nobody-reads",
      "src/vdi2770_validate/report.py",

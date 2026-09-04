@@ -513,10 +513,24 @@ def _claim_in(xmp: bytes) -> Optional[str]:
                 or re.search(p + rb"[:\s]*part\s*[=>]\s*[\"']?(\d)", xmp, re.I))
         if not part:
             continue
-        conf = (re.search(rb"<" + p + rb":conformance>\s*([ABUabu])\s*</" + p + rb":conformance>",
-                          xmp, re.I)
-                or re.search(p + rb"[:\s]*conformance\s*[=>]\s*[\"']?([ABUabu])", xmp, re.I))
-        return part.group(1).decode() + (conf.group(1).decode().lower() if conf else "?")
+        conf = (re.search(rb"<" + p + rb":conformance>\s*([ABUEFabuef])\s*</"
+                          + p + rb":conformance>", xmp, re.I)
+                or re.search(p + rb"[:\s]*conformance\s*[=>]\s*[\"']?([ABUEFabuef])",
+                             xmp, re.I))
+        if conf:
+            return part.group(1).decode() + conf.group(1).decode().lower()
+        # No level. For part 4 that is what the file is supposed to look like --
+        # ISO 19005-4 drops the conformance element -- and `?` said otherwise
+        # about every PDF/A-4 file there is. `E` and `F` are that part's two
+        # levels and the pattern accepted neither, so a file claiming `4F` was
+        # recorded as claiming `4?`: a level it does not claim, built out of a
+        # conformance this reader had just read and thrown away.
+        #
+        # Parts 1 to 3 do require one, so its absence stays worth reporting, and
+        # `?` is how it is carried. It is this reader's punctuation and not the
+        # file's, so a caller printing it inside a quoted claim is quoting the
+        # file for something the file does not say.
+        return part.group(1).decode() + ("" if part.group(1) == b"4" else "?")
     return None
 
 

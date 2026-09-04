@@ -39,6 +39,17 @@ gate or dropped, because a number nobody re-derives is the kind of claim the
 rest of these entries are about — and that one was itself wrong twice.
 
 
+- **Every PDF/A-4 file was recorded as claiming a level it does not claim.** The
+  conformance pattern accepted `A`, `B` and `U` — PDF/A-4's two levels are `E`
+  and `F` — so a file claiming `4F` was recorded as claiming `4?`, a level built
+  out of a conformance this reader had just read and thrown away. And ISO
+  19005-4 drops the conformance element altogether for the base level, so a
+  correct PDF/A-4 file was recorded the same way. Parts 1 to 3 do require a
+  level, so its absence stays worth reporting; `?` is this reader's punctuation
+  and not the file's, and `P4` now says *claims PDF/A part 1 and names no
+  conformance level* rather than printing it inside a quoted claim, under a
+  remedy that no longer calls such a claim well-formed.
+
 - **A crashed step promised that everything else had been checked.** `X5` closed
   with *only the named check did not run*, and three checks in the metadata layer
   decline their case to the schema layer — an absent `ClassId`, an absent
@@ -1299,7 +1310,7 @@ below is measured on this machine, before and after, on the same input.
 Three gates that ask what `make check` cannot ask of itself.
 
 - **`make mutations`** takes every claim this project makes about a gate, breaks
-  the thing that gate protects, and checks the gate notices — 89 rows, each
+  the thing that gate protects, and checks the gate notices — 90 rows, each
   naming the pytest selection or the tool that has to go red. The harness checks
   itself as hard as it checks the code: a row whose anchor no longer appears
   exactly once is an error rather than a pass; every apply and restore clears
