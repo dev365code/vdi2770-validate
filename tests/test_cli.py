@@ -395,26 +395,33 @@ def test_findings_are_ordered_the_way_a_reader_counts(tmp_path, capsys):
 def test_the_run_says_what_it_never_verifies_however_it_is_asked(capsys):
     """The one refusal this tool leads with is carried only by notes.
 
-    `P4` and `P3` say *this tool cannot verify PDF/A conformance* on every file
-    where it matters, and `--quiet` — the flag a CI log reaches for — removes
-    every one of them. The README promises the tool says so on every line where
-    it matters, and under that flag it says so nowhere: measured, zero mentions
-    of PDF/A in the whole output.
+    `P4` says *this tool cannot verify PDF/A conformance*, and `P4` is a note —
+    so `--quiet`, the flag a CI log reaches for, removed it. Measured on a
+    conforming container: zero mentions of PDF/A in the whole output, under a
+    README promising the tool says so on every line where it matters. (`P3` is
+    a *warning* and survives the flag; it says a scan found no claim, which is
+    a different sentence and not this refusal. An earlier telling of this said
+    "P3 and P4, both notes", and only the second half was true.)
 
     A statement about what this tool never does is not a finding about a
     container. It belongs to the run, said once however many paths were given,
     and it does not move a count or an exit code.
     """
+    said = ("This tool does not verify PDF/A conformance. It reports the claim "
+            "a file makes\nabout itself where it finds one; only a PDF/A "
+            "validator can say whether that\nclaim is true.")
     box = str(CORPUS / "demo_vdi.zip")
     for argv in (["check", box], ["check", "--quiet", box],
                  ["check", "--quiet", box, box]):
         code, out = run(capsys, argv)
         assert code == 0, out
-        assert out.lower().count("pdf/a") >= 1, (
-            f"{argv} says nothing about PDF/A:\n{out}")
+        # The whole sentence, not its opening: asserting a prefix let the rest
+        # be rewritten into the claim this project exists to refuse, with the
+        # suite green.
+        assert said in out, f"{argv} does not carry it:\n{out}"
     # Once for the run, not once per path.
     _, two = run(capsys, ["check", "--quiet", box, box])
-    assert two.count("This tool does not verify PDF/A") == 1, two
+    assert two.count(said) == 1, two
 
 
 def test_that_standing_line_is_not_a_finding(capsys):

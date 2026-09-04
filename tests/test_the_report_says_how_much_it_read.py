@@ -89,9 +89,9 @@ def test_the_figure_does_not_improve_when_the_tool_does_less(monkeypatch):
 
 def test_the_machine_shape_carries_it_too_and_quiet_does_not_hide_it():
     """`--quiet` hides notes. It must not hide a statement about how much of
-    this tool ran — that is the one line a CI log most needs, and the tool's
-    other self-limitation, the PDF/A refusal, is carried only by notes and does
-    disappear with them."""
+    this tool ran — that is the one line a CI log most needs. The tool's other
+    self-limitation, the PDF/A refusal, was carried by a note and did disappear
+    with it, which is why the run now says that one in its own right."""
     import json
 
     from vdi2770_validate.report import as_json

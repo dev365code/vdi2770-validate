@@ -72,9 +72,17 @@ def _cmd_check(args) -> int:
         print(_json_this_console_can_carry(documents))
     elif unreadable < len(args.paths):
         # Once for the run, whatever the flags. This is the refusal the project
-        # leads with, and it was carried only by `P3` and `P4` -- notes, which
-        # `--quiet` removes, so the flag a CI log reaches for deleted every
-        # mention of it. A sentence about what this tool never does is not a
+        # leads with, and it was carried by `P4` -- a note, which `--quiet`
+        # removes, so the flag a CI log reaches for deleted it. (`P3` is a
+        # warning and survives; it says a scan found no claim, which is a
+        # different sentence.)
+        #
+        # And the words matter. An earlier wording said this tool "reports the
+        # level a file claims" and that "only a PDF/A validator can check the
+        # claim" -- both untrue, four lines under a finding saying a file names
+        # no level, and beside a remedy saying this tool confirms a claim is
+        # present and well-formed. What this tool does not check is the
+        # conformance; the claim it does check. A sentence about what this tool never does is not a
         # finding about a container: it moves no count and no exit code, and
         # saying it once per path would repeat it four hundred times in a sweep.
         #
@@ -86,8 +94,8 @@ def _cmd_check(args) -> int:
         # stop a reader over-trusting a report; with no report there is
         # nothing to over-trust.
         print("\nThis tool does not verify PDF/A conformance. It reports the "
-              "level a file claims;\nonly a PDF/A validator can check the "
-              "claim.")
+              "claim a file makes\nabout itself where it finds one; only a "
+              "PDF/A validator can say whether that\nclaim is true.")
     if unreadable:
         return 2 if unreadable == len(args.paths) else max(worst, 1)
     return worst

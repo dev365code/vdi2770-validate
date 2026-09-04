@@ -51,6 +51,10 @@ folders.zip
 
   3 error(s), 1 warning(s), 0 note(s) — 1 of the errors is this tool declining to look, not the container
   read 1 of 1 archives, 1 of 3 metadata files
+
+This tool does not verify PDF/A conformance. It reports the claim a file makes
+about itself where it finds one; only a PDF/A validator can say whether that
+claim is true.
 ```
 
 The last line is there on every report. `0 error(s)` says what was found; that

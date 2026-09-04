@@ -9,7 +9,6 @@ import io
 import re
 
 from conftest import ROOT, ordinal, under_test
-from vdi2770_validate import report as rendering
 from vdi2770_validate.model import Severity
 from vdi2770_validate.runner import check_file
 
@@ -22,9 +21,25 @@ def test_the_readme_shows_a_command_that_exists():
     assert (ROOT / BLOCK.group(1)).exists(), f"the sample runs on {BLOCK.group(1)}, which is not here"
 
 
+def _command_output(target: str) -> list:
+    """What `vdi2770-validate check <target>` actually prints.
+
+    The renderer is a layer below the command, and the run's closing statement
+    lives in the command. A gate that reads the renderer sees a line the tool
+    does produce as absent -- which is how this sample's ending went missing
+    twice, the second time under the test written to forbid it.
+    """
+    import subprocess
+    import sys
+
+    done = subprocess.run([sys.executable, "-m", "vdi2770_validate", "check", target],
+                          cwd=ROOT, capture_output=True, text=True, env=under_test())
+    return done.stdout.splitlines()
+
+
 def test_every_line_of_the_sample_is_really_produced():
     target, shown = BLOCK.group(1), BLOCK.group(2)
-    real = rendering.as_text(check_file(str(ROOT / target))).splitlines()
+    real = _command_output(target)
     for line in shown.splitlines():
         if not line.strip() or line.strip().startswith("…"):
             continue          # checked by the test below, not skipped
@@ -223,8 +238,7 @@ def test_the_sample_does_not_stop_before_the_tool_does():
     grew a line after the counts.
     """
     target, shown = BLOCK.group(1), BLOCK.group(2)
-    real = rendering.as_text(check_file(str(ROOT / target))).splitlines()
+    real = _command_output(target)
     last = next(line for line in reversed(real) if line.strip())
     assert last.strip() in shown, (
-        f"the tool ends the report with {last.strip()!r} and the sample stops "
-        f"before it")
+        f"the command ends with {last.strip()!r} and the sample stops before it")

@@ -39,6 +39,30 @@ gate or dropped, because a number nobody re-derives is the kind of claim the
 rest of these entries are about — and that one was itself wrong twice.
 
 
+- **That standing sentence was false, and contradicted a finding four lines
+  above it.** It said this tool *reports the level a file claims* — printed
+  under a finding saying a file names no conformance level — and that *only a
+  PDF/A validator can check the claim*, where `P4`'s own remedy says this tool
+  confirms a claim is present and well-formed and one branch of it reports a
+  claim as incomplete. What this tool does not check is the conformance; the
+  claim it does check. The sentence says that now, and a test pins all of it
+  rather than its first eight words, which had let the rest be rewritten into
+  the claim this project exists to refuse with the suite green.
+
+- **And the sample lost its ending again, under the gate written to forbid
+  that.** The gate compared the page against the renderer, and the run's
+  closing statement is printed by the command a layer above — so a line the
+  tool does produce read as absent. Both README gates run the command now.
+
+- **Three things the read figure must be true of, on every container here.**
+  The earlier tests each build one container and assert one thing; these sweep
+  the corpus and the fixtures, so a change somewhere else — a new `continue` in
+  the walk, a rule that stops firing, a counter that learns to double — fails
+  without anyone remembering to come back. What they hold: the figure never
+  claims more than the archive lists; a read that fell short is never silent;
+  and `complete` is never true of one that did. All three are measured red
+  against a mutation, and the second is honest about being a floor.
+
 - **A gate can choose to fail on warnings.** Nine rules are warnings and every
   one is about the container — a file the metadata does not name, an encrypted
   PDF, a class name in a language this tool cannot check — and eight containers
@@ -49,9 +73,12 @@ rest of these entries are about — and that one was itself wrong twice.
   `--fail-on warning` is for the intake gate that wants none of them.
 
 - **`--quiet` deleted the one refusal this project leads with.** *This tool
-  cannot verify PDF/A conformance* is said by `P3` and `P4`, which are notes,
-  and `--quiet` — the flag a CI log reaches for — hides notes. Measured: zero
-  mentions of PDF/A in the whole output. The run says it once now, whatever the
+  cannot verify PDF/A conformance* is said by `P4`, which is a note, and
+  `--quiet` — the flag a CI log reaches for — hides notes. Measured on a
+  conforming container: zero mentions of PDF/A in the whole output. (`P3` is a
+  warning and survives the flag; it says a scan found no claim, which is a
+  different sentence. An earlier telling of this said *P3 and P4, both notes*,
+  and only the second half was true.) The run says it once now, whatever the
   flags and however many paths were given, outside the findings channel where a
   filter cannot reach it and where it moves no count and no exit code. The same
   shape as the coverage line, for the same reason: a statement about what this
@@ -1452,7 +1479,7 @@ Three gates that ask what `make check` cannot ask of itself.
   broken row, not a kill; and **one row must survive**, because a harness that
   reports red for a change that does not matter is reporting red for everything.
   It found two holes on its first full run.
-- **`make standalone`** runs each of the 66 test files on its own. A suite is a
+- **`make standalone`** runs each of the 67 test files on its own. A suite is a
   shared process, so a file can pass because an earlier one imported something —
   `tests/test_offline.py` did exactly that for weeks, patching `socket.socket`
   and then importing `urllib.request`, which breaks `class SSLSocket(socket)`
