@@ -16,7 +16,7 @@ import io
 import pathlib
 import zipfile
 
-from conftest import CLEAN_DOCUMENT, CORPUS
+from conftest import CLEAN_DOCUMENT, CORPUS, counts_line
 from vdi2770_validate.rules.container import MAX_FOLDERS
 from vdi2770_validate.runner import check_bytes
 
@@ -321,13 +321,13 @@ def test_the_summary_says_how_many_errors_are_this_tool_declining():
             z.writestr("doc1/" + name, doc.read(name))
     report = check_bytes(buf.getvalue(), "folders.zip")
     assert "Z13" in {f.rule.id for f in report.findings}, "premise"
-    summary = as_text(report, True).strip().splitlines()[-1]
+    summary = counts_line(as_text(report, True))
     assert "declin" in summary, f"the summary hides the axis: {summary!r}"
 
     # And a container whose errors really are its own says nothing of the kind.
     ordinary = check_bytes(zipfile.ZipFile(CLEAN_DOCUMENT).read("VDI2770_Metadata.xml"),
                            "notazip.zip")
-    line = as_text(ordinary, True).strip().splitlines()[-1]
+    line = counts_line(as_text(ordinary, True))
     assert "declin" not in line, f"a container-axis error was excused: {line!r}"
 
 

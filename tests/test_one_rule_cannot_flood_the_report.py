@@ -4,6 +4,7 @@ and 107 MB of output for a 127 KB archive. The listing is now bounded; the
 count is not, so the summary and the exit code still tell the truth."""
 import json
 
+from conftest import counts_line
 from vdi2770_validate.model import (
     MAX_LISTED_PER_RULE,
     About,
@@ -126,7 +127,7 @@ def test_the_axis_count_survives_the_listing_cap():
         report.add(Finding(rule, rule.title, Location(container="deep.zip")))
 
     assert report.count(Severity.ERROR) == 150, report.count(Severity.ERROR)
-    summary = as_text(report, True).strip().splitlines()[-1]
+    summary = counts_line(as_text(report, True))
     assert "150 error(s)" in summary, summary
     assert "150 of the errors" in summary, (
         f"the axis was counted over the listing, not the count: {summary}")

@@ -96,3 +96,18 @@ def newest_changelog_section() -> str:
 # `pdfread._read`. Not valid enough to render; valid enough to be the thing the
 # test says it is.
 A_PDF = b"%PDF-1.7\n1 0 obj\n<< /Type /Catalog >>\nendobj\ntrailer\n%%EOF\n"
+
+
+def counts_line(rendered: str) -> str:
+    """The report's `N error(s), …` line, found by what it says.
+
+    Three tests took `splitlines()[-1]`, which is the same line only while it is
+    the last one. A report that grows a line after the counts — one saying how
+    much of this tool ran, for instance — turns those assertions into assertions
+    about a different sentence, and they would have gone on passing for a while
+    before saying something untrue about the wrong string.
+    """
+    for line in rendered.strip().splitlines():
+        if "error(s)" in line and "warning(s)" in line:
+            return line
+    raise AssertionError(f"no counts line in:\n{rendered}")
