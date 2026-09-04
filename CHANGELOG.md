@@ -32,6 +32,20 @@ gave it more than one. A consumer reading `json.load(f)["findings"]` reads
 `[0]["findings"]` now. `rules` prints `obligation=` where 0.6.0 printed `basis=`;
 the value has not changed.
 
+**Every JSON document now says what produced it.** `schemaVersion`, `toolVersion`
+and `vdiSchema` — the version of this report format, the version of the tool, and
+the version the bundled VDI schema stamps on itself. `schemaVersion` moves when a
+field changes meaning or leaves, not when one is added, so a consumer can key off
+it; 0.6.0 offered nothing to key off, which is why this shape change is the last
+one anybody has to detect by reading. The three appear on every entry in the run,
+including an entry for a path this tool could not read — that branch never builds
+a report, and a run where some documents can be version-checked and some cannot
+is worse for a consumer than one where none can. `vdiSchema` names what this
+build carries, not what the run was checked against: `X0` and `X4` exist because
+that check can fail to run. The rules are not versioned separately — `rules.json`
+ships inside the wheel and cannot be swapped without changing the install, so
+`toolVersion` is also the answer to which rules judged a container.
+
 Things that were true of the code and not of what the project said about it,
 plus the guards that make each one say so next time. The count that used to open
 this section was written when it held six. Every count in it is now derived by a
@@ -1488,7 +1502,7 @@ Three gates that ask what `make check` cannot ask of itself.
   broken row, not a kill; and **one row must survive**, because a harness that
   reports red for a change that does not matter is reporting red for everything.
   It found two holes on its first full run.
-- **`make standalone`** runs each of the 67 test files on its own. A suite is a
+- **`make standalone`** runs each of the 68 test files on its own. A suite is a
   shared process, so a file can pass because an earlier one imported something —
   `tests/test_offline.py` did exactly that for weeks, patching `socket.socket`
   and then importing `urllib.request`, which breaks `class SSLSocket(socket)`

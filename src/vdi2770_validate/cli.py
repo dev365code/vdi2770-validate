@@ -55,7 +55,8 @@ def _cmd_check(args) -> int:
             # And it appears in the JSON. Skipping it gave a consumer N-1
             # documents for N paths, with the difference explained only in prose
             # on another stream.
-            documents.append({"path": path, "unreadable": str(e)})
+            documents.append({"path": path, **rendering.provenance(),
+                              "unreadable": str(e)})
             continue
         if args.json:
             documents.append({"path": path, **json.loads(rendering.as_json(rep, not args.quiet))})

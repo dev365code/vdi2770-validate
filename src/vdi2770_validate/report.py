@@ -5,10 +5,35 @@ from __future__ import annotations
 import json
 from typing import Dict, List
 
+from . import __version__
 from .model import About, Report, Severity
 from .names import as_written
+from .resources import schema_stamp
 
 MARK = {Severity.ERROR: "error", Severity.WARNING: "warn ", Severity.INFO: "info "}
+
+#: The version of this report format. A consumer keys off it, so it moves when a
+#: field changes meaning or leaves — adding one does not move it.
+SCHEMA_VERSION = 1
+
+
+def provenance() -> Dict:
+    """What produced this document.
+
+    It belongs on every document in a run, including the ones for paths that
+    could not be read — those never reach a report, and a run where some
+    documents can be version-checked and some cannot is worse for a consumer
+    than one where none can.
+
+    The rules are not versioned separately: `rules.json` ships inside the wheel
+    and cannot be swapped without changing the install, so `toolVersion` is also
+    the answer to "which rules judged this".
+    """
+    return {
+        "schemaVersion": SCHEMA_VERSION,
+        "toolVersion": __version__,
+        "vdiSchema": schema_stamp(),
+    }
 
 
 def _where(location) -> str:
@@ -101,6 +126,7 @@ def as_json(report: Report, show_info: bool = True) -> str:
     the two shapes. A flag a machine-readable output ignores is a flag that
     means different things to the two readers of one run."""
     payload: Dict = {
+        **provenance(),
         "target": report.target,
         "tool": "vdi2770-validate",
         "pdfaVerified": False,
