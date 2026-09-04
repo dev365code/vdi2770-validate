@@ -170,3 +170,38 @@ def test_a_part_that_requires_a_level_and_carries_none_is_still_not_a_level():
     assert "PDF/A-1?" not in (said[0].detail or ""), said[0].detail
     assert "conformance" in (said[0].detail or ""), said[0].detail
     assert "well-formed" not in (said[0].remedy or ""), said[0].remedy
+
+
+def _wrapped(part: str, conformance: str) -> bytes:
+    """One `<?xpacket>`-wrapped XMP packet."""
+    return (b"<?xpacket begin='' id='W5M0MpCehiHzreSzNTczkc9d'?>"
+            b"<rdf:RDF xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'>"
+            b"<rdf:Description xmlns:pdfaid='http://www.aiim.org/pdfa/ns/id/'>"
+            + f"<pdfaid:part>{part}</pdfaid:part>"
+              f"<pdfaid:conformance>{conformance}</pdfaid:conformance>".encode()
+            + b"</rdf:Description></rdf:RDF><?xpacket end='w'?>")
+
+
+def _bare(part: str, conformance: str) -> bytes:
+    """One `<x:xmpmeta>` packet with no `<?xpacket>` wrapper around it."""
+    return (b"<x:xmpmeta xmlns:x='adobe:ns:meta/'>"
+            b"<rdf:RDF xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'>"
+            b"<rdf:Description xmlns:pdfaid='http://www.aiim.org/pdfa/ns/id/'>"
+            + f"<pdfaid:part>{part}</pdfaid:part>"
+              f"<pdfaid:conformance>{conformance}</pdfaid:conformance>".encode()
+            + b"</rdf:Description></rdf:RDF></x:xmpmeta>")
+
+
+def test_two_packets_that_disagree_are_read_in_the_order_the_file_holds_them():
+    """The scan took each *kind* of packet in turn, so every `<?xpacket>` in the
+    file was read before any bare `<x:xmpmeta>` however late it sat. Which of
+    two disagreeing claims got reported was decided by packet syntax, and packet
+    syntax says nothing about which packet is the document's own — an
+    attachment's XMP is wrapped as often as the catalog's.
+
+    The rule is now the one a reader would assume: the first claim in the file.
+    """
+    first_bare = A_PDF + _bare("2", "b") + b"\n% filler\n" + _wrapped("3", "a")
+    first_wrapped = A_PDF + _wrapped("3", "a") + b"\n% filler\n" + _bare("2", "b")
+    assert pdfread.read(first_bare).pdfa_claim == "2b"
+    assert pdfread.read(first_wrapped).pdfa_claim == "3a"

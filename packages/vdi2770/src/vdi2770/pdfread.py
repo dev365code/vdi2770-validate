@@ -473,6 +473,15 @@ def _packets(hay: bytes):
     pattern did, once per opener, over the whole buffer.
     """
     low = hay.lower()
+    # Offsets first, then the file's own order. Taking each *kind* in turn meant
+    # every `<?xpacket>` was yielded before any bare `<x:xmpmeta>` however late
+    # it sat, so which of two disagreeing claims a caller saw was decided by
+    # packet syntax -- and packet syntax says nothing about which packet is the
+    # document's own, an attachment's XMP being wrapped as often as the
+    # catalog's. Spans and not slices: three kinds times `MAX_XMP_PACKETS` is a
+    # bounded list of integer pairs, where the same many slices of a haystack
+    # are not bounded by anything worth relying on.
+    spans = []
     for start_re, end_lit, tail in _PACKET_KINDS:
         pos = seen = 0
         while seen < MAX_XMP_PACKETS:
@@ -488,8 +497,10 @@ def _packets(hay: bytes):
                 if closer < 0:
                     break
                 stop = closer + len(tail)
-            yield hay[begin.start():stop]
+            spans.append((begin.start(), stop))
             pos, seen = stop, seen + 1
+    for begins, stop in sorted(spans):
+        yield hay[begins:stop]
 
 
 def _claim_in(xmp: bytes) -> Optional[str]:

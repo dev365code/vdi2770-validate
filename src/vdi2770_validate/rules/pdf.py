@@ -140,9 +140,9 @@ def check(container, document, facts_for) -> Iterator[Finding]:
                 yield Finding(
                     r, r.title, where,
                     detail=f"claims PDF/A-{facts.pdfa_claim} — {UNVERIFIED}. The "
-                           f"claim is read from an XMP packet in the file; PDF/A-3 "
-                           f"files carry attachments with packets of their own, "
-                           f"and this tool cannot tell one from the other")
+                           f"claim is the first one in the file; PDF/A-3 files "
+                           f"carry attachments with XMP packets of their own, and "
+                           f"this tool cannot tell one from the other")
 
     if unopened:
         # `Z5`, the sentence this tool already uses for every limit it declines

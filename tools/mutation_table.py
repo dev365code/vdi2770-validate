@@ -753,6 +753,14 @@ TABLE = [
      ["tests/test_pdf_precision.py"],
      "every PDF/A-4 file was recorded as claiming a level it does not claim"),
 
+    ("reader/the-first-claim-is-the-first-one-in-the-file",
+     "packages/vdi2770/src/vdi2770/pdfread.py",
+     "    for begins, stop in sorted(spans):",
+     "    for begins, stop in spans:",
+     ["tests/test_pdf_precision.py"],
+     "which of two disagreeing PDF/A claims was reported came down to packet "
+     "syntax, which says nothing about which packet is the document's own"),
+
     # --- the canary -------------------------------------------------------
     ("canary/a-comment-nobody-reads",
      "src/vdi2770_validate/report.py",

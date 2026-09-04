@@ -39,6 +39,14 @@ gate or dropped, because a number nobody re-derives is the kind of claim the
 rest of these entries are about — and that one was itself wrong twice.
 
 
+- **Which of two disagreeing PDF/A claims got reported came down to packet
+  syntax.** The scan took each *kind* of XMP packet in turn, so every
+  `<?xpacket>` in a file was read before any bare `<x:xmpmeta>` however late it
+  sat — and packet syntax says nothing about which packet is the document's own,
+  an attachment's XMP being wrapped as often as the catalog's. Packets are read
+  in the order the file holds them now, and `P4` says the claim it reports is the
+  first one in the file.
+
 - **Every PDF/A-4 file was recorded as claiming a level it does not claim.** The
   conformance pattern accepted `A`, `B` and `U` — PDF/A-4's two levels are `E`
   and `F` — so a file claiming `4F` was recorded as claiming `4?`, a level built
@@ -1310,7 +1318,7 @@ below is measured on this machine, before and after, on the same input.
 Three gates that ask what `make check` cannot ask of itself.
 
 - **`make mutations`** takes every claim this project makes about a gate, breaks
-  the thing that gate protects, and checks the gate notices — 90 rows, each
+  the thing that gate protects, and checks the gate notices — 91 rows, each
   naming the pytest selection or the tool that has to go red. The harness checks
   itself as hard as it checks the code: a row whose anchor no longer appears
   exactly once is an error rather than a pass; every apply and restore clears
