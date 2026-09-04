@@ -24,7 +24,9 @@ import io
 import re
 import zipfile
 
-from conftest import CLEAN_DOCUMENT
+import pytest
+
+from conftest import CLEAN_DOCUMENT, CLEAN_DOCUMENTATION
 from vdi2770_validate.runner import check_bytes
 
 FOREIGN = ('<x:DocumentClassification xmlns:x="urn:not-vdi" '
@@ -106,11 +108,22 @@ def test_a_schema_complaint_counts_children_the_way_the_schema_does():
 
 def test_metadata_in_another_namespace_is_told_so_once():
     meta = _metadata().replace('xmlns="http://www.vdi.de/schemas/vdi2770"',
-                               'xmlns="http://www.vdi.de/schemas/vdi277"', 1)
+                               'xmlns="urn:not-vdi"', 1)
     report = check_bytes(_box(meta), "typo.zip")
     said = [f for f in report.findings if f.rule.id == "M1"]
     assert len(said) == 1, _ids(report)
-    assert "vdi277" in (said[0].detail or ""), said[0].detail
+    # A namespace that is not a prefix of the real one. `vdi277` is a substring
+    # of `vdi2770`, so asserting on it was satisfied by the half of the sentence
+    # that names what was *expected* — true for every value of what was found.
+    assert "urn:not-vdi" in (said[0].detail or ""), said[0].detail
+    assert said[0].detail.index("urn:not-vdi") < said[0].detail.index(
+        "http://www.vdi.de/schemas/vdi2770"), (
+        "the namespace found and the one expected are the wrong way round: "
+        + said[0].detail)
+    # And it points at the element carrying the declaration, not at line 1,
+    # which is the XML declaration.
+    assert said[0].where.line == 1 + meta[:meta.index("<Document")].count("\n"), (
+        said[0].where.line)
     assert 'xmlns="http://www.vdi.de/schemas/vdi2770"' in (said[0].remedy or ""), (
         said[0].remedy)
     # And nothing else runs on a vocabulary that is not ours: every other rule
@@ -161,3 +174,129 @@ def test_a_root_with_no_children_is_the_schemas_complaint_and_not_this_one():
     said = [f for f in report.findings if f.rule.id == "M1"]
     assert said, _ids(report)
     assert "namespace" not in (said[0].detail or ""), said[0].detail
+
+
+def _declaring_a_payload(src, member: str, xmlns: str) -> bytes:
+    """A container declaring `cad.zip`, with an ordinary `cad.zip` in it."""
+    base = zipfile.ZipFile(src)
+    meta = base.read(member).decode("utf-8").replace(
+        "<DigitalFile",
+        '<DigitalFile FileFormat="application/zip">cad.zip</DigitalFile>\n      '
+        "<DigitalFile", 1)
+    meta = meta.replace('xmlns="http://www.vdi.de/schemas/vdi2770"', xmlns, 1)
+    payload = io.BytesIO()
+    with zipfile.ZipFile(payload, "w") as inner:
+        inner.writestr("part.step", b"ISO-10303-21;\n")
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        for name in base.namelist():
+            z.writestr(name, meta if name == member else base.read(name))
+        z.writestr("cad.zip", payload.getvalue())
+    return buf.getvalue()
+
+
+@pytest.mark.parametrize("src,member,invented", [
+    (CLEAN_DOCUMENTATION, "VDI2770_Main.xml", "Z3"),
+    (CLEAN_DOCUMENT, "VDI2770_Metadata.xml", "Z11"),
+])
+def test_a_vocabulary_we_cannot_read_is_unknown_and_not_declares_nothing(
+        src, member, invented):
+    """The container rules read the same model, and an empty one is not silence.
+
+    `declared` came out `frozenset()` for a document whose names are in another
+    vocabulary, and the container layer reads that as *this container declares
+    no files* — so a payload declared three lines from `B.pdf`'s own declaration
+    was accused of not being declared. The runner already keeps "unknown" and
+    "declares nothing" apart for three other ways of having no model; this was a
+    fourth, and the comment beside them says what it costs.
+    """
+    ours = _ids(check_bytes(
+        _declaring_a_payload(src, member,
+                             'xmlns="http://www.vdi.de/schemas/vdi2770"'), "ok.zip"))
+    assert invented not in ours, f"the premise: a declared payload is quiet: {ours}"
+
+    theirs = _ids(check_bytes(
+        _declaring_a_payload(src, member, 'xmlns="urn:not-vdi"'), "foreign.zip"))
+    assert invented not in theirs, theirs
+    assert "M1" in theirs, theirs
+
+
+def test_the_two_namespaces_are_told_apart_when_they_print_the_same():
+    """One Cyrillic letter and the finding holds two URIs a reader cannot tell
+    apart, under a remedy telling them to write the one they appear to have
+    written. `told_apart` is what the rest of this layer uses for that."""
+    look_alike = "http://www.vdi.de/sch" + chr(0x435) + "mas/vdi2770"
+    meta = _metadata().replace('xmlns="http://www.vdi.de/schemas/vdi2770"',
+                               f'xmlns="{look_alike}"', 1)
+    said = [f for f in check_bytes(_box(meta), "twin.zip").findings
+            if f.rule.id == "M1"]
+    assert said, _ids(check_bytes(_box(meta), "twin.zip"))
+    assert chr(0x435) not in (said[0].detail or ""), said[0].detail
+    assert "0435" in (said[0].detail or ""), said[0].detail
+
+
+def test_a_root_outside_the_namespace_whose_children_are_inside_it_is_read():
+    """The root's namespace is not the question either.
+
+    `<Document>` in no namespace with `xmlns` on its children builds the whole
+    model — the builder reads the root's children — so a report saying *nothing
+    in it is a VDI 2770 element* said it beside findings drawn from those
+    elements. The question is whether the model came out empty.
+    """
+    ns = ' xmlns="http://www.vdi.de/schemas/vdi2770"'
+    meta = _metadata().replace(ns, "", 1)
+    # The declaration moves off the root and onto each of its children, which is
+    # where the builder looks. Two-space indent is a direct child of `Document`.
+    meta = re.sub(r"^    <([A-Za-z]+)", lambda m: f"    <{m.group(1)}{ns}",
+                  meta, flags=re.M)
+    assert meta.count(ns) > 1, "the premise: several children carry it"
+    report = check_bytes(_box(meta), "inside.zip")
+    said = [f for f in report.findings if f.rule.id == "M1"]
+    assert not said or "namespace" not in (said[0].detail or ""), (
+        f"the model was built from these names: {said[0].detail if said else ''}")
+
+
+def test_the_single_lookup_carries_the_namespace_too():
+    """`find` and `find_all` are two halves of one decision.
+
+    The model reads `ClassId` with `find`, so leaving that half unfiltered kept
+    the headline case alive one level down: a foreign `ClassId` inside a VDI
+    2770 classification drew *the class id is not one of the published classes*
+    beside a schema complaint saying that element is not in the schema at all.
+    Reverting `find` alone was green across the whole suite.
+    """
+    meta = _metadata()
+    at = meta.index("<ClassId>")
+    end = meta.index("</ClassId>", at) + len("</ClassId>")
+    meta = (meta[:at]
+            + '<x:ClassId xmlns:x="urn:not-vdi">ZZ-99</x:ClassId>'
+            + meta[end:])
+    fired = _ids(check_bytes(_box(meta), "inner.zip"))
+    assert "M2" not in fired, fired
+    assert "X2" in fired, fired
+
+
+def test_one_element_in_another_vocabulary_is_not_the_whole_document():
+    """A document can be part ours, and the predicate has to be about the model.
+
+    Put the classification alone in another namespace and leave the rest right:
+    the identifiers and the versions are read, so the model is not empty and
+    saying *nothing in it is a VDI 2770 element* would be false about the very
+    findings this report goes on to make from it. `M1` still fires — the
+    document does carry no VDI 2770 classification — and it fires its first way,
+    which is the true one.
+    """
+    meta = _metadata()
+    at = meta.index("<DocumentClassification")
+    end = meta.index("</DocumentClassification>", at) + len("</DocumentClassification>")
+    block = meta[at:end].replace("DocumentClassification", "x:DocumentClassification")
+    meta = (meta[:at] + block.replace("<x:DocumentClassification",
+                                      '<x:DocumentClassification xmlns:x="urn:not-vdi"', 1)
+            + meta[end:])
+    report = check_bytes(_box(meta), "mixed.zip")
+    said = [f for f in report.findings if f.rule.id == "M1"]
+    assert said, _ids(report)
+    assert "urn:not-vdi" not in (said[0].detail or ""), (
+        f"the model was built from this document: {said[0].detail}")
+    # And the file rules are not switched off for a document they can read.
+    assert not [f for f in report.findings if f.rule.id == "M11"], _ids(report)

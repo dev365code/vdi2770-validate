@@ -39,6 +39,38 @@ gate or dropped, because a number nobody re-derives is the kind of claim the
 rest of these entries are about — and that one was itself wrong twice.
 
 
+- **An empty model is not "this container declares nothing".** The repair that
+  made the metadata layer namespace-aware left a document in another vocabulary
+  with a model that built and came out empty — and the container rules read that
+  as a container declaring no files, so a payload declared three lines from
+  `B.pdf`'s own declaration was told to declare itself. The runner already keeps
+  *unknown* and *declares nothing* apart for three other ways of having no
+  model; this was a fourth.
+
+- **And the root's namespace was never the question.** `<Document>` in no
+  namespace with `xmlns` on its children builds the whole model, because the
+  builder reads the root's children — so a report said *nothing in it is a VDI
+  2770 element* beside findings drawn from those elements. What the layers below
+  cannot work with is an empty model, and the namespace is the reason for one
+  exactly when the root has children in some other vocabulary. A document that
+  is part ours — one element elsewhere, the rest right — is read, and draws the
+  finding that is true of it.
+
+- **The two namespaces are told apart.** They were quoted with `repr`, which
+  escapes nothing a homoglyph does, so one Cyrillic letter put two URIs a reader
+  cannot distinguish either side of a remedy telling them to write the one they
+  appear to have written. And the finding points at the root element now, not at
+  line 1, which is the XML declaration.
+
+- **A truthiness guard switched `M7` off for an empty status.** `Draft` drew
+  *the main document is not released* and `StatusValue=""` drew nothing, on two
+  documents neither of which says it is released — the shape the same file
+  condemns eleven lines earlier. Nothing here defers to the schema layer either:
+  `StatusValue` is an enumeration, so an empty one is rejected rather than
+  accepted. The reader reads an absent attribute, an empty one and a blank one
+  to one value, so the finding names all three places to look rather than
+  quoting a status the file does not carry.
+
 - **Which of two disagreeing PDF/A claims got reported came down to packet
   syntax.** The scan took each *kind* of XMP packet in turn, so every
   `<?xpacket>` in a file was read before any bare `<x:xmpmeta>` however late it
@@ -1318,7 +1350,7 @@ below is measured on this machine, before and after, on the same input.
 Three gates that ask what `make check` cannot ask of itself.
 
 - **`make mutations`** takes every claim this project makes about a gate, breaks
-  the thing that gate protects, and checks the gate notices — 91 rows, each
+  the thing that gate protects, and checks the gate notices — 92 rows, each
   naming the pytest selection or the tool that has to go red. The harness checks
   itself as hard as it checks the code: a row whose anchor no longer appears
   exactly once is an error rather than a pass; every apply and restore clears

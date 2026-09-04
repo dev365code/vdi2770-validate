@@ -473,8 +473,8 @@ TABLE = [
 
     ("runner/metadata-we-could-not-model-declares-nothing-known",
      "src/vdi2770_validate/runner.py",
-     "        if c.kind in (Kind.DOCUMENT, Kind.DOCUMENTATION) and document is None:",
-     "        if False:",
+     "        if c.kind in (Kind.DOCUMENT, Kind.DOCUMENTATION) and (document is None",
+     "        if False and (document is None",
      ["tests/test_a_declared_zip_is_a_payload.py"],
      "a parse the reader refused left `declared` empty rather than unknown, so "
      "X6 said the metadata was not modelled while Z11 accused a member of not "
@@ -738,13 +738,21 @@ TABLE = [
      "document must carry one, and the schema complaint walker named the wrong "
      "line because it counted children a different way from the schema"),
 
-    ("rules/the-vocabulary-is-decided-by-the-children-too",
+    ("rules/the-vocabulary-is-decided-by-what-the-model-came-out-as",
      "src/vdi2770_validate/runner.py",
-     "                                  or any(k.ns == NS for k in tree.children))",
-     "                                  or True)",
+     "            if elsewhere and not (document.identifiers or document.classifications",
+     "            if elsewhere or not (document.identifiers or document.classifications",
      ["tests/test_a_name_belongs_to_a_namespace.py"],
-     "a prefix declared on the root and left off every element read as a "
-     "document with nothing in it"),
+     "a root outside the namespace whose children are inside it builds the whole "
+     "model, and was told that nothing in it is a VDI 2770 element"),
+
+    ("rules/a-vocabulary-we-cannot-read-is-unknown-not-empty",
+     "src/vdi2770_validate/runner.py",
+     "                                                              or foreign is not None):",
+     "                                                              or False):",
+     ["tests/test_a_name_belongs_to_a_namespace.py"],
+     "an empty model read as 'this container declares nothing', so a declared "
+     "payload was told to declare itself"),
 
     ("reader/part-four-names-no-conformance-level-on-purpose",
      "packages/vdi2770/src/vdi2770/pdfread.py",

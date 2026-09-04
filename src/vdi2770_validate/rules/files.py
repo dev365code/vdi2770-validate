@@ -37,8 +37,8 @@ def check(container, document, foreign) -> Iterator[Finding]:
     These rules read `document.all_files`, and a document whose names are in
     another vocabulary has none -- so every file in the container became "not
     named in the metadata", which is a flood of true sentences pointing at the
-    wrong thing. `M11` says the one thing that is wrong; nothing here can add to
-    it until the names are ours.
+    wrong thing. `M1` says the one thing that is wrong; nothing here can add to it
+    until the names are ours.
     """
     if foreign is not None:
         return

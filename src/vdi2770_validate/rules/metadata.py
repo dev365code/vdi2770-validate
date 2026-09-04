@@ -75,13 +75,24 @@ def check(container, document, foreign) -> Iterator[Finding]:
         # root element *is* `Document` sends its sender to rename an element
         # that is not wrong. And that layer does not always run.
         r = rule("M1")
+        # The root element's own line, the way `M1`'s first reach locates
+        # itself -- line 1 is the XML declaration, and the declaration the
+        # remedy asks for goes on the root.
+        #
+        # `told_apart` and not `repr`: two URIs differing by one Cyrillic letter
+        # print the same, and this finding holds both of them side by side under
+        # a remedy telling the reader to write the one they appear to have
+        # written. That is what the helper is for, and `_two_names` calls it ten
+        # lines below for the same reason.
+        found, ours = told_apart(foreign, NS)
         yield Finding(
             r, r.title,
-            container.where.child(member=container.metadata_name, line=1),
+            document.src.child(container=container.path,
+                               member=container.metadata_name),
             detail=("this metadata's names are in no namespace at all"
                     if not foreign else
-                    f"this metadata's names are in {foreign!r}")
-                   + f", and VDI 2770 names are in {NS!r}, so nothing in it is "
+                    f"this metadata's names are in '{found}'")
+                   + f", and VDI 2770 names are in '{ours}', so nothing in it is "
                      f"a VDI 2770 element — the classification included",
             fix=f'Declare the VDI 2770 namespace on the root element — '
                 f'xmlns="{NS}" — or put the prefix that binds it on every '
@@ -217,9 +228,23 @@ def check(container, document, foreign) -> Iterator[Finding]:
         # parsed -- which is a fact about the runner, not about the reader. If
         # that ever changes, this reads the container and the flag would have
         # read a stale summary of it.
-        if (container.kind is Kind.DOCUMENTATION and v.life_cycle_status
-                and v.life_cycle_status != RELEASED):
+        # `and v.life_cycle_status` was the guard this rule used to carry, and it
+        # is the shape condemned eleven lines above for `M8`: an empty attribute
+        # switched the check off. `Draft` drew this finding and `StatusValue=""`
+        # drew nothing, on two documents neither of which says it is released.
+        #
+        # The argument that kept the absent case with the schema layer does not
+        # apply here either: `StatusValue` is an enumeration of `InReview` and
+        # `Released`, so the schema rejects an empty one rather than accepting
+        # it. Both rules speaking is the overlap `Draft` has always had.
+        if container.kind is Kind.DOCUMENTATION and v.life_cycle_status != RELEASED:
             r = rule("M7")
             yield Finding(r, r.title, v.life_cycle_src.child(container=container.path,
                                                              member=container.metadata_name),
-                          detail=f"LifeCycleStatus is '{as_written(v.life_cycle_status)}'")
+                          detail=f"LifeCycleStatus is "
+                                 f"'{as_written(v.life_cycle_status)}'"
+                                 if v.life_cycle_status else
+                                 "no LifeCycleStatus value was read for this "
+                                 "document version — the element is absent, or it "
+                                 "carries no StatusValue, or its StatusValue is "
+                                 "blank")

@@ -284,7 +284,28 @@ def check_bytes(data: bytes, name: str) -> Report:
         # container. The comment below has said "unknown" and "declares nothing"
         # are different things since the budget path was repaired; these were the
         # other two ways in.
-        if c.kind in (Kind.DOCUMENT, Kind.DOCUMENTATION) and document is None:
+        # Whether this document's names are ours at all, decided from the model
+        # rather than from the root's namespace. The root's own is not the
+        # question: `<Document>` in no namespace with `xmlns` on its children
+        # builds the whole model, because the builder reads the root's children
+        # -- and a first version, which asked the root and then its children,
+        # said "nothing in it is a VDI 2770 element" beside findings drawn from
+        # those elements. What the layers below cannot work with is an *empty*
+        # model, and the namespace is the reason for it exactly when the root
+        # has children in some other vocabulary.
+        foreign = None
+        if document is not None:
+            elsewhere = sorted({k.ns for k in tree.children if k.ns != NS})
+            if elsewhere and not (document.identifiers or document.classifications
+                                  or document.versions):
+                foreign = elsewhere[0]
+
+        # And an empty model is not "this container declares nothing" -- it is
+        # the fourth way into the collapse the comment above is about. A payload
+        # declared three lines from `B.pdf` drew `Z11`, telling its sender to
+        # declare it.
+        if c.kind in (Kind.DOCUMENT, Kind.DOCUMENTATION) and (document is None
+                                                              or foreign is not None):
             modelled = False
 
         # `folder_path`, not `nfc`. A declared name and a member name are the
@@ -360,19 +381,6 @@ def check_bytes(data: bytes, name: str) -> Report:
         _into(report, r_schema.check(c, parse_error, schema_errors), c.where, "schema")
         if document is None:
             continue
-
-        # Whether this document's names are ours at all, decided here because a
-        # rule module may not walk a tree. Two ways they are not: the root is in
-        # another namespace or in none, and the root is in ours but every child
-        # it has is not -- a prefix declared on the root and left off the
-        # elements, which the schema's `elementFormDefault="qualified"` makes an
-        # error and which reads, to the layers below, as a document with nothing
-        # in it. A root with no children at all is a different complaint and the
-        # schema makes it.
-        ours = tree.ns == NS and (not tree.children
-                                  or any(k.ns == NS for k in tree.children))
-        foreign = (None if ours else
-                   tree.ns if tree.ns != NS else tree.children[0].ns)
 
         _into(report, r_files.check(c, document, foreign), c.where, "files")
         _into(report, r_metadata.check(c, document, foreign), c.where, "metadata")
