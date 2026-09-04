@@ -134,9 +134,11 @@ class Read:
     """What this read opened, and what the archive says was there to open.
 
     Both halves come from the archive's own directory rather than from how far
-    this tool got, which is the property that makes the pair worth printing: a
-    sender can check `1 of 3 metadata files` with `unzip -l`, and giving up
-    cannot improve it. A figure counted over this tool's own machinery has the
+    this tool got, which is the property that makes the pair worth printing:
+    every number is over names the archive lists, so giving up cannot improve
+    it. A sender can check the figures against a listing of the archive -- of
+    each archive, where containers are nested, because these count the tree and
+    a listing shows one level. A figure counted over this tool's own machinery has the
     opposite sign — a file that is not a ZIP calls for one check, that check
     runs, and the worst input this tool sees scores full marks.
     """

@@ -207,10 +207,17 @@ def check_bytes(data: bytes, name: str) -> Report:
         # a file it could not read.
         if c.kind is not Kind.UNREADABLE:
             report.read.archives_opened += 1
+        # `present`, not `file_names`: the second is what the reader agreed to
+        # hand over, and a member it refused -- an absolute path, say -- is in
+        # the archive's directory all the same. A sender counting with a listing
+        # tool sees it. Counting the reader's answer instead let refusing a
+        # second metadata file turn `1 of 2` into `1 of 1`, which is this tool
+        # grading itself on the work it agreed to do.
+        listed = c.present or c.file_names
         report.read.archives_found += sum(
-            1 for n in c.file_names if n.lower().endswith(".zip"))
+            1 for n in listed if n.lower().endswith(".zip"))
         report.read.metadata_found += sum(
-            1 for n in c.file_names
+            1 for n in listed
             if folder_path(n).rsplit("/", 1)[-1] in (METADATA_XML, MAIN_XML))
         if c.metadata_bytes is not None:
             report.read.metadata_read += 1

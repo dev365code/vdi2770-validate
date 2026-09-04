@@ -114,3 +114,50 @@ def test_the_listing_cap_does_not_move_the_figure(monkeypatch):
     monkeypatch.setattr(model, "MAX_LISTED_PER_RULE", 1)
     report = check_bytes(CLEAN_DOCUMENT.read_bytes(), "c.zip")
     assert "1 of 1 archives" in _line(report), _line(report)
+
+
+def test_a_member_this_tool_refused_is_still_a_member_the_archive_lists():
+    """The denominator must not shrink because we declined to look.
+
+    A member whose name this reader refuses — an absolute path, say — is in the
+    archive's directory and a sender counting with `unzip -l` sees it. Taking
+    the denominator from the names the reader handed back dropped it, so
+    refusing a second metadata file turned `1 of 2` into `1 of 1`: the tool
+    grading itself on the work it agreed to do.
+    """
+    base = zipfile.ZipFile(CLEAN_DOCUMENT)
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        for name in base.namelist():
+            z.writestr(name, base.read(name))
+        z.writestr("/etc/VDI2770_Metadata.xml", b"<x/>")
+    report = check_bytes(buf.getvalue(), "evil.zip")
+    assert "Z4" in {f.rule.id for f in report.findings} or any(
+        f.rule.id.startswith("Z") for f in report.findings), "the premise: it is refused"
+    r = report.read
+    assert (r.metadata_read, r.metadata_found) == (1, 2), (
+        f"a refused member left the denominator: {r.metadata_read} of {r.metadata_found}")
+
+
+def test_an_archive_the_reader_would_not_list_does_not_report_nothing_to_read():
+    """When the member cap bites, the reader hands back no names at all. Saying
+    `0 of 0 metadata files` would read as *there were none*; the truth is that
+    nothing was listed. The archive line already carries it — `0 of 1` — and the
+    metadata clause has to stay off rather than print a denominator of zero."""
+    from vdi2770 import zipread
+
+    base = zipfile.ZipFile(CLEAN_DOCUMENT)
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        for name in base.namelist():
+            z.writestr(name, base.read(name))
+        for i in range(20):
+            z.writestr(f"pad{i}.txt", b"x")
+    raw = buf.getvalue()
+    try:
+        zipread.MAX_MEMBERS = 5
+        said = _line(check_bytes(raw, "many.zip"))
+    finally:
+        zipread.MAX_MEMBERS = 10_000
+    assert "0 of 1 archives" in said, said
+    assert "of 0 metadata files" not in said, said

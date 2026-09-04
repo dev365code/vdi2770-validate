@@ -44,9 +44,9 @@ rest of these entries are about — and that one was itself wrong twice.
   all printed the same shape as a container with one small thing wrong, and six
   of this repository's own fixtures report a full stop that way. Every report
   now carries what was opened beside what the archive's own directory said was
-  there — `read 1 of 3 metadata files` — and both halves are the sender's
-  material, so a reader can check the pair with `unzip -l` and giving up cannot
-  improve it. That last property decided the shape: a figure counted over this
+  there — `read 1 of 3 metadata files` — and both halves are over names the
+  archive lists, including the ones this tool refused to open, so giving up
+  cannot improve the pair and a sender can check it against a listing. That last property decided the shape: a figure counted over this
   tool's own machinery scores a file that is not a ZIP at one out of one, so the
   worst input it ever sees would score full marks. The line is not a finding —
   `--quiet` and the listing cap both leave it alone — and the same numbers are
