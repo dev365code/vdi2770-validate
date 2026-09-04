@@ -112,6 +112,52 @@ Where the trade runs the other way it is recorded as such: a log file carrying
 absolute paths from a build machine was left in history rather than rewritten
 over, because there the cost of rewriting exceeded what it would have bought.
 
+## What the report says about itself
+
+`0 error(s)` is a statement about findings. It is not a statement about reach,
+and a file this tool cannot open at all used to print the same shape as a
+container with one small thing wrong. So every report carries two sentences that
+are about this tool rather than about the container.
+
+The first is a count of what was read:
+
+```
+  read 1 of 1 archives, 1 of 3 metadata files
+```
+
+Both halves are over names the archive's own directory lists, refusals included.
+That is the property worth having: giving up cannot improve the pair, and you
+can check it against a listing of the archive — of each archive, where
+containers are nested, because these count the tree and a listing shows one
+level. A figure counted over this tool's own machinery would have the opposite
+sign; a file that is not a ZIP calls for one check, that check runs and answers
+no, and the worst input this tool ever sees would score full marks.
+
+`--json` carries the same numbers under `read`, with a `complete` flag that is
+deliberately more than the integers beside it: it is false when anything was
+declined, so a container whose metadata this tool would not model does not read
+as one it finished.
+
+The second is the refusal this page leads with, said once per run:
+
+```
+This tool does not verify PDF/A conformance. It reports the claim a file makes
+about itself where it finds one; only a PDF/A validator can say whether that
+claim is true.
+```
+
+Neither is a finding. Both survive `--quiet` and the listing cap, and neither
+moves a count or the exit code. That is deliberate: this refusal used to be
+carried by a note, and `--quiet` — the flag a CI log reaches for — deleted every
+mention of it. A statement about ourselves that a flag can delete is a statement
+we do not really make.
+
+Not every sentence in this page belongs in every report. What a rule means when
+it fires travels with the rule — `M4`, for instance, reports which English
+renderings exist and never fails a document on that basis, which matters when
+`M4` fires and not otherwise. What goes in the run's own voice is what is true
+of every run.
+
 ## Why the refusals are written down
 
 Some of them are the honest edge of a free tool. If you need a PDF/A claim

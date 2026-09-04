@@ -39,6 +39,15 @@ gate or dropped, because a number nobody re-derives is the kind of claim the
 rest of these entries are about — and that one was itself wrong twice.
 
 
+- **The scope page says what the report says about itself.** Two sentences in
+  every report are about this tool rather than about the container — what it
+  read, and what it never verifies — and neither was written down anywhere a
+  reader would look for the reasoning. The page now carries both, says why the
+  count is over the archive's own names rather than over this tool's machinery,
+  and says why neither is a finding. A test compares both quotations against
+  what the command actually prints, because a page that quotes output is a page
+  that goes stale: this repository has watched a sample lose its ending twice.
+
 - **That standing sentence was false, and contradicted a finding four lines
   above it.** It said this tool *reports the level a file claims* — printed
   under a finding saying a file names no conformance level — and that *only a

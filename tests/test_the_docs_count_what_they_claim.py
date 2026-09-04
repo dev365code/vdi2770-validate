@@ -686,3 +686,31 @@ def test_scope_md_divides_the_ceilings_by_the_rate_it_publishes():
         assert int(m.group(1)) == round(ceiling / per_second), (
             f"{ceiling} bytes at {rate.group(1)} GB/s is "
             f"{ceiling / per_second:.1f} s; scope.md says {m.group(1)}")
+
+
+def test_the_scope_page_quotes_what_the_tool_prints():
+    """It shows two sentences the report carries. A page that quotes output is a
+    page that goes stale — the README's sample lost its ending twice before a
+    gate ran the command instead of the renderer, and this quotes the same run's
+    closing statement one file along."""
+    import subprocess
+    import sys
+
+    from conftest import under_test
+
+    page = (ROOT / "docs" / "scope.md").read_text(encoding="utf-8")
+    done = subprocess.run(
+        [sys.executable, "-m", "vdi2770_validate", "check",
+         "corpus/examples/missingdocuments/folders.zip"],
+        cwd=ROOT, capture_output=True, text=True, env=under_test())
+    printed = done.stdout
+
+    said = ("This tool does not verify PDF/A conformance. It reports the claim a "
+            "file makes\nabout itself where it finds one; only a PDF/A validator "
+            "can say whether that\nclaim is true.")
+    assert said in printed, printed[-400:]
+    assert said in page, "the page quotes a refusal the tool does not print"
+
+    shape = "  read 1 of 1 archives, 1 of 3 metadata files"
+    assert shape in printed, printed[-400:]
+    assert shape.strip() in page, "the page quotes a figure the tool does not print"
