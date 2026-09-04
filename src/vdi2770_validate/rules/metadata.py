@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import Iterator
 
 from ..catalog import CLASSIFICATION_SYSTEM, ISO_639_1, document_classes, english_for, german_for, rule
-from ..model import Finding, Kind
+from ..model import NS, Finding, Kind
 from ..names import as_written, escaped, nfc, spelled_where_not_ascii, told_apart
 
 RELEASED = "Released"
@@ -49,7 +49,48 @@ def _two_names(text: str, published, class_id: str, lead: str) -> str:
             + " / ".join([f"'{first}'"] + rest))
 
 
-def check(container, document) -> Iterator[Finding]:
+def check(container, document, foreign) -> Iterator[Finding]:
+    """`foreign` is the namespace the metadata's names are in, when it is not ours.
+
+    Reading elements by local name alone let another vocabulary's names satisfy
+    these rules, and the repair -- matching the namespace too -- has a cost that
+    has to be paid rather than absorbed: a document in the wrong namespace, or in
+    none, now holds nothing this layer can see. Saying `M1` about it would be
+    true and useless, and would send its sender to add a classification when the
+    one they wrote is sitting there in the wrong vocabulary. So the layer says
+    the one thing that is wrong, and stops: everything below reads a model built
+    from names that are not in this document.
+    """
+    if foreign is not None:
+        # `M1` reached its second way. The first is a document that declares no
+        # classification; this is a document whose classification is not one of
+        # ours, because none of its names are -- and both are "this document
+        # carries no VDI 2770 classification". One rule, two ways to reach it,
+        # each carrying the sentence that names what to do about *it*, which is
+        # the shape `REMEDY_FOR_DEFECT` already gives `Z5`.
+        #
+        # It has to be said by a layer that always runs. The namespace is the
+        # schema's own `targetNamespace` and the schema layer reports it -- as
+        # `'Document' is not an element of the schema`, which for a file whose
+        # root element *is* `Document` sends its sender to rename an element
+        # that is not wrong. And that layer does not always run.
+        r = rule("M1")
+        yield Finding(
+            r, r.title,
+            container.where.child(member=container.metadata_name, line=1),
+            detail=("this metadata's names are in no namespace at all"
+                    if not foreign else
+                    f"this metadata's names are in {foreign!r}")
+                   + f", and VDI 2770 names are in {NS!r}, so nothing in it is "
+                     f"a VDI 2770 element — the classification included",
+            fix=f'Declare the VDI 2770 namespace on the root element — '
+                f'xmlns="{NS}" — or put the prefix that binds it on every '
+                f'element and not only on the root. The schema declares its '
+                f'elements qualified, so a file in another namespace, or in '
+                f'none, holds no VDI 2770 names at all, and nothing else in '
+                f'this report could look at the metadata\'s content.')
+        return
+
     # An identifier is (domain, value): the schema makes DomainId required, and
     # the same drawing number registered by an OEM and by its supplier is two
     # identifiers, not one repeated. Comparing the text alone told people to

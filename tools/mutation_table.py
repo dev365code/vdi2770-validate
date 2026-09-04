@@ -729,6 +729,23 @@ TABLE = [
      ["tests/test_amplification.py"],
      "any occurrence of the word `obj` would have made a text file a PDF"),
 
+    ("reader/a-name-belongs-to-a-namespace",
+     "packages/vdi2770/src/vdi2770/xmlread.py",
+     "        return [c for c in self.children if c.tag == tag and c.ns == NS]",
+     "        return [c for c in self.children if c.tag == tag]",
+     ["tests/test_a_name_belongs_to_a_namespace.py"],
+     "another vocabulary's DocumentClassification satisfied the rule that a "
+     "document must carry one, and the schema complaint walker named the wrong "
+     "line because it counted children a different way from the schema"),
+
+    ("rules/the-vocabulary-is-decided-by-the-children-too",
+     "src/vdi2770_validate/runner.py",
+     "                                  or any(k.ns == NS for k in tree.children))",
+     "                                  or True)",
+     ["tests/test_a_name_belongs_to_a_namespace.py"],
+     "a prefix declared on the root and left off every element read as a "
+     "document with nothing in it"),
+
     # --- the canary -------------------------------------------------------
     ("canary/a-comment-nobody-reads",
      "src/vdi2770_validate/report.py",

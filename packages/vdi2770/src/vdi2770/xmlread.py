@@ -104,12 +104,25 @@ class Node:
     parent: Optional[Node] = None
 
     # -- convenience accessors used by the domain builder -------------------
+    # `Document` is not a name. `{http://www.vdi.de/schemas/vdi2770}Document` is,
+    # and matching on the local name alone read an element from any vocabulary at
+    # all as a VDI 2770 one. A `DocumentClassification` in somebody else's
+    # namespace satisfied the rule that a document must carry a classification;
+    # the German-name check issued a VDI 2770 verdict about it; and the schema
+    # complaint walker, which counts children the way this does, disagreed with
+    # `xmlschema` -- which counts by expanded name -- so one foreign sibling
+    # shifted every position after it and a complaint named a line whose element
+    # does not have the defect.
+    #
+    # `ns` was populated from the first commit and read by nobody. This is what
+    # it is for. There is no escape hatch on purpose: this package reads one
+    # vocabulary, and a caller wanting another one is not asking this package.
     def find_all(self, tag: str) -> List[Node]:
-        return [c for c in self.children if c.tag == tag]
+        return [c for c in self.children if c.tag == tag and c.ns == NS]
 
     def find(self, tag: str) -> Optional[Node]:
         for c in self.children:
-            if c.tag == tag:
+            if c.tag == tag and c.ns == NS:
                 return c
         return None
 

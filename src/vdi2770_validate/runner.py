@@ -18,7 +18,7 @@ from vdi2770.zipread import Kind
 
 from . import xsdvalidate
 from .catalog import rule
-from .model import Finding, Location, Report
+from .model import NS, Finding, Location, Report
 from .names import folder_path
 from .rules import container as r_container
 from .rules import files as r_files
@@ -361,8 +361,21 @@ def check_bytes(data: bytes, name: str) -> Report:
         if document is None:
             continue
 
-        _into(report, r_files.check(c, document), c.where, "files")
-        _into(report, r_metadata.check(c, document), c.where, "metadata")
+        # Whether this document's names are ours at all, decided here because a
+        # rule module may not walk a tree. Two ways they are not: the root is in
+        # another namespace or in none, and the root is in ours but every child
+        # it has is not -- a prefix declared on the root and left off the
+        # elements, which the schema's `elementFormDefault="qualified"` makes an
+        # error and which reads, to the layers below, as a document with nothing
+        # in it. A root with no children at all is a different complaint and the
+        # schema makes it.
+        ours = tree.ns == NS and (not tree.children
+                                  or any(k.ns == NS for k in tree.children))
+        foreign = (None if ours else
+                   tree.ns if tree.ns != NS else tree.children[0].ns)
+
+        _into(report, r_files.check(c, document, foreign), c.where, "files")
+        _into(report, r_metadata.check(c, document, foreign), c.where, "metadata")
 
         if raw is not None:
             _into(report,

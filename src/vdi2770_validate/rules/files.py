@@ -31,7 +31,18 @@ def _named_members(names) -> str:
             + (", ..." if len(names) > MAX_ALIKE else ""))
 
 
-def check(container, document) -> Iterator[Finding]:
+def check(container, document, foreign) -> Iterator[Finding]:
+    """`foreign` is the namespace the metadata's names are in, when not ours.
+
+    These rules read `document.all_files`, and a document whose names are in
+    another vocabulary has none -- so every file in the container became "not
+    named in the metadata", which is a flood of true sentences pointing at the
+    wrong thing. `M11` says the one thing that is wrong; nothing here can add to
+    it until the names are ours.
+    """
+    if foreign is not None:
+        return
+
     # Names are reconciled in one place, for every comparison in this module and
     # the PDF one. See names.py for the two ways of getting this wrong that are
     # already behind it.

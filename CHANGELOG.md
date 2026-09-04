@@ -39,6 +39,31 @@ gate or dropped, because a number nobody re-derives is the kind of claim the
 rest of these entries are about — and that one was itself wrong twice.
 
 
+- **`Document` is not a name.** The model matched local names and ignored the
+  namespace, so an element from any vocabulary at all was read as a VDI 2770 one.
+  A `DocumentClassification` in someone else's namespace *satisfied* the rule
+  that a document must carry one — a document with no VDI 2770 classification
+  reported as carrying one — and the German-name and class-id checks issued VDI
+  2770 verdicts about foreign elements, beside a schema complaint saying those
+  elements are not in the schema at all: two findings that cannot both be true.
+  The same blindness put a schema complaint on the wrong line, because the
+  complaint walker counted children by local name while the schema counts them
+  by expanded name, so one foreign sibling shifted every position after it.
+  `Node.ns` was populated from the first commit and read by nobody; this is what
+  it is for.
+
+- **And the repair has a cost, which is paid rather than absorbed.** A document
+  in the wrong namespace, or in none, now holds nothing the metadata and file
+  rules can see — so every file in the archive became "not named in the
+  metadata", one finding each, all true and all pointing at the wrong thing.
+  Both layers stop, and `M1` is reached its second way: *this metadata's names
+  are in `…/vdi277`, and VDI 2770 names are in `…/vdi2770`, so nothing in it is
+  a VDI 2770 element — the classification included*, with the remedy naming the
+  declaration to write. The schema layer reports this as *`Document` is not an
+  element of the schema*, which for a file whose root element **is** `Document`
+  sends its sender to rename an element that is not wrong — and that layer does
+  not always run.
+
 - **A budget running out was reported as a fact about the file — twice.** The
   read-wide PDF inflation ceiling switched the scan *off* rather than switching
   *inflating* off, so whether a file is a PDF at all, whether it is encrypted,
@@ -1264,7 +1289,7 @@ below is measured on this machine, before and after, on the same input.
 Three gates that ask what `make check` cannot ask of itself.
 
 - **`make mutations`** takes every claim this project makes about a gate, breaks
-  the thing that gate protects, and checks the gate notices — 87 rows, each
+  the thing that gate protects, and checks the gate notices — 89 rows, each
   naming the pytest selection or the tool that has to go red. The harness checks
   itself as hard as it checks the code: a row whose anchor no longer appears
   exactly once is an error rather than a pass; every apply and restore clears
@@ -1274,7 +1299,7 @@ Three gates that ask what `make check` cannot ask of itself.
   broken row, not a kill; and **one row must survive**, because a harness that
   reports red for a change that does not matter is reporting red for everything.
   It found two holes on its first full run.
-- **`make standalone`** runs each of the 63 test files on its own. A suite is a
+- **`make standalone`** runs each of the 64 test files on its own. A suite is a
   shared process, so a file can pass because an earlier one imported something —
   `tests/test_offline.py` did exactly that for weeks, patching `socket.socket`
   and then importing `urllib.request`, which breaks `class SSLSocket(socket)`
