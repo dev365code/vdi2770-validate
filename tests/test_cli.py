@@ -430,3 +430,24 @@ def test_that_standing_line_is_not_a_finding(capsys):
     payload = _json.loads(raw)
     assert payload[0]["pdfaVerified"] is False
     assert all(f["rule"] != "PDFA" for f in payload[0]["findings"])
+
+
+def test_the_standing_line_does_not_read_as_part_of_the_last_container(capsys):
+    """In a sweep it printed hard against the last report's final line, where a
+    reader takes it for something about that container. It is about the run."""
+    box = str(CORPUS / "demo_vdi.zip")
+    _, out = run(capsys, ["check", "--quiet", box, str(CORPUS / "empty.zip")])
+    before = out.split("This tool does not verify")[0]
+    assert before.endswith("\n\n"), repr(before[-60:])
+
+
+def test_a_run_that_read_nothing_does_not_lead_with_what_it_did_not_verify(
+        tmp_path, capsys):
+    """Every path unreadable: the reports go to stderr and this was the only
+    thing on stdout, so a log carried one sentence about PDF/A for a run that
+    opened no container at all. The statement exists to stop a reader
+    over-trusting a report; with no report there is nothing to over-trust."""
+    code, out = run(capsys, ["check", str(tmp_path / "nope1.zip"),
+                             str(tmp_path / "nope2.zip")])
+    assert code == 2, out
+    assert "PDF/A" not in out, out

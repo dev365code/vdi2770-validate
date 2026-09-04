@@ -64,14 +64,22 @@ def _cmd_check(args) -> int:
             worst = 1
     if args.json:
         print(_json_this_console_can_carry(documents))
-    else:
+    elif unreadable < len(args.paths):
         # Once for the run, whatever the flags. This is the refusal the project
         # leads with, and it was carried only by `P3` and `P4` -- notes, which
         # `--quiet` removes, so the flag a CI log reaches for deleted every
         # mention of it. A sentence about what this tool never does is not a
         # finding about a container: it moves no count and no exit code, and
         # saying it once per path would repeat it four hundred times in a sweep.
-        print("This tool does not verify PDF/A conformance. It reports the "
+        #
+        # Blank line first: printed hard against the last report it read as
+        # something about that container rather than about the run. And not
+        # at all when no container was opened -- the reports go to stderr
+        # then, and this was the only thing on stdout, so a log carried one
+        # sentence about PDF/A for a run that looked at nothing. It exists to
+        # stop a reader over-trusting a report; with no report there is
+        # nothing to over-trust.
+        print("\nThis tool does not verify PDF/A conformance. It reports the "
               "level a file claims;\nonly a PDF/A validator can check the "
               "claim.")
     if unreadable:

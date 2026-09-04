@@ -810,8 +810,8 @@ TABLE = [
 
     ("cli/the-run-says-what-it-never-verifies",
      "src/vdi2770_validate/cli.py",
-     '        print("This tool does not verify PDF/A conformance. It reports the "',
-     '        _unused = ("This tool does not verify PDF/A conformance. It reports the "',
+     '        print("\\nThis tool does not verify PDF/A conformance. It reports the "',
+     '        _unused = ("\\nThis tool does not verify PDF/A conformance. It reports the "',
      ["tests/test_cli.py"],
      "the refusal this project leads with was carried only by notes, and the "
      "flag a CI log reaches for removes every one of them"),
