@@ -769,6 +769,45 @@ TABLE = [
      "which of two disagreeing PDF/A claims was reported came down to packet "
      "syntax, which says nothing about which packet is the document's own"),
 
+    ("report/the-figure-counts-what-the-archive-lists",
+     "src/vdi2770_validate/runner.py",
+     "        listed = c.present or c.file_names",
+     "        listed = c.file_names",
+     ["tests/test_the_report_says_how_much_it_read.py"],
+     "refusing a member took it out of the denominator, so the figure improved "
+     "when this tool declined to look"),
+
+    ("report/an-archive-nobody-opened-is-still-one-archive",
+     "src/vdi2770_validate/runner.py",
+     "    report.read.archives_found = 1\n    if root is _CRASHED:",
+     "    if root is _CRASHED:",
+     ["tests/test_the_report_says_how_much_it_read.py"],
+     "the one path that says nothing in the archive was checked read "
+     "`0 of 0 archives` and called itself complete"),
+
+    ("report/an-unreadable-archive-is-not-an-opened-one",
+     "src/vdi2770_validate/runner.py",
+     "        if c.kind is not Kind.UNREADABLE:",
+     "        if True:",
+     ["tests/test_the_report_says_how_much_it_read.py"],
+     "a file that did not open as a ZIP was counted as an archive this read "
+     "opened"),
+
+    ("report/complete-knows-what-the-numbers-cannot",
+     "src/vdi2770_validate/report.py",
+     "                         and not any(report.count_about(s, About.TOOL)",
+     "                         and not any(False and report.count_about(s, About.TOOL)",
+     ["tests/test_the_report_says_how_much_it_read.py"],
+     "a container this tool declined to model had every number full and called "
+     "the read complete"),
+
+    ("report/the-coverage-line-is-not-a-note",
+     "src/vdi2770_validate/report.py",
+     '    lines.append("  read " + ", ".join(parts))',
+     '    lines.append("  read " + ", ".join(parts)) if show_info else None',
+     ["tests/test_the_report_says_how_much_it_read.py"],
+     "the flag that hides notes hid the line that says how much of this tool ran"),
+
     # --- the canary -------------------------------------------------------
     ("canary/a-comment-nobody-reads",
      "src/vdi2770_validate/report.py",

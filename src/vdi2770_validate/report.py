@@ -87,7 +87,10 @@ def as_text(report: Report, show_info: bool = True) -> str:
     # printed, and a statement about how much of the tool ran must survive both.
     r = report.read
     parts = [f"{r.archives_opened} of {r.archives_found} archives"]
-    if r.metadata_found:
+    # Printed at zero too. Leaving it off when nothing was found made an archive
+    # holding two members of one name -- the reader reads neither -- read the
+    # same as one that lists no metadata file at all.
+    if r.archives_opened:
         parts.append(f"{r.metadata_read} of {r.metadata_found} metadata files")
     lines.append("  read " + ", ".join(parts))
     return "\n".join(lines)
@@ -111,10 +114,20 @@ def as_json(report: Report, show_info: bool = True) -> str:
                          "found": report.read.archives_found},
             "metadataFiles": {"read": report.read.metadata_read,
                               "found": report.read.metadata_found},
+            # And whether anything was declined, which the four numbers above
+            # cannot say: a container whose metadata this tool read and could
+            # not model has every number full, and printed beside a clean
+            # container's line it said the same thing about two very different
+            # reads. Every rule that is `about: tool` is this tool saying it
+            # stopped, so one of them is the fact the flag is missing.
             "complete": (report.read.archives_opened == report.read.archives_found
-                         and report.read.metadata_read == report.read.metadata_found),
-            "note": "Counted from the archive's own directory, not from how far "
-                    "this tool got: `found` does not shrink when it gives up.",
+                         and report.read.metadata_read == report.read.metadata_found
+                         and not any(report.count_about(s, About.TOOL)
+                                     for s in Severity)),
+            "note": "Counted over the names the archives this read opened list, "
+                    "refusals included; a metadata file inside an archive that "
+                    "was not opened is not among them, and the archive count "
+                    "says so. `complete` is false if anything was declined.",
         },
         # Counted in the summary above, and deliberately not listed below: one
         # rule can fire once per element, and four hundred thousand identical

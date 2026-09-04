@@ -158,6 +158,12 @@ def check_bytes(data: bytes, name: str) -> Report:
                      "not open the archive at all, so nothing in it was checked — this "
                      "report is not a verdict on the container. Please report it with the "
                      "archive if you can share it.")
+    # Before the early return: this is the archive this read was given, and it
+    # is one whether or not the reader could open it. Counted after, the one
+    # path whose remedy says "this tool could not open the archive at all" read
+    # `0 of 0 archives` and called itself complete — the shape this figure
+    # exists to make impossible.
+    report.read.archives_found = 1
     if root is _CRASHED:
         return report
 
@@ -168,7 +174,6 @@ def check_bytes(data: bytes, name: str) -> Report:
     # up. Counting instead over this tool's own machinery has the opposite sign —
     # a file that is not a ZIP calls for one check, that check runs, and the
     # worst input this tool ever sees would score full marks.
-    report.read.archives_found = 1
     # Keyed by the container each entry belongs to, and pruned as the walk
     # leaves a subtree, so at most one root-to-here chain is ever held. Two
     # earlier versions keyed this differently and both were wrong:
@@ -218,7 +223,8 @@ def check_bytes(data: bytes, name: str) -> Report:
             1 for n in listed if n.lower().endswith(".zip"))
         report.read.metadata_found += sum(
             1 for n in listed
-            if folder_path(n).rsplit("/", 1)[-1] in (METADATA_XML, MAIN_XML))
+            if folder_path(n).replace("\\", "/").rsplit("/", 1)[-1]
+            in (METADATA_XML, MAIN_XML))
         if c.metadata_bytes is not None:
             report.read.metadata_read += 1
         # Leaving a subtree: everything at this depth or below is finished.

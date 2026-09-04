@@ -107,7 +107,12 @@ def counts_line(rendered: str) -> str:
     about a different sentence, and they would have gone on passing for a while
     before saying something untrue about the wrong string.
     """
-    for line in rendered.strip().splitlines():
-        if "error(s)" in line and "warning(s)" in line:
+    for line in rendered.splitlines():
+        # Two spaces, and not nine: a finding's detail is indented deeper and an
+        # archive picks what it says. Matching anywhere in the line let a member
+        # named `999 error(s), 999 warning(s) declined.txt` answer for the
+        # report.
+        if line.startswith("  ") and not line.startswith("   ") \
+                and "error(s)" in line and "warning(s)" in line:
             return line
     raise AssertionError(f"no counts line in:\n{rendered}")

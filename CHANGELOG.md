@@ -39,6 +39,25 @@ gate or dropped, because a number nobody re-derives is the kind of claim the
 rest of these entries are about — and that one was itself wrong twice.
 
 
+- **And the figure was attacked until it stopped over-claiming.** The count of
+  archives this read was given sat *after* the early return for a reader that
+  raised, so the one path whose remedy says *nothing in it was checked* read
+  `0 of 0 archives` and called itself complete. A member refused for a
+  backslash — the one separator this tool refuses over — was the one the
+  metadata predicate did not split on. `complete` was exactly what the four
+  integers beside it already said, so a container this tool declined to model
+  printed a clean container's line; it now also knows whether this tool
+  recorded stopping, which the integers cannot. The metadata clause is printed
+  at zero, because leaving it off made an archive holding two members of one
+  name read like an archive that lists no metadata file at all. Two fields
+  nothing ever set are gone.
+
+- **Upgrading, if you read the text report by position.** Every report now ends
+  with a `read …` line rather than the counts line, so anything taking the last
+  line of the output — `tail -1`, `splitlines()[-1]` — now reads the coverage
+  figure. Match on the line that carries `error(s)` instead. The `--json` shape
+  grows a `read` object beside `summary`; nothing existing moved.
+
 - **The report says how much of the container it read.** `0 error(s)` is a
   statement about findings, not about reach: a file this tool could not open at
   all printed the same shape as a container with one small thing wrong, and six
@@ -1399,7 +1418,7 @@ below is measured on this machine, before and after, on the same input.
 Three gates that ask what `make check` cannot ask of itself.
 
 - **`make mutations`** takes every claim this project makes about a gate, breaks
-  the thing that gate protects, and checks the gate notices — 92 rows, each
+  the thing that gate protects, and checks the gate notices — 97 rows, each
   naming the pytest selection or the tool that has to go red. The harness checks
   itself as hard as it checks the code: a row whose anchor no longer appears
   exactly once is an error rather than a pass; every apply and restore clears

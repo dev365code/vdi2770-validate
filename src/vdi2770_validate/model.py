@@ -147,8 +147,6 @@ class Read:
     archives_opened: int = 0
     metadata_found: int = 0
     metadata_read: int = 0
-    pdfs_declared: int = 0
-    pdfs_opened: int = 0
 
 
 @dataclass
