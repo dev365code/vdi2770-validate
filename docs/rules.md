@@ -342,6 +342,6 @@ Why this is ours: The file is well-formed XML; we declined to turn it into objec
 
 *error* · obligation `ours` · **about: this tool**
 
-Why this is ours: A rule that crashes has checked nothing, and a report that omits it in silence would be telling the reader the container passed that check. This is about us, not the container.
+Why this is ours: A rule that crashes has checked nothing, and a report that omits it in silence would be telling the reader the container passed that check. This is about us, not the container. It cannot say which other checks went quiet with it: rules that decline their case to another layer decline it whether that layer failed or was never asked.
 
-**Remedy.** Nothing in the container needs changing for this one. Please report it with the container if you can share it. Every other finding in this report still stands; only the named check did not run.
+**Remedy.** Nothing in the container needs changing for this one. Please report it with the container if you can share it. Every finding in this report still stands — but what did not run is the named check together with anything in this tool that leaves its case to it, so read the report as incomplete rather than as a verdict.

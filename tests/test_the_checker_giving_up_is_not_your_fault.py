@@ -214,3 +214,41 @@ def test_a_document_with_too_many_violations_is_not_told_to_simplify_itself(
     said = stopped[0].remedy or ""
     assert "Simplify the metadata" not in said, said
     assert "limit that gave up belongs to this tool" not in said, said
+
+
+def test_a_crashed_step_does_not_promise_that_everything_else_was_checked(
+        tmp_path, monkeypatch):
+    """`X5` closed with *only the named check did not run*. It is not true.
+
+    Three checks in the metadata layer decline their case to the schema layer —
+    an absent `ClassId`, an absent `Language` on a class name, an absent one on
+    a description — because the schema reports a missing element and this tool's
+    remedy for a *wrong* value is no help when there is nothing to correct. When
+    the schema step does not run, those decline too, and nothing says so.
+
+    The container below has no `ClassId` at all and the report named nothing
+    about it while promising the reader that everything else had been looked at.
+    """
+    import re
+
+    from vdi2770_validate import xsdvalidate
+
+    box = zipfile.ZipFile(io.BytesIO(CLEAN_DOCUMENT.read_bytes()))
+    was = box.read("VDI2770_Metadata.xml").decode("utf-8")
+    text = re.sub(r"\s*<ClassId>[^<]*</ClassId>", "", was, count=1)
+    assert text.count("<ClassId>") == was.count("<ClassId>") - 1, "the premise"
+    zpath = tmp_path / "crash.zip"
+    with zipfile.ZipFile(zpath, "w") as z:
+        for name in box.namelist():
+            z.writestr(name, text if name == "VDI2770_Metadata.xml"
+                       else box.read(name))
+
+    def boom(*_a, **_k):
+        raise RuntimeError("simulated schema-step crash")
+
+    monkeypatch.setattr(xsdvalidate, "validate", boom)
+    report = check_file(str(zpath))
+    said = [f for f in report.findings if f.rule.id == "X5"]
+    assert said, sorted({f.rule.id for f in report.findings})
+    assert "only the named check did not run" not in (said[0].remedy or ""), (
+        said[0].remedy)

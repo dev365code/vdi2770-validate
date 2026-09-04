@@ -39,6 +39,16 @@ gate or dropped, because a number nobody re-derives is the kind of claim the
 rest of these entries are about — and that one was itself wrong twice.
 
 
+- **A crashed step promised that everything else had been checked.** `X5` closed
+  with *only the named check did not run*, and three checks in the metadata layer
+  decline their case to the schema layer — an absent `ClassId`, an absent
+  `Language` on a class name, an absent one on a description — because a remedy
+  written for a *wrong* value is no help when there is nothing to correct. When
+  the schema step does not run, those go quiet too. A container with no `ClassId`
+  at all drew nothing about it under a sentence saying the rest had been looked
+  at. The report is now described as incomplete rather than as a verdict, which
+  is what it is.
+
 - **`Document` is not a name.** The model matched local names and ignored the
   namespace, so an element from any vocabulary at all was read as a VDI 2770 one.
   A `DocumentClassification` in someone else's namespace *satisfied* the rule
