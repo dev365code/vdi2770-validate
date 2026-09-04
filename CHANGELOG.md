@@ -422,9 +422,8 @@ rest of these entries are about — and that one was itself wrong twice.
   short of opening is reported as one — it used to draw `P3`, *this scan found
   no PDF/A claim in the file*, which is a fact about a scan that never ran.
   Legitimate deliveries do not come near the ceiling: the scan stops at the
-  first PDF/A claim it finds, VDI 2770 requires PDF/A, and every PDF in the
-  corpus carries its claim in bytes that were never compressed — 0 inflated,
-  measured.
+  first PDF/A claim it finds, and every PDF in the corpus carries its claim in
+  bytes that were never compressed — 0 inflated, measured.
 
 - **An archive answering to both container kinds was silently one of them.**
   `VDI2770_Main.xml` beside `VDI2770_Metadata.xml` at the root classifies as a

@@ -59,29 +59,36 @@ def test_three_findings_about_three_names_point_at_three_lines():
         assert tag in shown, f"{rule} points at line {at[rule]}: {shown.strip()!r}"
 
 
+#: Written here rather than lifted from `corpus/examples/`. The block this test
+#: needs is a long one — that is the whole argument, since pointing at its first
+#: line is how the defect looked — and the shortest way to get a long one was to
+#: copy the reference project's. Their fixtures are MIT and this file is listed
+#: as ours, so the copy would have travelled in the sdist under the wrong notice
+#: for the sake of filler no assertion reads.
 VERSION = """<DocumentVersion>
         <DocumentVersionId>1.0</DocumentVersionId>
         <Language>de</Language>
         <Language>deutsch</Language>
         <Party Role="Author">
-            <Organization OrganizationName="Beispiel GmbH"
-                OrganizationOfficialName="Beispiel GmbH &amp; Co. KGaA" OrganizationId="BSP"/>
+            <Organization OrganizationName="Musterwerk Anlagenbau"
+                OrganizationOfficialName="Musterwerk Anlagenbau GmbH" OrganizationId="MWA"/>
         </Party>
         <DocumentDescription Language="de">
-            <Title>Hauptdokument</Title>
-            <Summary>Das Hauptdoument ist eine Auflistung aller Dokumente einer Ebene.
-                Gibt es zu dieser Ebene auch eine untergeordnete Ebene, so enthält die Auflistung auch die Hauptdokumente
-                der zugehörigen ersten untergeordneten Ebene.
+            <Title>Prüfstück für die Fundstellenangabe</Title>
+            <Summary>Diese Dokumentversion gehört zu einem Prüfcontainer dieses
+                Projekts und beschreibt keine wirkliche Anlage. Sie ist absichtlich
+                ausführlich gehalten, damit der umschließende Block deutlich größer
+                ist als die einzelnen Elemente, um die es hier geht.
             </Summary>
             <KeyWords>
-                <KeyWord>Hauptdokument</KeyWord>
-                <KeyWord>Dokumentenliste</KeyWord>
+                <KeyWord>Prüfdaten</KeyWord>
+                <KeyWord>Fundstelle</KeyWord>
             </KeyWords>
         </DocumentDescription>
         <LifeCycleStatus StatusValue="InReview" SetDate="2018-04-04">
             <Party Role="Responsible">
-                <Organization OrganizationName="Beispiel GmbH"
-                    OrganizationOfficialName="Beispiel GmbH &amp; Co. KGaA" OrganizationId="BSP"/>
+                <Organization OrganizationName="Musterwerk Anlagenbau"
+                    OrganizationOfficialName="Musterwerk Anlagenbau GmbH" OrganizationId="MWA"/>
             </Party>
         </LifeCycleStatus>
         <DocumentRelationship Type="RefersTo">

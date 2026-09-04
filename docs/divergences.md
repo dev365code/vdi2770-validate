@@ -80,8 +80,16 @@ two of the four rows where they differ by wording. (The fifth, 04-01, differs on
 |---|---|---|---|---|
 | 02-03 | Bauteile | Assemblies | Components | reference (*Bauteile* are parts; assemblies are *Baugruppen*) |
 | 02-04 | Zeugnisse, Zertifikate, Bescheinigungen | Certificates, declarations | Certificates | IDTA (the German names three things) |
-| 03-01 | Montage, Demontage | Commissioning, decommissioning | Assembly, disassembly | reference (commissioning is *Inbetriebnahme*) |
+| 03-01 | Montage, Demontage | Commissioning, decommissioning * | Assembly, disassembly | reference (commissioning is *Inbetriebnahme*) |
 | 03-04 | Inspektion, Wartung, Prüfung | Inspection, maintenance, testing | Inspection, maintenance | IDTA (*Prüfung* is dropped) |
+
+\* IDTA prints `03-01` across a line break as `Commissioning, de-` /
+`commissioning`, and it is stored here without the hyphen. Whether the hyphen
+belongs to the word or to the line cannot be told from the page — the two other
+cells that wrap in the same table break at a space, and this one had room to. A
+sender who copies the printed form gets the `M4` note rather than a match, which
+is a note either way. Recorded in [THIRD_PARTY.md](../THIRD_PARTY.md) as a change
+to the CC BY material, and part of what the open question below asks.
 
 Two each. That is why matching is keyed on the class id and the German name, and
 why an English name produces a note here rather than a verdict: we have no basis

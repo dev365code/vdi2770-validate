@@ -8,8 +8,8 @@
       "publisher": "Industrial Digital Twin Association e.V.",
       "url": "https://github.com/admin-shell-io/submodel-templates",
       "licence": "CC BY 4.0",
-      "modification": "the twelve rows were extracted and reformatted as JSON; no wording altered",
-      "note": "Table 1 is unchanged from v2.0; all twelve rows were compared against the v2.0.1 text."
+      "modification": "the twelve rows were extracted and reformatted as JSON. One word was joined: 03-01 is printed 'Commissioning, de-' / 'commissioning' across a line break and is stored here without the hyphen. Whether that hyphen is spelling or typesetting cannot be decided from the source, and the reading that produced this file may be the wrong one: the two other cells that wrap in the same table break at a space, and this one had room to. Every other cell is transcribed character for character.",
+      "note": "Table 1 is unchanged from v2.0; all twelve rows were compared against the v2.0.1 text. The machine-readable artefacts published beside the PDF -- the template JSON and the sample AASX -- do not carry the class names, so the PDF is the only place this table can be read."
     },
     "english_second_opinion": {
       "repo": "DigitalDataChainConsortium/vdi2770",

@@ -5,8 +5,8 @@ whether we changed it.
 
 | Component | Origin | Licence | Modified? |
 |---|---|---|---|
-| `src/vdi2770_validate/data/VDI2770_Schema_2019-08-23.xsd` | VDI, from the [VDI 2770 guideline programme page](https://www.vdi.de/richtlinien/programme-zu-vdi-richtlinien/vdi-2770) | **No licence stated by the publisher** — see below | **No — byte-for-byte verbatim** |
-| `src/vdi2770_validate/data/document-classes.json` | Table 1 of IDTA 02004 "Handover Documentation" v2.0.1, as published in [admin-shell-io/submodel-templates](https://github.com/admin-shell-io/submodel-templates); the `ddcReference` names beside them from `Constants.java` of the reference implementation | **CC BY 4.0** © Industrial Digital Twin Association (IDTA names, IRDIs) **and MIT** © 2021 Johannes Schmidt (`ddcReference` names) | **Yes** — extracted and reformatted as JSON; no wording changed |
+| `src/vdi2770_validate/data/VDI2770_Schema_2019-08-23.xsd` | VDI, from the [VDI 2770 guideline programme page](https://www.vdi.de/richtlinien/programme-zu-vdi-richtlinien/vdi-2770) | **No grant — the publisher reserves its rights** — see below | **No — byte-for-byte verbatim** |
+| `src/vdi2770_validate/data/document-classes.json` | Table 1 of IDTA 02004 "Handover Documentation" v2.0.1, as published in [admin-shell-io/submodel-templates](https://github.com/admin-shell-io/submodel-templates); the `ddcReference` names beside them from `Constants.java` of the reference implementation | **CC BY 4.0** © Industrial Digital Twin Association (IDTA names, IRDIs) **and MIT** © 2021 Johannes Schmidt (`ddcReference` names) | **Yes** — extracted and reformatted as JSON; one hyphen joined in `03-01`, see below |
 | `corpus/examples/` (49 files) | [DigitalDataChainConsortium/vdi2770](https://github.com/DigitalDataChainConsortium/vdi2770) @ `e47c13c`, `examples/` | **MIT**, © 2021 Johannes Schmidt | **No — byte-for-byte verbatim, SHA-256 per file in `corpus/MANIFEST.json`** |
 | `tests/data/oracle-messages.json` | English message bundles of the same project | **MIT**, © 2021 Johannes Schmidt | **Yes** — the message strings were extracted into a JSON list; no wording changed |
 | `src/vdi2770_validate/data/rules.json` | this project | Apache-2.0 | n/a — titles and remedies are ours, checked against the reference's messages by `tests/test_catalogue.py::test_no_remedy_is_copied_from_the_reference_implementation`; its codes appear only in `refCodes`/`refKeys` as cross-references |
@@ -29,9 +29,18 @@ alongside the same declaration in plain text. It is the machine-readable model
 of the metadata file, and publishing it free is what makes independent
 implementations possible at all.
 
-**The download page states no licence and no terms of use.** So this
-redistribution rests on the evident purpose of a free publication of an
-interface definition, not on an explicit grant. We therefore:
+**The download page states no terms of its own — but the publisher is not
+silent, and this page used to say it was.** The page carries "© 2026 VDI Verein
+Deutscher Ingenieure e.V. Alle Rechte vorbehalten", and its footer links VDI's
+site-wide imprint, which reserves the site's content and asks that reproduction
+be agreed first: *"Die Vervielfältigung von Informationen oder Daten … bedarf
+der vorherigen Zustimmungen des VDI"* ([vdi.de/impressum](https://www.vdi.de/impressum),
+which also names German law and Düsseldorf; both pages read 2026-09).
+
+So this redistribution rests on the evident purpose of publishing an interface
+definition free of charge — read **against an express reservation, not into a
+silence**. That is thinner than what stood here before, and saying so is the
+point of this page. We therefore:
 
 - ship the file **completely unmodified**. The copy here has SHA-256
   `f7a704fe4bba095eaa4e95be0b9853205412301ad09c4bcffb4c5f0f666cb805`; a test pins
@@ -74,7 +83,15 @@ German and English names and ECLASS semantic identifiers, taken from:
 
 **Changes made:** the table's twelve rows were extracted and reformatted as
 JSON, with the English names of the corresponding rows of the reference
-implementation stored beside them for comparison. No wording was altered.
+implementation stored beside them for comparison.
+
+One word was joined. `03-01` is printed `Commissioning, de-` / `commissioning`
+across a line break, and is stored here as `Commissioning, decommissioning`. That
+reading may be the wrong one: the two other cells that wrap in the same table
+break at a space, and this one had room to, which is what a hyphen belonging to
+the word rather than to the line would look like. It is a note rather than a
+verdict either way — an English name never fails a document here. Every other
+cell is transcribed character for character.
 
 This project is not endorsed by, affiliated with, or certified by the IDTA.
 

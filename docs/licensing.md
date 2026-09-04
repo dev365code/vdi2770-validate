@@ -37,8 +37,13 @@ Full table, licence texts and modification statements are in
 
 1. **The XML schema.** VDI publishes it free of charge on the VDI 2770 guideline
    programme page. Redistributed verbatim and unmodified. The download page states
-   no licence or terms of use — we treat the file as VDI's work and change nothing
-   about it. A request for an explicit licence statement is worth making.
+   no terms of its own, but the publisher is not silent about the site: it reserves
+   its rights and asks that reproduction be agreed first. So we treat the file as
+   VDI's work, change nothing about it, and read a free publication of an interface
+   definition as meant to be implementable — against that reservation rather than
+   into a silence. An explicit statement from VDI is not a nicety here; it is the
+   thing this rests on. [THIRD_PARTY.md](../THIRD_PARTY.md) quotes the reservation
+   and says what happens if VDI would rather we stopped.
 
 2. **The document class table.** Transcribed from IDTA 02004 "Handover
    Documentation" v2.0.1 (November 2025) Table 1, published by the Industrial

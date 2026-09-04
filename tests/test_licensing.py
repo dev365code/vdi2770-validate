@@ -49,6 +49,16 @@ def test_cc_by_attribution_states_the_modification():
     assert "creativecommons.org/licenses/by/4.0" in THIRD_PARTY
     assert "Industrial Digital Twin Association" in THIRD_PARTY
     assert re.search(r"extracted and reformatted", THIRD_PARTY)
+    # Reformatting was not the only change, and "indicate if You modified" is not
+    # satisfied by naming the change that is easy to admit. One cell of the table
+    # is stored differently from how the source prints it.
+    assert "Commissioning, de-" in THIRD_PARTY, (
+        "the one transcription that departs from the printed table is no longer "
+        "disclosed, so the CC BY modification statement is now incomplete")
+    classes = json.loads((DATA / "document-classes.json").read_text(encoding="utf-8"))
+    assert "Commissioning, de-" in classes["_sources"]["german_and_irdi"]["modification"], (
+        "the data file has to carry the same disclosure: it ships in the wheel "
+        "and THIRD_PARTY.md is what a reader finds only if they go looking")
 
 
 def test_every_bundled_data_file_is_accounted_for():
@@ -178,3 +188,147 @@ def test_the_vendored_message_set_is_the_bytes_that_were_extracted():
     assert body["_source"]["commit"] == "e47c13c1925abc3ed4698cb5ed9e73b5eb544353", (
         "the messages and the oracle sweep must come from one commit of the reference")
     assert len(set(body["messages"])) == len(body["messages"]), "the set has duplicates"
+
+
+#: Prose surfaces. Every one of these is published: `README.md` and
+#: `CHANGELOG.md` are what PyPI links to, `NOTICE` and `THIRD_PARTY.md` travel
+#: in the wheel, and `docs/` is what a reader follows from either.
+PROSE = ["README.md", "CHANGELOG.md", "CONTRIBUTING.md", "SECURITY.md",
+         "NOTICE", "THIRD_PARTY.md"]
+
+_ASSERTS = re.compile(
+    r"(VDI\s?2770|the guideline|the standard)\s+"
+    r"(requires?|required|mandates?|demands?|prescribes?|stipulates?|"
+    r"specifies|defines|says|states|forbids?|prohibits?|allows?|permits?)\b",
+    re.I)
+
+#: Prose may say what VDI 2770 requires only where it also says where that came
+#: from, or where it is naming the form this project refuses to use. Each entry
+#: records which of the two it is. Reword the sentence and it stops matching, so
+#: the decision gets made once per sentence rather than once per project.
+SOURCED = {
+    "README.md": [
+        ("VDI 2770 defines twelve document classes",
+         "the sentence after it names the two sources that publish the table free"),
+    ],
+    "CONTRIBUTING.md": [
+        ("not what the standard requires",
+         "an instruction not to assert it — a mention, not a claim"),
+    ],
+    "docs/licensing.md": [
+        ("so this is what VDI 2770 requires",
+         "the policy sentence, quoting the form it forbids"),
+    ],
+}
+
+
+def test_prose_does_not_assert_what_the_paid_guideline_requires():
+    """`rules.json` carries an `obligation` on every rule so that no claim about
+    VDI 2770 travels without its source. Prose had no such gate, and a sentence
+    in the changelog asserted "VDI 2770 requires PDF/A" with nothing behind it —
+    a claim `P3` and `P4` are both written to refuse, since their obligation is
+    `ours` precisely because we cannot check the guideline.
+
+    The guideline is paid and was not read. A statement about what it requires is
+    therefore either sourced somewhere free, or it is repetition of something
+    somebody once heard — which is the thing CONTRIBUTING.md forbids "even from
+    memory".
+    """
+    paths = PROSE + sorted(str(p.relative_to(ROOT)) for p in (ROOT / "docs").glob("*.md"))
+    unsourced = []
+    for name in paths:
+        path = ROOT / name
+        if not path.exists():
+            continue
+        # Collapsed, so a sentence that wraps across lines is still one string
+        # and an allowance keyed on its words survives a re-wrap.
+        text = " ".join(path.read_text(encoding="utf-8").split())
+        for m in _ASSERTS.finditer(text):
+            context = text[max(0, m.start() - 90):m.end() + 90]
+            if any(fragment in context for fragment, _ in SOURCED.get(name, ())):
+                continue
+            unsourced.append(f"{name}: …{context}…")
+    assert not unsourced, (
+        "a public page states what VDI 2770 requires without saying where that "
+        "came from:\n  " + "\n  ".join(unsourced))
+
+
+def test_every_allowance_still_matches_something():
+    """An allowance for a sentence nobody wrote any more is a hole with a reason
+    attached. This is the count assert the generated files get."""
+    for name, allowed in SOURCED.items():
+        text = " ".join((ROOT / name).read_text(encoding="utf-8").split())
+        for fragment, why in allowed:
+            assert fragment in text, (
+                f"{name} no longer contains {fragment!r}, allowed because {why}")
+
+
+def _tracked_names():
+    """Git when there is a repository, a walk when there is not — the same
+    question has to be answerable inside an sdist, where only shipped files
+    exist."""
+    import subprocess
+
+    found = subprocess.run(["git", "ls-files"], cwd=ROOT, capture_output=True, text=True)
+    if found.returncode == 0 and found.stdout.split():
+        return found.stdout.split()
+    skip = {".git", "__pycache__", ".pytest_cache", ".ruff_cache", "build", "dist", ".venv"}
+    return [str(p.relative_to(ROOT)) for p in ROOT.rglob("*")
+            if p.is_file() and not skip & set(p.relative_to(ROOT).parts)]
+
+
+_TAG = re.compile(r"<[^>]*>")
+
+
+def _prose_of(text):
+    """Sentences, not structure. Every conforming metadata file repeats the same
+    element and attribute names, so a line-for-line comparison against the corpus
+    flags `<DigitalFile FileFormat="application/pdf">` — which is the format, not
+    anybody's writing. Stripping the tags leaves what a person composed."""
+    out = []
+    for chunk in _TAG.sub("\n", text).split("\n"):
+        collapsed = " ".join(chunk.split())
+        if len(collapsed) >= 40 and len(collapsed.split()) >= 6:
+            out.append(collapsed)
+    return out
+
+
+def test_no_source_of_ours_carries_prose_from_the_vendored_corpus():
+    """`corpus/examples/` is MIT and accounted for as MIT. Everything outside it
+    is listed in THIRD_PARTY.md as this project's own, under Apache-2.0.
+
+    A test fixture here was built by copying a `DocumentVersion` out of the
+    corpus — German prose and all, down to the upstream typo — because the test
+    needed a long block and that was the shortest way to get one. No assertion
+    read a word of it, and `MANIFEST.in` puts `tests/*.py` in the sdist, so it
+    would have shipped under the wrong notice for the sake of filler.
+
+    Attribution is the fix for material we need. This is the other case: we did
+    not need it.
+    """
+    corpus = [n for n in _tracked_names() if n.startswith("corpus/examples/")]
+    phrases = {}
+    for name in corpus:
+        try:
+            text = (ROOT / name).read_text(encoding="utf-8")
+        except (UnicodeDecodeError, OSError):
+            continue                      # binary fixtures carry no prose to lift
+        for phrase in _prose_of(text):
+            phrases.setdefault(phrase, name)
+    assert phrases, "no prose was extracted from the corpus, so this proves nothing"
+
+    ours = [n for n in _tracked_names()
+            if not n.startswith("corpus/")
+            and n.rsplit(".", 1)[-1] in ("py", "md", "json", "xml", "toml", "yml", "txt")]
+    copied = []
+    for name in ours:
+        try:
+            body = " ".join((ROOT / name).read_text(encoding="utf-8").split())
+        except (UnicodeDecodeError, OSError):
+            continue
+        for phrase, source in phrases.items():
+            if phrase in body:
+                copied.append(f"{name} carries {source}: {phrase[:60]}…")
+    assert not copied, (
+        "a file this project calls its own repeats prose from the vendored "
+        "corpus:\n  " + "\n  ".join(copied))
