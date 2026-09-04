@@ -451,3 +451,39 @@ def test_a_run_that_read_nothing_does_not_lead_with_what_it_did_not_verify(
                              str(tmp_path / "nope2.zip")])
     assert code == 2, out
     assert "PDF/A" not in out, out
+
+
+def test_a_gate_can_choose_to_fail_on_warnings(capsys):
+    """Nine rules are warnings and every one is about the container, not about
+    this tool — a file the metadata does not name, a class name in a language
+    this tool cannot check, an encrypted PDF. Eight containers in this
+    repository come back `exit 0` carrying one.
+
+    They are warnings on purpose: `P3` cannot be an error because this tool does
+    not verify PDF/A, and `Z9` relays what the reference implementation says
+    about folders. Making them errors would claim more than this tool knows. So
+    the default does not move, and an intake gate that wants none of them says
+    so.
+    """
+    warned = str(FIXTURES / "f2-undeclared-file.zip")
+    clean = str(CLEAN_DOCUMENT)
+
+    assert run(capsys, ["check", warned])[0] == 0
+    assert run(capsys, ["check", "--fail-on", "warning", warned])[0] == 1
+    # A container with nothing to say is still nothing to say.
+    assert run(capsys, ["check", "--fail-on", "warning", clean])[0] == 0
+    # And the flag does not invent an error where there is none to report.
+    code, out = run(capsys, ["check", "--fail-on", "warning", warned])
+    assert "1 error(s)" not in out, out
+    assert "0 error(s), 1 warning(s)" in out, out
+
+
+def test_the_default_is_the_one_the_page_documents(capsys):
+    """`--fail-on` defaults to `error`, which is what the README says happens."""
+    from conftest import ROOT
+
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    assert "A warning does" in readme, "the README explains what a warning does"
+    warned = str(FIXTURES / "f2-undeclared-file.zip")
+    assert run(capsys, ["check", "--fail-on", "error", warned])[0] == 0
+    assert run(capsys, ["check", warned])[0] == 0

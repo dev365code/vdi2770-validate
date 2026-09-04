@@ -5,8 +5,9 @@ sweep continues. A CI job pointed at a supplier drop folder must come back with
 a verdict on every container it was given, not a traceback about the first one.
 
 Exit codes: 0 no error, which is not the same as nothing wrong -- a warning
-does not move the number, so a container can come back 0 with findings in the
-report; 1 at least one error or unreadable path; 2 nothing could be read at all. A run whose reader goes away -- `| head` -- ends by
+does not move the number unless `--fail-on warning` says it should, so a
+container can come back 0 with findings in the report; 1 at least one finding at
+the chosen severity, or an unreadable path; 2 nothing could be read at all. A run whose reader goes away -- `| head` -- ends by
 `SIGPIPE` where the platform has one and 141 where it does not, because it did
 not finish: any of 0, 1 or 2 would be a claim about containers nobody looked at.
 """
@@ -60,7 +61,12 @@ def _cmd_check(args) -> int:
             documents.append({"path": path, **json.loads(rendering.as_json(rep, not args.quiet))})
         else:
             print(rendering.as_text(rep, not args.quiet))
-        if rep.count(Severity.ERROR):
+        # Nine rules are warnings and every one is about the container. They
+        # are warnings on purpose -- `P3` cannot be an error because this tool
+        # does not verify PDF/A -- so the number does not move for them by
+        # default, and an intake gate that wants none of them says so.
+        if rep.count(Severity.ERROR) or (
+                args.fail_on == "warning" and rep.count(Severity.WARNING)):
             worst = 1
     if args.json:
         print(_json_this_console_can_carry(documents))
@@ -129,6 +135,9 @@ def main(argv=None) -> int:
     c.add_argument("paths", nargs="+")
     c.add_argument("--json", action="store_true", help="machine-readable output")
     c.add_argument("--quiet", action="store_true", help="hide notes")
+    c.add_argument("--fail-on", choices=("error", "warning"), default="error",
+                   help="exit 1 on findings of this severity or worse "
+                        "(default: error)")
     c.set_defaults(func=_cmd_check)
 
     r = sub.add_parser("rules", help="list the rules this tool applies")

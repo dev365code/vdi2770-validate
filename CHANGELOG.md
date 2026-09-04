@@ -39,6 +39,15 @@ gate or dropped, because a number nobody re-derives is the kind of claim the
 rest of these entries are about — and that one was itself wrong twice.
 
 
+- **A gate can choose to fail on warnings.** Nine rules are warnings and every
+  one is about the container — a file the metadata does not name, an encrypted
+  PDF, a class name in a language this tool cannot check — and eight containers
+  in this repository come back `exit 0` carrying one. They are warnings on
+  purpose: `P3` cannot be an error because this tool does not verify PDF/A, and
+  `Z9` relays what the reference implementation says about folders, so promoting
+  them would claim more than this tool knows. The default does not move.
+  `--fail-on warning` is for the intake gate that wants none of them.
+
 - **`--quiet` deleted the one refusal this project leads with.** *This tool
   cannot verify PDF/A conformance* is said by `P3` and `P4`, which are notes,
   and `--quiet` — the flag a CI log reaches for — hides notes. Measured: zero
@@ -1433,7 +1442,7 @@ below is measured on this machine, before and after, on the same input.
 Three gates that ask what `make check` cannot ask of itself.
 
 - **`make mutations`** takes every claim this project makes about a gate, breaks
-  the thing that gate protects, and checks the gate notices — 98 rows, each
+  the thing that gate protects, and checks the gate notices — 99 rows, each
   naming the pytest selection or the tool that has to go red. The harness checks
   itself as hard as it checks the code: a row whose anchor no longer appears
   exactly once is an error rather than a pass; every apply and restore clears

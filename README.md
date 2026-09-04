@@ -21,7 +21,9 @@ vdi2770-validate check YOUR-CONTAINER.zip
 It exits `0` when it found no error, `1` when it found at least one or could not
 read a path you gave it, and `2` when it could read none of them. A warning does
 not move the number, so `0` means *no error*, not *nothing to look at* — the
-report says what it found either way.
+report says what it found either way. An intake gate that wants none of the
+warnings either can say `--fail-on warning`; the default is `error`, because a
+warning here is a warning on purpose.
 
 The rest of this page runs on containers that ship here, so to follow along:
 

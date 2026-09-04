@@ -816,6 +816,14 @@ TABLE = [
      "the refusal this project leads with was carried only by notes, and the "
      "flag a CI log reaches for removes every one of them"),
 
+    ("cli/a-gate-can-choose-to-fail-on-warnings",
+     "src/vdi2770_validate/cli.py",
+     '                args.fail_on == "warning" and rep.count(Severity.WARNING)):',
+     "                False):",
+     ["tests/test_cli.py"],
+     "eight containers here come back exit 0 carrying a warning and a gate had "
+     "no way to say it wanted none of them"),
+
     # --- the canary -------------------------------------------------------
     ("canary/a-comment-nobody-reads",
      "src/vdi2770_validate/report.py",
