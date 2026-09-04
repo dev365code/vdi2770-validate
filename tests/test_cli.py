@@ -8,7 +8,7 @@ import zipfile
 
 import pytest
 
-from conftest import CLEAN_DOCUMENT, FIXTURES, under_test
+from conftest import CLEAN_DOCUMENT, CORPUS, FIXTURES, under_test
 from vdi2770_validate.cli import main
 
 capsys_holder = [None]
@@ -334,3 +334,59 @@ def test_a_reader_that_stops_reading_does_not_produce_a_traceback():
     # reports for it. Never a verdict: the run did not finish, and saying 0 or 1
     # would be a claim about containers nobody looked at.
     assert proc.returncode in (-signal.SIGPIPE, 141), proc.returncode
+
+
+def test_the_exit_codes_the_docstring_promises_are_the_ones_it_returns(tmp_path,
+                                                                       capsys):
+    """`cli`'s own first paragraph is where the exit codes are written down, and
+    it said "0 nothing wrong" for a run that reports warnings and returns 0.
+
+    A CI job reads the number, not the paragraph — but the paragraph is what a
+    reader is given, and five fixtures whose whole purpose is to violate a rule
+    come back 0 because the rule is a warning.
+    """
+    import re
+
+    from vdi2770_validate import cli
+
+    said = re.search(r"Exit codes: ([^.]*)\.", cli.__doc__).group(1)
+    assert "0 nothing wrong" not in said, said
+    assert "warning" in said, (
+        f"the paragraph does not say what a warning does to the number: {said}")
+
+    warned = FIXTURES / "f2-undeclared-file.zip"
+    assert warned.exists(), "the premise"
+    assert cli.main(["check", str(warned)]) == 0
+    out = capsys.readouterr().out
+    assert "warning(s)" in out and " 0 error(s)" in out, out
+
+
+def test_quiet_hides_notes_in_both_shapes(tmp_path, capsys):
+    """`--quiet` says "hide notes" and only the human shape obeyed it."""
+    import json as _json
+
+    from vdi2770_validate import cli
+
+    box = CORPUS / "demo_vdi.zip"
+    assert box.exists(), "the premise"
+    cli.main(["check", "--json", "--quiet", str(box)])
+    payload = _json.loads(capsys.readouterr().out)
+    kinds = {f["severity"] for d in payload for f in d.get("findings", [])}
+    assert "info" not in kinds, sorted(kinds)
+
+
+def test_findings_are_ordered_the_way_a_reader_counts(tmp_path, capsys):
+    """`Z10` sorted before `Z2` because the ids were compared as strings. The
+    `rules` subcommand was fixed for exactly this and the report was not."""
+    from vdi2770_validate.catalog import rule
+    from vdi2770_validate.model import Finding, Location, Report, Severity
+
+    rep = Report(target="x.zip")
+    ids = ("Z2", "Z11", "Z13")
+    for rid in ids:
+        r = rule(rid)
+        assert r.severity is Severity.ERROR, (
+            f"{rid} changed severity; this test needs three of one kind")
+        rep.add(Finding(r, r.title, Location(container="x.zip")))
+    got = [f.rule.id for f in rep.sorted()]
+    assert got == ["Z2", "Z11", "Z13"], got

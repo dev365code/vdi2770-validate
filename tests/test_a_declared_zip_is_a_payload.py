@@ -475,3 +475,52 @@ def test_a_documentation_container_holding_only_a_declared_payload_delivers_noth
     assert z8, (
         "the innermost documentation container delivers nothing and nothing "
         f"said so: {[f.rule.id for f in report.findings]}")
+
+
+def test_following_the_remedy_settles_it_or_the_remedy_does_not_say_it_will():
+    """`Z11` promised that a declaration settles which of the two you meant.
+
+    It stopped being true when this rule learned to say so when the two
+    disagree: declare a `.zip` as payload and, if its root still holds the
+    reserved file that makes an archive a container, the finding stays — with a
+    second remedy contradicting the first. A sender who does what the report
+    says and gets the same error back, differently worded, has been sent down a
+    path that cannot work.
+    """
+    import io
+    import zipfile
+
+    from conftest import CLEAN_DOCUMENT
+    from vdi2770_validate.catalog import rule
+    from vdi2770_validate.runner import check_bytes
+
+    base = zipfile.ZipFile(CLEAN_DOCUMENT)
+    meta = base.read("VDI2770_Metadata.xml").decode("utf-8")
+
+    def box(text):
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w") as z:
+            for name in base.namelist():
+                z.writestr(name, text if name == "VDI2770_Metadata.xml"
+                           else base.read(name))
+            z.writestr("stowaway.zip", CLEAN_DOCUMENT.read_bytes())
+        return buf.getvalue()
+
+    declared = meta.replace(
+        "<DigitalFile",
+        '<DigitalFile FileFormat="application/zip">stowaway.zip</DigitalFile>\n      '
+        "<DigitalFile", 1)
+    assert declared != meta, "the premise"
+
+    first = [f for f in check_bytes(box(meta), "s.zip").findings if f.rule.id == "Z11"]
+    assert first, "the premise: an undeclared inner container draws Z11"
+    still = [f for f in check_bytes(box(declared), "s.zip").findings
+             if f.rule.id == "Z11"]
+    assert still, "the premise: declaring it does not settle it any more"
+
+    said = first[0].remedy or ""
+    assert said == rule("Z11").remedy, "this reach uses the catalogue's remedy"
+    assert "a declaration is what tells it which of the two you meant" not in said, (
+        "the remedy promises that declaring it settles this, and it does not")
+    # And what does settle it has to be in the sentence the sender is given.
+    assert "reserved" in said or "rename" in said, said

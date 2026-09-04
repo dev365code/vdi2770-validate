@@ -531,7 +531,7 @@
       "obligation": "ours",
       "title": "A document container carries another container inside it",
       "whyOurs": "Document containers hold a document's files. A container inside one is either a mistake or a way to carry something past a check that only looks at declared files.",
-      "remedy": "Move the inner container up into the documentation container, where containers belong — or, if it is payload rather than a container, declare it in this document container's metadata as a DigitalFile with FileFormat application/zip. This tool opens every .zip because the reader has no metadata to know better; a declaration is what tells it which of the two you meant.",
+      "remedy": "Move the inner container up into the documentation container, where containers belong. If it is payload rather than a container, it takes two things: declare it in this document container's metadata as a DigitalFile with FileFormat application/zip, and make sure its root does not hold VDI2770_Metadata.xml or VDI2770_Main.xml — a reserved name at the root is what makes an archive a container, and a declaration saying otherwise is a disagreement this tool reports rather than resolves.",
       "refKeys": [],
       "refCodes": [],
       "about": "container"

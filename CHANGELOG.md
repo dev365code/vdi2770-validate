@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.7.0 — 2026-08-25
+## 0.7.0 — unreleased
 
 **Upgrading from 0.6.0 will turn some green runs red.** Four rules can do it:
 `X6` and `Z13`, both new errors, `Z6`, promoted from warning to error, and `Z10`,
@@ -38,6 +38,26 @@ this section was written when it held six. Every count in it is now derived by a
 gate or dropped, because a number nobody re-derives is the kind of claim the
 rest of these entries are about — and that one was itself wrong twice.
 
+
+- **A remedy that could not be followed.** `Z11` told the sender of an inner
+  container that declaring it as payload is *what tells this tool which of the
+  two you meant* — and it stopped being true when the rule learned to report a
+  declaration and a classification that disagree. Doing what the report said
+  returned the same finding under a second remedy contradicting the first. It
+  now says what actually settles it: a declaration *and* a root that does not
+  hold a reserved name.
+
+- **`--quiet` was read by one of the two output shapes**, so a flag that says
+  *hide notes* meant different things to the two readers of one run.
+
+- **The report ordered rules as strings**, printing `Z1, Z10, Z11, Z12, Z2`. The
+  `rules` subcommand was given natural order for exactly this reason and the
+  report was not, so the two disagreed about what order the rules come in.
+
+- **The one place the exit codes are written down said `0 nothing wrong`.** A
+  warning does not move the number, so a container comes back `0` with findings
+  in the report — five of this repository's own fixtures do. The paragraph says
+  that now.
 
 - **An empty model is not "this container declares nothing".** The repair that
   made the metadata layer namespace-aware left a document in another vocabulary
@@ -1360,7 +1380,7 @@ Three gates that ask what `make check` cannot ask of itself.
   broken row, not a kill; and **one row must survive**, because a harness that
   reports red for a change that does not matter is reporting red for everything.
   It found two holes on its first full run.
-- **`make standalone`** runs each of the 64 test files on its own. A suite is a
+- **`make standalone`** runs each of the 65 test files on its own. A suite is a
   shared process, so a file can pass because an earlier one imported something —
   `tests/test_offline.py` did exactly that for weeks, patching `socket.socket`
   and then importing `urllib.request`, which breaks `class SSLSocket(socket)`

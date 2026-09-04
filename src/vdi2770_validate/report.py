@@ -83,7 +83,10 @@ def as_text(report: Report, show_info: bool = True) -> str:
     return "\n".join(lines)
 
 
-def as_json(report: Report) -> str:
+def as_json(report: Report, show_info: bool = True) -> str:
+    """`show_info` is `--quiet`, which said "hide notes" and was read by one of
+    the two shapes. A flag a machine-readable output ignores is a flag that
+    means different things to the two readers of one run."""
     payload: Dict = {
         "target": report.target,
         "tool": "vdi2770-validate",
@@ -119,6 +122,7 @@ def as_json(report: Report) -> str:
                 },
             }
             for f in report.sorted()
+            if show_info or f.severity is not Severity.INFO
         ],
     }
     return json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=False)

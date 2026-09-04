@@ -4,7 +4,7 @@
     python tools/rules_doc.py --write    # regenerate
     python tools/rules_doc.py --check    # byte comparison, run by `make check`
 
-Thirty-six rules and the only way to read them was `rules.json` or running
+Every rule this tool applies, and the only way to read them was `rules.json` or running
 `vdi2770-validate rules`. Someone deciding whether this tool is worth installing
 should be able to see what it checks, and what each check is based on, from a
 link. The generator is the source of truth: editing the page by hand is what
@@ -60,8 +60,8 @@ def page() -> str:
     # `basis` is a different field on the same rule -- the free source a rule
     # cites, `IDTA 02004 v2.0.1 Table 1`. Calling `obligation` by that name here
     # sent a reader who followed this page to the data looking for a key that
-    # five of the rules have and that means something else, and two of those
-    # five hold the empty string.
+    # some of the rules have and that means something else, and some of those
+    # hold the empty string.
     for kind, meaning in BASIS.items():
         held = [r for r in catalogue if r.obligation is kind]
         out.append(f"- **`{kind.value}`** ({len(held)}) — {meaning}")

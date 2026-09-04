@@ -4,8 +4,9 @@ Three subcommands and one rule between them: a surprise is reported and the
 sweep continues. A CI job pointed at a supplier drop folder must come back with
 a verdict on every container it was given, not a traceback about the first one.
 
-Exit codes: 0 nothing wrong, 1 at least one error or unreadable path, 2 nothing
-could be read at all. A run whose reader goes away -- `| head` -- ends by
+Exit codes: 0 no error, which is not the same as nothing wrong -- a warning
+does not move the number, so a container can come back 0 with findings in the
+report; 1 at least one error or unreadable path; 2 nothing could be read at all. A run whose reader goes away -- `| head` -- ends by
 `SIGPIPE` where the platform has one and 141 where it does not, because it did
 not finish: any of 0, 1 or 2 would be a claim about containers nobody looked at.
 """
@@ -56,7 +57,7 @@ def _cmd_check(args) -> int:
             documents.append({"path": path, "unreadable": str(e)})
             continue
         if args.json:
-            documents.append({"path": path, **json.loads(rendering.as_json(rep))})
+            documents.append({"path": path, **json.loads(rendering.as_json(rep, not args.quiet))})
         else:
             print(rendering.as_text(rep, not args.quiet))
         if rep.count(Severity.ERROR):

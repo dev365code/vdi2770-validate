@@ -106,8 +106,14 @@ class Finding:
         return self.as_about or self.rule.about
 
     def sort_key(self):
+        # Natural order, not lexical: comparing the ids as strings printed `Z1`,
+        # `Z10`, `Z11`, `Z12`, `Z2`. The `rules` subcommand was given this once
+        # and the report was not, so the two disagreed about what order the
+        # rules come in.
         w = self.where
-        return (self.severity.rank, self.rule.id, w.container, w.member or "",
+        letters = self.rule.id.rstrip("0123456789")
+        number = int(self.rule.id[len(letters):] or 0)
+        return (self.severity.rank, letters, number, w.container, w.member or "",
                 w.line if w.line is not None else -1, w.subject or "", self.message)
 
 
