@@ -48,7 +48,13 @@ folders.zip
   … 1 more Z9 warning
 
   3 error(s), 1 warning(s), 0 note(s) — 1 of the errors is this tool declining to look, not the container
+  read 1 of 1 archives, 1 of 3 metadata files
 ```
+
+The last line is there on every report. `0 error(s)` says what was found; that
+line says how much of the container was reached, counted over the names the
+archive itself lists — so a delivery whose documents are in folders this tool
+does not open cannot come back looking like one it read end to end.
 
 That is real output, not a hand-written sample: a test in this repository runs the command and compares.
 

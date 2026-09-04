@@ -213,3 +213,18 @@ def test_the_readme_states_the_exit_codes_the_tool_really_returns(tmp_path):
     for code in sorted(set(measured.values())):
         assert f"`{code}`" in text or f" {code} " in text, (
             f"exit code {code} is returned and not written down")
+
+
+def test_the_sample_does_not_stop_before_the_tool_does():
+    """`line in real` is one-directional: it catches a line the tool never
+    prints and cannot catch one the tool prints and the page leaves out. The
+    page then shows a real session with its ending removed, which is the kind of
+    sample this file exists to forbid — and it happened the moment the report
+    grew a line after the counts.
+    """
+    target, shown = BLOCK.group(1), BLOCK.group(2)
+    real = rendering.as_text(check_file(str(ROOT / target))).splitlines()
+    last = next(line for line in reversed(real) if line.strip())
+    assert last.strip() in shown, (
+        f"the tool ends the report with {last.strip()!r} and the sample stops "
+        f"before it")

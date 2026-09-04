@@ -39,6 +39,12 @@ gate or dropped, because a number nobody re-derives is the kind of claim the
 rest of these entries are about — and that one was itself wrong twice.
 
 
+- **The README's sample was a real session with its ending removed.** The gate
+  that keeps it honest asserts every line shown is a line the tool prints, which
+  cannot see a line the tool prints and the page leaves out — so the sample
+  stopped at the counts line the moment the report grew one after it. It checks
+  both directions now.
+
 - **And the figure was attacked until it stopped over-claiming.** The count of
   archives this read was given sat *after* the early return for a reader that
   raised, so the one path whose remedy says *nothing in it was checked* read
