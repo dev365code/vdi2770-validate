@@ -2,6 +2,7 @@
 all — which is how `classes` came to crash while `make check` stayed green.
 """
 import json
+import re
 import subprocess
 import sys
 import zipfile
@@ -494,3 +495,24 @@ def test_the_default_is_the_one_the_page_documents(capsys):
     warned = str(FIXTURES / "f2-undeclared-file.zip")
     assert run(capsys, ["check", "--fail-on", "error", warned])[0] == 0
     assert run(capsys, ["check", warned])[0] == 0
+
+
+def test_an_unreadable_path_says_the_same_thing_on_both_channels(capsys, tmp_path):
+    """The prose line uses `strerror` and the JSON used `str(e)`, which for a
+    directory reads `[Errno 21] Is a directory: 3` — a file descriptor number
+    from inside this process, in the field a machine reads. Pointing the tool at
+    an unpacked directory is a common first mistake (`docs/scope.md` says ZIP
+    only), so it is a common way to be handed one.
+    """
+    from conftest import CORPUS
+
+    target = str(CORPUS / "folders")
+    code, out = run(capsys, ["check", "--json", target])
+    entry = json.loads(out)[0]
+    said = entry["unreadable"]
+
+    assert "Is a directory" in said, said
+    assert not re.search(r":\s*\d+$", said), (
+        f"the machine-readable field ends in a file descriptor: {said!r}")
+    assert said == "Is a directory", (
+        f"the two channels disagree about the same failure: {said!r}")

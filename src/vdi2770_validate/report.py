@@ -159,7 +159,7 @@ def as_json(report: Report, show_info: bool = True) -> str:
         # rule can fire once per element, and four hundred thousand identical
         # findings serve nobody.
         "notListed": [{"rule": rid, "container": container, "count": n}
-                      for rid, container, n in report.not_listed()],
+                      for rid, container, n in report.not_listed(show_info)],
         "findings": [
             {
                 "rule": f.rule.id,

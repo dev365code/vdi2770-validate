@@ -132,3 +132,28 @@ def test_the_axis_count_survives_the_listing_cap():
     assert "150 of the errors" in summary, (
         f"the axis was counted over the listing, not the count: {summary}")
     assert About.TOOL is not None
+
+
+def test_quiet_hides_the_same_notes_from_both_shapes():
+    """`--quiet` hides notes. The text renderer asks `not_listed(show_info)` and
+    the JSON one asked `not_listed()`, so a quiet run carried no findings and a
+    machine-readable count of findings it had not listed — one document
+    contradicting itself in two adjacent keys.
+
+    `Report.not_listed` already takes the filter and says why: *"Honours the
+    same INFO filter the listing does, so a quiet run does not announce notes it
+    is not printing."* One of its two callers passed it.
+    """
+    rep = Report(target="x.zip")
+    flood(rep, N, rid="P4", sev=Severity.INFO)
+
+    loud = json.loads(as_json(rep, True))
+    assert loud["notListed"], "the premise: this report must overflow the cap"
+
+    quiet = json.loads(as_json(rep, False))
+    assert quiet["findings"] == [], "the premise: --quiet leaves no notes listed"
+    assert quiet["notListed"] == [], (
+        f"a quiet run listed no findings and announced "
+        f"{quiet['notListed']} it did not list")
+    # And the two shapes agree, which is the whole of it.
+    assert ("..." in as_text(rep, False)) is bool(quiet["notListed"])

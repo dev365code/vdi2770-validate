@@ -116,10 +116,11 @@ over, because there the cost of rewriting exceeded what it would have bought.
 
 `0 error(s)` is a statement about findings. It is not a statement about reach,
 and a file this tool cannot open at all used to print the same shape as a
-container with one small thing wrong. So every report carries two sentences that
-are about this tool rather than about the container.
+container with one small thing wrong. So a run carries two sentences that are
+about this tool rather than about the container — one per report, one per run,
+and this page said "every report" about both until somebody read it twice.
 
-The first is a count of what was read:
+The first is a count of what was read, and every report has its own:
 
 ```
   read 1 of 1 archives, 1 of 3 metadata files

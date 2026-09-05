@@ -37,10 +37,16 @@ class Severity(enum.Enum):
 class About(enum.Enum):
     """Who the finding is about.
 
-    Four rules fire because this tool stopped — a broken installation, a document
+    Some rules fire because this tool stopped — a broken installation, a document
     the schema checker would not finish, an archive over a budget, a tree deeper
-    than we open. Nothing in those is a statement about what the sender packed,
-    and a consumer reading the JSON could not tell them from the rest.
+    than we open, a scan for an indirect object that ended without answering.
+    Nothing in those is a statement about what the sender packed, and a consumer
+    reading the JSON could not tell them from the rest.
+
+    No count here. Which rules those are is the catalogue's to say and
+    `tests/test_catalogue.py` holds the list against it; a number in this
+    sentence is a second copy of that list with nothing checking it, which is
+    how it came to read "four" while there were eight.
     """
 
     CONTAINER = "container"

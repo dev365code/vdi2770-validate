@@ -14,6 +14,7 @@ user actually reads.
 """
 import io
 import pathlib
+import re
 import zipfile
 
 from conftest import CLEAN_DOCUMENT, CORPUS, counts_line
@@ -626,3 +627,36 @@ def test_the_other_kinds_classifying_name_is_not_just_an_undeclared_file():
     assert "document container" in said, (
         f"nothing says this is the other kind's classifying name: {said!r}")
     assert "Declare the file" not in (f2[0].remedy or ""), f2[0].remedy
+
+
+def test_m4_does_not_offer_a_choice_where_the_sources_agree():
+    """`M4` exists because two published sources give different English names
+    for five of the twelve classes. For the other seven they agree, and the
+    sentence written for the disagreement was said about those too:
+
+        The English class name matches neither published rendering
+        'identification' for class 01-01; published renderings are 'Identification'
+        -> Either published spelling is defensible until the disagreement is resolved.
+
+    Three claims, three of them false where there is one rendering: *neither* of
+    one thing, a plural verb over a single item, and a disagreement to wait out
+    that does not exist. It reproduces on a container this repository ships.
+    """
+    from conftest import CORPUS
+    from vdi2770_validate.runner import check_bytes
+
+    raw = (CORPUS / "demo_invalid_doc_type_names.zip").read_bytes()
+    m4 = [f for f in check_bytes(raw, "demo.zip").findings if f.rule.id == "M4"]
+    assert m4, "the premise: this container has to produce an M4"
+
+    from vdi2770_validate.catalog import english_for
+
+    for f in m4:
+        cls = re.search(r"for class (\S+?);", f.detail).group(1)
+        if len(english_for(cls)) > 1:
+            continue                      # the disagreement M4 was written for
+        said = f"{f.message} {f.detail} {f.remedy}"
+        for wrong in ("neither", "renderings are", "the disagreement"):
+            assert wrong not in said, (
+                f"class {cls} has one published English name and the finding "
+                f"says {wrong!r}: {said}")

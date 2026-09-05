@@ -49,14 +49,20 @@ def _cmd_check(args) -> int:
             # AttributeError out of the handler and stopped the sweep — which is
             # the one thing the handler exists to prevent. Keep it for the
             # OSError case, though; "No such file or directory" beats a repr.
-            print(f"{path}: cannot read it — {getattr(e, 'strerror', None) or e}",
-                  file=sys.stderr)
+            # One sentence, both channels. `str(e)` on an OSError interpolates
+            # whatever the call was given -- for a directory that is the file
+            # descriptor CPython opened, so the machine-readable field carried
+            # `[Errno 21] Is a directory: 12`, a number from inside this process
+            # that changes between runs. `strerror` is the part that is about
+            # the file.
+            why = getattr(e, "strerror", None) or str(e)
+            print(f"{path}: cannot read it — {why}", file=sys.stderr)
             unreadable += 1
             # And it appears in the JSON. Skipping it gave a consumer N-1
             # documents for N paths, with the difference explained only in prose
             # on another stream.
             documents.append({"path": path, **rendering.provenance(),
-                              "unreadable": str(e)})
+                              "unreadable": why})
             continue
         if args.json:
             documents.append({"path": path, **json.loads(rendering.as_json(rep, not args.quiet))})

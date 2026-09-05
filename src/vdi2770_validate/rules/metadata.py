@@ -193,9 +193,27 @@ def check(container, document, foreign) -> Iterator[Finding]:
                                      f"this tool does not check")
             elif text not in want_en:
                 r = rule("M4")
-                yield Finding(r, r.title, where,
-                              detail=_two_names(written, want_en, c.class_id,
-                                                "published renderings are"))
+                # The rule exists for the five classes where the two sources
+                # give different English names. For the other seven they agree,
+                # and the sentence written for a disagreement said three false
+                # things about them at once: *neither* of one rendering, a
+                # plural verb over a single item, and a disagreement to wait out
+                # that is not there. Same rule, same severity -- an English name
+                # still decides nothing here -- and a sentence that matches what
+                # is in front of the reader.
+                one = len(want_en) == 1
+                yield Finding(
+                    r,
+                    "The English class name is not the published one" if one
+                    else r.title,
+                    where,
+                    detail=_two_names(written, want_en, c.class_id,
+                                      "the published name is" if one
+                                      else "published renderings are"),
+                    fix="Use the published English name, or drop the English "
+                        "name: matching here is keyed on the class id and the "
+                        "German name, which both sources give the same for all "
+                        "twelve." if one else None)
 
     for v in document.versions:
         for tag in v.languages:
