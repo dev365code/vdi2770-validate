@@ -13,7 +13,7 @@ check that — the normative text is paywalled.
 
 ## How much of this was measured
 
-It is measured now. 46 of the 47 containers in `corpus/` and
+It is measured now. All 47 containers in `corpus/` and
 `tests/fixtures/` were put through the reference implementation at its pinned commit
 `e47c13c`, with the locale forced to `en_US`, and the result is checked in at
 [`docs/oracle-sweep.json`](oracle-sweep.json). `tools/capture_oracle.py --check`
@@ -26,17 +26,27 @@ A container added after a sweep carries our column and an empty one for the
 reference until the next run, named in the sweep's `_unswept` block with the
 reason. **Every count on this page excludes those**, because an empty
 `reference` means "we never asked it", and reading that as "it reported nothing"
-invents a disagreement with a tool that has never seen the container. One is
-outstanding: `p5-unconfirmed-pdf.zip`, added for a rule the reference has no
-counterpart to — it folds a scan that cannot answer into "not a PDF", so there is
-no verdict of its to disagree with.
+invents a disagreement with a tool that has never seen the container. Nothing is
+outstanding now.
 
-One thing the first CI run settled that no local run could: the reference's
-verdicts on the other 44 containers came back **byte-identical** to the ones
-captured on a maintainer's laptop. The pinned commit and the pinned locale really
-do produce the same answer on another machine, which is the property the whole
-comparison rests on. `tools/oracle/README.md` says what
-you need to repeat it, including the two things that will bite you.
+The last container to be swept corrected this page, and the correction is worth
+keeping rather than editing away. `p5-unconfirmed-pdf.zip` was described here as
+one the reference has "no verdict of its to disagree with", reasoning that `P5`
+reports a PDF scan that could not answer and that project folds such a scan into
+"not a PDF". That was a prediction about what it would say, written down as a
+fact, and never put to it. It reports three errors on that container. What they
+are about is not something this repository can print — §4 says why — but the
+sentence was wrong, and wrong in the direction this whole page exists to guard
+against: an assertion about the other implementation that nobody had asked it.
+
+Two things the CI runs settled that no local run could. The reference's verdicts
+came back **byte-identical** to the ones captured on a maintainer's laptop; and
+the sweep that filled the last column reproduced all 46 that were already
+recorded, unchanged, on a later run of the same pinned environment. The pinned
+commit and the pinned locale really do produce the same answer on another
+machine and on another day, which is the property the whole comparison rests on.
+`tools/oracle/README.md` says what you need to repeat it, including the two
+things that will bite you.
 
 What the sweep settled:
 
