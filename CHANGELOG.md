@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.7.0 — unreleased
+## 0.7.0 — 2026-09-06
 
 **Two distributions, one release.** This project ships as `vdi2770-validate`
 (the rules) and `vdi2770` (the reader), and the first declared a version *range*
