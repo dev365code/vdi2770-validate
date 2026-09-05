@@ -71,8 +71,9 @@ PDF_BUDGETS = {
     "MAX_LINE_LOOKBACK": (64, 1 << 16),
     "MAX_XMP_PACKETS": (4, 4096),
     "MAX_PDFA_PREFIXES": (1, 64),
-    # Occurrences of `obj` looked behind before a file is called "no
-    # objects here". The floor is one; the ceiling keeps it a bound.
+    # Occurrences of `obj` looked behind before the search gives up and answers
+    # "unknown" -- not "no objects here", which is what it meant while the third
+    # value was folded away. The floor is one; the ceiling keeps it a bound.
     "MAX_OBJ_PROBES": (1, 1 << 20),
 }
 

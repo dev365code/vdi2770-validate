@@ -45,6 +45,22 @@ how the mistake reads in a diff and not how it sits in a file: there was a blank
 line on each side of the footnote, so it would have passed on the break it was
 written for. The proof that these can fail is beside them in the same file.
 
+**The reader's `is_pdf` has three values now, and a naive read of it flips.**
+`vdi2770.read_pdf` answered `True` or `False`; it answers `True`, `False` or
+`None`, the last meaning the search for an indirect object gave up at
+`MAX_OBJ_PROBES` without an answer. Anything written as `if facts.is_pdf:` now
+takes the *false* branch on a file it used to take the true one on — which is
+the fold this release removed, arriving as the default behaviour of a consumer
+that has not been told. Compare with `is True` / `is False` where the difference
+matters. `MAX_OBJ_PROBES` also moved, from 4,096 to 100,000: it is a public
+constant, and the old size could be reached by a conforming file carrying a long
+comment.
+
+Nothing about this stops a deliberate attacker — anyone writing `1 0 obj` at the
+top of a file walks through it. What it buys is that a budget of ours cannot
+pass for a verdict about somebody's document, which is what `Z5` and `X4` buy in
+the places they cover.
+
 **Every JSON document now says what produced it.** `schemaVersion`, `toolVersion`
 and `vdiSchema` — the version of this report format, the version of the tool, and
 the version the bundled VDI schema stamps on itself. `schemaVersion` moves when a

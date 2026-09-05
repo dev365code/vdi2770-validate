@@ -75,6 +75,15 @@ package parses XML itself instead of handing you an `ElementTree`.
 *claims*, such as `"2b"`. Nothing here verifies that claim. Verifying PDF/A takes
 a PDF/A validator, and this is not one.
 
+**`is_pdf` has three values, not two.** `True` found an indirect object, `False`
+looked at the whole file and found none, and `None` gave up at `MAX_OBJ_PROBES`
+without an answer. A conforming file can reach that bound — a comment is legal
+between any two tokens — so `None` is not "no", and code that needs the
+difference compares with `is True` / `is False` rather than testing
+truthiness. Folding the third value into either of the other two decides, in a
+layer that knows nothing about what the file is for, a question only the caller
+holding the obligation can answer.
+
 ### Defect kinds
 
 `not-a-zip`, `too-many-members`, `unsafe-member-name`, `member-too-large`,

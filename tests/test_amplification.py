@@ -148,9 +148,16 @@ def test_looking_for_an_indirect_object_does_not_backtrack(monkeypatch):
 
 
 def test_the_object_probe_gives_up_rather_than_scanning_forever(monkeypatch):
-    """The cap is a cap: past it the answer is no, not a longer search."""
+    """The cap is a cap: past it the search stops rather than running longer.
+
+    What it answers there is `None`, not "no". Those were one value while the
+    fold was in place, and `assert not …` passed on either — so this read as a
+    claim about the file while asserting nothing of the kind. The identity
+    checks are the difference between "we looked and there is none" and "we
+    stopped looking", which is the whole reason the third value exists.
+    """
     monkeypatch.setattr(pdfread, "MAX_OBJ_PROBES", 3)
     decoys = b"obj " * 10
-    assert not pdfread._has_an_indirect_object(decoys + b"1 0 obj\n")
+    assert pdfread._has_an_indirect_object(decoys + b"1 0 obj\n") is None
     monkeypatch.setattr(pdfread, "MAX_OBJ_PROBES", 64)
-    assert pdfread._has_an_indirect_object(decoys + b"1 0 obj\n")
+    assert pdfread._has_an_indirect_object(decoys + b"1 0 obj\n") is True
