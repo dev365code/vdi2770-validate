@@ -1,17 +1,21 @@
-"""The reader ships before the validator that pins it, and something has to say so.
+"""The package ships before the old name that redirects to it, and something has
+to say so.
 
-`release.yml` installs the reader from the working tree, so nothing in the gate
-asks an index whether the pinned version exists, and `python -m build` does not
-resolve runtime dependencies at all. Tagging `v*` before `sdk-v*` therefore
-builds green and publishes a distribution `pip` cannot resolve -- under a number
-PyPI will not let anyone reuse. `tools/check_release_order.py` is what refuses
-that; these are the ways it has to refuse.
+`release.yml` installs from the working tree, so nothing in the build asks an
+index whether the redirect's dependency exists, and `python -m build` does not
+resolve runtime dependencies at all. Publishing `vdi2770-validate` first
+therefore builds green and puts a distribution on the index `pip` cannot
+resolve -- under a number PyPI will not let anyone reuse.
+`tools/check_release_order.py` is what refuses that; these are the ways it has
+to refuse.
 
-A tag is not a publication, which is the distinction that took the longest to
-land here: the gate proved `sdk-v0.6.2` existed and printed *the reader this pins
-has been released*. Tag the reader, watch its publish job stop at an environment
-approval or a 5xx, and the sentence is false while the gate is green -- and the
-validator burns a version number that PyPI will not hand back.
+The gate ran in the other direction while the reader was its own distribution:
+the validator pinned it, and it had to go first. The pin moved to the shim, and
+none of the ways to get this wrong moved with it -- including the one that took
+longest to land. A tag is not a publication: the gate proved a tag existed and
+printed *has been released*. Tag it, watch the publish job stop at an
+environment approval or a 5xx, and the sentence is false while the gate is
+green.
 """
 import pathlib
 import shutil
@@ -23,8 +27,9 @@ from conftest import ROOT, under_test
 TOOL = ROOT / "tools" / "check_release_order.py"
 
 
-def tree_with(tmp_path, tags, pin):
-    """A throwaway checkout whose pin says `pin` and whose history holds `tags`."""
+def tree_with(tmp_path, tags, floor, version="0.7.0"):
+    """A throwaway checkout: this repository at `version`, a shim asking for
+    `>=floor`, and a history holding `tags`."""
     tree = tmp_path / "tree"
     (tree / "tools").mkdir(parents=True)
     shutil.copy(TOOL, tree / "tools" / "check_release_order.py")
@@ -33,13 +38,31 @@ def tree_with(tmp_path, tags, pin):
     import re
 
     body = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
-    # The pin token, not the line it sits on: `dependencies = [...]` holds the
-    # whole list, and replacing the line with one requirement leaves a file the
-    # tool reads as declaring no dependencies at all -- which it refuses for a
-    # different reason, so every case below would pass on the wrong sentence.
-    swapped, n = re.subn(r'"vdi2770[^"]*"', f'"vdi2770~={pin}"', body, count=1)
-    assert n == 1, "the validator no longer pins the reader"
-    (tree / "pyproject.toml").write_text(swapped, encoding="utf-8")
+    stamped, n = re.subn(r'^version = "[^"]+"', f'version = "{version}"',
+                         body, count=1, flags=re.M)
+    assert n == 1, "the repository manifest declares no version"
+    (tree / "pyproject.toml").write_text(stamped, encoding="utf-8")
+
+    shim = tree / "packages" / "vdi2770-validate"
+    shim.mkdir(parents=True)
+    body = (ROOT / "packages" / "vdi2770-validate" / "pyproject.toml").read_text(
+        encoding="utf-8")
+    # Inside the dependencies list and nowhere else. Two narrower rules, each
+    # learned from a fixture that lied: not the whole `dependencies = [...]`
+    # line, because replacing it with one requirement leaves a file the tool
+    # reads as declaring no dependencies at all and refuses for a different
+    # reason; and not the first `"vdi2770..."` token in the file, because the
+    # manifest declares `name = "vdi2770-validate"` above the list, so that
+    # rewrote the distribution's own name and left the pin untouched. Every
+    # case here would have passed on the wrong sentence.
+    swapped, n = re.subn(
+        r'(^dependencies = \[)([^\]]*)(\])',
+        lambda m: m.group(1) + f'"vdi2770>={floor}"' + m.group(3),
+        body, count=1, flags=re.M)
+    assert n == 1, "the shim declares no dependencies list to aim at"
+    assert f'"vdi2770>={floor}"' in swapped and 'name = "vdi2770-validate"' in swapped
+    (shim / "pyproject.toml").write_text(swapped, encoding="utf-8")
+
     subprocess.run(["git", "init", "-q"], cwd=tree, check=True)
     subprocess.run(["git", "add", "-A"], cwd=tree, check=True)
     subprocess.run(["git", "-c", "user.email=t@t", "-c", "user.name=t",
@@ -55,15 +78,15 @@ def run(tree, *extra):
         cwd=tree, capture_output=True, text=True, env=under_test())
 
 
-def test_a_pinned_reader_that_is_tagged_is_allowed(tmp_path):
+def test_a_redirect_whose_target_is_tagged_is_allowed(tmp_path):
     """The premise: without it every refusal below could be for the wrong reason.
 
     `--offline` because the tag is only half the answer now; the other half is
     the index, and a test suite does not ask the network.
     """
-    done = run(tree_with(tmp_path, ["sdk-v0.6.1", "sdk-v0.6.2"], "0.6.2"), "--offline")
+    done = run(tree_with(tmp_path, ["v0.6.0", "v0.7.0"], "0.7"), "--offline")
     assert done.returncode == 0, done.stdout + done.stderr
-    assert "sdk-v0.6.2 is tagged" in done.stderr, done.stderr
+    assert "v0.7.0 is tagged" in done.stderr, done.stderr
 
 
 def test_being_tagged_is_not_said_to_be_being_released(tmp_path):
@@ -76,10 +99,10 @@ def test_being_tagged_is_not_said_to_be_being_released(tmp_path):
     vdi2770-validate` could not resolve -- permanently, because the version
     number does not come back.
     """
-    done = run(tree_with(tmp_path, ["sdk-v0.6.2"], "0.6.2"), "--offline")
+    done = run(tree_with(tmp_path, ["v0.7.0"], "0.7"), "--offline")
     assert done.returncode == 0, done.stdout + done.stderr
     assert "released" not in done.stderr, (
-        "the offline half still claims the reader was published: " + done.stderr)
+        "the offline half still claims it was published: " + done.stderr)
 
 
 def test_a_tag_the_index_does_not_know_about_is_refused(monkeypatch, tmp_path):
@@ -90,8 +113,8 @@ def test_a_tag_the_index_does_not_know_about_is_refused(monkeypatch, tmp_path):
     import check_release_order as gate
     import check_version_is_new as index
 
-    monkeypatch.setattr(index, "published", lambda name, timeout=15.0: {"0.6.1"})
-    monkeypatch.chdir(tree_with(tmp_path, ["sdk-v0.6.1", "sdk-v0.6.2"], "0.6.2"))
+    monkeypatch.setattr(index, "published", lambda name, timeout=15.0: {"0.6.0"})
+    monkeypatch.chdir(tree_with(tmp_path, ["v0.6.0", "v0.7.0"], "0.7"))
     monkeypatch.setattr(gate, "ROOT", pathlib.Path.cwd())
     assert gate.main([]) == 1
 
@@ -109,7 +132,7 @@ def test_an_index_that_cannot_be_reached_is_refused(monkeypatch, tmp_path):
         raise OSError("no route to host")
 
     monkeypatch.setattr(index, "published", unreachable)
-    monkeypatch.chdir(tree_with(tmp_path, ["sdk-v0.6.1", "sdk-v0.6.2"], "0.6.2"))
+    monkeypatch.chdir(tree_with(tmp_path, ["v0.6.0", "v0.7.0"], "0.7"))
     monkeypatch.setattr(gate, "ROOT", pathlib.Path.cwd())
     assert gate.main([]) == 1
 
@@ -121,34 +144,47 @@ def test_the_index_says_yes_and_the_gate_agrees(monkeypatch, tmp_path):
     import check_release_order as gate
     import check_version_is_new as index
 
-    monkeypatch.setattr(index, "published", lambda name, timeout=15.0: {"0.6.2"})
-    monkeypatch.chdir(tree_with(tmp_path, ["sdk-v0.6.1", "sdk-v0.6.2"], "0.6.2"))
+    monkeypatch.setattr(index, "published", lambda name, timeout=15.0: {"0.7.0"})
+    monkeypatch.chdir(tree_with(tmp_path, ["v0.6.0", "v0.7.0"], "0.7"))
     monkeypatch.setattr(gate, "ROOT", pathlib.Path.cwd())
     assert gate.main([]) == 0
 
 
-def test_a_pinned_reader_that_was_never_tagged_is_refused(tmp_path):
-    done = run(tree_with(tmp_path, ["sdk-v0.6.1"], "0.6.2"), "--offline")
+def test_a_target_that_was_never_tagged_is_refused(tmp_path):
+    done = run(tree_with(tmp_path, ["v0.6.0"], "0.7"), "--offline")
     assert done.returncode == 1, done.stdout + done.stderr
-    assert "sdk-v0.6.2 is not tagged" in done.stderr, done.stderr
+    assert "v0.7.0 is not tagged" in done.stderr, done.stderr
+
+
+def test_a_floor_above_what_this_repository_publishes_is_refused(tmp_path):
+    """The one failure the index cannot report, because it is not about the
+    index: a shim asking for `>=0.8` on the day 0.7.0 is published resolves to
+    nothing, and every version PyPI holds could be healthy. Cheap, offline, and
+    it runs before the tag history is even read."""
+    done = run(tree_with(tmp_path, ["v0.7.0"], "0.8"), "--offline")
+    assert done.returncode == 1, done.stdout + done.stderr
+    assert "Nothing on the index can satisfy that" in done.stderr, done.stderr
 
 
 def test_a_checkout_with_no_tags_at_all_is_refused(tmp_path):
     """Not the same as "the reader was never released", and answering yes to the
     second because you cannot see the first is how a release gate fails open.
     `actions/checkout` gives `--depth 1 --no-tags` by default."""
-    done = run(tree_with(tmp_path, [], "0.6.2"), "--offline")
+    done = run(tree_with(tmp_path, [], "0.7"), "--offline")
     assert done.returncode == 1, done.stdout + done.stderr
-    assert "no `sdk-v*` tags" in done.stderr, done.stderr
+    assert "no `v*` tags" in done.stderr, done.stderr
 
 
 def test_a_pin_with_no_floor_is_refused(tmp_path):
-    """`vdi2770` unpinned admits every reader ever published, including the ones
-    these tests never ran against. There is no version to check the order of."""
-    tree = tree_with(tmp_path, ["sdk-v0.6.1"], "0.6.2")
-    body = pathlib.Path(tree / "pyproject.toml").read_text(encoding="utf-8")
-    pathlib.Path(tree / "pyproject.toml").write_text(
-        body.replace('"vdi2770~=0.6.2"', '"vdi2770"'), encoding="utf-8")
+    """`vdi2770` unpinned is satisfied by every release ever published, so a
+    machine that already has 0.6.0 installs the redirect and keeps the tool the
+    redirect exists to replace. There is no version to check the order of."""
+    tree = tree_with(tmp_path, ["v0.7.0"], "0.7")
+    manifest = pathlib.Path(tree / "packages" / "vdi2770-validate" / "pyproject.toml")
+    manifest.write_text(
+        manifest.read_text(encoding="utf-8").replace('dependencies = ["vdi2770>=0.7"]',
+                                                     'dependencies = ["vdi2770"]'),
+        encoding="utf-8")
     done = run(tree, "--offline")
     assert done.returncode != 0, done.stdout + done.stderr
     assert "no lower bound" in done.stderr, done.stderr

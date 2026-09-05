@@ -32,6 +32,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -144,11 +145,12 @@ TABLE = [
      "weakening the message set weakens the proof that no remedy was copied"),
 
     ("gates/a-publishing-workflow-runs-the-whole-gate",
-     ".github/workflows/release-sdk.yml",
-     "        working-directory: .\n        run: |\n          python -m pip install -e packages/vdi2770",
-     "        run: |\n          python -m pip install -e packages/vdi2770",
+     ".github/workflows/release.yml",
+     "      - name: The gate must pass on the tagged tree\n        run: make check",
+     "      - name: The gate must pass on the tagged tree\n        run: true",
      ["tests/test_ci_parity.py"],
-     "the SDK release ran make check from a directory with no Makefile"),
+     "a release workflow listed the gate's targets by hand and ran six of nine; "
+     "the three it missed were the three newest"),
 
     ("gates/the-coverage-gate-uses-its-own-judgement",
      "tools/rule_coverage.py",
@@ -340,20 +342,40 @@ TABLE = [
      "`Z9` said `AB393/` and `Z13` said `./AB393/` in one report, and a reader "
      "has to work out they are the same place"),
 
-    ("gates/the-reader-ships-before-the-validator-that-pins-it",
+    ("gates/the-redirect-ships-after-the-package-it-points-at",
      ".github/workflows/release.yml",
-     "        run: python tools/check_release_order.py",
-     "        run: true",
-     ["tests/test_ci_parity.py::test_the_publishing_workflow_checks_the_reader_shipped_first"],
-     "tagging the validator first publishes a distribution pip cannot resolve, "
-     "under a number PyPI will not let anyone reuse"),
+     "            if python tools/check_release_order.py; then exit 0; fi",
+     "            if true; then exit 0; fi",
+     ["tests/test_two_packages_publish_separately.py::"
+      "test_the_order_gate_runs_and_not_with_the_flag_that_skips_the_index"],
+     "publishing the old name first puts a distribution pip cannot resolve on "
+     "the index, under a number PyPI will not let anyone reuse"),
 
-    ("gates/an-unreleased-reader-is-not-a-tagged-one",
+    ("gates/an-unreleased-package-is-not-a-tagged-one",
      "tools/check_release_order.py",
-     '    if f"sdk-v{floor}" not in tags:',
+     '    if f"v{version}" not in tags:',
      "    if False:",
      ["tests/test_the_release_order_is_enforced.py"],
      "the check that makes the workflow step mean anything"),
+
+    ("gates/the-two-tag-namespaces-are-told-apart",
+     "tools/api_fingerprint.py",
+     "MERGED_AT = (0, 7, 0)",
+     "MERGED_AT = (0, 0, 0)",
+     ["tests/test_the_api_record_holds.py::"
+      "test_a_version_from_before_the_merge_is_looked_up_in_the_old_namespace"],
+     "`v0.5.0` is a validator release whose reader said 0.3.1, so reading a "
+     "pre-merge reader version out of the `v*` namespace answers about a "
+     "different distribution"),
+
+    ("gates/a-floor-nothing-can-satisfy-is-refused",
+     "tools/check_release_order.py",
+     "    if Version(floor) > Version(version):",
+     "    if False:",
+     ["tests/test_the_release_order_is_enforced.py"],
+     "a redirect asking for a version this repository does not publish resolves "
+     "to nothing, however healthy the index is -- the one failure the index "
+     "cannot report"),
 
     ("gates/a-checkout-without-tags-cannot-answer-the-order",
      "tools/check_release_order.py",
@@ -448,28 +470,55 @@ TABLE = [
 
     ("gates/a-tag-that-is-not-the-version-stops-the-release",
      ".github/workflows/release.yml",
+     '          pkg=$(python -c "import sys; sys.path.insert(0,\'src\'); import '
+     'vdi2770_validate as v; print(v.__version__)")\n'
      '          test "$tag" = "$pkg" || { echo "tag $tag != package $pkg"; exit 1; }',
-     "          true",
+     '          pkg=$(python -c "import sys; sys.path.insert(0,\'src\'); import '
+     'vdi2770_validate as v; print(v.__version__)")\n          true',
      ["tests/test_two_packages_publish_separately.py"],
      "the test asserted the shell variable was created, not that it was "
      "compared: a tag saying 0.2.0 could publish a tree saying 0.1.9, and the "
      "number is on the index forever"),
 
+    ("gates/a-tag-that-is-not-the-redirects-version-stops-it-too",
+     ".github/workflows/release.yml",
+     "          pkg=$(grep -m1 '^version = ' packages/vdi2770-validate/pyproject.toml"
+     " | cut -d'\"' -f2)\n"
+     '          test "$tag" = "$pkg" || { echo "tag $tag != package $pkg"; exit 1; }',
+     "          pkg=$(grep -m1 '^version = ' packages/vdi2770-validate/pyproject.toml"
+     " | cut -d'\"' -f2)\n          true",
+     ["tests/test_two_packages_publish_separately.py"],
+     "one tag drives both distributions now, and a redirect left on an older "
+     "number goes on pointing at a release nobody made"),
+
     ("gates/a-release-checkout-can-see-its-tags",
      ".github/workflows/release.yml",
-     "        with: { fetch-depth: 0 }",
-     "        with: { fetch-depth: 1 }",
+     "      # skip \u2014 in the one workflow that authorises a publish.\n"
+     "      - uses: actions/checkout@v4\n        with: { fetch-depth: 0 }",
+     "      # skip \u2014 in the one workflow that authorises a publish.\n"
+     "      - uses: actions/checkout@v4\n        with: { fetch-depth: 1 }",
      ["tests/test_two_packages_publish_separately.py"],
-     "without the tags the assertions comparing this tree against sdk-v* skip "
-     "rather than fail, in the one workflow that authorises a publish"),
+     "without the tags the assertions comparing this tree against a release tag "
+     "skip rather than fail, in the one workflow that authorises a publish"),
 
-    ("gates/ci-installs-the-reader-from-this-tree",
+    ("gates/the-redirect-checkout-can-see-them-too",
+     ".github/workflows/release.yml",
+     "      # and a default checkout is `--depth 1 --no-tags`.\n"
+     "      - uses: actions/checkout@v4\n        with: { fetch-depth: 0 }",
+     "      # and a default checkout is `--depth 1 --no-tags`.\n"
+     "      - uses: actions/checkout@v4\n        with: { fetch-depth: 1 }",
+     ["tests/test_two_packages_publish_separately.py"],
+     "the order gate reads the tag history, and a gate that cannot see fails "
+     "closed here -- which stops the release rather than breaking it, but stops "
+     "it for a reason nobody wrote down"),
+
+    ("gates/ci-installs-this-repository-from-this-tree",
      ".github/workflows/ci.yml",
-     "          python -m pip install -e packages/vdi2770\n",
-     "",
+     '          python -m pip install -e ".[dev]"',
+     "          python -m pip install vdi2770",
      ["tests/test_ci_parity.py"],
-     "pip then resolves the pin from an index and every result in the run is "
-     "about a different reader than the commit's"),
+     "the run is then about whatever the index happens to hold rather than "
+     "about the commit"),
 
     ("runner/metadata-we-could-not-model-declares-nothing-known",
      "src/vdi2770_validate/runner.py",
@@ -840,27 +889,51 @@ def clear(tree: Path) -> None:
         shutil.rmtree(cache, ignore_errors=True)
 
 
-def run(tree: Path, checks: list) -> int:
+def run(tree: Path, checks: list) -> tuple:
     """Whatever the row names: a pytest selection, or a gate that is a tool.
 
     Several gates in this project are not tests — the coverage baseline, the
     oracle sweep, the API fingerprint, the wheel. A table that could only run
     pytest reported "nothing caught" for those and was wrong about it.
+
+    Returns the worst exit code and what pytest printed — `None` when the row
+    names no pytest selection at all, which is different from one that printed
+    nothing. The exit code alone cannot tell a test that ran from a test that
+    declined to; see `_ran`.
     """
     env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1")
     tools = [c for c in checks if c.startswith("tools/")]
     tests = [c for c in checks if not c.startswith("tools/")]
-    worst = 0
+    worst, said = 0, None
     for spec in tools:
         code = subprocess.run([sys.executable, *spec.split()],
                               cwd=tree, capture_output=True, text=True, env=env).returncode
         worst = worst or code
     if tests:
-        code = subprocess.run([sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider",
+        # No `-q` here. The project's `addopts` already carries one, and pytest
+        # counts verbosity: two of them silence the `N passed` line entirely,
+        # which is the line `_ran` reads. The output is captured either way, so
+        # the second `-q` bought nothing and cost the harness its eyesight.
+        done = subprocess.run([sys.executable, "-m", "pytest", "-p", "no:cacheprovider",
                                *tests], cwd=tree, capture_output=True, text=True,
-                              env=env).returncode
-        worst = worst or code
-    return worst
+                              env=env)
+        worst = worst or done.returncode
+        said = done.stdout + done.stderr
+    return worst, said
+
+
+def _ran(said: str) -> bool:
+    """Whether pytest actually asserted anything.
+
+    This sweep runs in a copy of the tree with `.git` left out, and a test that
+    reads the tag history skips there. `pytest` exits 0 on a run that skipped
+    everything, so the mutation was applied, nothing objected, and the row was
+    reported as *survived* -- a real finding, but pointing at the workflow
+    rather than at the row, and the fix would have been to weaken the gate.
+    Exit code 5 already covers "collected nothing"; this covers "collected it
+    and declined to run it", which looks exactly like a pass from outside.
+    """
+    return re.search(r"\b\d+ passed", said) is not None
 
 
 def apply(tree: Path, row) -> None:
@@ -909,12 +982,22 @@ def main() -> int:
             pristine = (tree / rel).read_text(encoding="utf-8")
 
             clear(tree)
-            if run(tree, tests) != 0:
+            code, said = run(tree, tests)
+            if code != 0:
                 broken.append(f"{_id}: the tests it names already fail before the mutation")
+                continue
+            # `said is None` means the row names only tools, which report by exit
+            # code and have no summary line to read. `tests` here is the whole
+            # check list, tools included, so testing *it* flagged every
+            # tools-only row -- the guard read "this row named something" as
+            # "pytest ran".
+            if said is not None and not _ran(said):
+                broken.append(f"{_id}: the tests it names pass nothing here -- they "
+                              f"skipped, so the row cannot kill anything")
                 continue
 
             apply(tree, row)
-            code = run(tree, tests)
+            code, _ = run(tree, tests)
             (tree / rel).write_text(pristine, encoding="utf-8")
             (tree / rel).touch()
             clear(tree)

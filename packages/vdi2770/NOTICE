@@ -8,14 +8,15 @@ Licensed under the Apache License, Version 2.0.
 Third-party material bundled with this package
 --------------------------------------------------------------------------
 
-None. This package contains no schema, no table, no corpus and no vendored
-text of any kind — it is a reader with no dependencies, and the only file it
-ships besides its own source is this notice and the licence beside it.
+None. This half of the distribution contains no schema, no table, no corpus
+and no vendored text of any kind — it is a reader with no dependencies, and the
+only file it ships besides its own source is this notice and the licence beside
+it.
 
-The material the sibling package `vdi2770-validate` bundles — VDI's XML schema,
-the IDTA document class table, the reference implementation's corpus — is
-accounted for in that package's NOTICE and THIRD_PARTY.md, and none of it is
-here.
+The material the rest of the distribution bundles — VDI's XML schema, the IDTA
+document class table, the reference implementation's corpus — is accounted for
+in the NOTICE and THIRD_PARTY.md at the root of this distribution, and none of
+it is here.
 
 The text of the VDI 2770 guideline itself (VDI 2770 Blatt 1:2020-04) is sold by
 DIN Media and is NOT included, quoted, or paraphrased anywhere in this project.

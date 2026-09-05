@@ -3,9 +3,9 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "vdi2770-validate"
+name = "vdi2770"
 version = "0.7.0"
-description = "Offline conformance checker for VDI 2770 containers — every finding comes with a remedy"
+description = "Read and check VDI 2770 handover-documentation containers, offline — every finding comes with a remedy"
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "Apache-2.0" }
@@ -21,12 +21,13 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
   "Topic :: Software Development :: Quality Assurance",
 ]
-# The readers live in `vdi2770`, which has no dependencies of its own; this
-# package is that library plus a rule set. The floor is the exact reader version
-# this was tested against, not the start of its minor line: `~=0.3.0` let pip
-# install 0.3.0 beside vdi2770-validate 0.5.0, and the fix 0.5.0 exists for is in
-# the reader. A range that merely permits the fixed version does not deliver it.
-dependencies = ["vdi2770~=0.6.2", "xmlschema==4.2.0"]
+# One distribution, two layers. The readers used to be a separate distribution
+# this one pinned with `~=`, and the pin was a standing way to be wrong: it had
+# already let pip install a reader without the fix the release existed for, and
+# the floor had to be tightened to the exact version. It cannot be wrong now
+# because it is not there — the reader is the other half of this package, and
+# `import vdi2770` still costs nothing (a test reads its imports and says so).
+dependencies = ["xmlschema==4.2.0"]
 
 [project.urls]
 Homepage = "https://github.com/dev365code/vdi2770-validate"
@@ -38,18 +39,27 @@ Changelog = "https://github.com/dev365code/vdi2770-validate/blob/main/CHANGELOG.
 dev = ["pytest==8.3.4", "ruff==0.16.3"]
 
 [project.scripts]
+# The name people will learn, and the one already in their scripts. The second
+# is not deprecated: a command that used to work and stops working is a cost
+# paid by whoever automated it, and this one costs a line to keep.
+vdi2770 = "vdi2770_validate.cli:_run"
 vdi2770-validate = "vdi2770_validate.cli:_run"
 
 [tool.setuptools]
 # The wheel bundles VDI's schema and a table derived from an IDTA publication,
 # so the notices have to travel with it.
-license-files = ["LICENSE", "NOTICE", "THIRD_PARTY.md"]
+license-files = ["LICENSE", "NOTICE", "THIRD_PARTY.md",
+                 "packages/vdi2770/NOTICE"]
 
 [tool.setuptools.packages.find]
-where = ["src"]
+# Both halves, from where each has always lived. The reader keeps its own
+# directory and its own tests: what changed is that it ships inside this
+# distribution rather than beside it.
+where = ["src", "packages/vdi2770/src"]
 
 [tool.setuptools.package-data]
 vdi2770_validate = ["data/*.json", "data/*.xsd"]
+vdi2770 = ["py.typed"]
 
 [tool.ruff]
 line-length = 110

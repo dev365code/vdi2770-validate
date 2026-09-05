@@ -25,9 +25,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 SUITES = [
     (ROOT, sorted((ROOT / "tests").glob("test_*.py")), []),
+    # `-c pytest.ini`: the reader had a `pyproject.toml` of its own while it was
+    # published separately, and its `[tool.pytest.ini_options]` is what put
+    # `src` and `tests` on the path from this directory. The manifest went when
+    # the two distributions became one; the test settings had no reason to.
     (ROOT / "packages" / "vdi2770",
      sorted((ROOT / "packages" / "vdi2770" / "tests").glob("test_*.py")),
-     ["-c", "pyproject.toml"]),
+     ["-c", "pytest.ini"]),
 ]
 
 # Bytecode goes wherever this interpreter puts it, and `sys.pycache_prefix`

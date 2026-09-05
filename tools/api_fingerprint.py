@@ -5,20 +5,18 @@
     python tools/api_fingerprint.py --check    # judge, against packages/vdi2770/API.json
     python tools/api_fingerprint.py --write    # record it, after a version bump
 
-Two releases have already gone out with a pin that let pip install a reader the
-validator could not use. The existing gate compares the pin's floor to the
-version in the tree, which catches "the pin is too loose" and cannot catch the
-other half: **the code changed and the version did not**. This cycle's reader
-gained `DEFECT_KINDS`, gained `Container.parent`, and changed
-`Container.rejected` from `Dict[str, str]` to `Dict[str, Defect]`, all while
-calling itself 0.5.0.
+Two releases went out with a pin that let pip install a reader the validator
+could not use, back when the two were separate distributions. Version checks
+catch "the pin is too loose" and cannot catch the other half: **the code changed
+and the version did not**. One cycle's reader gained `DEFECT_KINDS`, gained
+`Container.parent`, and changed `Container.rejected` from `Dict[str, str]` to
+`Dict[str, Defect]`, all while calling itself 0.5.0.
 
 Nobody was hurt by that particular one, and the reason is worth writing down:
-0.5.0 was never tagged, so `release-sdk.yml` never published it. The newest
-reader on PyPI is 0.4.0 and the released validator pins `~=0.4.0`, which
-resolves. What would have hurt is tagging the validator from that tree — its pin
-said `~=0.5.0` for a reader that existed nowhere but here. The companion check
-for that is in `tests/test_ci_parity.py`.
+0.5.0 was never tagged, so nothing published it — PyPI's `vdi2770` goes 0.4.0
+then 0.6.0. The pin is gone now, and what it protected is not: `import vdi2770`
+is a public surface, third parties pin it, and a version is a promise about what
+they get.
 
 `--write` refuses to record a changed surface under a version it has already
 recorded. That is the whole point: without it, "regenerate the baseline" is a
@@ -104,15 +102,17 @@ def surface() -> dict:
 
 
 def compatible(recorded: dict, now: dict) -> Optional[str]:
-    """Is moving from `recorded` to `now` something the validator's pin permits?
+    """Is moving from `recorded` to `now` something a caller's pin permits?
 
     Returns None when it is, or the sentence explaining why not.
 
-    "Bump the version" was the whole rule, and it is not enough while the
-    validator pins with `~=`: `vdi2770~=0.6.0` admits every 0.6.x, so a removal
+    "Bump the version" was the whole rule, and it is not enough against a
+    compatible-release pin: `vdi2770~=0.6.0` admits every 0.6.x, so a removal
     published as 0.6.1 arrives on installed machines without anyone choosing it.
-    This project shipped that mistake once already — `~=0.3.0` accepted 0.3.1 and
-    pip installed the reader whose fix was the point of the release.
+    This project shipped that mistake once already, when the validator was the
+    one pinning — `~=0.3.0` accepted 0.3.1 and pip installed the reader whose
+    fix was the point of the release. The internal pin is gone; anybody
+    depending on `vdi2770` can still write one, and the rule holds for them.
 
     Additions are compatible; a patch bump is an honest way to ship one.
     Removals and signature changes are not, and the minor has to move so the
@@ -148,7 +148,7 @@ def compatible(recorded: dict, now: dict) -> Optional[str]:
     if moved:
         what.append(f"changed the signature of {moved}")
     return (f"{recorded['version']} -> {now['version']} " + " and ".join(what) +
-            f". The validator pins the reader with `~=`, which admits every "
+            f". A compatible-release pin admits every "
             f"{was[0]}.{was[1]}.x — this release would install itself on machines "
             f"that asked for {recorded['version']}. Move the minor.")
 
@@ -163,34 +163,82 @@ def _parts(version: str) -> Optional[tuple]:
     return (int(head.group(1)), int(head.group(2)), int(head.group(3))) if head else None
 
 
+#: Where the two tag namespaces meet. Below this the reader was published on its
+#: own as `sdk-v<version>`; from here up it ships inside `vdi2770` and goes out
+#: on the distribution's own `v<version>`.
+MERGED_AT = (0, 7, 0)
+
+#: Both spellings, because a rename of the evidence is not a deletion of it:
+#: reader releases up to 0.6.1 are on PyPI under numbers nobody can reuse, and
+#: reading only the current spelling would make every one of them look
+#: unpublished — turning every guard in this file off for exactly the versions
+#: people have installed.
+TAG_PREFIXES = ("v", "sdk-v")
+
+
+def _prefix_for(version: str) -> str:
+    """Which namespace a reader version belongs to.
+
+    Not "try both and take the first that exists". The two namespaces share
+    their numbers and mean different things below the merge: `v0.5.0` is a
+    *validator* release, and the reader inside it said 0.3.1. Trying `v` first
+    made `_published("0.5.0")` answer yes on the strength of that tag, for a
+    reader version PyPI has never held — a false refusal rather than a false
+    pass, but an answer about the wrong distribution either way.
+    """
+    parts = _parts(version)
+    return "v" if parts is not None and parts >= MERGED_AT else "sdk-v"
+
+
+def _tag_naming(version: str) -> Optional[str]:
+    """The tag that published `version`, in the namespace that version is in."""
+    tag = f"{_prefix_for(version)}{version}"
+    return tag if tag in _tags() else None
+
+
 def _at_tag(version: str):
-    """The baseline as `sdk-v<version>` published it, or None.
+    """The baseline as its tag published it, or None.
 
     Read from git rather than from the file being judged, because the file being
     judged is the one somebody could have edited.
+
+    Asks git directly rather than going through `_tags()`, which refuses when
+    there is no tag history to read. That refusal is right where the question is
+    "was this published" and wrong here: this reads a file, its callers already
+    know the version is published, and an unpacked sdist is not a git checkout
+    -- routing this through `_tags()` made the sdist gate die on a tree that was
+    never going to have tags.
+
+    Both spellings are tried, newest namespace first, and a tag that holds
+    unreadable JSON does not end the search: `v0.6.0` exists and carries no
+    baseline at all, so stopping at the first tag that resolves would answer
+    `None` for a version `sdk-v0.6.0` recorded perfectly well.
     """
-    done = subprocess.run(["git", "show", f"sdk-v{version}:packages/vdi2770/API.json"],
-                          cwd=ROOT, capture_output=True, text=True)
-    if done.returncode:
-        return None
-    try:
-        return json.loads(done.stdout)
-    except json.JSONDecodeError:
-        return None
+    for prefix in (_prefix_for(version), *TAG_PREFIXES):
+        done = subprocess.run(
+            ["git", "show", f"{prefix}{version}:packages/vdi2770/API.json"],
+            cwd=ROOT, capture_output=True, text=True)
+        if done.returncode:
+            continue
+        try:
+            return json.loads(done.stdout)
+        except json.JSONDecodeError:
+            continue
+    return None
 
 
 def _published(version: str) -> bool:
-    """Whether `sdk-v<version>` exists — whether anyone could have installed it.
+    """Whether a tag names `version` — whether anyone could have installed it.
 
     A version nobody has published is still being written and its record may
     move with it. Once the tag exists the record is evidence about something on
     an index, and `--write` stops accepting changes under it.
     """
-    return f"sdk-v{version}" in _tags()
+    return _tag_naming(version) is not None
 
 
 def _tags() -> set:
-    """Every `sdk-v*` tag, or a refusal if git cannot answer.
+    """Every release tag in either spelling, or a refusal if git cannot answer.
 
     "No such tag" and "there is no tag history here" were the same answer, and
     the second one turns every guard in this file off: in a `--depth 1
@@ -199,7 +247,7 @@ def _tags() -> set:
     the whole gate stayed green. A guard that cannot see is a guard that says
     yes.
     """
-    got = subprocess.run(["git", "tag", "--list", "sdk-v*"],
+    got = subprocess.run(["git", "tag", "--list", *(f"{p}*" for p in TAG_PREFIXES)],
                          cwd=ROOT, capture_output=True, text=True)
     if got.returncode:
         raise SystemExit(
@@ -210,7 +258,7 @@ def _tags() -> set:
     tags = {t for t in got.stdout.split() if t}
     if not tags:
         raise SystemExit(
-            "this checkout has no `sdk-v*` tags at all. That is indistinguishable "
+            "this checkout has no release tags at all. That is indistinguishable "
             "from nothing having been released, which is not true of this package "
             "-- fetch tags (`fetch-depth: 0`) before recording anything.")
     return tags
@@ -263,15 +311,15 @@ def main() -> int:
             # and this file is a copy of it.
             if not _published(recorded["version"]):
                 print(f"{BASELINE.relative_to(ROOT)} says it records "
-                      f"{recorded['version']}, and no sdk-v{recorded['version']} "
-                      f"was ever tagged. There is nothing to compare against; "
+                      f"{recorded['version']}, and no release tag ever named "
+                      f"it. There is nothing to compare against; "
                       f"restore the baseline from the tag it belongs to.",
                       file=sys.stderr)
                 return 1
             published = _at_tag(recorded["version"])
             if published != recorded:
                 print(f"{BASELINE.relative_to(ROOT)} says it records {recorded['version']}, "
-                      f"and that is not what sdk-v{recorded['version']} published"
+                      f"and that is not what {_tag_naming(recorded['version'])} published"
                       f"{' -- the tag has no baseline at all' if published is None else ''}. "
                       f"Restore it from the tag; a baseline that is not the record of a "
                       f"release cannot be compared against one.", file=sys.stderr)
@@ -286,7 +334,7 @@ def main() -> int:
                 # surface change straight into the live version: the branch fires
                 # on "the recorded version differs", which is exactly the
                 # condition that makes the same-version guard below unreachable.
-                print(f"sdk-v{now['version']} is already published. Whoever installed "
+                print(f"{_tag_naming(now['version'])} is already published. Whoever installed "
                       f"it does not get this surface, whatever the baseline in the "
                       f"tree says. Bump the version.", file=sys.stderr)
                 return 1
@@ -323,9 +371,10 @@ def main() -> int:
                 and recorded["version"] == now["version"]
                 and recorded["surface"] != now["surface"]):
             print(f"the public surface changed and {now['version']} is already "
-                  f"published as sdk-v{now['version']}. Whoever installed it does "
-                  f"not get this. Bump packages/vdi2770 (pyproject.toml and "
-                  f"__init__.py), move the validator's pin with it, then rerun.",
+                  f"published as {_tag_naming(now['version'])}. Whoever installed it does "
+                  f"not get this. Bump the version -- pyproject.toml and "
+                  f"packages/vdi2770/src/vdi2770/__init__.py, which have to "
+                  f"agree -- then rerun.",
                   file=sys.stderr)
             return 1
         # A bump is not automatically the right bump. `--write` is the one moment
@@ -366,9 +415,9 @@ def main() -> int:
             # would have burned a number to fix a problem that did not exist.
             # `--write` already told the two apart; only the explanation did not.
             fix = (f"Whoever installs {now['version']} from PyPI does not get this. "
-                   f"Bump the version, move the validator's pin, then rerun --write."
+                   f"Bump the version, then rerun --write."
                    if _published(now["version"]) else
-                   f"sdk-v{now['version']} was never published, so this surface has "
+                   f"no tag names {now['version']}, so this surface has "
                    f"not been promised to anybody yet. Rerun --write and review the "
                    f"diff.")
             print(f"the reader still calls itself {now['version']} and its public surface has "

@@ -13,7 +13,7 @@ from vdi2770_validate.model import Severity
 from vdi2770_validate.runner import check_file
 
 README = (ROOT / "README.md").read_text(encoding="utf-8")
-BLOCK = re.search(r"```\n\$ vdi2770-validate check (\S+)\n(.*?)```", README, re.S)
+BLOCK = re.search(r"```\n\$ vdi2770 check (\S+)\n(.*?)```", README, re.S)
 
 
 def test_the_readme_shows_a_command_that_exists():
@@ -22,7 +22,7 @@ def test_the_readme_shows_a_command_that_exists():
 
 
 def _command_output(target: str) -> list:
-    """What `vdi2770-validate check <target>` actually prints.
+    """What `vdi2770 check <target>` actually prints.
 
     The renderer is a layer below the command, and the run's closing statement
     lives in the command. A gate that reads the renderer sees a line the tool
@@ -140,7 +140,7 @@ def test_the_classes_transcript_is_output_the_tool_produces():
     import subprocess
     import sys
 
-    block = re.search(r"```\n\$ vdi2770-validate classes\n(.*?)```", README, re.S)
+    block = re.search(r"```\n\$ vdi2770 classes\n(.*?)```", README, re.S)
     assert block, "the README no longer shows a `classes` session"
     run = subprocess.run([sys.executable, "-m", "vdi2770_validate", "classes"],
                          cwd=ROOT, capture_output=True, text=True, env=under_test())
@@ -213,7 +213,10 @@ def test_a_reader_who_has_only_installed_it_can_run_the_first_command():
     clone came *after* the command, and no `git clone` line appeared anywhere.
     """
     text = README
-    first = re.search(r"vdi2770-validate check (corpus|tests)/", text)
+    # Either spelling of the command: `vdi2770-validate` is the name this
+    # project published under until 0.6.0 and it is still installed, so a
+    # page that used it would have the same problem.
+    first = re.search(r"vdi2770(-validate)? check (corpus|tests)/", text)
     if first is None:
         return                    # no repo-relative example to get wrong
     clone = text.find("git clone")

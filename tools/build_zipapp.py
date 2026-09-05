@@ -91,12 +91,13 @@ def _distribution_name(spec: str) -> str:
     return re.split(r"[<>=!~\[; ]", spec, maxsplit=1)[0].strip().lower().replace("_", "-")
 
 
-#: What is copied from the tree instead of fetched. The reader is a dependency
-#: of the *distribution* while it is published separately, and it is not one
-#: here: fetching it would put a released version inside a file built from this
-#: working tree, which is the one thing a single-file build must not do. After
-#: the two are one distribution this list still holds -- the entry simply stops
-#: appearing in `dependencies` at all.
+#: What is copied from the tree instead of fetched. Neither name appears in
+#: `dependencies` any more — the reader ships inside this distribution and
+#: `vdi2770-validate` is a redirect to it — so this filter matches nothing
+#: today. It is kept because the failure it prevents is silent: a first-party
+#: name reappearing in that list would fetch a *released* version off an index
+#: and put it inside a file built from this working tree, which is the one thing
+#: a single-file build must not do, and the built file would still run.
 FIRST_PARTY = {"vdi2770", "vdi2770-validate"}
 
 

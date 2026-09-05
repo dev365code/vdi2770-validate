@@ -107,10 +107,13 @@ def test_the_reader_crashing_is_a_finding_too(monkeypatch):
     `nfc`.
 
     The reader's contract is that it records a `Defect` rather than raising, and
-    it is tested against that — but it is a *separately versioned package*, and
-    the validator's pin admits releases nobody here has run. The failure mode is
-    the exact one `_into` exists to prevent: a traceback naming this tool's
-    internals, and every container after it in the batch unchecked.
+    it is tested against that — but it is a *layer with its own suite*, written
+    to stand alone and to be usable on its own, so a change there can land
+    without a rule ever being run. It was a separately versioned distribution
+    when this was written, and the pin admitted releases nobody here had run.
+    The failure mode is the exact one `_into` exists to prevent: a traceback
+    naming this tool's internals, and every container after it in the batch
+    unchecked.
     """
     def explodes(*a, **kw):
         raise Surprise("the reader fell over")

@@ -182,55 +182,48 @@ def test_make_check_depends_on_every_gate():
         f"exemption above with a reason.")
 
 
-def test_the_sdk_in_this_repository_satisfies_the_pin_that_depends_on_it():
-    """Two packages in one repository, and the second declares a version range
-    for the first. Nothing checked that the copy sitting right here satisfies it.
+def test_the_version_is_in_one_place():
+    """One distribution, one version.
 
-    It cost a broken install already: bumping the reader to `0.3.0.dev0` while the
-    validator asked for `vdi2770~=0.3.0` sent pip to PyPI, because a pre-release
-    does not satisfy a compatible-release specifier. Locally and in CI the reader
-    is installed from the working tree, so the pin has to accept what is there.
+    The reader had a `pyproject.toml` of its own and its own number, which is
+    what a separately published library needs. It is not one any more: it ships
+    inside `vdi2770`, and two numbers for one artifact is a way for a report to
+    name a version nobody can install.
+
+    This is a claim about the repository, so it is here and not in the reader's
+    own suite — that suite must not read files above the package, because an
+    sdist of it contains the package and nothing else.
     """
-    from packaging.requirements import Requirement
-    from packaging.version import Version
-
-    pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
-    deps = re.search(r"^dependencies = \[(.*?)\]", pyproject, re.M | re.S)
-    assert deps, "the validator declares no dependencies"
-    pin = next((Requirement(m) for m in re.findall(r'"([^"]+)"', deps.group(1))
-                if Requirement(m).name == "vdi2770"), None)
-    assert pin is not None, "the validator no longer depends on the reader"
-
-    sdk = (ROOT / "packages" / "vdi2770" / "pyproject.toml").read_text(encoding="utf-8")
-    here = Version(re.search(r'^version = "([^"]+)"', sdk, re.M).group(1))
-
-    assert pin.specifier.contains(here, prereleases=here.is_prerelease), (
-        f"the reader in this repository is {here} and the validator asks for "
-        f"{pin}. `pip install -e .` will go to PyPI and fail.")
-
-    # Accepting the reader beside it is not enough: the range has to *require* it.
-    # `vdi2770~=0.3.0` accepted 0.3.1 and pip installed 0.3.0, so vdi2770-validate
-    # 0.5.0 shipped with the reader whose fix was the entire reason for the
-    # release. The floor is the version this was tested against.
-    floors = [s.version for s in pin.specifier if s.operator in ("~=", ">=", "==")]
-    assert floors, f"{pin} has no lower bound; any older reader satisfies it"
-    assert Version(max(floors, key=Version)) == here, (
-        f"the reader here is {here} but the pin's floor is {max(floors, key=Version)}. "
-        f"A user can install an older reader than the one these tests ran against.")
+    root = re.search(r'^version = "([^"]+)"',
+                     (ROOT / "pyproject.toml").read_text(encoding="utf-8"),
+                     re.M).group(1)
+    reader = re.search(r'^__version__ = "([^"]+)"',
+                       (ROOT / "packages" / "vdi2770" / "src" / "vdi2770" /
+                        "__init__.py").read_text(encoding="utf-8"), re.M).group(1)
+    assert reader == root, (
+        f"the distribution is {root} and the reader inside it says {reader}. "
+        f"`import vdi2770; vdi2770.__version__` is what a report prints, and it "
+        f"would name a release nobody can install.")
+    assert not (ROOT / "packages" / "vdi2770" / "pyproject.toml").exists(), (
+        "the reader has a manifest of its own again, so there are two versions "
+        "and two names for one distribution")
 
 
-def test_ci_runs_every_python_either_package_advertises():
+def test_ci_runs_every_python_any_manifest_advertises():
     """A classifier on PyPI is a promise to whoever reads it before installing.
 
-    The existing floor test reads the validator's `requires-python` and nothing
-    else, so the reader package advertised `Programming Language :: Python ::
-    3.13` while CI ran 3.9 and 3.12 and no interpreter ever confirmed it.
+    The existing floor test reads one manifest and nothing else, so the reader
+    package advertised `Programming Language :: Python :: 3.13` while CI ran 3.9
+    and 3.12 and no interpreter ever confirmed it. The reader's manifest is gone
+    and the redirect's is here, making the same promise to the same reader — and
+    its own `requires-python` has to hold too, or it installs on a Python the
+    package it points at refuses and the error names the wrong package.
     """
     matrix = re.search(r"python-version:\s*\[(.*?)\]", CI.read_text(encoding="utf-8"))
     assert matrix, "CI declares no python-version matrix"
     tested = set(re.findall(r'"([0-9.]+)"', matrix.group(1)))
 
-    for name in ("pyproject.toml", "packages/vdi2770/pyproject.toml"):
+    for name in ("pyproject.toml", "packages/vdi2770-validate/pyproject.toml"):
         text = (ROOT / name).read_text(encoding="utf-8")
         block = re.search(r"^classifiers = \[(.*?)^\]", text, re.M | re.S)
         assert block, f"{name} declares no classifiers"
@@ -307,15 +300,18 @@ def test_no_stale_copy_of_the_source_tree_is_left_lying_around():
 
 
 def test_contributing_installs_what_ci_installs():
-    """CI installs the reader from the working tree before the validator, with a
-    comment saying that is what proves the commit's two halves fit together.
-    CONTRIBUTING said `pip install -e ".[dev]"` and nothing else, so a
-    contributor following it resolved the reader from PyPI and ran the gate
-    against a different reader than CI did.
+    """Whatever CI installs, the contributor recipe has to name.
+
+    CI used to install the reader from the working tree before the validator
+    that pinned it, and CONTRIBUTING said `pip install -e ".[dev]"` and nothing
+    else -- so a contributor following it resolved the reader from PyPI and ran
+    the gate against a different reader than CI did. One install now, and this
+    still has to hold: it is the direction that catches CI growing a step
+    nobody wrote down.
     """
     prose = (ROOT / "CONTRIBUTING.md").read_text(encoding="utf-8")
-    # Editable installs of this repository's own two distributions. `pip install
-    # build` is a tool the wheel gate needs, not a thing under test.
+    # Editable installs of this repository itself. `pip install build` is a tool
+    # the wheel gate needs, not a thing under test.
     installs = [c for c in ci_commands()
                 if c.startswith("python -m pip install -e ")]
     assert installs, "CI installs nothing"
@@ -352,7 +348,7 @@ def test_a_workflow_that_publishes_runs_the_whole_gate():
     went stale the moment the gate grew.
 
     `release.yml` ran six of nine targets. `release-sdk.yml` — the one that
-    publishes the reader to PyPI — ran two, and never ran
+    published the reader to PyPI — ran two, and never ran
     `tools/api_fingerprint.py`, whose entire purpose is to stop that workflow
     publishing a reader whose public surface has moved under an old version.
     Nothing noticed, because the parity test read `ci.yml` and no other file.
@@ -388,11 +384,13 @@ def test_a_workflow_that_publishes_runs_the_whole_gate():
 
 
 def test_a_step_that_runs_make_check_runs_it_where_the_makefile_is():
-    """`release-sdk.yml` sets `defaults.run.working-directory: packages/vdi2770`
-    for the whole file. A step added there without `working-directory: .` runs
+    """`release-sdk.yml` set `defaults.run.working-directory: packages/vdi2770`
+    for the whole file. A step added there without `working-directory: .` ran
     from inside the library, where there is no Makefile and no
     `packages/vdi2770` — so the SDK release failed before it could publish, and
-    the gate that step exists to run never ran.
+    the gate that step exists to run never ran. That file is gone with the
+    distribution it published, and no workflow sets a file-wide default today,
+    so this asserts nothing about the tree until one does again.
 
     Checked structurally rather than by name: any workflow with a file-wide
     default must override it on a step that runs a repository-root command.
@@ -431,21 +429,27 @@ def test_a_step_that_runs_make_check_runs_it_where_the_makefile_is():
                 f"{root_commands} without `working-directory: .`:\n{step[:200]}")
 
 
-def test_the_publishing_workflow_checks_the_reader_shipped_first():
+def test_the_publishing_workflow_checks_the_order_at_all():
     """Unconditionally, because the condition is the thing being protected.
 
-    The sibling below asserts this too, but only on the branch where the pin
-    names an unpublished reader -- and it needs the tag history, which a copied
+    The sibling below asserts this too, but only on the branch where the floor
+    names an unpublished release -- and it needs the tag history, which a copied
     tree does not have, so it skips wherever the gates are measured. The claim
-    does not depend on today's pin: this workflow publishes the validator, the
-    validator pins the reader, and the order has to be checked at the moment a
-    release happens because that is the only moment anything knows one is.
+    does not depend on today's floor: this workflow publishes both
+    distributions, one of them depends on the other, and the order has to be
+    checked at the moment a release happens because that is the only moment
+    anything knows one is.
+
+    The gate ran the other way round while the reader was its own distribution
+    -- the validator pinned it and it had to go first. The direction moved; the
+    reason a build cannot catch this did not.
     """
     body = (ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
     assert "tools/check_release_order.py" in body, (
         "release.yml does not run tools/check_release_order.py. Nothing else "
-        "asks an index whether the pinned reader exists -- the gate installs it "
-        "from the working tree and `python -m build` does not resolve runtime "
+        "asks an index whether the package the redirect depends on exists -- "
+        "the gate installs it from the working tree and `python -m build` does "
+        "not resolve runtime "
         "dependencies -- so without this step the validator can be tagged first "
         "and published permanently unresolvable.")
     assert (ROOT / "tools" / "check_release_order.py").exists(), (
@@ -460,72 +464,61 @@ def test_the_publishing_workflow_checks_the_reader_shipped_first():
                 "the index whether the pinned reader was published: " + line.strip())
 
 
-def test_the_pin_names_a_reader_that_has_been_published():
-    """What this enforces is release *order*, not the pin's value.
+def test_the_redirects_floor_names_a_release_that_exists_or_is_being_made():
+    """What this enforces is release *order*, not the floor's value.
 
-    The floor test above compares the pin to the reader in this tree and requires
-    them equal, which leaves exactly one open question: is that version something
-    a user can already install, or is it about to be published? If it is about to
-    be, the SDK has to be tagged first — and it cannot be tagged at all without
-    the API baseline that gates its release.
+    `vdi2770-validate` is metadata and a dependency on `vdi2770`, and the floor
+    of that dependency has exactly one open question: is it something a user can
+    already install, or is it about to be published alongside it? If it is
+    neither, the redirect is unresolvable from the moment it is uploaded, and
+    the version number does not come back.
 
-    At one point today the pin said `vdi2770~=0.5.0` for a reader that existed
-    nowhere but this working tree — 0.5.0 was never tagged. Tagging the validator
-    from there would have published a distribution `pip` could not resolve, which
-    is the same failure as an over-loose pin arriving from the other direction.
-
-    A pin may name the version being released alongside it: `sdk-v<version>` in
-    the tags, or the reader's version bumped in this same tree with the SDK
-    release still to come. What it may not do is name a version that is neither.
+    That failed once from the other direction, when the validator was the one
+    pinning: the pin said `vdi2770~=0.5.0` for a reader that existed nowhere but
+    a working tree. The shape of the mistake did not move with the pin.
     """
-    import re
     import subprocess
 
     from packaging.requirements import Requirement
+    from packaging.version import Version
 
-    deps = re.search(r"^dependencies = \[(.*?)\]",
-                     (ROOT / "pyproject.toml").read_text(encoding="utf-8"), re.M | re.S)
+    shim = (ROOT / "packages" / "vdi2770-validate" / "pyproject.toml").read_text(
+        encoding="utf-8")
+    deps = re.search(r"^dependencies = \[(.*?)\]", shim, re.M | re.S)
+    assert deps, "the redirect depends on nothing, so it redirects to nothing"
     pin = next(Requirement(m) for m in re.findall(r'"([^"]+)"', deps.group(1))
                if Requirement(m).name == "vdi2770")
-    floor = max((s.version for s in pin.specifier if s.operator in ("~=", ">=", "==")),
-                key=lambda v: tuple(int(x) for x in v.split(".")))
+    floors = [s.version for s in pin.specifier if s.operator in ("~=", ">=", "==")]
+    assert floors, f"{pin} has no lower bound; an older release satisfies it"
+    floor = Version(max(floors, key=Version))
 
-    tags = subprocess.run(["git", "tag", "--list", "sdk-v*"], cwd=ROOT,
+    tags = subprocess.run(["git", "tag", "--list", "v*", "sdk-v*"], cwd=ROOT,
                           capture_output=True, text=True)
     if tags.returncode != 0:
         import pytest
         pytest.skip("not a git checkout; the tag history is not available here")
-    published = {t[len("sdk-v"):] for t in tags.stdout.split()}
-    here = re.search(r'^version = "([^"]+)"',
-                     (ROOT / "packages" / "vdi2770" / "pyproject.toml").read_text(encoding="utf-8"),
-                     re.M).group(1)
+    published = {Version(re.sub(r"^(sdk-)?v", "", tag))
+                 for tag in tags.stdout.split() if tag}
+    here = Version(re.search(r'^version = "([^"]+)"',
+                             (ROOT / "pyproject.toml").read_text(encoding="utf-8"),
+                             re.M).group(1))
 
-    # Belt only, and worth saying so: the sibling above asserts `floor == here`
-    # outright, so this disjunction cannot fail while that test is green. It is
-    # here to survive that test being loosened, not to catch anything today.
-    assert floor in published or floor == here, (
-        f"the validator pins vdi2770>={floor}, which is neither a published tag "
-        f"({sorted(published)}) nor the reader in this tree ({here}). Releasing the "
-        f"validator on this pin gives users something pip cannot resolve.")
+    assert floor in published or floor <= here, (
+        f"the redirect asks for vdi2770>={floor}, which is neither a published "
+        f"release ({sorted(str(v) for v in published)}) nor satisfied by the one "
+        f"this repository is making ({here}). Published on this floor, "
+        f"`pip install vdi2770-validate` gives users something pip cannot resolve.")
 
-    # This is the live half -- and for most of its life it was not live at all.
-    # It asserted that `API.json` exists, which it always does, so the ordering
-    # this test is named for was enforced by nothing: a `v*` tag pushed before
-    # `sdk-v*` would build green, publish, and leave `vdi2770-validate` on the
-    # index permanently unresolvable under a number PyPI will not let anyone
-    # reuse. Only the release workflow can check this, because only it knows a
-    # release is happening; what this asserts is that the workflow does.
-    if floor == here and floor not in published:
-        assert (ROOT / "packages" / "vdi2770" / "API.json").exists(), (
-            "the pin names an unpublished reader, so `sdk-v" + here + "` has to be "
-            "tagged before the validator — and the API baseline has to exist for that "
-            "release to be gated at all")
+    # The live half. Only the release workflow can check whether the package is
+    # actually on the index, because only it knows a release is happening; what
+    # this asserts is that the workflow does.
+    if floor not in published:
         body = (ROOT / ".github" / "workflows" / "release.yml").read_text(
             encoding="utf-8")
         assert "tools/check_release_order.py" in body, (
-            "the pin names a reader nobody can install yet, and release.yml does "
-            "not run tools/check_release_order.py — so nothing stops the "
-            "validator being tagged first")
+            "the redirect names a release nobody can install yet, and "
+            "release.yml does not run tools/check_release_order.py — so nothing "
+            "stops it being published first")
 
 
 def test_a_target_outside_the_gate_has_a_written_reason():
@@ -615,45 +608,53 @@ def test_the_fixture_generator_owns_its_output_directory(tmp_path):
         "the second run does not produce what the first one did")
 
 
-def test_the_reader_in_this_tree_is_the_one_its_version_names():
+def test_the_code_in_this_tree_is_the_code_its_version_names():
     """The fingerprint watches the reader's public *surface*. Nothing watched its
     behaviour.
 
     `pdfread._is_encrypted` was repaired twice after `sdk-v0.6.1` was published —
     a scan that cost 135 seconds on a 1.5 KB archive, and one that called a plain
     PDF encrypted. Neither touched a name in `__all__`, so `api_fingerprint
-    --check` stayed green at 0.6.1, and a user installing the validator would
-    have got the version on PyPI: the one without the repairs. The validator
-    would have shipped against a reader it was never tested with.
+    --check` stayed green at 0.6.1, and a user installing that version would have
+    got the one on PyPI: the one without the repairs.
 
     A version is a promise about what you get, not only about what you can call.
+    Both halves of the distribution, because they share one number now: a commit
+    to `src/` after the tag is the same broken promise as a commit to the
+    reader's, and only the reader's half was ever watched.
     """
     import subprocess
 
-    tags = subprocess.run(["git", "tag", "--list", "sdk-v*"], cwd=ROOT,
+    tags = subprocess.run(["git", "tag", "--list", "v*", "sdk-v*"], cwd=ROOT,
                           capture_output=True, text=True)
     if tags.returncode != 0 or not tags.stdout.split():
         import pytest
         pytest.skip("no tag history here; this compares against the last release")
 
     here = re.search(r'^version = "([^"]+)"',
-                     (ROOT / "packages" / "vdi2770" / "pyproject.toml").read_text(encoding="utf-8"),
+                     (ROOT / "pyproject.toml").read_text(encoding="utf-8"),
                      re.M).group(1)
-    if f"sdk-v{here}" not in tags.stdout.split():
+    # Either spelling. The reader's releases went out as `sdk-v*` while it was
+    # its own distribution, and those numbers are on PyPI; reading only the
+    # current prefix would make them all look unreleased.
+    tag = next((t for t in (f"v{here}", f"sdk-v{here}") if t in tags.stdout.split()),
+               None)
+    if tag is None:
         # `skip`, not `return`. A bare return reports as a pass, and this test
         # spent its whole life reporting as one: the version in the tree is by
         # definition the unreleased one, so the tag is absent every time until
         # the moment of release. The sibling five lines above already says skip.
         import pytest
-        pytest.skip(f"sdk-v{here} is not tagged yet; it is being written")
+        pytest.skip(f"nothing tags {here} yet; it is being written")
 
-    moved = subprocess.run(["git", "diff", "--name-only", f"sdk-v{here}", "--",
-                            "packages/vdi2770/src"], cwd=ROOT, capture_output=True, text=True)
+    moved = subprocess.run(["git", "diff", "--name-only", tag, "--",
+                            "src", "packages/vdi2770/src"],
+                           cwd=ROOT, capture_output=True, text=True)
     changed = [p for p in moved.stdout.split() if p]
     assert not changed, (
-        f"the reader says it is {here}, `sdk-v{here}` is published, and these have "
-        f"moved since: {changed}. Whoever installs {here} does not get them, and "
-        f"the validator's pin would fetch that one. Bump the reader.")
+        f"this tree says it is {here}, `{tag}` is published, and these have "
+        f"moved since: {changed}. Whoever installs {here} does not get them. "
+        f"Bump the version.")
 
 
 def test_a_gate_that_starts_python_does_not_leave_bytecode_behind():
@@ -740,31 +741,30 @@ def test_a_gate_that_starts_python_does_not_leave_bytecode_behind():
 
 
 
-def test_ci_installs_both_halves_of_this_repository_from_the_tree():
-    """Deleting the reader's editable install from CI leaves nothing red.
-
-    The step's own comment says why it is there: *"The SDK first: the validator
-    depends on it, and installing it from the working tree is what proves this
-    commit's two halves fit together."* Without it, pip resolves the pin from an
-    index and every result in the run is about a different reader than the one
-    in the commit.
+def test_ci_installs_this_repository_from_the_tree_and_only_this_repository():
+    """Deleting an editable install from CI leaves nothing red.
 
     `test_contributing_installs_what_ci_installs` checks the other direction —
-    that whatever CI installs is written down — so removing an install shrinks
-    what it has to check and it passes.
+    that whatever CI installs is written down — so removing one shrinks what it
+    has to check and it passes.
+
+    Two claims, and the second is the one the rename introduced. The reader was
+    a separate distribution installed from `packages/vdi2770` before the
+    validator that pinned it; drop that step and pip resolved the pin from an
+    index, so every result in the run was about a different reader than the
+    commit. There is nothing to resolve now — but a second editable install
+    appearing here is exactly what a half slipping back out into its own
+    distribution would look like, and it would look like an ordinary CI edit.
     """
     editable = [c for c in ci_commands()
                 if c.startswith("python -m pip install -e ")]
-    reader = [i for i, c in enumerate(editable) if "packages/vdi2770" in c]
-    validator = [i for i, c in enumerate(editable) if "packages/vdi2770" not in c]
-
-    assert reader, (
-        f"CI does not install the reader from this tree; its editable installs "
-        f"are {editable}. The pin would then be resolved from an index and every "
-        f"result in the run would be about a different reader than this commit's.")
-    assert validator, (
-        f"CI does not install the validator from this tree; its editable "
-        f"installs are {editable}")
-    assert reader[0] < validator[0], (
-        f"CI installs the validator before the reader, so the pin is resolved "
-        f"from an index before this tree's reader is in place: {editable}")
+    assert editable, (
+        "CI does not install this repository from the tree, so the run is about "
+        "whatever the index happens to hold")
+    assert len(editable) == 1, (
+        f"CI makes {len(editable)} editable installs: {editable}. One "
+        f"distribution ships from this repository, and the reader travels inside "
+        f"it; a second install means something is being resolved separately.")
+    assert "packages/" not in editable[0], (
+        f"CI installs a package directory rather than the repository: "
+        f"{editable[0]}. Both halves ship from the root manifest.")

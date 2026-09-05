@@ -33,6 +33,39 @@ def test_the_notices_travel_with_the_wheel():
         assert (ROOT / wanted).exists()
 
 
+def test_the_notice_of_the_half_that_used_to_ship_alone_travels_too():
+    """The reader carried its own NOTICE while it was published as its own
+    distribution, and that NOTICE says something the root one cannot: that this
+    half bundles nothing of anybody else's. One distribution now, so the list
+    that has to name it is this one -- and a file that stops being packaged the
+    moment its own `pyproject.toml` is deleted is exactly the loss a rename is
+    likely to make quietly."""
+    reader = "packages/vdi2770/NOTICE"
+    assert reader in license_files(), f"{reader} would not be packaged"
+    assert (ROOT / reader).exists()
+
+
+def test_the_readers_notice_sends_people_where_the_material_actually_is():
+    """A NOTICE is read by whoever has to clear the package for use, and it was
+    written when this repository published two distributions: it told them the
+    schema, the class table and the corpus were accounted for "in the sibling
+    package `vdi2770-validate`".
+
+    That name still resolves, and after the rename it resolves to a redirect
+    that contains no notices, no THIRD_PARTY.md and no code — so the sentence
+    now sends the one reader who follows it to an empty package. The material
+    did not move; the distribution boundary the sentence described did.
+    """
+    reader = (ROOT / "packages" / "vdi2770" / "NOTICE").read_text(encoding="utf-8")
+    assert "THIRD_PARTY.md" in reader, (
+        "the reader's NOTICE no longer says where the bundled material is "
+        "accounted for")
+    assert "vdi2770-validate" not in reader, (
+        "the reader's NOTICE points at `vdi2770-validate` for the third-party "
+        "accounting, and that distribution is now a redirect carrying none of "
+        "it. Point at this distribution's own THIRD_PARTY.md.")
+
+
 def test_mit_permission_notice_is_reproduced_in_full():
     """MIT: 'the above copyright notice AND THIS PERMISSION NOTICE shall be
     included'. A copyright line on its own does not satisfy it."""

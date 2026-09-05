@@ -1,0 +1,20 @@
+vdi2770-validate
+Copyright 2026 Wooyong Lee
+
+This product includes software developed by Wooyong Lee.
+Licensed under the Apache License, Version 2.0.
+
+--------------------------------------------------------------------------
+Third-party material bundled with this package
+--------------------------------------------------------------------------
+
+None. This distribution ships no code at all. It is the project's former name,
+kept resolving on the package index, and it contains one thing: a dependency on
+`vdi2770`, which is the same project under the name it uses now.
+
+Everything this project bundles — VDI's XML schema, the IDTA document class
+table, the reference implementation's corpus — is accounted for in the NOTICE
+and THIRD_PARTY.md that ship with `vdi2770`.
+
+The text of the VDI 2770 guideline itself (VDI 2770 Blatt 1:2020-04) is sold by
+DIN Media and is NOT included, quoted, or paraphrased anywhere in this project.

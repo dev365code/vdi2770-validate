@@ -34,3 +34,38 @@ def test_every_anchor_appears_exactly_once_in_the_file_it_names():
     assert not wrong, (
         "mutation rows whose anchor no longer pins one line — each proves "
         "nothing until it is re-pinned:\n  " + "\n  ".join(wrong))
+
+
+def test_every_row_names_a_test_that_exists():
+    """The other half of a row: the anchor points at code to break, and the
+    `proves` list points at what has to go red. An anchor that stops matching is
+    caught above. A *selection* that stops matching is not, and it fails in the
+    opposite direction — pytest exits non-zero on a selection that matches
+    nothing, so the row reads as proven while nothing ran.
+
+    Not hypothetical. Editing this suite by replacing a span between two named
+    tests deleted seven tests that sat between them, and the whole suite stayed
+    green: a deleted test is not a failing test. Two of the rows here pointed at
+    one of them. `make mutations` would have said so, in minutes, later.
+    """
+    missing = []
+    for row in TABLE:
+        name, proves = row[0], row[4]
+        for selection in proves:
+            if "::" not in selection:
+                # A whole file, or a tool invocation like
+                # `tools/rule_coverage.py --check`. The first word is the path.
+                path = ROOT / selection.split()[0]
+                if not path.exists():
+                    missing.append(f"{name}: {selection} is not in this tree")
+                continue
+            path, _, target = selection.partition("::")
+            here = ROOT / path
+            if not here.exists():
+                missing.append(f"{name}: {path} is not in this tree")
+            elif f"def {target}(" not in here.read_text(encoding="utf-8"):
+                missing.append(f"{name}: {path} has no {target}")
+    assert not missing, (
+        "mutation rows naming a test that is not there — pytest exits non-zero "
+        "on a selection that matches nothing, so each of these reads as proven "
+        "while nothing ran:\n  " + "\n  ".join(missing))

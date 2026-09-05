@@ -67,7 +67,6 @@ jobs:
       - name: Install this project
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -e packages/vdi2770
           python -m pip install -e ".[dev]"
 
       - name: Build the fixtures the sweep covers

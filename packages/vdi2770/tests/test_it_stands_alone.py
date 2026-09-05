@@ -72,12 +72,6 @@ def test_the_declared_public_surface_is_the_real_one():
     assert not undeclared, f"public but undeclared: {undeclared}"
 
 
-def test_the_version_is_in_one_place():
-    toml = (HERE / "pyproject.toml").read_text(encoding="utf-8")
-    assert re.search(f'^version = "{re.escape(vdi2770.__version__)}"$', toml, re.M), \
-        f"pyproject and __init__ disagree; __init__ says {vdi2770.__version__}"
-
-
 def test_the_readme_does_not_promise_a_verdict():
     """The whole reason this package exists separately is that it decides nothing.
     A README sentence that says otherwise would be the first thing to rot."""
@@ -105,17 +99,20 @@ def test_the_readme_names_every_defect_kind_the_code_can_emit():
     assert REFUSAL_KINDS <= DEFECT_KINDS, sorted(REFUSAL_KINDS - DEFECT_KINDS)
 
 def test_the_notice_travels_with_this_package_too():
-    """Apache-2.0 asks for the NOTICE to go with the distribution. The validator
-    shipped one from the first release; this package shipped only a LICENSE,
-    because its `license-files` named only that. The two are separate
-    distributions of one project and the attribution belongs in both."""
+    """Apache-2.0 asks for the NOTICE to go with the distribution. This package
+    shipped only a LICENSE while it was published separately, because its
+    `license-files` named only that.
+
+    One distribution now, and the attribution still belongs with the code: this
+    package's NOTICE says what its own half bundles (nothing), which the
+    validator's list cannot say for it. Whether the distribution *packages* this
+    file is a claim about the distribution, so it is asserted in the
+    repository's own suite -- this one only reaches inside the package."""
     notice = HERE / "NOTICE"
     assert notice.exists(), "this package has no NOTICE"
     text = notice.read_text(encoding="utf-8")
     assert text.startswith("vdi2770\n"), "the NOTICE names the wrong package"
     assert "Apache License" in text
-    toml = (HERE / "pyproject.toml").read_text(encoding="utf-8")
-    assert '"NOTICE"' in toml, "the NOTICE exists but the wheel would not carry it"
     assert "None." in text, (
         "this package bundles nothing third-party; the NOTICE should say so "
         "rather than repeating the validator's list")

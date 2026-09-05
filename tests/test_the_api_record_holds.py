@@ -4,9 +4,12 @@ back a version disabled the refusal outright, a made-up `version` made it
 compare against nothing, and `rm` plus `--first` claimed there had never been a
 record.
 
-All three are only a problem once `sdk-v<version>` exists — before that the
-version is still being written and the record moves with it. That distinction is
-the fix: the tool asks the tag history, not the file it is about to overwrite.
+All three are only a problem once a release tag names the version — before that
+it is still being written and the record moves with it. That distinction is the
+fix: the tool asks the tag history, not the file it is about to overwrite. The
+tag is `v<version>` from 0.7.0, when the reader and the rules became one
+distribution, and `sdk-v<version>` below it, when the reader was published on
+its own.
 """
 import json
 import shutil
@@ -19,6 +22,17 @@ from conftest import ROOT
 
 TOOL = ROOT / "tools" / "api_fingerprint.py"
 BASELINE = ROOT / "packages" / "vdi2770" / "API.json"
+
+
+def tag_for(version: str) -> str:
+    """The tag that would publish a reader version, in its own namespace.
+
+    Mirrors `api_fingerprint._prefix_for`. The two namespaces share their
+    numbers: `v0.5.0` is a validator release whose reader said 0.3.1, so a
+    fixture that tags the wrong one is testing a different distribution.
+    """
+    parts = tuple(int(x) for x in version.split(".")[:3])
+    return ("v" if parts >= (0, 7, 0) else "sdk-v") + version
 
 
 def run(tmp_path, *args, published=True):
@@ -41,9 +55,9 @@ def run(tmp_path, *args, published=True):
     # package has never shipped anything" are different claims and the tool
     # refuses the second one outright. A copy with no tags at all used to make
     # every guard in the tool answer "not published".
-    subprocess.run(["git", "tag", "sdk-v0.0.1"], cwd=tree, check=True)
+    subprocess.run(["git", "tag", "v0.0.1"], cwd=tree, check=True)
     if published:
-        subprocess.run(["git", "tag", f"sdk-v{version}"], cwd=tree, check=True)
+        subprocess.run(["git", "tag", tag_for(version)], cwd=tree, check=True)
     # Move the surface.
     zr = tree / "packages" / "vdi2770" / "src" / "vdi2770" / "zipread.py"
     text = zr.read_text(encoding="utf-8")
@@ -67,11 +81,46 @@ def test_editing_the_record_does_not_steer_the_refusal(tmp_path, field, value):
     body = json.loads(baseline.read_text(encoding="utf-8"))
     body[field] = value
     if field == "version":
-        subprocess.run(["git", "tag", f"sdk-v{value}"], cwd=tree, check=True)
+        subprocess.run(["git", "tag", tag_for(value)], cwd=tree, check=True)
     baseline.write_text(json.dumps(body, indent=2), encoding="utf-8")
     done = subprocess.run([sys.executable, "tools/api_fingerprint.py", "--write"],
                           cwd=tree, capture_output=True, text=True)
     assert done.returncode == 1, f"editing {field} let it record: {done.stdout}{done.stderr}"
+
+
+def test_a_version_from_before_the_merge_is_looked_up_in_the_old_namespace():
+    """The reader was its own distribution once, released on `sdk-v*`, and those
+    releases are on PyPI under numbers nobody can reuse. The tags this file
+    reads moved to `v*` when the two distributions became one at 0.7.0.
+
+    A rename of the evidence is not a deletion of it — but the two namespaces
+    share their numbers and do not share their meaning. `v0.5.0` is a
+    *validator* release and the reader inside it said 0.3.1; PyPI has no reader
+    0.5.0 at all. So the namespace is chosen by version rather than tried in
+    turn, which is what stops this file answering about the wrong distribution.
+    """
+    sys.path.insert(0, str(ROOT / "tools"))
+    import api_fingerprint as fp
+
+    assert fp._prefix_for("0.6.1") == "sdk-v"
+    assert fp._prefix_for("0.4.0") == "sdk-v"
+    assert fp._prefix_for("0.7.0") == "v", "the merge release is in the new one"
+    assert fp._prefix_for("1.2.3") == "v"
+
+
+def test_a_reader_release_made_under_the_old_name_still_reads_as_published():
+    """The live half of the same claim, against this repository's own history:
+    `sdk-v0.6.1` exists and `v0.6.1` does not. Reading only the current spelling
+    would make the newest published reader look unreleased, which turns every
+    guard in this file off for exactly the version people have installed."""
+    sys.path.insert(0, str(ROOT / "tools"))
+    import api_fingerprint as fp
+
+    got = subprocess.run(["git", "tag", "--list", "sdk-v0.6.1"], cwd=ROOT,
+                         capture_output=True, text=True)
+    if got.returncode or not got.stdout.strip():
+        pytest.skip("no tag history here; this reads the repository's own")
+    assert fp._published("0.6.1")
 
 
 def test_deleting_the_record_does_not_make_it_the_first_one(tmp_path):
@@ -175,7 +224,7 @@ def test_a_release_past_a_published_version_is_not_a_wall():
     recorded = json.loads(BASELINE.read_text(encoding="utf-8"))
     published = fp._at_tag(recorded["version"])
     if published is None:
-        pytest.skip(f"sdk-v{recorded['version']} is not tagged here yet")
+        pytest.skip(f"{tag_for(recorded['version'])} is not tagged here yet")
     assert published == recorded, (
         "the checked-in baseline is not what its own tag published; the release "
         "path compares against the tag and this would refuse every release")
@@ -190,13 +239,13 @@ def test_a_baseline_that_is_not_what_its_tag_published_is_refused(tmp_path):
     baseline = tree / "packages" / "vdi2770" / "API.json"
     body = json.loads(baseline.read_text(encoding="utf-8"))
     body["version"] = "0.0.9"                       # tagged below, and a minor behind
-    subprocess.run(["git", "tag", "sdk-v0.0.9"], cwd=tree, check=True)
+    subprocess.run(["git", "tag", tag_for("0.0.9")], cwd=tree, check=True)
     baseline.write_text(json.dumps(body, indent=2), encoding="utf-8")
 
     done = subprocess.run([sys.executable, "tools/api_fingerprint.py", "--write"],
                           cwd=tree, capture_output=True, text=True)
     assert done.returncode == 1, done.stdout + done.stderr
-    assert "not what sdk-v0.0.9 published" in done.stderr, done.stderr
+    assert f"not what {tag_for('0.0.9')} published" in done.stderr, done.stderr
 
 
 def test_a_checkout_without_tags_is_refused_rather_than_waved_through(tmp_path):
@@ -215,7 +264,7 @@ def test_a_checkout_without_tags_is_refused_rather_than_waved_through(tmp_path):
     done = subprocess.run([sys.executable, "tools/api_fingerprint.py", "--write"],
                           cwd=tree, capture_output=True, text=True)
     assert done.returncode == 1, done.stdout + done.stderr
-    assert "no `sdk-v*` tags" in done.stderr, done.stderr
+    assert "no release tags at all" in done.stderr, done.stderr
 
 
 def test_a_version_that_is_already_published_is_not_recorded_over(tmp_path):
@@ -245,19 +294,21 @@ def test_a_version_that_is_already_published_is_not_recorded_over(tmp_path):
     subprocess.run(["git", "add", "-A"], cwd=tree, check=True)
     subprocess.run(["git", "-c", "user.email=t@t", "-c", "user.name=t",
                     "commit", "-q", "-m", "x"], cwd=tree, check=True)
-    # The baseline is genuinely the record of `sdk-v{was}`, so `_at_tag` matches
+    # The baseline is genuinely the record of that tag, so `_at_tag` matches
     # it and the "restore it from the tag" branch above cannot fire instead.
-    subprocess.run(["git", "tag", f"sdk-v{was}"], cwd=tree, check=True)
+    subprocess.run(["git", "tag", tag_for(was)], cwd=tree, check=True)
 
     major, minor, _patch = (int(x) for x in was.split("."))
     # The *minor*: the addition below changes a dataclass's signature, and the
     # pin is `~=`, so a patch bump is refused one guard earlier and this test
     # would pass on the wrong sentence.
     now = f"{major}.{minor + 1}.0"
-    subprocess.run(["git", "tag", f"sdk-v{now}"], cwd=tree, check=True)
-    for name in ("pyproject.toml", "src/vdi2770/__init__.py"):
-        f = tree / "packages" / "vdi2770" / name
-        f.write_text(f.read_text(encoding="utf-8").replace(was, now), encoding="utf-8")
+    subprocess.run(["git", "tag", tag_for(now)], cwd=tree, check=True)
+    # `__init__.py` and nothing else: the reader had a `pyproject.toml` of its
+    # own while it was published separately, and the number lives in one place
+    # now.
+    f = tree / "packages" / "vdi2770" / "src" / "vdi2770" / "__init__.py"
+    f.write_text(f.read_text(encoding="utf-8").replace(was, now), encoding="utf-8")
     # An addition, so `compatible()` is happy with the patch bump and the only
     # thing left to object to is the number itself.
     zr = tree / "packages" / "vdi2770" / "src" / "vdi2770" / "zipread.py"
@@ -270,7 +321,7 @@ def test_a_version_that_is_already_published_is_not_recorded_over(tmp_path):
     done = subprocess.run([sys.executable, "tools/api_fingerprint.py", "--write"],
                           cwd=tree, capture_output=True, text=True)
     assert done.returncode == 1, done.stdout + done.stderr
-    assert f"sdk-v{now} is already published" in done.stderr, done.stderr
+    assert f"{tag_for(now)} is already published" in done.stderr, done.stderr
     kept = json.loads((tree / "packages" / "vdi2770" / "API.json").read_text(
         encoding="utf-8"))
     assert kept["version"] == was, "it refused and wrote the file anyway"
@@ -307,7 +358,7 @@ def test_pointing_the_record_at_a_tag_that_does_not_exist_is_refused(tmp_path):
     done = subprocess.run([sys.executable, "tools/api_fingerprint.py", "--write"],
                           cwd=tree, capture_output=True, text=True)
     assert done.returncode == 1, done.stdout + done.stderr
-    assert "no sdk-v0.0.5 was ever tagged" in done.stderr, done.stderr
+    assert "no release tag ever named it" in done.stderr, done.stderr
 
 
 def test_a_baseline_that_differs_from_its_tag_is_refused(tmp_path):
@@ -323,16 +374,14 @@ def test_a_baseline_that_differs_from_its_tag_is_refused(tmp_path):
     body["surface"]["SNEAK"] = {"kind": "str", "value": "'x'"}
     baseline.write_text(json.dumps(body, indent=2), encoding="utf-8")
     bumped = ".".join([*version.split(".")[:2], str(int(version.split(".")[2]) + 1)])
-    for f in ("packages/vdi2770/pyproject.toml",
-              "packages/vdi2770/src/vdi2770/__init__.py"):
-        p = tree / f
-        p.write_text(p.read_text(encoding="utf-8").replace(f'"{version}"', f'"{bumped}"'),
-                     encoding="utf-8")
+    p = tree / "packages" / "vdi2770" / "src" / "vdi2770" / "__init__.py"
+    p.write_text(p.read_text(encoding="utf-8").replace(f'"{version}"', f'"{bumped}"'),
+                 encoding="utf-8")
 
     done = subprocess.run([sys.executable, "tools/api_fingerprint.py", "--write"],
                           cwd=tree, capture_output=True, text=True)
     assert done.returncode == 1, done.stdout + done.stderr
-    assert "is not what sdk-v" in done.stderr, done.stderr
+    assert "is not what v" in done.stderr, done.stderr
     assert "no baseline at all" not in done.stderr, (
         "this is the 'the tag says something else' path, not the 'no tag' one")
 
@@ -358,7 +407,7 @@ def test_an_unreleased_version_is_told_to_re_record_not_to_bump(tmp_path):
     subprocess.run(["git", "add", "-A"], cwd=tree, check=True)
     subprocess.run(["git", "-c", "user.email=t@t", "-c", "user.name=t",
                     "commit", "-q", "-m", "x"], cwd=tree, check=True)
-    subprocess.run(["git", "tag", "sdk-v0.0.1"], cwd=tree, check=True)
+    subprocess.run(["git", "tag", "v0.0.1"], cwd=tree, check=True)
 
     zr = tree / "packages" / "vdi2770" / "src" / "vdi2770" / "zipread.py"
     text = zr.read_text(encoding="utf-8")

@@ -44,9 +44,20 @@ import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+# One distribution carrying two import packages, and one carrying none. The
+# reader was its own wheel until 0.6.0; it ships inside this one now, which is
+# why `check` takes a list of package roots rather than a single name — a wheel
+# with two packages in it had every file of the second one flagged as shipped
+# from outside the first.
 DISTRIBUTIONS = [
-    (ROOT / "packages" / "vdi2770", "vdi2770"),
-    (ROOT, "vdi2770_validate"),
+    (ROOT,
+     [(ROOT / "src", "vdi2770_validate"),
+      (ROOT / "packages" / "vdi2770" / "src", "vdi2770")],
+     ("LICENSE", "NOTICE", "THIRD_PARTY.md", "packages/vdi2770/NOTICE")),
+    # The old name, published as metadata and a dependency. No package at all is
+    # the property that matters: two distributions shipping `vdi2770_validate/`
+    # install over each other, and pip does not refuse it.
+    (ROOT / "packages" / "vdi2770-validate", [], ("LICENSE", "NOTICE")),
 ]
 # A container that produces findings, used to prove the installed wheel runs.
 SMOKE = ROOT / "corpus" / "examples" / "missingdocuments" / "folders.zip"
@@ -57,6 +68,17 @@ SMOKE = ROOT / "corpus" / "examples" / "missingdocuments" / "folders.zip"
 # CPython still considers valid. Writing none is cheaper than chasing it.
 NO_BYTECODE = dict(os.environ, PYTHONDONTWRITEBYTECODE="1")
 
+
+
+def _distribution(project: Path) -> str:
+    """What the manifest calls it. The repository directory is named after the
+    other distribution built here, so `project.name` labelled the main wheel
+    with the redirect's name."""
+    import re
+
+    found = re.search(r'^name = "([^"]+)"',
+                      (project / "pyproject.toml").read_text(encoding="utf-8"), re.M)
+    return found.group(1) if found else project.name
 
 
 def contents(project: Path, out: Path) -> tuple:
@@ -83,7 +105,8 @@ def contents(project: Path, out: Path) -> tuple:
     return wheels[0], zipfile.ZipFile(wheels[0]).namelist()
 
 
-def check(project: Path, package: str, wheel: Path, names: list) -> list:
+def check(project: Path, roots: list, notices: tuple, wheel: Path,
+          names: list) -> list:
     """What the source tree has, the wheel must carry.
 
     Deriving the requirement from the project's own `pyproject.toml` was the
@@ -92,24 +115,26 @@ def check(project: Path, package: str, wheel: Path, names: list) -> list:
     declaration is the thing that breaks. The filesystem is not.
     """
     problems = []
-    src = project / "src" / package
 
-    for name in ("LICENSE", "NOTICE", "THIRD_PARTY.md"):
+    for name in notices:
         if not (project / name).exists():
             continue
         if not any(n.endswith(f"/licenses/{name}") or n.endswith(f".dist-info/{name}")
                    for n in names):
             problems.append(f"{wheel.name}: {name} is in the project and not in the wheel")
 
-    for f in sorted(src.rglob("*")):
-        if not f.is_file() or "__pycache__" in f.parts or f.suffix == ".pyc":
-            continue
-        rel = f"{package}/{f.relative_to(src).as_posix()}"
-        if rel not in names:
-            kind = "module" if f.suffix == ".py" else "file"
-            problems.append(
-                f"{wheel.name}: {rel} is a {kind} inside the package and did not ship. "
-                f"Anything under src/{package}/ is there to be installed.")
+    for src, package in roots:
+        for f in sorted((src / package).rglob("*")):
+            if not f.is_file() or "__pycache__" in f.parts or f.suffix == ".pyc":
+                continue
+            rel = f"{package}/{f.relative_to(src / package).as_posix()}"
+            if rel not in names:
+                kind = "module" if f.suffix == ".py" else "file"
+                problems.append(
+                    f"{wheel.name}: {rel} is a {kind} inside the package and did "
+                    f"not ship. Anything under "
+                    f"{src.relative_to(ROOT).as_posix()}/{package}/ is there to be "
+                    f"installed.")
 
     # And the other direction. NOTICE and THIRD_PARTY.md tell readers which
     # MIT-derived material this project carries and where; the sentence that
@@ -121,11 +146,12 @@ def check(project: Path, package: str, wheel: Path, names: list) -> list:
         # No `endswith(".dist-info")`: setuptools writes no directory entries
         # into a wheel, so nothing can end with it -- and the unreachable clause
         # was a hole, waving through any path that happened to end that way.
-        if n.startswith(f"{package}/") or ".dist-info/" in n:
+        if any(n.startswith(f"{package}/") for _, package in roots) or ".dist-info/" in n:
             continue
+        shipped = " or ".join(f"{package}/" for _, package in roots) or "any package"
         problems.append(
-            f"{wheel.name}: {n} shipped from outside src/{package}/. The wheel is "
-            f"the package and nothing else; repository material — corpus, oracle "
+            f"{wheel.name}: {n} shipped from outside {shipped}. The wheel is "
+            f"the packages and nothing else; repository material — corpus, oracle "
             f"evidence, tools — stays in the sdist, which is what NOTICE says.")
     return problems
 
@@ -184,10 +210,11 @@ def smoke(wheels: list) -> list:
 def main() -> int:
     problems, built = [], []
     with tempfile.TemporaryDirectory() as out:
-        for project, package in DISTRIBUTIONS:
+        for project, roots, notices in DISTRIBUTIONS:
+            label = _distribution(project)
             # One directory per distribution: they land in the same place
             # otherwise and "expected one wheel" finds the neighbour's.
-            here = Path(out) / package
+            here = Path(out) / label
             here.mkdir()
             # Unconditionally, both sides. `contents` has already destroyed
             # whatever was there, so "put back what we found" is not on offer --
@@ -199,13 +226,13 @@ def main() -> int:
                 for stale in (list(project.glob("**/*.egg-info"))
                               + [project / "build"]):
                     shutil.rmtree(stale, ignore_errors=True)
-            found = check(project, package, wheel, names)
+            found = check(project, roots, notices, wheel, names)
             problems += found
             built.append(wheel)
             # Only when it does. Printing the good news unconditionally after a
             # function that returns problems meant the run said both things.
             if not found:
-                print(f"{package}: wheel carries its licences and its data")
+                print(f"{label}: wheel carries its licences and its data")
         problems += smoke(built)
     if problems:
         for p in problems:

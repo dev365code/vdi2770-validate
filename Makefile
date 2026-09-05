@@ -91,6 +91,7 @@ clean:
 	# `**` is not recursive under /bin/sh, and *.egg-info is what makes the
 	# packaging gates read the last build instead of this commit.
 	rm -rf .pytest_cache .ruff_cache build dist tests/fixtures \
-	       packages/vdi2770/build packages/vdi2770/dist
+	       packages/vdi2770/.pytest_cache \
+	       packages/vdi2770-validate/build packages/vdi2770-validate/dist
 	find . -name '__pycache__' -type d -prune -exec rm -rf {} +
 	find . -name '*.egg-info' -type d -prune -exec rm -rf {} +

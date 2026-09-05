@@ -1,10 +1,20 @@
 name: release
 
-# Two packages ship from this repository, so each gets its own workflow file and
-# its own environment: PyPI keys a trusted publisher on (repo, workflow, environment),
-# and two packages sharing that tuple would each be able to publish as the other.
-# This one publishes `vdi2770-validate` on a `v*` tag; release-sdk.yml publishes
-# `vdi2770` on an `sdk-v*` tag, which `v*` deliberately does not match.
+# Two distributions ship from this repository, and PyPI keys a trusted publisher
+# on (repo, workflow file, environment). Two publishers sharing that tuple would
+# each be able to publish as the other, so the environments differ: a job running
+# in `pypi` gets an OIDC token that names `pypi`, and the redirect's publisher
+# will not accept it.
+#
+# They are one workflow file because one of them must go second. `vdi2770` is the
+# project; `vdi2770-validate` is the name it published under until 0.6.0, kept
+# resolving as metadata and a dependency on `vdi2770`. Publish the redirect
+# first and the index holds a distribution pip cannot resolve, under a number
+# PyPI will not let anyone reuse. `needs:` states that ordering and the runner
+# enforces it; two workflows on two tags cannot say it at all.
+#
+# This used to be two files on two tags, `v*` and `sdk-v*`, when the reader was
+# published as its own distribution.
 
 on:
   push:
@@ -25,7 +35,6 @@ jobs:
       - name: Install
         run: |
           python -m pip install --upgrade pip build
-          python -m pip install -e packages/vdi2770
           python -m pip install -e ".[dev]"
       # `make check`, not a copy of what it runs. The copy went stale the moment
       # the gate grew: this step listed six of nine targets, and the three it
@@ -39,19 +48,11 @@ jobs:
       # publishes the divergence counts, and those exclude anything unswept.
       - name: Every container has been through the reference implementation
         run: make oracle-fully-swept
-      # And the reader it pins must already be on the index. `pip install -e
-      # packages/vdi2770` satisfies the pin from the working tree, so nothing in
-      # the gate ever asks; `python -m build` does not resolve runtime
-      # dependencies at all. Tagging this before `sdk-v*` publishes a
-      # distribution pip cannot resolve, under a number PyPI will not let anyone
-      # reuse. The constraint lived in a docstring until it had this step.
-      - name: The reader this pins must already have been released
-        run: python tools/check_release_order.py
       # A forced tag update fires this workflow exactly as a new tag does, so a
       # re-pointed tag would carry a days-old tree through the gate and then ask
       # the index to accept a filename it already holds. Ask first.
       - name: The index must not already have this version
-        run: python tools/check_version_is_new.py --package vdi2770-validate --version "${GITHUB_REF_NAME#v}"
+        run: python tools/check_version_is_new.py --package vdi2770 --version "${GITHUB_REF_NAME#v}"
       - name: The tag must be the version
         run: |
           tag="${GITHUB_REF_NAME#v}"
@@ -74,5 +75,65 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
+
+  # The old name, published only once the name it points at is installable.
+  build-redirect:
+    needs: publish
+    runs-on: ubuntu-latest
+    steps:
+      # `fetch-depth: 0` again, for a different reason: the order gate below
+      # asks the tag history whether the package this redirects to was released,
+      # and a default checkout is `--depth 1 --no-tags`.
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: python -m pip install --upgrade pip build packaging
+      # The question this whole job order exists for, asked rather than assumed.
+      # `needs: publish` proves the upload step ran; it does not prove the index
+      # serves the file, and the redirect is unresolvable until it does. PyPI's
+      # JSON view can trail the upload by a few seconds, so the gate is given a
+      # few tries -- and still refuses at the end rather than guessing, because a
+      # redirect published against a package that is not there cannot be fixed
+      # under this version number.
+      - name: The package this redirects to must be on the index
+        run: |
+          for attempt in 1 2 3 4 5; do
+            if python tools/check_release_order.py; then exit 0; fi
+            echo "the index does not serve it yet (attempt $attempt of 5); waiting"
+            sleep 20
+          done
+          echo "the package this redirects to never appeared on the index"
+          exit 1
+      - name: The index must not already have this version
+        run: python tools/check_version_is_new.py --package vdi2770-validate --version "${GITHUB_REF_NAME#v}"
+      - name: The tag must be the version
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          pkg=$(grep -m1 '^version = ' packages/vdi2770-validate/pyproject.toml | cut -d'"' -f2)
+          test "$tag" = "$pkg" || { echo "tag $tag != package $pkg"; exit 1; }
+      - name: Build
+        run: python -m build packages/vdi2770-validate --outdir dist/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-redirect
+          path: dist/
+
+  publish-redirect:
+    needs: build-redirect
+    runs-on: ubuntu-latest
+    # Not `pypi`. The environment is half of what PyPI keys the publisher on, so
+    # sharing it here would let either job publish as the other package.
+    environment: pypi-redirect
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist-redirect
           path: dist/
       - uses: pypa/gh-action-pypi-publish@release/v1
