@@ -23,6 +23,10 @@ OUTSIDE_CHECK = {
                           "the `oracle` workflow, and the divergence counts exclude "
                           "it meanwhile; it stops being acceptable the moment those "
                           "counts are published, which is what a release does",
+    "zipapp": "it fetches the dependency it bundles, and `make check` is offline "
+              "— which is the property this tool sells, so the gate that proves "
+              "it must not be the thing that breaks it. CI runs it on every "
+              "push, because a build nobody runs until tag day breaks on tag day",
     "mutations": "minutes rather than seconds, and it is a check *on* the suite "
                  "rather than part of it — it only tells you something new when a "
                  "gate changes",
@@ -129,7 +133,24 @@ def test_ci_runs_nothing_the_gate_does_not():
         "pip install", "pip download", "actions/", "python -m build",
         "python -m venv", "git ", "echo ",
     )
-    recipes = [c.replace("$(PYTHON)", "python").strip() for c in recipe_commands()]
+    #: And the third kind: a gate CI runs that `make check` does not, with the
+    #: reason. `OUTSIDE_CHECK` says why a target is not in `check`; this says
+    #: why one of those still runs on every push. Two lists rather than one
+    #: because they answer different questions, and a target can be in the first
+    #: without belonging in the second — `mutations` and `standalone` are.
+    CI_ONLY = {
+        "python tools/build_zipapp.py --check":
+            "it fetches the dependency it bundles, and `make check` is offline "
+            "-- the property this tool sells. CI has the network, and a build "
+            "nobody runs until tag day is a build that breaks on tag day.",
+    }
+    # The `check` recipes, plus the targets named above — a CI step matching one
+    # of those is recognised because somebody wrote down why it is there.
+    recipes = [c.replace("$(PYTHON)", "python").strip()
+               for c in recipe_commands(include={"zipapp"})]
+    for command, reason in CI_ONLY.items():
+        assert reason and command in recipes, (
+            f"{command!r} is named as CI-only and the Makefile does not run it")
     for step in ci_commands():
         core = step.strip()
         if not core or core.startswith("#"):

@@ -45,6 +45,10 @@ jobs:
         run: python tools/capture_oracle.py --check-ours
       - name: The reader's API matches its version
         run: python tools/api_fingerprint.py --check
+      # Built and *run*, not built. A single file that imports and cannot answer
+      # is the failure this catches, and the two look alike from outside.
+      - name: The single file builds and checks a container
+        run: python tools/build_zipapp.py --check
       - name: The sdist can run its own tests
         run: |
           python -m pip install build

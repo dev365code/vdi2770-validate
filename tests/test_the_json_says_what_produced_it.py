@@ -16,7 +16,7 @@ import pytest
 from conftest import CLEAN_DOCUMENT
 from vdi2770_validate import __version__
 from vdi2770_validate.cli import main
-from vdi2770_validate.resources import schema_path
+from vdi2770_validate.resources import schema_text
 
 
 def run(capsys, argv):
@@ -49,7 +49,7 @@ def test_every_document_names_the_vdi_schema_this_build_carries(capsys):
     check can fail to run, and a field that claimed the check happened would be
     the kind of over-claim the rest of this report is built to avoid."""
     stamped = re.search(r'\sversion="(\d{4}-\d{2}-\d{2})"',
-                        schema_path().read_text(encoding="utf-8"))
+                        schema_text())
     assert stamped, "the bundled schema carries a dated version attribute"
     for doc in documents(capsys, str(CLEAN_DOCUMENT)):
         assert doc.get("vdiSchema") == stamped.group(1), doc.get("vdiSchema")

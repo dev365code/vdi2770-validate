@@ -1,10 +1,12 @@
-# One entry point. CI runs exactly these targets — tests/test_ci_parity.py proves it.
+# One entry point. CI runs the `check` targets and, on every push, `zipapp` —
+# which is outside `check` because it needs the network. Both directions are
+# proved in tests/test_ci_parity.py, where the exception carries its reason.
 PYTHON  ?= python3
 RUFF_VERSION   := 0.16.3
 PYTEST_VERSION := 8.3.4
 XMLSCHEMA_VERSION := 4.2.0
 
-.PHONY: check lint test fixtures corpus coverage-check rules-doc oracle-half sdist-runs-its-own-tests wheel-installs-and-runs reader-api-matches-its-version mutations standalone clean oracle-fully-swept
+.PHONY: zipapp check lint test fixtures corpus coverage-check rules-doc oracle-half sdist-runs-its-own-tests wheel-installs-and-runs reader-api-matches-its-version mutations standalone clean oracle-fully-swept
 
 check: lint fixtures test corpus coverage-check rules-doc oracle-half reader-api-matches-its-version sdist-runs-its-own-tests wheel-installs-and-runs
 
@@ -41,6 +43,13 @@ oracle-half:
 # question `check` cannot ask of itself — whether the gates catch anything.
 mutations:
 	$(PYTHON) tools/mutation_table.py --run
+
+# Outside `check` because it needs the network once, to fetch the dependency it
+# bundles -- and `check` is offline, which is the property this tool sells. In
+# CI on every push, though: a build nobody runs until tag day is a build that
+# breaks on tag day.
+zipapp:
+	$(PYTHON) tools/build_zipapp.py --check
 
 # Outside `check` because it is a release question, not a change question: a
 # container may sit unswept for as long as it takes to run the `oracle` workflow,

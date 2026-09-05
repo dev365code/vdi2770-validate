@@ -15,7 +15,7 @@ from typing import List, Optional
 
 from vdi2770.xmlread import Node
 
-from .resources import schema_path
+from .resources import schema_text
 
 _SEG = re.compile(r"^(?:\{(?P<ns>[^}]*)\})?(?P<tag>[^\[/]+)(?:\[(?P<idx>\d+)\])?$")
 
@@ -114,7 +114,11 @@ def _schema():
     ships inside the wheel and cannot change while the process runs.
     """
     import xmlschema  # imported lazily so `--version` works without it
-    return xmlschema.XMLSchema(str(schema_path()))
+    # The text, not a path. `xmlschema` takes either, and a path is a claim
+    # that this package is a directory on disk -- which it is not inside a
+    # zipapp. The schema declares no `import` or `include`, so nothing needs a
+    # base directory to resolve against.
+    return xmlschema.XMLSchema(schema_text())
 
 
 def validate(data: bytes, tree: Node) -> List[dict]:
