@@ -42,6 +42,12 @@ class Stopped:
 # else a finding lists members.
 MAX_NAMED = 5
 
+#: Why a member is scanned when no metadata declared it. Named rather than
+#: spelled twice: the reason a file qualifies is also the obligation it is held
+#: to, and one of the two rules that reads it is the one that decides whether an
+#: unconfirmed PDF is a finding.
+RESERVED = "the reserved main document"
+
 
 def _targets(container, document):
     """Which members to scan, in report order, each with the reason it qualifies.
@@ -77,7 +83,7 @@ def _targets(container, document):
                     if folder_path(n) == MAIN_PDF), None)
     if (container.kind is Kind.DOCUMENTATION
             and at_root is not None and at_root not in seen):
-        out.append((at_root, "the reserved main document"))
+        out.append((at_root, RESERVED))
     return out
 
 
@@ -104,7 +110,7 @@ def check(container, document, facts_for) -> Iterator[Finding]:
             if cut_short and stopped.reason == "read":
                 unopened.append((name, stopped))
         where = container.where.child(member=name, subject=name)
-        if not facts.is_pdf:
+        if facts.is_pdf is False:
             r = rule("P1")
             # A file that never claimed to be a PDF and one that begins with the
             # header and carries no document are both "not a PDF", and a sender
@@ -115,6 +121,51 @@ def check(container, document, facts_for) -> Iterator[Finding]:
                           f"{why}; it begins with the header {facts.header!r} and "
                           f"carries no indirect object, so there is no PDF "
                           f"document after it")
+            continue
+        if facts.is_pdf is None:
+            # The reader looked at `MAX_OBJ_PROBES` places and did not find an
+            # indirect object. That is not "no PDF document here" -- a
+            # conforming file can carry a long comment, and the scan can end
+            # inside one -- so nothing here says it is.
+            #
+            # What it is depends on where the file sits, and the catalogue
+            # already carries that: `_targets` qualifies a member either because
+            # metadata declared it or because its name is reserved, and the
+            # second is an obligation VDI 2770 puts on the name rather than
+            # anything this tool invented. A reserved main document has to be a
+            # PDF -- the recipient's system opens it as one -- so a scan that
+            # could not confirm it has not passed it. An ordinary attachment
+            # carries no such duty, and there is nothing to report.
+            #
+            # Same observation, different obligation, so a different verdict.
+            # The sentence stays with the observation: it never says the file is
+            # not a PDF, because that is exactly what was not established.
+            # By the name, not by why the member came to be scanned. A
+            # reserved main document is usually declared as well, and then
+            # `_targets` qualifies it for the declaration and the reason reads
+            # `declared as application/pdf` -- the obligation is on the name and
+            # does not go away when the metadata also mentions it.
+            if (container.kind is Kind.DOCUMENTATION
+                    and folder_path(name) == MAIN_PDF):
+                r = rule("P1")
+                yield Finding(
+                    r, "This file could not be confirmed to be a PDF document",
+                    where,
+                    # No number: a rule module may not import a parser, which
+                    # is the same reason `Stopped` is handed its ceiling rather
+                    # than reading one. The sentence does not need it.
+                    detail=f"{RESERVED}, so it has to be one; the scan looked as "
+                           f"far into it as it looks and found no indirect "
+                           f"object. Whether there is one beyond that is not "
+                           f"known",
+                    fix="If this is a real PDF, re-export it: a file that fills "
+                        "its own beginning with `obj` before its first indirect "
+                        "object is not something a producer writes, and whatever "
+                        "wrote this is worth looking at. If it is not a PDF, the "
+                        "name is reserved and the recipient's system will open it "
+                        "as one, so put the main document here. If you believe "
+                        "this is a conforming file this tool cannot read, please "
+                        "report it with the file.")
             continue
         if facts.encrypted:
             r = rule("P2")

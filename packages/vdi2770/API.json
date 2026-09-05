@@ -421,7 +421,7 @@
           "has-default"
         ],
         "is_pdf": [
-          "bool",
+          "Optional[bool]",
           "no-default"
         ],
         "pdfa_claim": [

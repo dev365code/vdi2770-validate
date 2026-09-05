@@ -396,7 +396,17 @@ MAX_INFLATED_PER_READ = 4 * 1024 * 1024 * 1024
 
 @dataclass(frozen=True)
 class PdfFacts:
-    is_pdf: bool
+    #: `True` found an indirect object, `False` looked at the whole file and
+    #: found none, `None` gave up at `MAX_OBJ_PROBES` and does not know.
+    #:
+    #: Three values, not two. Folding `None` into either of them here decides,
+    #: in a layer that knows nothing about what the file is for, a question that
+    #: only the rule holding the obligation can answer: a reserved name has to
+    #: be a PDF and an ordinary attachment does not, so "we could not confirm it"
+    #: is a finding in one place and nothing at all in the other. It was folded
+    #: into `True`, and a 16 KB file with a `%PDF-` header and no document
+    #: passed as the reserved main document with exit 0.
+    is_pdf: Optional[bool]
     header: str = ""
     encrypted: bool = False
     pdfa_claim: Optional[str] = None   # e.g. "2b" — a CLAIM, never a verdict
@@ -413,7 +423,15 @@ class PdfFacts:
 # linear and the window is 48 bytes, so the work per occurrence is constant and
 # the bounded repetitions cannot backtrack into the same shape. 0.0000 seconds
 # on the same input, same answer.
-MAX_OBJ_PROBES = 4096     # occurrences of `obj` examined before answering no
+# Occurrences of `obj` examined before the search gives up. Every PDF this
+# repository ships is answered on the **first** probe, measured, so this is not
+# sized against ordinary files -- it is sized against how long a pathological one
+# may cost, and that is flat: 8 MB of decoys takes 0.065 s here and does not grow
+# with the file, because the cap is reached first. It was 4,096, which a
+# conforming file can reach through a long comment (ISO 32000-1 §7.2.4 allows one
+# between any two tokens); at this size that is a file with a hundred thousand
+# decoys in front of its first object, which nobody writes by accident.
+MAX_OBJ_PROBES = 100_000
 _OBJ_BEFORE = re.compile(rb"\d{1,10}[\x00\t\n\f\r ]{1,16}\d{1,5}[\x00\t\n\f\r ]{1,16}$")
 
 
@@ -701,7 +719,7 @@ def _read(data: bytes, allowance: Optional[List[int]]):
     # changed its mind about what it is answering.
     # `is not False`, so a search that did not finish is not an accusation. We
     # say "this is not a PDF" only having looked all the way through.
-    is_pdf = _has_an_indirect_object(data) is not False
+    is_pdf = _has_an_indirect_object(data)
     encrypted = _is_encrypted(data)
     claim = None
     cut = [None]

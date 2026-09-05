@@ -412,9 +412,80 @@ def test_a_budget_running_out_is_not_a_fact_about_the_file(monkeypatch):
     scan that did not happen. The file below carries five indirect objects."""
     monkeypatch.setattr(pdfread, "MAX_OBJ_PROBES", 8)
     facts = pdfread.read(_real_pdf(decoys=64))
-    assert facts.is_pdf, (
+    # `is not False`, not truthiness: the answer is three-valued now, and what
+    # this forbids is the file being *reported as not a PDF*. "The search gave
+    # up" is a third answer and the rules decide what it means where they are —
+    # which is the point of it being three-valued rather than folded here.
+    assert facts.is_pdf is not False, (
         "a conforming PDF was reported as carrying no indirect object because "
         "the search for one stopped early")
+    assert facts.is_pdf is None, (
+        "the premise: the search has to give up on this file, not answer it")
+
+
+def test_the_reserved_main_document_is_not_passed_on_an_unconfirmed_scan():
+    """A `%PDF-` header and a hundred thousand decoy `obj` tokens: the scan
+    gives up, and folding that into "it is a PDF" let 16 KB of nothing sit where
+    the main document goes and come back exit 0.
+
+    The reserved name has to be a PDF — the recipient's system opens it as one —
+    so a scan that could not confirm it has not passed it. The finding says
+    exactly that and never says the file is not a PDF, because that is what was
+    not established.
+    """
+    import io
+    import zipfile
+
+    base = zipfile.ZipFile(CLEAN_DOCUMENTATION)
+    files = {n: base.read(n) for n in base.namelist()}
+    files["VDI2770_Main.pdf"] = (b"%PDF-1.4\nheader and decoys\n"
+                                 + b"obj " * pdfread.MAX_OBJ_PROBES)
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as out:
+        for name, body in files.items():
+            out.writestr(name, body)
+
+    assert pdfread.read(files["VDI2770_Main.pdf"]).is_pdf is None, (
+        "the premise: the scan has to give up on this file")
+
+    report = check_bytes(buf.getvalue(), "unconfirmed.zip")
+    p1 = [f for f in report.findings if f.rule.id == "P1"]
+    assert len(p1) == 1, sorted(f.rule.id for f in report.findings)
+    assert p1[0].severity is Severity.ERROR
+    assert "could not be confirmed" in p1[0].message, p1[0].message
+    for forbidden in ("is not one", "no PDF document", "carries no indirect object"):
+        assert forbidden not in (p1[0].message + p1[0].detail), (
+            f"the sentence says {forbidden!r} about a file nothing established "
+            f"that about")
+
+
+def test_an_ordinary_declared_pdf_is_not_touched_by_that():
+    """The other half, and the reason the first is not a licence to fail
+    everything a bounded scan cannot finish. Same bytes, same unconfirmed
+    answer, no reserved name — no obligation, so no finding. Without this the
+    repair reads as "give up means fail", which is the defect it replaced
+    pointing the other way.
+    """
+    import io
+    import zipfile
+
+    base = zipfile.ZipFile(CLEAN_DOCUMENT)
+    meta = base.read("VDI2770_Metadata.xml").decode("utf-8")
+    meta = meta.replace(
+        '<DigitalFile FileFormat="application/pdf">B.pdf</DigitalFile>',
+        '<DigitalFile FileFormat="application/pdf">ordinary.pdf</DigitalFile>')
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as out:
+        for name in base.namelist():
+            out.writestr(name, meta if name == "VDI2770_Metadata.xml"
+                         else base.read(name))
+        out.writestr("ordinary.pdf", b"%PDF-1.4\nheader and decoys\n"
+                     + b"obj " * pdfread.MAX_OBJ_PROBES)
+
+    report = check_bytes(buf.getvalue(), "ordinary.zip")
+    assert not [f for f in report.findings if f.rule.id == "P1"], (
+        "an attachment carries no duty to be a PDF this tool can confirm")
+    assert report.count(Severity.ERROR) == 0
 
 
 def test_obj_inside_a_longer_word_is_not_an_indirect_object():
