@@ -4,11 +4,16 @@
 
 **Two distributions, one release.** This project ships as `vdi2770-validate`
 (the rules) and `vdi2770` (the reader), and the first declared a version *range*
-for the second. That range was a standing way to be wrong: it had already let
-`pip` install a reader without the fix a release existed for, so the correction
-never reached the people it was written for. Worse, the range it was tightened
-to named `0.6.2` — a reader version that was never published at all, so the pin
-could not have resolved on the day it shipped.
+for the second. That range was a standing way to be wrong, and what it does is
+measurable rather than hypothetical. `vdi2770-validate` 0.6.0 — what the index
+serves today — asks for `vdi2770~=0.4.0`, which was the reader it shipped with
+and cannot reach any of the ones published since. Install it now and pip still
+gives you reader 0.4.0, while 0.6.0 and 0.6.1 of the reader sit on the same
+index unreachable, because a compatible-release clause on `0.4.x` is a ceiling
+as well as a floor. A range that pins itself to a line it has left behind does
+not deliver a fix; it locks the fix out. Worse, the range was then tightened to
+`0.6.2`, a reader version that was never published at all, so the pin could not
+have resolved on the day it shipped.
 
 The two halves now carry the same version, go out under one tag, and the rules
 name the reader **exactly**: `vdi2770==0.7.0`. There is no version of one left
