@@ -32,6 +32,17 @@ gave it more than one. A consumer reading `json.load(f)["findings"]` reads
 `[0]["findings"]` now. `rules` prints `obligation=` where 0.6.0 printed `basis=`;
 the value has not changed.
 
+**A published page is now read for its shape, not only its numbers.** A footnote
+written under the table row it belonged to ended that table, and the rows after
+it became pipe characters in a paragraph — on a page a reader is sent to. Every
+count in it was still right, which is why nothing failed. A test now looks for a
+row with no header above it, and for a row whose cells do not match the header it
+does have, across every page the index renders and every page the wheel carries.
+The check that went in first looked for a stray line *between* two rows, which is
+how the mistake reads in a diff and not how it sits in a file: there was a blank
+line on each side of the footnote, so it would have passed on the break it was
+written for. The proof that these can fail is beside them in the same file.
+
 **Every JSON document now says what produced it.** `schemaVersion`, `toolVersion`
 and `vdiSchema` — the version of this report format, the version of the tool, and
 the version the bundled VDI schema stamps on itself. `schemaVersion` moves when a
@@ -1501,7 +1512,7 @@ Three gates that ask what `make check` cannot ask of itself.
   broken row, not a kill; and **one row must survive**, because a harness that
   reports red for a change that does not matter is reporting red for everything.
   It found two holes on its first full run.
-- **`make standalone`** runs each of the 68 test files on its own. A suite is a
+- **`make standalone`** runs each of the 69 test files on its own. A suite is a
   shared process, so a file can pass because an earlier one imported something —
   `tests/test_offline.py` did exactly that for weeks, patching `socket.socket`
   and then importing `urllib.request`, which breaks `class SSLSocket(socket)`
