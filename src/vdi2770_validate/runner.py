@@ -130,8 +130,19 @@ def _facts_for(raw: bytes, accepted, read_pdf):
                 # The budget bounds inflating a file, not reading one, so the
                 # facts come back either way and only the claim search is lost.
                 facts, cut_short = read_pdf(member)
+                # Only the allowance spent across the read. A ceiling this file
+                # reached on its own is `P3` -- the rule written for exactly
+                # that, whose remedy already ends "if the file does carry one,
+                # our scan did not reach it". Treating the two alike made `Z5`,
+                # an error on the tool axis, fire on an ordinary multi-page PDF:
+                # a 2 KB archive went from exit 0 to exit 1.
+                #
+                # The difference is whose limit it was. An allowance spent
+                # across the read says nothing about this file -- it was not
+                # looked at because of the files before it -- and that is what
+                # `Z5` reports, once, for the container.
                 cache[name] = (Stopped(pdfread.MAX_INFLATED_PER_READ, facts)
-                               if cut_short else facts)
+                               if cut_short == "read" else facts)
         return cache[name]
 
     return get

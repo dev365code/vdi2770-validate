@@ -149,6 +149,14 @@ def check(container, document, facts_for) -> Iterator[Finding]:
         # to spend: same statement, same remedy -- split the delivery -- and
         # `about: tool`, because the ceiling is ours. Saying it once with a count
         # beats one line per file, and saying nothing was the defect.
+        #
+        # Only the allowance spent across the read reaches here. A ceiling one
+        # file went over on its own is that file's `P3`, whose remedy already
+        # ends "if the file does carry one, our scan did not reach it": an error
+        # on the tool axis for an ordinary multi-page PDF is the shape
+        # `test_tool_limits_are_not_verdicts.py` exists to keep out, and one
+        # remedy cannot serve both -- "split the delivery" does nothing about a
+        # limit that is per file.
         r = rule("Z5")
         gib = unopened[0][1].ceiling / (1024 ** 3)
         one = len(unopened) == 1

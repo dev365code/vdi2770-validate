@@ -454,7 +454,8 @@ def _has_an_indirect_object(data: bytes) -> Optional[bool]:
     return None
 
 
-def _haystacks(data: bytes, allowance: Optional[List[int]] = None):
+def _haystacks(data: bytes, allowance: Optional[List[int]] = None,
+               cut: Optional[List[Optional[str]]] = None):
     """The raw bytes, then each stream inflated — under a budget.
 
     A PDF stream can expand about a thousandfold, and we are looking for one
@@ -474,6 +475,25 @@ def _haystacks(data: bytes, allowance: Optional[List[int]] = None):
            else min(MAX_INFLATED_TOTAL, allowance[0]))
     for seen, m in enumerate(_STREAM.finditer(data)):
         if seen >= MAX_STREAMS or spent >= cap:
+            # Stopping here used to be silent, and a caller that cannot tell
+            # "searched and found nothing" from "stopped searching" has to
+            # guess -- every one of them guessed the first.
+            #
+            # Which of the three stopped it, too. They do not have the same
+            # answer: a delivery split into more containers gets past an
+            # allowance spent across the read and gets nowhere against a ceiling
+            # one file reached on its own.
+            if cut is not None:
+                # Which limit `cap` actually was, not whether the allowance
+                # happened to reach zero at the same moment. `allowance[0] <= 0`
+                # answers the second question, and there is a window where the
+                # two disagree: a file whose own ceiling stopped it can also
+                # spend the last of an allowance that was larger. It was
+                # reported as the read's, and the read's remedy is "split the
+                # delivery", which does nothing about a per-file ceiling.
+                cut[0] = ("streams" if seen >= MAX_STREAMS
+                          else "read" if cap < MAX_INFLATED_TOTAL
+                          else "file")
             return
         chunk = data[m.end():m.end() + MAX_STREAM_SCAN]
         try:
@@ -567,13 +587,14 @@ def _claim_in(xmp: bytes) -> Optional[str]:
     return None
 
 
-def reader(allowance: int) -> Callable[[bytes], Optional[PdfFacts]]:
+def reader(allowance: int) -> Callable[[bytes], tuple]:
     """`read`, with what it inflates charged to one allowance for the whole read.
 
-    Answers `None` for a file the allowance no longer reaches. That is not the
-    same answer as "no claim in it", and the caller has to say which: a scan
-    that did not run found nothing, and reporting that as a fact about the file
-    is the shape `PdfFacts` exists to keep out of a report.
+    Answers `(facts, cut_short)`, where `cut_short` names the limit that ended
+    the claim search early or is `None`. That is not the same answer as "no
+    claim in it", and the caller has to say which: a scan that did not finish
+    found nothing, and reporting that as a fact about the file is the shape
+    `PdfFacts` exists to keep out of a report.
 
     A factory rather than a parameter on `read`, because `read` is a name this
     package has published and a signature it has promised; the pin that admits
@@ -593,22 +614,58 @@ def reader(allowance: int) -> Callable[[bytes], Optional[PdfFacts]]:
         126 files of the kind an ordinary machine is full of reach 4 GiB, so
         this was not a hypothetical.
 
-        `cut_short` says the search for a claim did not run, which is the one
+        `cut_short` says the search for a claim did not finish, which is the one
         thing the allowance can take away.
+
+        It used to be decided here, before the file was looked at: *was the
+        allowance already spent when this one came up*. That is true of every
+        file after the boundary and false of the boundary itself -- the file the
+        allowance runs out **inside**. That one had the search start, stop
+        partway and report nothing found, which is the sentence this pair exists
+        to keep out of a report, said about a file that does carry a claim.
+
+        So the scan says whether it stopped, and which limit did it. A file
+        that starts with nothing left is not a special case any more -- its cap
+        is zero, so the first stream stops it, and the answer is the allowance.
         """
-        spent = left[0] <= 0
-        return _read(data, left), spent
+        return _read(data, left)
 
     return read_one
 
 
 def read(data: bytes) -> PdfFacts:
-    return _read(data, None)
+    """The four facts, with no allowance across files.
+
+    This drops whether the claim search was cut short, because `PdfFacts` is a
+    published shape and the answer has nowhere to go in it. A caller that needs
+    to tell "no claim" from "stopped looking" -- and a caller reporting on
+    somebody else's file does -- takes `reader()` instead, which returns both.
+    """
+    return _read(data, None)[0]
 
 
-def _read(data: bytes, allowance: Optional[List[int]]) -> PdfFacts:
+def _read(data: bytes, allowance: Optional[List[int]]):
+    """`(facts, cut_short)`, where `cut_short` names which limit stopped the
+    claim search before it ran out of file, or is `None`.
+
+    `"read"` for the allowance across the whole read, `"file"` for this file's
+    own inflation ceiling, `"streams"` for how many streams will be opened at
+    all. A caller reporting on somebody else's container needs the difference:
+    the first says nothing about this file -- it was not looked at because of
+    the files before it -- and the other two are this file being larger than
+    what a bounded scan reads.
+
+    Not every limit reaches here. A stream truncated at
+    `MAX_INFLATED_PER_STREAM`, a body longer than `MAX_STREAM_SCAN`, a packet
+    past `MAX_XMP_PACKETS` -- all of those also end a search early and all of
+    them are per file, which is the answer this distinction exists to give.
+    Naming them individually would say more than a caller can act on.
+
+    Only ever set when no claim was found. A search that stopped after finding
+    one has its answer, and nothing later could add to it.
+    """
     if not data.startswith(b"%PDF-"):
-        return PdfFacts(is_pdf=False)
+        return PdfFacts(is_pdf=False), None
     header = data[:8].decode("latin-1", "replace")
     # The magic is a claim, and this package does not report a claim as a fact.
     # `is_pdf` was that claim spelled another way, so eight bytes -- `%PDF-1.4`
@@ -630,12 +687,14 @@ def _read(data: bytes, allowance: Optional[List[int]]) -> PdfFacts:
     is_pdf = _has_an_indirect_object(data) is not False
     encrypted = _is_encrypted(data)
     claim = None
-    for hay in _haystacks(data, allowance):
+    cut = [None]
+    for hay in _haystacks(data, allowance, cut):
         for packet in _packets(hay):
             claim = _claim_in(packet)
             if claim:
                 break
         if claim:
             break
-    return PdfFacts(is_pdf=is_pdf, header=header, encrypted=encrypted,
-                    pdfa_claim=claim)
+    return (PdfFacts(is_pdf=is_pdf, header=header, encrypted=encrypted,
+                     pdfa_claim=claim),
+            cut[0] if claim is None else None)

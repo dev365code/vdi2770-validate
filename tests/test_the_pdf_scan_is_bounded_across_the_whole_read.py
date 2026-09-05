@@ -23,6 +23,7 @@ import pytest
 
 from conftest import A_PDF, CLEAN_DOCUMENT, CLEAN_DOCUMENTATION
 from vdi2770 import pdfread
+from vdi2770_validate.model import Severity
 from vdi2770_validate.runner import check_bytes
 
 # Ten streams, so one file wants ten times what a single stream may become.
@@ -144,6 +145,150 @@ def test_a_file_we_stopped_short_of_reading_is_not_called_claimless(counted,
     # And the budget is quoted the way every other page quotes one.
     assert f"{pdfread.MAX_INFLATED_PER_READ / 1024 ** 3:g} GiB" in stopped[0].detail, (
         stopped[0].detail)
+
+
+#: Greedy like `_GREEDY`, and it carries a claim after the greed. Eight streams
+#: rather than ten, so one of these fits inside `MAX_INFLATED_TOTAL` and the
+#: claim is reachable in an unbudgeted read — the truth this is compared
+#: against. What runs out partway through it is the budget for the whole read,
+#: and everything the search wants is on the far side of where that stopped.
+_CLAIMED = (A_PDF + b"".join(b"stream\n" + _BLOB for _ in range(8))
+            + b"stream\n" + zlib.compress(
+                b'<?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?>'
+                b'<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">'
+                b'<rdf:Description xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/">'
+                b"<pdfaid:part>2</pdfaid:part>"
+                b"<pdfaid:conformance>B</pdfaid:conformance>"
+                b"</rdf:Description></rdf:RDF><?xpacket end=\"w\"?>"))
+
+
+def _container_of(bodies: dict) -> bytes:
+    """A conforming document container declaring each name in `bodies`."""
+    base = zipfile.ZipFile(CLEAN_DOCUMENT)
+    meta = base.read("VDI2770_Metadata.xml").decode("utf-8")
+    declared = "\n      ".join(
+        f'<DigitalFile FileFormat="application/pdf">{name}</DigitalFile>'
+        for name in bodies)
+    meta = meta.replace("<DigitalFile", declared + "\n      <DigitalFile", 1)
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        for name in base.namelist():
+            z.writestr(name, meta if name == "VDI2770_Metadata.xml" else base.read(name))
+        for name, body in bodies.items():
+            z.writestr(name, body)
+    return buf.getvalue()
+
+
+def test_a_file_the_budget_ran_out_inside_is_not_accused_of_carrying_no_claim(
+        counted, monkeypatch):
+    """The test above conserves a count, and a file can be on the wrong side of
+    one that adds up.
+
+    It asserts every declared file is either searched — `P3` for no claim, `P4`
+    for one — or counted by `Z5`, never both. A file the budget runs out
+    *inside* satisfies that and is still wrong: the read reached it, so the
+    search started and it draws `P3`; `Z5` begins at the file after it. Both
+    numbers add up, and the sentence the sender is handed says their file has no
+    PDF/A claim in it.
+
+    `cut_short` was decided before the file was looked at — "the allowance was
+    already spent when this one came up" — which is true of every file after the
+    boundary and false of the boundary itself.
+
+    Counted against the truth rather than against the bookkeeping: an unbudgeted
+    read of the same bytes says what is really in them.
+    """
+    monkeypatch.setattr(pdfread, "MAX_INFLATED_PER_READ", 6_000_000)
+    bodies = {f"c{i}.pdf": _CLAIMED for i in range(4)}
+    raw = _container_of(bodies)
+
+    report = check_bytes(raw, "boundary.zip")
+    assert [f for f in report.findings if f.rule.id == "Z5"], (
+        "the premise: this read has to stop somewhere in these files")
+
+    with zipfile.ZipFile(io.BytesIO(raw)) as z:
+        carries = {name for name in bodies
+                   if pdfread.read(z.read(name)).pdfa_claim is not None}
+    assert carries == set(bodies), "the premise: every one of them carries a claim"
+
+    accused = {f.where.member for f in report.findings if f.rule.id == "P3"}
+    assert not accused & carries, (
+        f"{sorted(accused & carries)} carry a PDF/A claim and were told they do "
+        f"not. The scan was cut short inside them and reported that as a fact "
+        f"about the file")
+
+
+def test_the_boundary_file_is_not_reported_as_a_complete_read(counted,
+                                                              monkeypatch):
+    """`docs/scope.md`: the flag "is false when anything was declined".
+
+    Nothing about the boundary file was declined *in the bookkeeping* — it drew
+    a finding on the container axis like any judged file — so a read that never
+    finished looking came back saying it had.
+
+    **The boundary file is the last one**, which is the arrangement this needs.
+    Give the read a file after it and that one is never started at all, so the
+    flag would come down for a file nobody looked at — a case the tool already
+    handled — rather than for the one it looked at halfway.
+    """
+    import json
+
+    from vdi2770_validate.report import as_json
+
+    monkeypatch.setattr(pdfread, "MAX_INFLATED_PER_READ", 5_000_000)
+    raw = _container_of({f"c{i}.pdf": _CLAIMED for i in range(2)})
+    report = check_bytes(raw, "boundary.zip")
+    with zipfile.ZipFile(io.BytesIO(raw)) as z:
+        assert all(pdfread.read(z.read(f"c{i}.pdf")).pdfa_claim for i in range(2)), (
+            "the premise: there is something in these files to have missed")
+    payload = json.loads(as_json(report))
+    assert payload["read"]["complete"] is False, (
+        "a read that stopped inside a file reported itself complete")
+
+
+#: Over `MAX_INFLATED_TOTAL` on its own, so this one is stopped by its own
+#: ceiling however much the read has left.
+_OVERSIZE = (A_PDF + b"".join(b"stream\n" + _BLOB for _ in range(12))
+             + _CLAIMED[len(A_PDF):])
+
+
+def test_a_ceiling_this_file_reached_on_its_own_is_not_an_error_about_the_tool(
+        counted, monkeypatch):
+    """Three limits can cut a claim search short and only one of them is `Z5`.
+
+    `Z5` is `about: tool` and an error, and it is right for the allowance spent
+    across the *read*: that file was not looked at because of the files before
+    it, which is nothing to do with the file. A ceiling one file reaches on its
+    own is `P3` — the rule written to say "this scan found no PDF/A claim",
+    whose remedy already ends *"if the file does carry one, our scan did not
+    reach it"*.
+
+    Treating the two alike turned a 2 KB archive of an ordinary multi-page PDF
+    from exit 0 into exit 1, which is the class `test_tool_limits_are_not_
+    verdicts.py` exists to keep out: a limit of this program reported as an
+    error about somebody else's document.
+    """
+    monkeypatch.setattr(pdfread, "MAX_INFLATED_PER_READ", 1_000_000_000)
+    report = check_bytes(_container_of({"big.pdf": _OVERSIZE}), "oversize.zip")
+
+    assert not [f for f in report.findings if f.rule.id == "Z5"], (
+        "one file over a ceiling of its own is not the read declining to look")
+    assert "big.pdf" in {f.where.member for f in report.findings
+                         if f.rule.id == "P3"}, (
+        f"produced {sorted(f.rule.id for f in report.findings)}")
+    assert report.count(Severity.ERROR) == 0, (
+        "an ordinary file this tool cannot scan to the end must not fail a build")
+
+
+def test_the_read_allowance_is_still_the_one_that_says_so(counted, monkeypatch):
+    """The other side of the split: spent across the read, `Z5` and its remedy."""
+    monkeypatch.setattr(pdfread, "MAX_INFLATED_PER_READ", 5_000_000)
+    report = check_bytes(_container_of({f"c{i}.pdf": _CLAIMED for i in range(3)}),
+                         "spent.zip")
+    stopped = [f for f in report.findings if f.rule.id == "Z5"]
+    assert stopped, sorted(f.rule.id for f in report.findings)
+    assert "this read spent" in stopped[0].detail, stopped[0].detail
+    assert "Split the delivery" in stopped[0].remedy, stopped[0].remedy
 
 
 def _real_pdf(decoys: int = 0) -> bytes:
