@@ -202,6 +202,16 @@ TABLE = [
      "installs itself on machines that asked for 0.6.0 -- which this project "
      "shipped once already"),
 
+    ("gates/the-front-page-names-the-classes-that-are-disputed",
+     "README.md",
+     "disagree on five English ones**",
+     "disagree on six English ones**",
+     ["tests/test_the_docs_count_what_they_claim.py::"
+      "test_the_readme_names_the_classes_the_two_sources_actually_disagree_on"],
+     "the front page tells a reader which rows to distrust, by id, and nothing "
+     "derived it -- a corrected name or an added class would leave the list "
+     "reading true"),
+
     ("gates/a-cited-file-has-to-exist-in-every-document",
      "CONTRIBUTING.md",
      "## Three rules of the road",

@@ -111,10 +111,28 @@ edition of the guideline — is behind the same paywall as everything else.
 What is known about provenance, and it is not much: the reference
 implementation's `Constants.java` describes its English names as "defined in VDI
 2770 guideline", and its author wrote it to support the VDI standardisation
-working group. IDTA has used its own rendering consistently since 02004 v1.2
-(2023-03), through v2.0.1 (2025-11), and in 02035-2 (2026-02). Both look
-deliberate. A question has been put to IDTA; this section changes if it is
-answered.
+working group.
+
+IDTA's rendering is not a one-off either. It is in 02004 Table 1 at v2.0.1,
+which is the edition this project transcribed and the edition
+[`document-classes.json`](../src/vdi2770_validate/data/document-classes.json)
+names; and it appears again in **IDTA 02035-2**, the battery-passport profile of
+handover documentation, published by a different group — its README calls it "a
+joint result of the Model Expert Group comprising IDTA and Catena-X". That
+document's published template is machine-readable and carries one class row,
+`02-04`, as *Certificates, declarations* — IDTA's wording, where the reference
+implementation says *Certificates*. One row is not the table, but it is the same
+choice made again, in another document, years later. Both look deliberate.
+
+Those two documents first appear in IDTA's public template repository on
+2023-03-07 (02004, at version 1.0) and 2026-02-18 (02035-2, at version 1.0).
+Read those as *when the material became public there*, which is what was
+checked, and not as the publication date printed on either PDF — the two need
+not agree, and only the first is something this project can show you. An earlier
+draft of this paragraph paired "v1.2" with the 2023-03 date; v1.2 appears on
+2023-04-28, and v1.0 is what 2023-03 belongs to.
+
+A question has been put to IDTA; this section changes if it is answered.
 
 ## 1b. Class names are matched to their class id, not to the whole table
 

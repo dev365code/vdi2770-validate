@@ -753,3 +753,48 @@ def test_the_upgrade_warning_counts_the_rules_it_names():
     assert named, said.group(2)
     assert said.group(1).lower() == spelled(len(named)), (
         f"the warning says {said.group(1)!r} and names {len(named)}: {named}")
+
+
+def test_the_readme_names_the_classes_the_two_sources_actually_disagree_on():
+    """The front page tells a reader which rows to distrust, by id.
+
+    Nothing derived it. The list and the two counts were typed once and would
+    have gone on reading true after a name was corrected, a class was added, or
+    a source was re-transcribed — and the reader most likely to check them is
+    the one deciding whether to trust this tool's verdicts on their own
+    containers.
+
+    Read from `document-classes.json`, which is also what the rules match on,
+    so the page and the behaviour cannot drift apart.
+    """
+    import json
+
+    classes = json.loads(
+        (ROOT / "src" / "vdi2770_validate" / "data" / "document-classes.json")
+        .read_text(encoding="utf-8"))["classes"]
+    # Whitespace collapsed: these sentences wrap, and a line break between
+    # "twelve" and "German" is not a change of claim. The first version of this
+    # test read the raw text and failed on the wrapping rather than on the fact.
+    raw = (ROOT / "README.md").read_text(encoding="utf-8")
+    readme = re.sub(r"\s+", " ", raw)
+
+    agree_de = [c["classId"] for c in classes if c["nameDe"]["agree"]]
+    differ_en = [c["classId"] for c in classes if not c["nameEn"]["agree"]]
+
+    assert len(agree_de) == len(classes), (
+        f"the sources no longer agree on every German name ({len(agree_de)} of "
+        f"{len(classes)}), and the page says they do")
+    assert f"all {spelled(len(classes))} German names" in readme, (
+        f"the sources agree on {len(classes)} German names and the page says "
+        f"otherwise")
+    assert f"disagree on {spelled(len(differ_en))} English ones" in readme, (
+        f"they disagree on {len(differ_en)} English names and the page says "
+        f"otherwise")
+    for cid in differ_en:
+        assert cid in readme, (
+            f"{cid} is a class the two sources render differently and the page "
+            f"does not name it")
+    named = set(re.findall(r"\b(0[1-4]-0[0-9])\b", raw))
+    assert not (named - set(differ_en)), (
+        f"the page names {sorted(named - set(differ_en))} as disputed and the "
+        f"sources agree on them")

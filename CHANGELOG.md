@@ -53,7 +53,7 @@ a delivery spends this read's whole budget for inflating PDF streams. (`X5` is
 new and an error too, but no container can ask for it — it fires
 only when a rule in this tool raises.) `Z10` is the one of the five that is about
 the delivery rather than about this tool: `B.pdf` beside `b.pdf` is one file on
-macOS as it ships and on every Windows filesystem, so the recipient keeps
+macOS as it ships and on Windows by default, so the recipient keeps
 whichever their unzip tool wrote last. 0.6.0 said `F2` about the second member —
 a warning, exit 0 — and a sender who followed `F2`'s remedy and declared both got
 a clean report for a delivery that loses a file. It is `about: container`, so
@@ -731,7 +731,10 @@ rest of these entries are about — and that one was itself wrong twice.
 
 - **Two members that are one file for the recipient came back clean, exit 0.**
   `B.pdf` beside `b.pdf` is two entries in the archive and one file on macOS as
-  it ships and on every Windows filesystem — measured here, one inode. The
+  it ships — measured here, one inode — and on Windows by default. "By default"
+  rather than always: NTFS folds case, and since Windows 10 a directory can be
+  flagged not to. That flag is not something this project has measured, and the
+  sentence stops where the measurement does. The
   recipient keeps whichever their unzip tool wrote last and the other declaration
   names a path they do not have. The tool said `F2` about the second member, a
   warning, so a sender who followed `F2`'s remedy and declared both got a report
@@ -1563,7 +1566,7 @@ below is measured on this machine, before and after, on the same input.
 Three gates that ask what `make check` cannot ask of itself.
 
 - **`make mutations`** takes every claim this project makes about a gate, breaks
-  the thing that gate protects, and checks the gate notices — 108 rows, each
+  the thing that gate protects, and checks the gate notices — 109 rows, each
   naming the pytest selection or the tool that has to go red. The harness checks
   itself as hard as it checks the code: a row whose anchor no longer appears
   exactly once is an error rather than a pass; every apply and restore clears
