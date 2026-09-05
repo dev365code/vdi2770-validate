@@ -781,3 +781,35 @@ def test_nothing_in_the_fast_suite_installs_from_an_index():
         f"these install from an index inside `make check`, which is supposed to "
         f"run with no route out: {offenders}. Build the artifact and install it "
         f"with --no-index, or move the check to a target CI runs separately.")
+
+
+def test_every_workflow_that_installs_this_project_installs_the_reader_first():
+    """One workflow had both install lines and the other had one.
+
+    The rules pin the reader exactly, and the reader is not on an index until
+    the release that publishes it. A workflow that installs this repository and
+    nothing else therefore fails outright before that release — and, after it,
+    fails in the worse direction: it succeeds, having installed the *published*
+    reader rather than the one in the commit it is running against.
+
+    The one that was missing it is the sweep, which is where the reference
+    implementation's verdicts come from — the evidence a release publishes
+    divergence counts out of. `test_ci_installs_both_halves_from_this_tree_and_the_reader_first`
+    reads one file; nothing looked across them.
+    """
+    from pathlib import Path
+
+    for path in sorted(Path(CI.parent).glob("*.yml")):
+        body = path.read_text(encoding="utf-8")
+        rules = body.find('pip install -e "."')
+        if rules < 0:
+            rules = body.find('pip install -e ".[dev]"')
+        if rules < 0:
+            continue
+        reader = body.find("pip install -e packages/vdi2770")
+        assert 0 <= reader < rules, (
+            f"{path.name} installs this repository without installing the "
+            f"reader from the tree first. The pin is exact, so pip goes to an "
+            f"index for it: before the release that is a hard failure, and "
+            f"after it the run silently becomes about the published reader "
+            f"instead of this commit.")

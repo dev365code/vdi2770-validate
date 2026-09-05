@@ -548,6 +548,16 @@ TABLE = [
      "closed here -- which stops the release rather than breaking it, but stops "
      "it for a reason nobody wrote down"),
 
+    ("gates/every-workflow-installs-the-reader-from-the-tree",
+     ".github/workflows/oracle.yml",
+     "          python -m pip install -e packages/vdi2770\n",
+     "",
+     ["tests/test_ci_parity.py::"
+      "test_every_workflow_that_installs_this_project_installs_the_reader_first"],
+     "the sweep is where the reference implementation's verdicts come from, and "
+     "one workflow had this line while the other did not -- the gate that "
+     "compared CI against the Makefile read one file and could not see it"),
+
     ("gates/ci-installs-this-repository-from-this-tree",
      ".github/workflows/ci.yml",
      '          python -m pip install -e ".[dev]"',
