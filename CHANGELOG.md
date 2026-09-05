@@ -2,11 +2,13 @@
 
 ## 0.7.0 — unreleased
 
-**Upgrading from 0.6.0 will turn some green runs red.** Four rules can do it:
-`X6` and `Z13`, both new errors, `Z6`, promoted from warning to error, and `Z10`,
+**Upgrading from 0.6.0 will turn some green runs red.** Five rules can do it:
+`X6` and `Z13`, both new errors, `Z6`, promoted from warning to error, `Z10`,
 which now also reports two members that are one file wherever case is not kept
-apart. (`X5` is new and an error too, but no container can ask for it — it fires
-only when a rule in this tool raises.) `Z10` is the one of the four that is about
+apart, and `Z5`, which the PDF layer could not reach in 0.6.0 and now does when
+a delivery spends this read's whole budget for inflating PDF streams. (`X5` is
+new and an error too, but no container can ask for it — it fires
+only when a rule in this tool raises.) `Z10` is the one of the five that is about
 the delivery rather than about this tool: `B.pdf` beside `b.pdf` is one file on
 macOS as it ships and on every Windows filesystem, so the recipient keeps
 whichever their unzip tool wrote last. 0.6.0 said `F2` about the second member —
@@ -14,7 +16,7 @@ a warning, exit 0 — and a sender who followed `F2`'s remedy and declared both 
 a clean report for a delivery that loses a file. It is `about: container`, so
 filtering the tool axis will not hide it, and it should not.
 
-The other three are `about: tool`, meaning this tool is
+The other four are `about: tool`, meaning this tool is
 saying it declined to look rather than that your container is wrong; the exit
 code does not distinguish the two, so a CI job that gates on it will fail on a
 delivery nothing is wrong with. `about` is itself new here, so there is nothing

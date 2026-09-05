@@ -112,9 +112,16 @@ def test_a_file_we_stopped_short_of_reading_is_not_called_claimless(counted,
     """P3 says a bounded scan found no PDF/A claim. It did not scan at all.
 
     The other findings still stand: what the allowance takes away is the search
-    for a claim, so every declared file either had that search run -- and draws
-    `P3` when it found none or `P4` when it found one -- or is counted by `Z5`,
-    and never both.
+    for a claim, so every declared file is accounted for exactly once. Three
+    ways, not two, and this counts the third against the other two: a search
+    that ran draws `P4` when it found a claim and `P3` when it did not, a search
+    a limit of this file cut short draws `P3` too — saying so, on the tool axis
+    — and a file the allowance never reached is counted by `Z5`.
+
+    The conservation below cannot see the difference between the first two,
+    which is the whole of what it can check: a count is not a meaning. The
+    sentences are held apart by
+    `test_a_scan_that_stopped_inside_a_file_says_so_and_owns_it` and its control.
     """
     monkeypatch.setattr(pdfread, "MAX_INFLATED_PER_READ", 4_000_000)
     raw = _container(8)

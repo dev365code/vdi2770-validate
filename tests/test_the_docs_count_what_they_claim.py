@@ -714,3 +714,32 @@ def test_the_scope_page_quotes_what_the_tool_prints():
     shape = "  read 1 of 1 archives, 1 of 3 metadata files"
     assert shape in printed, printed[-400:]
     assert shape.strip() in page, "the page quotes a figure the tool does not print"
+
+
+def test_the_upgrade_warning_counts_the_rules_it_names():
+    """The sentence an upgrading reader sees first says how many ids can turn
+    their green run red, and then names them. The number was written once and
+    the list grew under it.
+
+    This does not check the list is complete — nothing here can, because a rule
+    can turn a run red through a path that is new while its id is not, which is
+    what happened: `Z5` existed in 0.6.0 and could not be reached from the PDF
+    layer. It checks the two halves of one sentence agree.
+    """
+    import re
+
+    from conftest import spelled
+
+    section = newest_changelog_section()
+    said = re.search(r"\*\*Upgrading from [\d.]+ will turn some green runs red\.\*\*\s+"
+                     r"(\w+) rules? can do it:(.*?)\n\n", section, re.S)
+    assert said, "the upgrade warning has been reworded; this counts its ids"
+    # The list is the sentence after the colon, and only that. What follows it
+    # explains one of the ids and names others in passing -- `F2`, for what
+    # 0.6.0 used to say -- and those are not ids that turn a run red. The
+    # parenthetical goes too: it exists to name an id and then take it back out.
+    listed = re.sub(r"\([^)]*\)", "", said.group(2)).split(". ")[0]
+    named = sorted(set(re.findall(r"`([A-Z]\d+)`", listed)))
+    assert named, said.group(2)
+    assert said.group(1).lower() == spelled(len(named)), (
+        f"the warning says {said.group(1)!r} and names {len(named)}: {named}")
