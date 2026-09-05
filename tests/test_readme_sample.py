@@ -37,13 +37,31 @@ def _command_output(target: str) -> list:
     return done.stdout.splitlines()
 
 
-def test_every_line_of_the_sample_is_really_produced():
+def test_every_line_of_the_sample_is_really_produced_in_that_order():
+    """Membership was the whole check, and a sample can hold every line the tool
+    prints and still show a session it never had.
+
+    It did: the findings were shown `F1`, `Z13`, `Z7` and the tool prints `F1`,
+    `Z7`, `Z13`. Order is not decoration here — the report sorts by severity and
+    then by rule, and a reader scrolling a CI log for the first error is reading
+    that order. Checked by walking one cursor forward through the real output,
+    so a line that appears before the one above it is as much a failure as a
+    line that never appears.
+    """
     target, shown = BLOCK.group(1), BLOCK.group(2)
     real = _command_output(target)
+    at, previous = 0, None
     for line in shown.splitlines():
         if not line.strip() or line.strip().startswith("…"):
             continue          # checked by the test below, not skipped
         assert line in real, f"the README shows a line the tool never prints:\n  {line}"
+        try:
+            at = real.index(line, at) + 1
+        except ValueError:
+            raise AssertionError(
+                f"the README shows this line after {previous!r}, and the tool "
+                f"prints it before:\n  {line}") from None
+        previous = line
 
 
 def test_the_elision_says_what_it_elided():

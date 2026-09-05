@@ -39,13 +39,13 @@ folders.zip
          at folders.zip!/VDI2770_Main.xml:56:2
          'VDI2770_Main.pdf' is declared but not in the archive
          -> Add the missing file to the container, or remove its DigitalFile entry from the metadata. The two must agree.
+  error  Z7  The documentation container has no VDI2770_Main.pdf
+         at folders.zip
+         -> Add the main document as VDI2770_Main.pdf at the root of the documentation container, next to VDI2770_Main.xml.
   error  Z13  Documents are delivered as folders, which this tool does not open
          at folders.zip
          2 folders hold VDI2770_Metadata.xml: 456-29201/, AB393/
          -> Nothing here is necessarily wrong with the container. Zip each document folder into its own .zip member if you want this tool to check it, or check those folders with something that reads them.
-  error  Z7  The documentation container has no VDI2770_Main.pdf
-         at folders.zip
-         -> Add the main document as VDI2770_Main.pdf at the root of the documentation container, next to VDI2770_Main.xml.
 
   … 1 more Z9 warning
 
@@ -72,8 +72,11 @@ files that never claimed at all. It says so on every line where it matters, and 
 JSON output is one document for the run — a list with an entry per path you gave,
 each carrying that `path`. An entry for a container that was checked also carries
 `"pdfaVerified": false`; a path that could not be opened at all carries
-`"unreadable"` and nothing else, because there is no verdict to report about a
-file nobody read. The rest of the refusals
+`"unreadable"` and no verdict — no `pdfaVerified`, no counts, no findings —
+because there is nothing to report about a file nobody read. It carries the
+three fields that say what produced the run, like every other entry: a run where
+some entries can be version-checked and some cannot is worse for a consumer than
+one where none can. The rest of the refusals
 are in [docs/scope.md](https://github.com/dev365code/vdi2770-validate/blob/main/docs/scope.md).
 
 ## How it is built

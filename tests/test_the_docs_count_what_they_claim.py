@@ -560,11 +560,15 @@ def test_the_readme_describes_the_json_entries_the_tool_actually_emits():
 
     *"a list with an entry per path you gave, each carrying that path and
     `pdfaVerified: false`"* -- true of a container that was checked, and not of a
-    path that could not be opened, which carries `path` and `unreadable` and
-    stops there. The heterogeneous shape is deliberate: there is no PDF/A verdict
-    to give about a file nobody read. What was wrong was the sentence, and a
-    consumer that believed it raised `KeyError` on exactly the path the sweep
-    exists to keep going past.
+    path that could not be opened. The heterogeneous shape is deliberate: there
+    is no PDF/A verdict to give about a file nobody read. What was wrong was the
+    sentence, and a consumer that believed it raised `KeyError` on exactly the
+    path the sweep exists to keep going past.
+
+    The README also says what that entry does *not* carry, and nothing counted
+    it: three fields saying what produced the run were added to that branch and
+    the sentence stayed as it was, which is the same defect in the other
+    direction. So the whole key set is asserted here.
     """
     import json
     import subprocess
@@ -583,6 +587,12 @@ def test_the_readme_describes_the_json_entries_the_tool_actually_emits():
     assert "pdfaVerified" not in unread, (
         "an unreadable path now carries a PDF/A verdict; the README says it does not")
     assert "unreadable" in unread, sorted(unread)
+    # And nothing else beyond what says who produced the run. A key added here
+    # is a promise the README has to make or the branch has to drop.
+    assert set(unread) == {"path", "unreadable", "schemaVersion", "toolVersion",
+                           "vdiSchema"}, (
+        f"an entry for a path nobody read carries {sorted(unread)}; the README "
+        f"says what it carries and this is not that")
     assert '`"unreadable"`' in readme, (
         "the README no longer says what an entry for an unopenable path carries")
 
