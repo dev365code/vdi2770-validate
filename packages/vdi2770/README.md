@@ -4,12 +4,11 @@ Read a VDI 2770 handover-documentation container and get back a typed model —
 without extracting anything to disk, without opening a socket, and without
 importing anything outside the standard library.
 
-This is one half of the `vdi2770` distribution; the other half is the rule set
-that judges what this reads. They were two distributions up to 0.6.0 and this
-package was published on its own, which is why it is written to stand alone and
-why a test fails if it can so much as import the rules. Installing the
-distribution brings both, and `import vdi2770` still reaches nothing else — the
-dependency the rules need is never imported from here.
+That last part is a property of the package, not a promise: a test reads every
+import in it and fails on anything the standard library does not provide. It is
+what makes this worth installing on its own — the rule set that judges what this
+reads is a separate distribution, released beside it under the same version, and
+nothing here reaches it.
 
 ```bash
 pip install vdi2770
@@ -39,10 +38,10 @@ question about VDI 2770, and the answer depends on which supplement your custome
 sent you. This library tells you what is in the file and where it is written; the
 opinion is yours to supply.
 
-If you want an opinion supplied for you, it arrived in the same install:
-`vdi2770 check YOUR-CONTAINER.zip`, or `import vdi2770_validate`. The
-[`vdi2770-validate`](https://pypi.org/project/vdi2770-validate/) name on the
-index is kept resolving here and carries nothing of its own.
+If you want an opinion supplied for you, [`vdi2770-validate`](https://pypi.org/project/vdi2770-validate/)
+is this library plus a rule set, as a command-line tool. It names this package
+exactly rather than by range, so the pair you install is the pair that was
+tested together.
 
 ## Three properties, each tested rather than promised
 

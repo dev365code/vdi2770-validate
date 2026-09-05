@@ -342,14 +342,14 @@ TABLE = [
      "`Z9` said `AB393/` and `Z13` said `./AB393/` in one report, and a reader "
      "has to work out they are the same place"),
 
-    ("gates/the-redirect-ships-after-the-package-it-points-at",
+    ("gates/the-rules-ship-after-the-reader-they-pin",
      ".github/workflows/release.yml",
      "            if python tools/check_release_order.py; then exit 0; fi",
      "            if true; then exit 0; fi",
      ["tests/test_two_packages_publish_separately.py::"
       "test_the_order_gate_runs_and_not_with_the_flag_that_skips_the_index"],
-     "publishing the old name first puts a distribution pip cannot resolve on "
-     "the index, under a number PyPI will not let anyone reuse"),
+     "publishing the rules first puts a distribution pip cannot resolve on the "
+     "index, under a number PyPI will not let anyone reuse"),
 
     ("gates/an-unreleased-package-is-not-a-tagged-one",
      "tools/check_release_order.py",
@@ -360,22 +360,40 @@ TABLE = [
 
     ("gates/the-two-tag-namespaces-are-told-apart",
      "tools/api_fingerprint.py",
-     "MERGED_AT = (0, 7, 0)",
-     "MERGED_AT = (0, 0, 0)",
+     "ONE_TAG_FROM = (0, 7, 0)",
+     "ONE_TAG_FROM = (0, 0, 0)",
      ["tests/test_the_api_record_holds.py::"
       "test_a_version_from_before_the_merge_is_looked_up_in_the_old_namespace"],
-     "`v0.5.0` is a validator release whose reader said 0.3.1, so reading a "
-     "pre-merge reader version out of the `v*` namespace answers about a "
+     "`v0.5.0` is a validator release whose reader said 0.3.1, so reading an "
+     "older reader version out of the `v*` namespace answers about a "
      "different distribution"),
 
-    ("gates/a-floor-nothing-can-satisfy-is-refused",
+    ("gates/a-pin-that-is-not-this-release-is-refused",
      "tools/check_release_order.py",
-     "    if Version(floor) > Version(version):",
+     "    if pinned != version:",
      "    if False:",
      ["tests/test_the_release_order_is_enforced.py"],
-     "a redirect asking for a version this repository does not publish resolves "
-     "to nothing, however healthy the index is -- the one failure the index "
-     "cannot report"),
+     "a pin naming any version but this one means the tag and the wheel "
+     "disagree about which pair went out -- ahead of it resolves to nothing, "
+     "behind it resolves to the wrong reader, and no index can report either"),
+
+    ("gates/the-reader-is-pinned-exactly-or-not-at-all",
+     "tools/check_release_order.py",
+     "    if len(list(pin.specifier)) != 1 or len(wanted) != 1 or wanted[0].endswith(\".*\"):",
+     "    if False:",
+     ["tests/test_the_release_order_is_enforced.py"],
+     "a range let pip install a reader this release was never run against, and "
+     "leaves the order gate no single version to check"),
+
+    ("gates/the-two-distributions-cannot-claim-one-import-name",
+     "pyproject.toml",
+     '\nwhere = ["src"]',
+     '\nwhere = ["src", "packages/vdi2770/src"]',
+     ["tests/test_the_two_halves_carry_one_version.py::"
+      "test_neither_half_claims_the_others_import_name"],
+     "two distributions shipping one import package install over each other "
+     "without complaint, and uninstalling either deletes files the other is "
+     "still using -- reproduced against the published 0.6.0"),
 
     ("gates/a-checkout-without-tags-cannot-answer-the-order",
      "tools/check_release_order.py",
@@ -480,16 +498,34 @@ TABLE = [
      "compared: a tag saying 0.2.0 could publish a tree saying 0.1.9, and the "
      "number is on the index forever"),
 
-    ("gates/a-tag-that-is-not-the-redirects-version-stops-it-too",
+    ("gates/a-tag-that-is-not-the-readers-version-stops-it-too",
      ".github/workflows/release.yml",
-     "          pkg=$(grep -m1 '^version = ' packages/vdi2770-validate/pyproject.toml"
-     " | cut -d'\"' -f2)\n"
+     '          pkg=$(python -c "import sys; sys.path.insert(0,\'packages/vdi2770/src\'); '
+     'import vdi2770 as v; print(v.__version__)")\n'
      '          test "$tag" = "$pkg" || { echo "tag $tag != package $pkg"; exit 1; }',
-     "          pkg=$(grep -m1 '^version = ' packages/vdi2770-validate/pyproject.toml"
-     " | cut -d'\"' -f2)\n          true",
+     '          pkg=$(python -c "import sys; sys.path.insert(0,\'packages/vdi2770/src\'); '
+     'import vdi2770 as v; print(v.__version__)")\n          true',
      ["tests/test_two_packages_publish_separately.py"],
-     "one tag drives both distributions now, and a redirect left on an older "
-     "number goes on pointing at a release nobody made"),
+     "one tag drives both distributions, and either half left on an older "
+     "number is a pair that was never built"),
+
+    ("gates/the-pin-names-the-reader-that-was-built",
+     "packages/vdi2770/pyproject.toml",
+     'version = "0.7.0"',
+     'version = "0.7.1"',
+     ["tools/check_wheel.py"],
+     "the two manifests agree with each other and the artifacts do not: the "
+     "smoke test installs the pair with --no-deps and cannot notice, and on an "
+     "index there is no --no-deps"),
+
+    ("gates/each-build-asks-about-what-it-builds",
+     ".github/workflows/release.yml",
+     "        run: python -m build packages/vdi2770 --outdir dist/",
+     "        run: python -m build --outdir dist/",
+     ["tests/test_two_packages_publish_separately.py::"
+      "test_each_build_asks_the_index_about_the_distribution_it_actually_builds"],
+     "the index is asked about one distribution and the other is uploaded; "
+     "every other assertion stays green and PyPI does not take it back"),
 
     ("gates/a-release-checkout-can-see-its-tags",
      ".github/workflows/release.yml",
@@ -501,7 +537,7 @@ TABLE = [
      "without the tags the assertions comparing this tree against a release tag "
      "skip rather than fail, in the one workflow that authorises a publish"),
 
-    ("gates/the-redirect-checkout-can-see-them-too",
+    ("gates/the-rules-checkout-can-see-them-too",
      ".github/workflows/release.yml",
      "      # and a default checkout is `--depth 1 --no-tags`.\n"
      "      - uses: actions/checkout@v4\n        with: { fetch-depth: 0 }",

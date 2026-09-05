@@ -163,10 +163,10 @@ def _parts(version: str) -> Optional[tuple]:
     return (int(head.group(1)), int(head.group(2)), int(head.group(3))) if head else None
 
 
-#: Where the two tag namespaces meet. Below this the reader was published on its
-#: own as `sdk-v<version>`; from here up it ships inside `vdi2770` and goes out
-#: on the distribution's own `v<version>`.
-MERGED_AT = (0, 7, 0)
+#: Where the two tag namespaces meet. Below this the reader was released on its
+#: own schedule as `sdk-v<version>`; from here up it is half of one release with
+#: the rules — same number, one `v<version>` tag, an exact pin between them.
+ONE_TAG_FROM = (0, 7, 0)
 
 #: Both spellings, because a rename of the evidence is not a deletion of it:
 #: reader releases up to 0.6.1 are on PyPI under numbers nobody can reuse, and
@@ -180,14 +180,14 @@ def _prefix_for(version: str) -> str:
     """Which namespace a reader version belongs to.
 
     Not "try both and take the first that exists". The two namespaces share
-    their numbers and mean different things below the merge: `v0.5.0` is a
+    their numbers and mean different things below that line: `v0.5.0` is a
     *validator* release, and the reader inside it said 0.3.1. Trying `v` first
     made `_published("0.5.0")` answer yes on the strength of that tag, for a
     reader version PyPI has never held — a false refusal rather than a false
     pass, but an answer about the wrong distribution either way.
     """
     parts = _parts(version)
-    return "v" if parts is not None and parts >= MERGED_AT else "sdk-v"
+    return "v" if parts is not None and parts >= ONE_TAG_FROM else "sdk-v"
 
 
 def _tag_naming(version: str) -> Optional[str]:

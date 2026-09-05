@@ -91,13 +91,13 @@ def _distribution_name(spec: str) -> str:
     return re.split(r"[<>=!~\[; ]", spec, maxsplit=1)[0].strip().lower().replace("_", "-")
 
 
-#: What is copied from the tree instead of fetched. Neither name appears in
-#: `dependencies` any more — the reader ships inside this distribution and
-#: `vdi2770-validate` is a redirect to it — so this filter matches nothing
-#: today. It is kept because the failure it prevents is silent: a first-party
-#: name reappearing in that list would fetch a *released* version off an index
-#: and put it inside a file built from this working tree, which is the one thing
-#: a single-file build must not do, and the built file would still run.
+#: What is copied from the tree instead of fetched. `vdi2770` is in this
+#: project's `dependencies` — it is the reader, published separately and pinned
+#: exactly — and without this filter the build would fetch a *released* reader
+#: off an index and put it inside a file built from this working tree. The
+#: single-file form would still run, on code nobody here wrote this commit
+#: against. `vdi2770-validate` is listed for the same reason, against the day
+#: something declares it.
 FIRST_PARTY = {"vdi2770", "vdi2770-validate"}
 
 

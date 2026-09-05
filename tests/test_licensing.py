@@ -15,12 +15,13 @@ NOTICE = (ROOT / "NOTICE").read_text(encoding="utf-8")
 DATA = ROOT / "src" / "vdi2770_validate" / "data"
 
 
-def license_files():
+def license_files(manifest=None):
     """Read the packaged licence list without a TOML parser — the tool supports
     Python 3.9, where tomllib does not exist, and plant systems run 3.9."""
-    text = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    manifest = manifest or (ROOT / "pyproject.toml")
+    text = manifest.read_text(encoding="utf-8")
     m = re.search(r"^license-files\s*=\s*\[(.*?)\]", text, re.M | re.S)
-    assert m, "pyproject.toml declares no license-files"
+    assert m, f"{manifest.name} declares no license-files"
     return re.findall(r'"([^"]+)"', m.group(1))
 
 
@@ -33,16 +34,26 @@ def test_the_notices_travel_with_the_wheel():
         assert (ROOT / wanted).exists()
 
 
-def test_the_notice_of_the_half_that_used_to_ship_alone_travels_too():
-    """The reader carried its own NOTICE while it was published as its own
-    distribution, and that NOTICE says something the root one cannot: that this
-    half bundles nothing of anybody else's. One distribution now, so the list
-    that has to name it is this one -- and a file that stops being packaged the
-    moment its own `pyproject.toml` is deleted is exactly the loss a rename is
-    likely to make quietly."""
-    reader = "packages/vdi2770/NOTICE"
-    assert reader in license_files(), f"{reader} would not be packaged"
-    assert (ROOT / reader).exists()
+def test_the_reader_packages_its_own_notice():
+    """The reader is its own distribution and its own wheel, and its NOTICE says
+    something the root one cannot: that this package bundles nothing of anybody
+    else's. It has to be declared in the reader's own manifest, because that is
+    the only one its wheel is built from."""
+    reader = ROOT / "packages" / "vdi2770" / "pyproject.toml"
+    for wanted in ("LICENSE", "NOTICE"):
+        assert wanted in license_files(reader), (
+            f"the reader's wheel would not carry {wanted}")
+        assert (reader.parent / wanted).exists()
+
+
+def test_the_root_wheel_does_not_carry_the_readers_notice():
+    """It did while the two were one distribution. They are two again, and a
+    NOTICE for a package this wheel does not contain is worse than a missing one
+    -- whoever clears the package for use reads it as a statement about what
+    they are installing."""
+    assert "packages/vdi2770/NOTICE" not in license_files(), (
+        "the rules' wheel declares the reader's NOTICE, and the reader is not "
+        "in it")
 
 
 def test_the_readers_notice_sends_people_where_the_material_actually_is():
@@ -60,10 +71,12 @@ def test_the_readers_notice_sends_people_where_the_material_actually_is():
     assert "THIRD_PARTY.md" in reader, (
         "the reader's NOTICE no longer says where the bundled material is "
         "accounted for")
-    assert "vdi2770-validate" not in reader, (
-        "the reader's NOTICE points at `vdi2770-validate` for the third-party "
-        "accounting, and that distribution is now a redirect carrying none of "
-        "it. Point at this distribution's own THIRD_PARTY.md.")
+    assert "vdi2770-validate" in reader, (
+        "the reader's NOTICE no longer names the distribution that actually "
+        "carries the schema, the class table and the corpus. `vdi2770` ships "
+        "none of it and has no THIRD_PARTY.md of its own, so a reader who "
+        "follows this notice has to be sent to the sibling distribution by "
+        "name.")
 
 
 def test_mit_permission_notice_is_reproduced_in_full():

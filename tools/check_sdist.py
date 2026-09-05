@@ -34,18 +34,14 @@ NO_BYTECODE = dict(os.environ, PYTHONDONTWRITEBYTECODE="1")
 
 ROOT = Path(__file__).resolve().parent.parent
 
-# One distribution carries the code. The reader was its own until 0.6.0 and was
-# built here too -- if it could not stand up alone, the validator's green result
-# would have been borrowed from a source tree that happened to be nearby. It
-# ships inside this one now, and `packages/vdi2770/tests` runs from this sdist.
+# Two distributions come out of this repository, and a packager may build
+# either. The reader is checked first: if it cannot stand up alone, the rules'
+# own green result would be borrowed from a source tree that happens to be
+# nearby -- which is the whole reason it is published separately.
 DISTRIBUTIONS = [
+    (ROOT / "packages" / "vdi2770", []),
     (ROOT, ["tools/make_fixtures.py"]),
 ]
-
-#: The other distribution this repository publishes: the name it used until
-#: 0.6.0, kept resolving as metadata and a dependency. It has no tests to run —
-#: what it has is a rule that cannot be relaxed by accident, checked below.
-REDIRECT = ROOT / "packages" / "vdi2770-validate"
 
 
 def _distribution(project: Path) -> str:
@@ -133,52 +129,12 @@ def _build_and_run(project: Path, before: list) -> int:
     return 0
 
 
-def check_the_redirect_ships_no_code() -> int:
-    """The redirect must be metadata and nothing else.
-
-    Both distributions would otherwise install `vdi2770_validate/` over each
-    other -- pip does not refuse it, it keeps whichever went last, and
-    uninstalling the redirect afterwards deletes the real tool. `packages = []`
-    in the manifest says so; this is whether the built artifact agrees, because
-    a manifest is a claim and a tarball is what people receive.
-    """
-    _pristine(REDIRECT)
-    try:
-        with tempfile.TemporaryDirectory() as tmp:
-            build = subprocess.run(
-                [sys.executable, "-m", "build", "--sdist", "--outdir", tmp,
-                 str(REDIRECT)], env=NO_BYTECODE, capture_output=True, text=True)
-            if build.returncode:
-                print(build.stdout[-2000:], build.stderr[-2000:], file=sys.stderr)
-                print("could not build the redirect's sdist", file=sys.stderr)
-                return 1
-            archives = glob.glob(f"{tmp}/*.tar.gz")
-            if len(archives) != 1:
-                print(f"expected one sdist, found {archives}", file=sys.stderr)
-                return 1
-            with tarfile.open(archives[0]) as tf:
-                # `setup.py` is what setuptools may generate into an sdist; it is
-                # not a module the install would place anywhere, so it does not
-                # count. Anything else ending in `.py` does.
-                carried = [n for n in tf.getnames()
-                           if n.endswith(".py") and Path(n).name != "setup.py"]
-            if carried:
-                print(f"the redirect's sdist carries code: {carried}. Two "
-                      f"distributions shipping the same module install over each "
-                      f"other, and pip does not refuse it.", file=sys.stderr)
-                return 1
-    finally:
-        _pristine(REDIRECT)
-    print("vdi2770-validate: the redirect ships no code")
-    return 0
-
-
 def main() -> int:
     for project, before in DISTRIBUTIONS:
         rc = check(project, before)
         if rc:
             return rc
-    return check_the_redirect_ships_no_code()
+    return 0
 
 
 if __name__ == "__main__":

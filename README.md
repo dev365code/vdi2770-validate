@@ -1,4 +1,4 @@
-# vdi2770
+# vdi2770-validate
 
 Point it at a VDI 2770 container and it tells you, offline, whether the archive is
 one — and if something is wrong, what to do about it.
@@ -14,13 +14,9 @@ is a small offline CLI you can drop into a CI job.
 Names are used descriptively.
 
 ```bash
-pip install vdi2770
-vdi2770 check YOUR-CONTAINER.zip
+pip install vdi2770-validate
+vdi2770-validate check YOUR-CONTAINER.zip
 ```
-
-Published as `vdi2770-validate` up to 0.6.0. That name still installs this — it
-is kept on the index pointing here — and the `vdi2770-validate` command still
-works, so nothing anyone automated has to change.
 
 It exits `0` when it found no error, `1` when it found at least one or could not
 read a path you gave it, and `2` when it could read none of them. A warning does
@@ -37,7 +33,7 @@ cd vdi2770-validate
 ```
 
 ```
-$ vdi2770 check corpus/examples/missingdocuments/folders.zip
+$ vdi2770-validate check corpus/examples/missingdocuments/folders.zip
 folders.zip
   error  F1  A file named in the metadata is not in the container
          at folders.zip!/VDI2770_Main.xml:56:2
@@ -101,18 +97,23 @@ are in [docs/scope.md](https://github.com/dev365code/vdi2770-validate/blob/main/
   or an XML library, so a rule cannot accidentally check how a document was spelled
   instead of what it says. Rules may read the readers' constants — the reserved file names, the container kinds — but not call a parser.
 
-## Two layers, one install
+## Two packages
 
-The reader is `import vdi2770`: it opens a container, refuses what it should
+The reader lives in [`vdi2770`](https://pypi.org/project/vdi2770/), a separate
+package with no dependencies: it opens a container, refuses what it should
 refuse, and hands back a typed model with a line number on every node. It decides
 nothing, and it imports nothing — no dependency of this package is reachable from
 it, which a test asserts rather than promises.
 
-The rules are `import vdi2770_validate`, and they are the layer with an opinion.
-The split is not cosmetic — a test fails if the reader can so much as import the
-rules — and it exists because a rule set is an opinion. If your customer's
-supplement disagrees with ours, or you want the parsed model for something other
-than a verdict, use the reader and leave the opinion behind:
+This package is that library plus a rule set. The split is not cosmetic — a test
+fails if the reader can so much as import the rules — and it exists because a rule
+set is an opinion. If your customer's supplement disagrees with ours, or you want
+the parsed model for something other than a verdict, take the reader and leave the
+opinion behind:
+
+```bash
+pip install vdi2770
+```
 
 ```python
 from vdi2770 import read_container_file
@@ -121,10 +122,11 @@ container = read_container_file("corpus/examples/container/documentcontainer.zip
 print(container.kind, len(container.members))
 ```
 
-The two travelled as two distributions up to 0.6.0, and the rules pinned the
-reader with a version range. That range was a standing way to be wrong: it had
-already let `pip` install a reader without the fix a release existed for. One
-install now, one version number, and nothing to resolve.
+The two carry the same version and are released together under one tag, and this
+package names the reader exactly — `vdi2770==0.7.0`, not a range. A range was a
+standing way to be wrong: it had already let `pip` install a reader without the
+fix a release existed for, so the correction never reached the people it was
+written for.
 
 ## The classification table, and a disagreement
 
@@ -136,7 +138,7 @@ German names and disagree on five English ones** (02-03, 02-04, 03-01, 03-04,
 English name never fails a document — it produces a note that shows both renderings.
 
 ```
-$ vdi2770 classes
+$ vdi2770-validate classes
 02-03  Bauteile                                   Assemblies   [sources disagree]
       English — IDTA 02004: 'Assemblies'   reference impl: 'Components'
 ```

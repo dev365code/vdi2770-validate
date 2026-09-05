@@ -2,10 +2,10 @@
 on (repo, workflow file, environment). Two publishers sharing that tuple would
 each be able to publish as the other.
 
-They were two workflow files on two tags while the reader was its own
-distribution. They are two jobs in one file now, and the reason is the ordering:
-`vdi2770-validate` is the name this project published under until 0.6.0, kept
-resolving as metadata and a dependency on `vdi2770`. Publish it first and the
+They were two workflow files on two tags, one per distribution, each released
+on its own schedule. They are four jobs in one file now, because the two halves
+are one release: same version, one tag, and `vdi2770-validate` pinning
+`vdi2770` exactly. That pin is an ordering. Publish the rules first and the
 index holds a distribution pip cannot resolve, under a number PyPI will not let
 anyone reuse. `needs:` states that; two files firing on two tags cannot.
 
@@ -93,23 +93,10 @@ def test_they_do_not_share_a_publishing_environment():
         f"publish as the other")
 
 
-def test_the_redirect_cannot_be_published_before_what_it_points_at():
-    """The ordering the two-tag arrangement could not express.
-
-    `vdi2770-validate` depends on `vdi2770`. Published first, it is permanently
-    unresolvable — the version number does not come back. `tools/check_release_order.py`
-    refuses that at run time; this asserts the workflow does not even offer it
-    the chance, by making the redirect's build wait on the other publish.
-    """
-    all_jobs = jobs(RELEASE)
-    redirect = next(n for n, b in publishers(RELEASE).items()
-                    if "vdi2770-validate" in b or "redirect" in n)
-    main = next(n for n in publishers(RELEASE) if n != redirect)
-
-    # Walk `needs:` up from the redirect's publisher; the main publish has to be
-    # somewhere above it. Asserting on one hop would pass the day a build job is
-    # inserted between them.
-    seen, todo = set(), [redirect]
+def upstream(all_jobs, start):
+    """Every job `start` waits on, however many hops away. Asserting on one hop
+    would pass the day a build job is inserted between two of them."""
+    seen, todo = set(), [start]
     while todo:
         job = todo.pop()
         if job in seen:
@@ -117,18 +104,44 @@ def test_the_redirect_cannot_be_published_before_what_it_points_at():
         seen.add(job)
         for m in re.finditer(r"^\s*needs:\s*(.+)$", all_jobs.get(job, ""), re.M):
             todo.extend(re.findall(r"[\w-]+", m.group(1)))
-    assert main in seen, (
-        f"{redirect} does not wait on {main} ({sorted(seen)}), so the redirect "
-        f"can be published before the package it redirects to")
+    return seen
+
+
+def test_the_rules_cannot_be_published_before_the_reader_they_pin():
+    """The ordering the two-tag arrangement could not express.
+
+    `vdi2770-validate` pins `vdi2770` exactly. Published first, it is
+    permanently unresolvable — the version number does not come back.
+    `tools/check_release_order.py` refuses that at run time; this asserts the
+    workflow does not even offer it the chance.
+
+    Which publisher is which is read from what its chain of jobs actually does,
+    not from what the jobs are called: a rename would otherwise move this test's
+    subject without failing it.
+    """
+    all_jobs = jobs(RELEASE)
+    pubs = publishers(RELEASE)
+
+    def chain(job):
+        return "".join(all_jobs[j] for j in upstream(all_jobs, job))
+
+    rules = [n for n in pubs if "--package vdi2770-validate " in chain(n)]
+    reader = [n for n in pubs if n not in rules]
+    assert len(rules) == 1 and len(reader) == 1, (
+        f"cannot tell the two publishers apart by what they publish: "
+        f"rules={rules}, reader={reader}")
+    assert reader[0] in upstream(all_jobs, rules[0]), (
+        f"{rules[0]} does not wait on {reader[0]}, so the rules can be "
+        f"published before the reader they pin")
 
 
 def test_each_publisher_checks_that_the_tag_is_the_version_it_publishes():
     """A tag that says 0.2.0 publishing a tree that says 0.1.9 is unrecoverable:
     the number is on PyPI forever and does not match the code.
 
-    One tag drives both distributions now, so both have to be checked against it
-    — the redirect carrying a stale version is how the old name goes on pointing
-    at a release nobody made.
+    One tag drives both distributions now, so both have to be checked against
+    it. Either half left on a stale number is a pair that was never built: the
+    tag says one release and the wheels are two.
     """
     body = RELEASE.read_text(encoding="utf-8")
     assert body.count('tag="${GITHUB_REF_NAME#v}"') == 2, (
@@ -140,11 +153,14 @@ def test_each_publisher_checks_that_the_tag_is_the_version_it_publishes():
         assert "exit 1" in compare, (
             f"the tag is compared to the version and nothing stops on a "
             f"mismatch: {compare!r}")
-    # And the redirect's version has to be read from the redirect's own manifest.
-    # Reading the root one would compare the tag against itself.
-    assert "packages/vdi2770-validate/pyproject.toml" in body, (
-        "nothing reads the redirect's own version, so its manifest can name a "
-        "release that was never made")
+    # And each half's version has to come from that half. Reading the same
+    # source twice compares the tag against one number and calls it two, which
+    # is precisely the mismatch this exists to catch.
+    reads = re.findall(r"^\s*pkg=\$\((.*)\)\s*$", body, re.M)
+    assert len(reads) == 2, f"the two versions are not read from anywhere: {reads}"
+    assert reads[0] != reads[1], (
+        f"both jobs read the version the same way ({reads[0]!r}), so one of "
+        f"them is comparing the tag against the other distribution's number")
 
 
 def test_a_publishing_workflow_refuses_a_version_the_index_already_has():
@@ -239,3 +255,32 @@ def test_every_workflow_that_reads_the_tag_history_fetches_it():
         assert all(d == "0" for d in depths), (
             f"{path.name} checks out with fetch-depth {depths} and then runs "
             f"something that reads the tag history")
+
+
+def test_each_build_asks_the_index_about_the_distribution_it_actually_builds():
+    """The question and the upload are separate steps, and nothing tied them
+    together.
+
+    Ask the index whether it already has `vdi2770` 0.7.0, get a clean answer,
+    and then run a build that produces `vdi2770-validate` instead: every
+    assertion above stays green, and a version goes onto the index that was
+    never checked. PyPI does not take it back, and the number does not come
+    round again.
+    """
+    for name, block in jobs(RELEASE).items():
+        asked = re.findall(r"check_version_is_new\.py --package (\S+)", block)
+        built = re.findall(r"python -m build(?:\s+(?!-)(\S+))?", block)
+        if not asked and not built:
+            continue
+        assert len(asked) == 1 and len(built) == 1, (
+            f"{name} asks the index about {asked} and builds {built}. A job "
+            f"that does one without the other leaves the pairing to whoever "
+            f"reads the file next.")
+        # Where each distribution is built from. The rules are the repository
+        # root, which `python -m build` takes as its default and writes as no
+        # argument at all.
+        where = {"vdi2770": "packages/vdi2770", "vdi2770-validate": ""}
+        assert asked[0] in where, f"{name} asks about an unknown distribution: {asked[0]}"
+        assert built[0] == where[asked[0]], (
+            f"{name} asks the index about {asked[0]} and then builds "
+            f"{built[0] or 'the repository root'}, which is the other one")

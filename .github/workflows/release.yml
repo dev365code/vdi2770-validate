@@ -3,25 +3,26 @@ name: release
 # Two distributions ship from this repository, and PyPI keys a trusted publisher
 # on (repo, workflow file, environment). Two publishers sharing that tuple would
 # each be able to publish as the other, so the environments differ: a job running
-# in `pypi` gets an OIDC token that names `pypi`, and the redirect's publisher
-# will not accept it.
+# in `pypi-vdi2770` gets an OIDC token that names it, and the other project's
+# publisher will not accept it.
 #
-# They are one workflow file because one of them must go second. `vdi2770` is the
-# project; `vdi2770-validate` is the name it published under until 0.6.0, kept
-# resolving as metadata and a dependency on `vdi2770`. Publish the redirect
-# first and the index holds a distribution pip cannot resolve, under a number
-# PyPI will not let anyone reuse. `needs:` states that ordering and the runner
-# enforces it; two workflows on two tags cannot say it at all.
-#
-# This used to be two files on two tags, `v*` and `sdk-v*`, when the reader was
-# published as its own distribution.
+# They are one workflow file because they are one release. `vdi2770` is the
+# reader and `vdi2770-validate` is the rule set built on it; they carry the same
+# version, go out under one tag, and the second pins the first exactly. That pin
+# is an ordering: publish the rules first and the index holds a distribution pip
+# cannot resolve, under a number PyPI will not let anyone reuse. `needs:` states
+# that ordering and the runner enforces it; two workflows on two tags cannot say
+# it at all, which is why this used to be two files on `v*` and `sdk-v*` and is
+# not any more.
 
 on:
   push:
     tags: ["v*"]
 
 jobs:
-  build:
+  # The reader goes first, and the whole gate runs here — before anything at all
+  # has been published, which is the only moment a refusal is still free.
+  build-reader:
     runs-on: ubuntu-latest
     steps:
       # `fetch-depth: 0` is load-bearing: three release-time assertions read
@@ -35,6 +36,11 @@ jobs:
       - name: Install
         run: |
           python -m pip install --upgrade pip build
+          # The reader first, from the working tree. The rules pin it exactly,
+          # and this commit's reader is the only thing that satisfies that pin
+          # before the release exists — going to an index here would run the
+          # gate against a reader nobody is publishing.
+          python -m pip install -e packages/vdi2770
           python -m pip install -e ".[dev]"
       # `make check`, not a copy of what it runs. The copy went stale the moment
       # the gate grew: this step listed six of nine targets, and the three it
@@ -56,35 +62,35 @@ jobs:
       - name: The tag must be the version
         run: |
           tag="${GITHUB_REF_NAME#v}"
-          pkg=$(python -c "import sys; sys.path.insert(0,'src'); import vdi2770_validate as v; print(v.__version__)")
+          pkg=$(python -c "import sys; sys.path.insert(0,'packages/vdi2770/src'); import vdi2770 as v; print(v.__version__)")
           test "$tag" = "$pkg" || { echo "tag $tag != package $pkg"; exit 1; }
       - name: Build
-        run: python -m build
+        run: python -m build packages/vdi2770 --outdir dist/
       - uses: actions/upload-artifact@v4
         with:
-          name: dist
+          name: dist-reader
           path: dist/
 
-  publish:
-    needs: build
+  publish-reader:
+    needs: build-reader
     runs-on: ubuntu-latest
-    environment: pypi
+    environment: pypi-vdi2770
     permissions:
       id-token: write        # Trusted Publishing; no API token is stored anywhere
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: dist
+          name: dist-reader
           path: dist/
       - uses: pypa/gh-action-pypi-publish@release/v1
 
-  # The old name, published only once the name it points at is installable.
-  build-redirect:
-    needs: publish
+  # The rules, published only once the reader they pin is installable.
+  build-rules:
+    needs: publish-reader
     runs-on: ubuntu-latest
     steps:
       # `fetch-depth: 0` again, for a different reason: the order gate below
-      # asks the tag history whether the package this redirects to was released,
+      # asks the tag history whether the reader this pins was released,
       # and a default checkout is `--depth 1 --no-tags`.
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
@@ -94,46 +100,47 @@ jobs:
       - name: Install
         run: python -m pip install --upgrade pip build packaging
       # The question this whole job order exists for, asked rather than assumed.
-      # `needs: publish` proves the upload step ran; it does not prove the index
-      # serves the file, and the redirect is unresolvable until it does. PyPI's
-      # JSON view can trail the upload by a few seconds, so the gate is given a
-      # few tries -- and still refuses at the end rather than guessing, because a
-      # redirect published against a package that is not there cannot be fixed
-      # under this version number.
-      - name: The package this redirects to must be on the index
+      # `needs: publish-reader` proves the upload step ran; it does not prove the
+      # index serves the file, and the rules are unresolvable until it does.
+      # PyPI's JSON view can trail the upload by a few seconds, so the gate is
+      # given a few tries -- and still refuses at the end rather than guessing,
+      # because rules published against a reader that is not there cannot be
+      # fixed under this version number.
+      - name: The reader this pins must be on the index
         run: |
           for attempt in 1 2 3 4 5; do
             if python tools/check_release_order.py; then exit 0; fi
             echo "the index does not serve it yet (attempt $attempt of 5); waiting"
             sleep 20
           done
-          echo "the package this redirects to never appeared on the index"
+          echo "the reader this pins never appeared on the index"
           exit 1
       - name: The index must not already have this version
         run: python tools/check_version_is_new.py --package vdi2770-validate --version "${GITHUB_REF_NAME#v}"
       - name: The tag must be the version
         run: |
           tag="${GITHUB_REF_NAME#v}"
-          pkg=$(grep -m1 '^version = ' packages/vdi2770-validate/pyproject.toml | cut -d'"' -f2)
+          pkg=$(python -c "import sys; sys.path.insert(0,'src'); import vdi2770_validate as v; print(v.__version__)")
           test "$tag" = "$pkg" || { echo "tag $tag != package $pkg"; exit 1; }
       - name: Build
-        run: python -m build packages/vdi2770-validate --outdir dist/
+        run: python -m build
       - uses: actions/upload-artifact@v4
         with:
-          name: dist-redirect
+          name: dist-rules
           path: dist/
 
-  publish-redirect:
-    needs: build-redirect
+  publish-rules:
+    needs: build-rules
     runs-on: ubuntu-latest
-    # Not `pypi`. The environment is half of what PyPI keys the publisher on, so
-    # sharing it here would let either job publish as the other package.
-    environment: pypi-redirect
+    # Not the reader's environment. The environment is half of what PyPI keys
+    # the publisher on, so sharing it would let either job publish as the other
+    # package.
+    environment: pypi-vdi2770-validate
     permissions:
       id-token: write
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: dist-redirect
+          name: dist-rules
           path: dist/
       - uses: pypa/gh-action-pypi-publish@release/v1

@@ -8,17 +8,15 @@ recursive-include tools *.py *.java *.md
 recursive-include corpus *
 recursive-include docs *.md *.json
 recursive-include .github *.yml
-# The reader ships inside this distribution and its source lives here; so does
-# the manifest for `vdi2770-validate`, the name this project published under
-# until 0.6.0, which is built from this repository too. An sdist without them
-# would run a suite that cannot import half of itself, and would not be able to
-# build the other distribution at all.
+# The reader is its own distribution and its source lives here. Its manifest and
+# its pytest settings travel too: an sdist of this repository without them runs
+# a suite that cannot import half of itself, and cannot build the other
+# distribution at all.
 recursive-include packages *.py *.toml *.md *.in *.ini *.json
 # Extensionless names need naming: the recursive-include patterns above are
 # by suffix, and LICENSE and NOTICE have none. The sdist gate caught the
 # NOTICE being missing here, which is exactly what it is for.
 include packages/vdi2770/LICENSE packages/vdi2770/NOTICE packages/vdi2770/src/vdi2770/py.typed
-include packages/vdi2770-validate/LICENSE packages/vdi2770-validate/NOTICE
 prune tests/fixtures
 # `recursive-include packages ... *.md` matches `.pytest_cache/README.md`, so an
 # sdist built in a tree somebody had run the suite in carried pytest's cache.

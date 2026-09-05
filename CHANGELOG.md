@@ -2,31 +2,43 @@
 
 ## 0.7.0 — unreleased
 
-**The two distributions are one, and the old name still installs it.** This
-project shipped as `vdi2770-validate` (the rules) and `vdi2770` (the reader),
-and the first declared a version range for the second. That range was a standing
-way to be wrong: it had already let `pip` install a reader without the fix a
-release existed for, and it had to be tightened to an exact version to stop it.
-`pip install vdi2770` now brings both halves, and there is nothing left to
-resolve. The layering has not moved — `import vdi2770` still reaches no
-dependency, which a test asserts rather than promises.
+**Two distributions, one release.** This project ships as `vdi2770-validate`
+(the rules) and `vdi2770` (the reader), and the first declared a version *range*
+for the second. That range was a standing way to be wrong: it had already let
+`pip` install a reader without the fix a release existed for, so the correction
+never reached the people it was written for. Worse, the range it was tightened
+to named `0.6.2` — a reader version that was never published at all, so the pin
+could not have resolved on the day it shipped.
 
-`vdi2770-validate` goes on being published, as metadata and a dependency on
-`vdi2770` and nothing else. A rename on a package index is not a rename: the old
-name keeps resolving to the last thing published under it, so without this,
-anyone who does not read a changelog installs 0.6.0 forever. The
-`vdi2770-validate` command and `import vdi2770_validate` are unchanged, so
-nothing anyone automated has to change. The redirect owns no import name at all,
-which is the only safe shape for it — two distributions shipping
-`vdi2770_validate/` would install over each other, `pip` does not refuse that,
-and uninstalling the redirect would then delete the tool.
+The two halves now carry the same version, go out under one tag, and the rules
+name the reader **exactly**: `vdi2770==0.7.0`. There is no version of one left
+to pair with a different version of the other. The reader jumps from 0.6.2 to
+0.7.0 with no change to its code; the number is now the pair, not the package.
+Nothing anyone typed changes — `pip install vdi2770-validate`, the
+`vdi2770-validate` command and `import vdi2770_validate` are all as they were,
+and `pip install vdi2770` still gets the reader on its own, with no
+dependencies.
 
-The release gate that made the reader ship before the rules that pinned it now
-makes the package ship before the redirect that points at it, and it is the same
-gate: a distribution published against a dependency that is not on the index is
-unresolvable under a number PyPI does not hand back. The reader's releases went
-out as `sdk-v*` tags and those versions are on PyPI; the gates read both
-spellings, because a rename of the evidence is not a deletion of it.
+Folding the two into a single distribution was built first and then put down,
+and the reason belongs here rather than in a commit nobody reads. A name on a
+package index cannot be vacated: whatever was published under a name goes on
+resolving for anyone who types it. Moving the same import package from one
+distribution to another therefore has `pip` write those files and then delete
+them — it installs the new distribution first, then uninstalls the old one from
+the old record, which lists the very same paths. It reports success, satisfies
+`pip check`, and cannot run. Reversing the direction moves the harm to the other
+name rather than removing it. A gate now keeps the two distributions from ever
+claiming one import name, so this cannot arrive by accident later.
+
+The release gate that made the reader ship before the rules that pinned it does
+the same job under a stronger question. A range could only be wrong in one
+direction — ask for more than exists — and a stale pin was invisible, because
+`>=0.6.2` is satisfied by 0.7.0 and by 0.6.2 alike. An exact pin that names any
+other version means the tag and the wheel disagree about which pair went out,
+and no index can report that. The reader's releases went out as `sdk-v*` tags
+and those versions are on PyPI; from 0.7.0 both halves go out on one `v*` tag,
+and the gates read both spellings, because a rename of the evidence is not a
+deletion of it.
 
 **Upgrading from 0.6.0 will turn some green runs red.** Five rules can do it:
 `X6` and `Z13`, both new errors, `Z6`, promoted from warning to error, `Z10`,
@@ -1546,7 +1558,7 @@ below is measured on this machine, before and after, on the same input.
 Three gates that ask what `make check` cannot ask of itself.
 
 - **`make mutations`** takes every claim this project makes about a gate, breaks
-  the thing that gate protects, and checks the gate notices — 103 rows, each
+  the thing that gate protects, and checks the gate notices — 107 rows, each
   naming the pytest selection or the tool that has to go red. The harness checks
   itself as hard as it checks the code: a row whose anchor no longer appears
   exactly once is an error rather than a pass; every apply and restore clears
@@ -1556,7 +1568,7 @@ Three gates that ask what `make check` cannot ask of itself.
   broken row, not a kill; and **one row must survive**, because a harness that
   reports red for a change that does not matter is reporting red for everything.
   It found two holes on its first full run.
-- **`make standalone`** runs each of the 73 test files on its own. A suite is a
+- **`make standalone`** runs each of the 72 test files on its own. A suite is a
   shared process, so a file can pass because an earlier one imported something —
   `tests/test_offline.py` did exactly that for weeks, patching `socket.socket`
   and then importing `urllib.request`, which breaks `class SSLSocket(socket)`

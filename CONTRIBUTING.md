@@ -16,17 +16,18 @@ test holds the lapse closed: it fails if any commit newer than it is unsigned.
 ## Before you open a pull request
 
 ```bash
+python -m pip install -e packages/vdi2770
 python -m pip install -e ".[dev]"
 make check
 ```
 
-One install, both halves. The reader used to be a separate distribution that had
-to be installed first and from this tree — skipping that line resolved `vdi2770`
+Two installs, and the order is the point. This repository builds two
+distributions — the reader `vdi2770` and the rules `vdi2770-validate` — and the
+rules pin the reader exactly. Skip the first line and pip resolves `vdi2770`
 from PyPI, so the gate you ran was the published reader rather than the one in
-the commit you were changing, which is exactly the split that shipped a release
-whose own fix never reached the user. It ships inside this distribution now, so
-there is no pin left to resolve. CI makes the same single install, and a test
-compares the two recipes.
+the commit you were changing: that is exactly the split that shipped a release
+whose own fix never reached the user. CI installs the same two, in the same
+order, and a test compares the two recipes.
 
 `make check` also builds distributions, which needs `pip install build`.
 

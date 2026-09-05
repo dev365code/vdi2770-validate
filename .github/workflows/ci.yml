@@ -25,10 +25,11 @@ jobs:
       - name: Install
         run: |
           python -m pip install --upgrade pip
-          # One install, both halves. The reader was its own distribution and
-          # had to go first, from the working tree, or pip resolved the pin from
-          # an index and the run was about a different reader than the commit.
-          # It ships inside this one now, so there is no pin left to resolve.
+          # The reader first, and from the working tree. The rules pin it
+          # exactly, so a pip that reaches an index here would either fail (the
+          # version is not published yet) or install a reader that is not the
+          # one in this commit -- and the run would be about that instead.
+          python -m pip install -e packages/vdi2770
           python -m pip install -e ".[dev]"
       - name: Lint
         run: python -m ruff check src tests tools packages

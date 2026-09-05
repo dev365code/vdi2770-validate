@@ -1,0 +1,8 @@
+# setuptools ships the package source by default and nothing else. The tests are
+# the reason to trust the package, so they travel with it -- including the two
+# helpers they import by name, which have no `test_` prefix and were the only
+# thing missing when this file was briefly deleted: the sdist built, the suite
+# ran, and two tests failed on `No module named 'nodisk'`.
+include LICENSE NOTICE README.md API.json pytest.ini
+recursive-include tests *.py
+recursive-include src *.py py.typed

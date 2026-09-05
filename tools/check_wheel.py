@@ -35,7 +35,9 @@ declaration is the thing that breaks. The filesystem is not.
 """
 from __future__ import annotations
 
+import email
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -44,20 +46,20 @@ import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-# One distribution carrying two import packages, and one carrying none. The
-# reader was its own wheel until 0.6.0; it ships inside this one now, which is
-# why `check` takes a list of package roots rather than a single name — a wheel
-# with two packages in it had every file of the second one flagged as shipped
-# from outside the first.
+# Two distributions, one import package each, and the sets must stay disjoint --
+# two wheels shipping `vdi2770_validate/` would install over each other without
+# complaint, and uninstalling either would delete files the other is still
+# using. `check` takes a *list* of package roots because a wheel briefly carried
+# two, and every file of the second was flagged as shipped from outside the
+# first; the shape is kept so that a wheel growing a second package is measured
+# rather than misreported.
 DISTRIBUTIONS = [
+    (ROOT / "packages" / "vdi2770",
+     [(ROOT / "packages" / "vdi2770" / "src", "vdi2770")],
+     ("LICENSE", "NOTICE")),
     (ROOT,
-     [(ROOT / "src", "vdi2770_validate"),
-      (ROOT / "packages" / "vdi2770" / "src", "vdi2770")],
-     ("LICENSE", "NOTICE", "THIRD_PARTY.md", "packages/vdi2770/NOTICE")),
-    # The old name, published as metadata and a dependency. No package at all is
-    # the property that matters: two distributions shipping `vdi2770_validate/`
-    # install over each other, and pip does not refuse it.
-    (ROOT / "packages" / "vdi2770-validate", [], ("LICENSE", "NOTICE")),
+     [(ROOT / "src", "vdi2770_validate")],
+     ("LICENSE", "NOTICE", "THIRD_PARTY.md")),
 ]
 # A container that produces findings, used to prove the installed wheel runs.
 SMOKE = ROOT / "corpus" / "examples" / "missingdocuments" / "folders.zip"
@@ -71,11 +73,10 @@ NO_BYTECODE = dict(os.environ, PYTHONDONTWRITEBYTECODE="1")
 
 
 def _distribution(project: Path) -> str:
-    """What the manifest calls it. The repository directory is named after the
-    other distribution built here, so `project.name` labelled the main wheel
-    with the redirect's name."""
-    import re
-
+    """What the manifest calls it, not what the directory is called. The
+    repository directory is `vdi2770-validate` and so is one of the
+    distributions built inside it, so `project.name` labelled two different
+    wheels with the same name."""
     found = re.search(r'^name = "([^"]+)"',
                       (project / "pyproject.toml").read_text(encoding="utf-8"), re.M)
     return found.group(1) if found else project.name
@@ -156,6 +157,58 @@ def check(project: Path, roots: list, notices: tuple, wheel: Path,
     return problems
 
 
+def _metadata(wheel: Path):
+    """A built wheel's own `METADATA`, as a mail message."""
+    with zipfile.ZipFile(wheel) as z:
+        name = next(n for n in z.namelist() if n.endswith(".dist-info/METADATA"))
+        return email.message_from_string(z.read(name).decode("utf-8"))
+
+
+def pin_names_what_was_built(wheels: list) -> list:
+    """The rules pin the reader exactly; the pin has to name the reader this
+    build produced.
+
+    Read from the two artifacts rather than from the two manifests. Everything
+    else that checks this reads `pyproject.toml`, and a manifest is a claim
+    about what a build will do -- setuptools normalises versions on the way into
+    metadata, and a local or pre-release suffix that a string comparison of
+    manifests calls equal is a different requirement on the index.
+
+    `--no-deps` below is what makes this necessary: the smoke test installs both
+    wheels and never resolves anything, on purpose, so it cannot notice that the
+    pair it installed is not a pair pip could ever assemble. On the index there
+    is no `--no-deps`, and a pin naming a version nobody published is an install
+    that fails for everyone, permanently, under a number PyPI does not hand
+    back.
+    """
+    built = {}
+    needed = None
+    for wheel in wheels:
+        meta = _metadata(wheel)
+        built[meta["Name"]] = meta["Version"]
+        if meta["Name"] == "vdi2770-validate":
+            needed = [v for v in (meta.get_all("Requires-Dist") or [])
+                      if re.match(r"^vdi2770(?![\w.-])", v)]
+    if needed is None:
+        return ["no wheel here declares itself as vdi2770-validate"]
+    if len(needed) != 1:
+        return [f"vdi2770-validate requires {needed}; it depends on the reader "
+                f"exactly once or the order gate has no single version to check"]
+    asked = re.search(r"==\s*([^\s,;]+)", needed[0])
+    if not asked:
+        return [f"vdi2770-validate asks for {needed[0]!r}, which is not an exact "
+                f"pin, so the pair that installs is whatever the index holds"]
+    if "vdi2770" not in built:
+        return ["the reader was not built here, so the pin cannot be checked "
+                "against the artifact it names"]
+    if asked.group(1) != built["vdi2770"]:
+        return [f"vdi2770-validate {built['vdi2770-validate']} pins the reader at "
+                f"{asked.group(1)} and the reader built here is "
+                f"{built['vdi2770']}. Published as a pair, this is an install "
+                f"nobody can complete."]
+    return []
+
+
 def smoke(wheels: list) -> list:
     """Install what was built and run the command line out of it.
 
@@ -233,6 +286,7 @@ def main() -> int:
             # function that returns problems meant the run said both things.
             if not found:
                 print(f"{label}: wheel carries its licences and its data")
+        problems += pin_names_what_was_built(built)
         problems += smoke(built)
     if problems:
         for p in problems:

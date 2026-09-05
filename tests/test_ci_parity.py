@@ -182,31 +182,41 @@ def test_make_check_depends_on_every_gate():
         f"exemption above with a reason.")
 
 
-def test_the_version_is_in_one_place():
-    """One distribution, one version.
+def test_every_file_that_carries_the_version_carries_the_same_one():
+    """One release in two parts, and four files that can disagree about which
+    release it is.
 
-    The reader had a `pyproject.toml` of its own and its own number, which is
-    what a separately published library needs. It is not one any more: it ships
-    inside `vdi2770`, and two numbers for one artifact is a way for a report to
-    name a version nobody can install.
+    Each half has a manifest and a `__version__`, and the halves are pinned to
+    each other exactly. `import vdi2770; vdi2770.__version__` is what a report
+    prints, so code ahead of its manifest names a release nobody can install,
+    and a manifest ahead of its code publishes that number for something else.
+    The exact pin then turns either into an install that cannot resolve.
 
     This is a claim about the repository, so it is here and not in the reader's
     own suite — that suite must not read files above the package, because an
     sdist of it contains the package and nothing else.
     """
-    root = re.search(r'^version = "([^"]+)"',
-                     (ROOT / "pyproject.toml").read_text(encoding="utf-8"),
-                     re.M).group(1)
-    reader = re.search(r'^__version__ = "([^"]+)"',
-                       (ROOT / "packages" / "vdi2770" / "src" / "vdi2770" /
-                        "__init__.py").read_text(encoding="utf-8"), re.M).group(1)
-    assert reader == root, (
-        f"the distribution is {root} and the reader inside it says {reader}. "
-        f"`import vdi2770; vdi2770.__version__` is what a report prints, and it "
-        f"would name a release nobody can install.")
-    assert not (ROOT / "packages" / "vdi2770" / "pyproject.toml").exists(), (
-        "the reader has a manifest of its own again, so there are two versions "
-        "and two names for one distribution")
+    def stated(path, pattern):
+        found = re.search(pattern, path.read_text(encoding="utf-8"), re.M)
+        assert found, f"{path} states no version"
+        return found.group(1)
+
+    reader = ROOT / "packages" / "vdi2770"
+    said = {
+        "pyproject.toml":
+            stated(ROOT / "pyproject.toml", r'^version = "([^"]+)"'),
+        "packages/vdi2770/pyproject.toml":
+            stated(reader / "pyproject.toml", r'^version = "([^"]+)"'),
+        "src/vdi2770_validate/__init__.py":
+            stated(ROOT / "src" / "vdi2770_validate" / "__init__.py",
+                   r'^__version__ = "([^"]+)"'),
+        "packages/vdi2770/src/vdi2770/__init__.py":
+            stated(reader / "src" / "vdi2770" / "__init__.py",
+                   r'^__version__ = "([^"]+)"'),
+    }
+    assert len(set(said.values())) == 1, (
+        f"the two halves go out under one tag and these disagree about which "
+        f"release that is: {said}")
 
 
 def test_ci_runs_every_python_any_manifest_advertises():
@@ -214,16 +224,15 @@ def test_ci_runs_every_python_any_manifest_advertises():
 
     The existing floor test reads one manifest and nothing else, so the reader
     package advertised `Programming Language :: Python :: 3.13` while CI ran 3.9
-    and 3.12 and no interpreter ever confirmed it. The reader's manifest is gone
-    and the redirect's is here, making the same promise to the same reader — and
-    its own `requires-python` has to hold too, or it installs on a Python the
-    package it points at refuses and the error names the wrong package.
+    and 3.12 and no interpreter ever confirmed it. Two distributions means two
+    manifests making the promise, and the reader's `requires-python` has to hold
+    on its own — it is installed by name, by people who never see the other one.
     """
     matrix = re.search(r"python-version:\s*\[(.*?)\]", CI.read_text(encoding="utf-8"))
     assert matrix, "CI declares no python-version matrix"
     tested = set(re.findall(r'"([0-9.]+)"', matrix.group(1)))
 
-    for name in ("pyproject.toml", "packages/vdi2770-validate/pyproject.toml"):
+    for name in ("pyproject.toml", "packages/vdi2770/pyproject.toml"):
         text = (ROOT / name).read_text(encoding="utf-8")
         block = re.search(r"^classifiers = \[(.*?)^\]", text, re.M | re.S)
         assert block, f"{name} declares no classifiers"
@@ -464,62 +473,35 @@ def test_the_publishing_workflow_checks_the_order_at_all():
                 "the index whether the pinned reader was published: " + line.strip())
 
 
-def test_the_redirects_floor_names_a_release_that_exists_or_is_being_made():
-    """What this enforces is release *order*, not the floor's value.
+def test_this_release_number_was_not_already_spent_in_the_old_namespace():
+    """Reader releases went out as `sdk-v*` while it was published on its own
+    schedule; from this release both halves go out under one `v*` tag.
 
-    `vdi2770-validate` is metadata and a dependency on `vdi2770`, and the floor
-    of that dependency has exactly one open question: is it something a user can
-    already install, or is it about to be published alongside it? If it is
-    neither, the redirect is unresolvable from the moment it is uploaded, and
-    the version number does not come back.
+    The two spellings share their numbers and not their meaning, so a number
+    already spent on the reader alone cannot be spent again on the pair: PyPI
+    refuses a re-upload, and it would refuse it after the tag was pushed and the
+    first half of the release had already gone out under a number that does not
+    come back.
 
-    That failed once from the other direction, when the validator was the one
-    pinning: the pin said `vdi2770~=0.5.0` for a reader that existed nowhere but
-    a working tree. The shape of the mistake did not move with the pin.
+    This replaces a test that asked whether the pin's *floor* named something
+    installable. The pin is exact now and gated against this repository's own
+    version, which answers that question by construction; this one is what the
+    exact pin does not answer.
     """
     import subprocess
 
-    from packaging.requirements import Requirement
-    from packaging.version import Version
-
-    shim = (ROOT / "packages" / "vdi2770-validate" / "pyproject.toml").read_text(
-        encoding="utf-8")
-    deps = re.search(r"^dependencies = \[(.*?)\]", shim, re.M | re.S)
-    assert deps, "the redirect depends on nothing, so it redirects to nothing"
-    pin = next(Requirement(m) for m in re.findall(r'"([^"]+)"', deps.group(1))
-               if Requirement(m).name == "vdi2770")
-    floors = [s.version for s in pin.specifier if s.operator in ("~=", ">=", "==")]
-    assert floors, f"{pin} has no lower bound; an older release satisfies it"
-    floor = Version(max(floors, key=Version))
-
-    tags = subprocess.run(["git", "tag", "--list", "v*", "sdk-v*"], cwd=ROOT,
+    here = re.search(r'^version = "([^"]+)"',
+                     (ROOT / "pyproject.toml").read_text(encoding="utf-8"),
+                     re.M).group(1)
+    tags = subprocess.run(["git", "tag", "--list", "sdk-v*"], cwd=ROOT,
                           capture_output=True, text=True)
     if tags.returncode != 0:
         import pytest
         pytest.skip("not a git checkout; the tag history is not available here")
-    published = {Version(re.sub(r"^(sdk-)?v", "", tag))
-                 for tag in tags.stdout.split() if tag}
-    here = Version(re.search(r'^version = "([^"]+)"',
-                             (ROOT / "pyproject.toml").read_text(encoding="utf-8"),
-                             re.M).group(1))
-
-    assert floor in published or floor <= here, (
-        f"the redirect asks for vdi2770>={floor}, which is neither a published "
-        f"release ({sorted(str(v) for v in published)}) nor satisfied by the one "
-        f"this repository is making ({here}). Published on this floor, "
-        f"`pip install vdi2770-validate` gives users something pip cannot resolve.")
-
-    # The live half. Only the release workflow can check whether the package is
-    # actually on the index, because only it knows a release is happening; what
-    # this asserts is that the workflow does.
-    if floor not in published:
-        body = (ROOT / ".github" / "workflows" / "release.yml").read_text(
-            encoding="utf-8")
-        assert "tools/check_release_order.py" in body, (
-            "the redirect names a release nobody can install yet, and "
-            "release.yml does not run tools/check_release_order.py — so nothing "
-            "stops it being published first")
-
+    spent = {t for t in tags.stdout.split() if t}
+    assert f"sdk-v{here}" not in spent, (
+        f"the reader already went out as sdk-v{here}, so publishing {here} as "
+        f"the pair would be a second upload of a number PyPI has already seen.")
 
 def test_a_target_outside_the_gate_has_a_written_reason():
     """A Makefile target `make check` does not run is a decision, and the place
@@ -741,30 +723,61 @@ def test_a_gate_that_starts_python_does_not_leave_bytecode_behind():
 
 
 
-def test_ci_installs_this_repository_from_the_tree_and_only_this_repository():
+def test_ci_installs_both_halves_from_this_tree_and_the_reader_first():
     """Deleting an editable install from CI leaves nothing red.
 
     `test_contributing_installs_what_ci_installs` checks the other direction —
     that whatever CI installs is written down — so removing one shrinks what it
     has to check and it passes.
 
-    Two claims, and the second is the one the rename introduced. The reader was
-    a separate distribution installed from `packages/vdi2770` before the
-    validator that pinned it; drop that step and pip resolved the pin from an
-    index, so every result in the run was about a different reader than the
-    commit. There is nothing to resolve now — but a second editable install
-    appearing here is exactly what a half slipping back out into its own
-    distribution would look like, and it would look like an ordinary CI edit.
+    Two halves, two installs, and the order carries the weight. The rules pin
+    the reader exactly. Install the rules first and pip goes to an index for a
+    version nobody has published yet; on the day it *is* published, that same
+    line quietly installs the released reader instead of the one in this commit,
+    and every result in the run is about a different tree. That is not
+    hypothetical -- it is the split that shipped a release whose own fix never
+    reached the user.
     """
     editable = [c for c in ci_commands()
                 if c.startswith("python -m pip install -e ")]
-    assert editable, (
-        "CI does not install this repository from the tree, so the run is about "
-        "whatever the index happens to hold")
-    assert len(editable) == 1, (
-        f"CI makes {len(editable)} editable installs: {editable}. One "
-        f"distribution ships from this repository, and the reader travels inside "
-        f"it; a second install means something is being resolved separately.")
-    assert "packages/" not in editable[0], (
-        f"CI installs a package directory rather than the repository: "
-        f"{editable[0]}. Both halves ship from the root manifest.")
+    assert len(editable) == 2, (
+        f"CI makes {len(editable)} editable installs: {editable}. This "
+        f"repository builds two distributions and both have to come from the "
+        f"tree, or the run is partly about whatever the index holds.")
+    assert editable[0].endswith("packages/vdi2770"), (
+        f"CI installs {editable[0]} before the reader. The rules pin the reader "
+        f"exactly, so pip resolves that pin from an index instead of from this "
+        f"commit.")
+    assert "packages/" not in editable[1], (
+        f"CI's second install is {editable[1]}, not the repository root")
+
+
+def test_nothing_in_the_fast_suite_installs_from_an_index():
+    """`make check` is offline, and that is the property this tool sells: it is
+    what lets the thing run inside a plant network with no route out.
+
+    Nothing enforced it. A test added with the packaging work installed this
+    tree with `pip install <root>`, which goes to PyPI for the runtime
+    dependency, and it passed everywhere anyone ran it -- on a laptop with a
+    network, and in CI, which also has one. The promise held exactly where
+    nobody could check it, which is the shape of every claim in this repository
+    that turned out to be false.
+
+    Scoped to `pip install`: an index is the only thing in `make check` that
+    needs a route out, and `--no-index` is the flag that refuses one. The
+    packaging gates that do install run outside the fast suite, from wheels they
+    built themselves, and pass that flag.
+    """
+    offenders = []
+    for suite in (ROOT / "tests", ROOT / "packages" / "vdi2770" / "tests"):
+        for path in sorted(suite.rglob("test_*.py")):
+            text = path.read_text(encoding="utf-8")
+            for found in re.finditer(r'"pip"\s*,\s*"install"', text):
+                call = text[found.start():found.start() + 400]
+                if "--no-index" not in call:
+                    line = text[:found.start()].count("\n") + 1
+                    offenders.append(f"{path.relative_to(ROOT)}:{line}")
+    assert not offenders, (
+        f"these install from an index inside `make check`, which is supposed to "
+        f"run with no route out: {offenders}. Build the artifact and install it "
+        f"with --no-index, or move the check to a target CI runs separately.")
