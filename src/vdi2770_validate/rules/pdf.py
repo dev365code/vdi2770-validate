@@ -128,45 +128,53 @@ def check(container, document, facts_for) -> Iterator[Finding]:
             # conforming file can carry a long comment, and the scan can end
             # inside one -- so nothing here says it is.
             #
-            # What it is depends on where the file sits, and the catalogue
-            # already carries that: `_targets` qualifies a member either because
-            # metadata declared it or because its name is reserved, and the
-            # second is an obligation VDI 2770 puts on the name rather than
-            # anything this tool invented. A reserved main document has to be a
-            # PDF -- the recipient's system opens it as one -- so a scan that
-            # could not confirm it has not passed it. An ordinary attachment
-            # carries no such duty, and there is nothing to report.
+            # What it is worth depends on where the file sits. Every declared
+            # rendition owes something: `M6` reads "Other formats may accompany
+            # it but cannot replace it", so a version has to have a PDF, and
+            # `_targets` scans the declared renditions and the reserved name.
+            # There is no member here with no duty at all, which is why silence
+            # was wrong for both. The reserved name owes more: the recipient's
+            # system opens it as a PDF whatever this scan could confirm, so that
+            # one is an error and the rest are a warning `M6` does not cover.
             #
-            # Same observation, different obligation, so a different verdict.
-            # The sentence stays with the observation: it never says the file is
+            # Same observation, two obligations, two strengths. The sentence
+            # stays with the observation either way: it never says the file is
             # not a PDF, because that is exactly what was not established.
-            # By the name, not by why the member came to be scanned. A
-            # reserved main document is usually declared as well, and then
-            # `_targets` qualifies it for the declaration and the reason reads
-            # `declared as application/pdf` -- the obligation is on the name and
-            # does not go away when the metadata also mentions it.
-            if (container.kind is Kind.DOCUMENTATION
-                    and folder_path(name) == MAIN_PDF):
-                r = rule("P1")
-                yield Finding(
-                    r, "This file could not be confirmed to be a PDF document",
-                    where,
-                    # No number: a rule module may not import a parser, which
-                    # is the same reason `Stopped` is handed its ceiling rather
-                    # than reading one. The sentence does not need it.
-                    detail=f"{RESERVED}, so it has to be one; the scan looked as "
-                           f"far into it as it looks and found no indirect "
-                           f"object. Whether there is one beyond that is not "
-                           f"known",
-                    fix="If this is a real PDF, re-export it: a file that fills "
-                        "its own beginning with `obj` before its first indirect "
-                        "object is not something a producer writes, and whatever "
-                        "wrote this is worth looking at. If it is not a PDF, the "
-                        "name is reserved and the recipient's system will open it "
-                        "as one, so put the main document here. If you believe "
-                        "this is a conforming file this tool cannot read, please "
-                        "report it with the file.")
-            continue
+            #
+            # `as_about` on both, because the limit that ended the scan is ours.
+            # It is also what keeps `read.complete` honest -- a report saying it
+            # stopped looking and `complete: true` in the same breath is the
+            # contract `docs/scope.md` writes down.
+            #
+            # No number in either sentence: a rule module may not import a
+            # parser, the same reason `Stopped` is handed its ceiling.
+            reserved = (container.kind is Kind.DOCUMENTATION
+                        and folder_path(name) == MAIN_PDF)
+            r = rule("P1" if reserved else "P5")
+            yield Finding(
+                r,
+                "This file could not be confirmed to be a PDF document" if reserved
+                else r.title,
+                where,
+                detail=(f"{RESERVED}, so it has to be one; " if reserved else "")
+                       + "the scan looked as far into it as it looks and found "
+                         "no indirect object. Whether there is one beyond that "
+                         "is not known",
+                fix=("If this is a real PDF, re-export it: a file that fills its "
+                     "own beginning with `obj` before its first indirect object "
+                     "is not something a producer writes, and whatever wrote "
+                     "this is worth looking at. If it is not a PDF, the name is "
+                     "reserved and the recipient's system will open it as one, "
+                     "so put the main document here. If you believe this is a "
+                     "conforming file this tool cannot read, please report it "
+                     "with the file.") if reserved else None,
+                as_about=About.TOOL)
+            # And then fall through. Whether the file is a PDF document says
+            # nothing about the other three facts -- the header, the encryption
+            # flag and the PDF/A claim are read from bytes no indirect object had
+            # to be found for. Skipping them threw away what the scan did settle:
+            # a declared rendition holding `/Encrypt` lost its `P2` outright, so
+            # a container that came back with a warning came back clean.
         if facts.encrypted:
             r = rule("P2")
             yield Finding(r, r.title, where)

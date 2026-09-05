@@ -88,7 +88,7 @@ def as_text(report: Report, show_info: bool = True) -> str:
     counts = {s: report.count(s) for s in Severity}
     lines.append("")
     # And how many of the errors are this tool declining to look rather than
-    # anything the sender packed. Seven rules are `about: tool` and all seven are
+    # anything the sender packed. Eight rules are `about: tool` and all eight are
     # errors, so that exit 0 can never mean "checked" -- every one of their
     # titles says so, and the count did not. A supplier read `1 error(s)` under a
     # remedy opening "Nothing here is necessarily wrong with the container", and

@@ -88,8 +88,8 @@ are in [docs/scope.md](https://github.com/dev365code/vdi2770-validate/blob/main/
 - **Rules are data.** [`rules.json`](https://github.com/dev365code/vdi2770-validate/blob/main/src/vdi2770_validate/data/rules.json), rendered as [docs/rules.md](https://github.com/dev365code/vdi2770-validate/blob/main/docs/rules.md) — each
   rule carries where its requirement comes from, a remedy sentence, and — where the
   reference implementation checks the same thing — the message keys it uses.
-- **25 of 38 rules have a minimal fixture pair** — a container that violates the rule
-  and a conforming one differing in as little as a single member. A 26th has a violating
+- **26 of 39 rules have a minimal fixture pair** — a container that violates the rule
+  and a conforming one differing in as little as a single member. A 27th has a violating
   fixture and no counterpart, because there is no conforming version of *this file is not
   a ZIP*. The rest are exercised by the vendored corpus. A rule that fires nowhere fails
   the build.

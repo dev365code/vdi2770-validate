@@ -13,7 +13,7 @@ check that — the normative text is paywalled.
 
 ## How much of this was measured
 
-It is measured now. All 46 containers in `corpus/` and
+It is measured now. 46 of the 47 containers in `corpus/` and
 `tests/fixtures/` were put through the reference implementation at its pinned commit
 `e47c13c`, with the locale forced to `en_US`, and the result is checked in at
 [`docs/oracle-sweep.json`](oracle-sweep.json). `tools/capture_oracle.py --check`
@@ -26,8 +26,10 @@ A container added after a sweep carries our column and an empty one for the
 reference until the next run, named in the sweep's `_unswept` block with the
 reason. **Every count on this page excludes those**, because an empty
 `reference` means "we never asked it", and reading that as "it reported nothing"
-invents a disagreement with a tool that has never seen the container. There are
-none outstanding right now.
+invents a disagreement with a tool that has never seen the container. One is
+outstanding: `p5-unconfirmed-pdf.zip`, added for a rule the reference has no
+counterpart to — it folds a scan that cannot answer into "not a PDF", so there is
+no verdict of its to disagree with.
 
 One thing the first CI run settled that no local run could: the reference's
 verdicts on the other 44 containers came back **byte-identical** to the ones

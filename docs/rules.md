@@ -12,9 +12,9 @@ tool, because both are errors on purpose and severity cannot carry the differenc
 - **`table`** (2) — a freely published table says so (IDTA 02004)
 - **`container`** (4) — mechanics of ZIP and XML — true without VDI 2770
 - **`reference`** (13) — observed in the MIT reference implementation, **not** verified against the guideline, which is paywalled
-- **`ours`** (18) — our own judgement, and it carries a reason
+- **`ours`** (19) — our own judgement, and it carries a reason
 
-38 rules.
+39 rules.
 
 ## container
 
@@ -283,6 +283,14 @@ Reference implementation: `processor:REP_MESSAGE_015` (displayed as `REP_015`). 
 Why this is ours: Verifying PDF/A conformance needs a full PDF/A validator. Reporting a claim as a verdict would be a lie, so we report it as a claim and say so every time.
 
 **Remedy.** Run a PDF/A validator such as veraPDF if you need the claim verified. This tool only confirms that a claim is present and well-formed.
+
+### `P5` — A declared PDF could not be confirmed to be a PDF document
+
+*error* · obligation `ours` · **about: this tool**
+
+Why this is ours: The scan for an indirect object is bounded, and a file can end that scan without answering it -- a comment is legal between any two tokens, so a conforming file may in principle reach the bound. Reporting that as "not a PDF" would be a fact about our budget dressed as a fact about the file, and reporting nothing let a budget pass for a verdict: the sole declared rendition of a document could be a file nobody could confirm and the container came back clean. An error because that is this project's one policy for every limit it declines to spend -- if we did not look, exit 0 tells somebody we did -- and because every declared rendition owes something: `M6` says other formats may accompany a PDF and cannot replace it. The reserved main document draws `P1` instead, where the recipient's system will open the file as a PDF whatever we could confirm.
+
+**Remedy.** If this is a real PDF, re-export it and look at whatever wrote it: a file that fills its own beginning with `obj` before its first indirect object is not something a producer writes. If it is not a PDF, correct the declared FileFormat or replace the file. If you believe this is a conforming file this tool cannot read, please report it with the file.
 
 ## schema
 

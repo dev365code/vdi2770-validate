@@ -192,6 +192,7 @@ TOOL_RULES = {
     "X4": "the schema checker would not follow this document to the end",
     "X5": "a check in this tool raised and did not finish — a bug of ours, not a container",
     "X6": "the metadata is well-formed and this tool did not model it — our limit,\n           whether the document alone is too big or the read has spent its budget",
+    "P5": "a declared PDF the scan for an indirect object ended without answering\n           — our bound, and nothing about what the sender packed",
     "Z13": "documents delivered as folders, which this tool does not open — its limit,\n           not the delivery's fault",
     "Z5": "the archive is over a budget this tool sets for untrusted input",
     "Z6": "the tree is deeper than this tool opens",

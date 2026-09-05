@@ -322,7 +322,7 @@ rest of these entries are about — and that one was itself wrong twice.
   action they can take.
 
 - **The summary says how many of the errors are this tool declining to look.**
-  Seven rules are `about: tool` and all seven are errors, so that exit 0 can
+  Eight rules are `about: tool` and all eight are errors, so that exit 0 can
   never mean *checked* — a policy this release does not change. Every one of
   their titles says the tool declined. The count did not: a supplier read
   `1 error(s)` as the last line of a report whose only error carried a remedy
@@ -1638,10 +1638,11 @@ Boundary findings — the module edges rather than the verdicts. The user-facing
 ones are above in the same section.
 
 - **One severity policy for "this tool stopped", and a field that says so.**
-  Seven rules fire because the validator declined — a broken installation, a
+  Eight rules fire because the validator declined — a broken installation, a
   document the schema checker would not finish, one it would not build a model
   of, a check of ours that crashed, an archive over a budget, a tree deeper than
-  we open, and documents delivered as folders. The four that existed when this
+  we open, documents delivered as folders, and a declared PDF whose search for an
+  indirect object ended without answering. The four that existed when this
   policy was settled disagreed with each other: three were errors arguing *"a report that silently skipped
   the check would be worse than no report"*; `Z6` was a warning arguing the
   opposite for the same situation. Both are good arguments and only one can be

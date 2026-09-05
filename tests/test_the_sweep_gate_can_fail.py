@@ -47,7 +47,19 @@ def test_an_honest_recording_passes(tmp_path):
     designed. The claim here is about the tool, not about what the recording
     happens to hold today.
     """
-    done = swept(tmp_path, lambda body: body.pop("_unswept", None))
+    def honest(body):
+        # Emptying the block alone leaves what it named with no reference
+        # verdict and nothing saying why, which is the state `--check-swept`
+        # exists to refuse — the premise would be built out of the thing being
+        # tested. Dropping those containers instead trips a different rule, that
+        # the recording and the repository hold the same set. So they are given
+        # a verdict: an honest recording is one where the reference has seen
+        # everything, and what it saw does not matter to this claim.
+        for name in body.pop("_unswept", None) or {}:
+            if name in body["containers"]:
+                body["containers"][name]["reference"] = {"ERROR": [], "INFO": []}
+
+    done = swept(tmp_path, honest)
     assert done.returncode == 0, done.stdout + done.stderr
 
 

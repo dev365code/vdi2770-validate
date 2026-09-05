@@ -459,12 +459,21 @@ def test_the_reserved_main_document_is_not_passed_on_an_unconfirmed_scan():
             f"that about")
 
 
-def test_an_ordinary_declared_pdf_is_not_touched_by_that():
+def test_an_ordinary_declared_pdf_is_reported_under_its_own_rule():
     """The other half, and the reason the first is not a licence to fail
-    everything a bounded scan cannot finish. Same bytes, same unconfirmed
-    answer, no reserved name — no obligation, so no finding. Without this the
-    repair reads as "give up means fail", which is the defect it replaced
-    pointing the other way.
+    everything a bounded scan cannot finish.
+
+    "No obligation" was wrong, and the catalogue says so: `M6` reads *"Other
+    formats may accompany it but cannot replace it"*, so every document version
+    owes a PDF rendition — and `_targets` scans declared renditions and the
+    reserved name, which leaves no member here with no duty at all. Silence let
+    the sole declared rendition of a document be a file this tool could not
+    confirm, and the container came back clean.
+
+    Two rules, then, for two obligations: the reserved name draws `P1`, where
+    the recipient's system will open the file as a PDF whatever was confirmed,
+    and a declared rendition draws `P5`. Both errors -- every rule that fires
+    because this tool stopped is one, which this project settled once.
     """
     import io
     import zipfile
@@ -483,9 +492,88 @@ def test_an_ordinary_declared_pdf_is_not_touched_by_that():
                      + b"obj " * pdfread.MAX_OBJ_PROBES)
 
     report = check_bytes(buf.getvalue(), "ordinary.zip")
-    assert not [f for f in report.findings if f.rule.id == "P1"], (
-        "an attachment carries no duty to be a PDF this tool can confirm")
-    assert report.count(Severity.ERROR) == 0
+    fired = {f.rule.id for f in report.findings}
+    assert "P1" not in fired, (
+        "`P1` is the reserved name's rule; a declared rendition is `P5`")
+    assert "P5" in fired, sorted(fired)
+
+
+def test_what_the_scan_did_settle_is_still_reported():
+    """`is_pdf` being unknown says nothing about the other three facts. The
+    header, the encryption flag and the PDF/A claim are read from bytes no
+    indirect object had to be found for, and they were being thrown away: the
+    unknown branch `continue`d past every rule below it.
+
+    Measured cost of that: a declared rendition holding `/Encrypt` lost its
+    `P2` entirely — the reader saw `encrypted=True` and the report said nothing
+    — so a container that used to come back with a warning came back clean, and
+    an operator running `--fail-on warning` stopped seeing it.
+    """
+    import io
+    import zipfile
+
+    from vdi2770 import pdfread
+
+    decoy = (b"%PDF-1.4\nheader and decoys\n" + b"obj " * pdfread.MAX_OBJ_PROBES
+             + b"\ntrailer\n<< /Encrypt 9 0 R >>\n%%EOF\n")
+    facts = pdfread.read(decoy)
+    assert facts.is_pdf is None and facts.encrypted, (
+        "the premise: unknown whether it is a PDF, and certainly encrypted")
+
+    base = zipfile.ZipFile(CLEAN_DOCUMENT)
+    meta = base.read("VDI2770_Metadata.xml").decode("utf-8")
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as out:
+        out.writestr("VDI2770_Metadata.xml", meta)
+        for name in base.namelist():
+            if name != "VDI2770_Metadata.xml":
+                out.writestr(name, decoy if name == "B.pdf" else base.read(name))
+
+    fired = {f.rule.id for f in check_bytes(buf.getvalue(), "encrypted.zip").findings}
+    assert "P2" in fired, (
+        f"the encryption flag was settled and thrown away with the rest: {sorted(fired)}")
+
+
+def test_a_declared_rendition_nobody_could_confirm_is_not_silence():
+    """The sole declared PDF of a document, unconfirmable, and the report said
+    nothing at all — `M6` was satisfied by the declaration and `P1` does not
+    reach outside the reserved name.
+
+    Not silence, and by this project's policy not a warning either: every rule
+    that fires because this tool stopped is an error, settled once so that four
+    rules would not argue it four ways.
+    """
+    import io
+    import zipfile
+
+    from vdi2770 import pdfread
+
+    decoy = b"%PDF-1.4\nheader and decoys\n" + b"obj " * pdfread.MAX_OBJ_PROBES
+    base = zipfile.ZipFile(CLEAN_DOCUMENT)
+    meta = base.read("VDI2770_Metadata.xml").decode("utf-8")
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as out:
+        out.writestr("VDI2770_Metadata.xml", meta)
+        for name in base.namelist():
+            if name != "VDI2770_Metadata.xml":
+                out.writestr(name, decoy if name == "B.pdf" else base.read(name))
+
+    report = check_bytes(buf.getvalue(), "unconfirmed-rendition.zip")
+    said = [f for f in report.findings
+            if "could not be confirmed" in f.message and f.where.member == "B.pdf"]
+    assert said, (
+        f"a declared rendition nobody could confirm produced "
+        f"{sorted(f.rule.id for f in report.findings)}")
+    assert said[0].about is About.TOOL, (
+        "the limit that stopped the scan is this tool's")
+    # An error, because that is this project's one policy for every limit it
+    # declines to spend: `test_every_rule_about_this_tool_is_an_error` settled
+    # it -- "if we did not look, exit 0 is telling somebody we did" -- after
+    # `X0`/`X4` and `Z6` had argued it both ways. The risk that policy carries
+    # is a false positive breaking a build, and here it is measured away: every
+    # PDF this repository ships answers on the first probe, and reaching the cap
+    # takes a hundred thousand decoys in front of the first object.
+    assert said[0].severity is Severity.ERROR, said[0].severity
 
 
 def test_obj_inside_a_longer_word_is_not_an_indirect_object():

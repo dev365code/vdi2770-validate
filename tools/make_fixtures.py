@@ -18,6 +18,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "packages" / "vdi2770" / "src"))
+from vdi2770 import pdfread  # noqa: E402 - after sys.path
 from vdi2770.xmlread import MAX_ELEMENTS  # noqa: E402 - after sys.path
 
 CORPUS = ROOT / "corpus" / "examples"
@@ -278,6 +279,17 @@ def main() -> int:
     f = dict(base)
     f["B.pdf"] = (CORPUS / "pdf" / "scan.pdf").read_bytes()
     add("p3-no-pdfa-claim.zip", f, "P3", ["B.pdf"], "B.pdf replaced with the corpus's scan.pdf")
+
+    # P5 — a declared PDF the scan for an indirect object cannot answer. The
+    # header is there and the first `MAX_OBJ_PROBES` occurrences of `obj` are
+    # all decoys, so the scan ends without finding one and without having read
+    # to the end of the file. Not "not a PDF": that is the point of the rule.
+    f = dict(base)
+    f["B.pdf"] = (b"%PDF-1.4\nheader and decoys\n"
+                  + b"obj " * pdfread.MAX_OBJ_PROBES)
+    add("p5-unconfirmed-pdf.zip", f, "P5", ["B.pdf"],
+        "B.pdf replaced with a header and enough decoy `obj` tokens to end the "
+        "search for an indirect object before it finds one")
 
     (OUT / "MANIFEST.json").write_text(json.dumps({
         "_about": "The violating half of each rule's fixture pair. Each is one deliberate change to a corpus container.",
