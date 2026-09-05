@@ -136,3 +136,46 @@ def test_a_trailer_the_keyword_check_declines_still_costs_budget(monkeypatch):
     assert big <= ceiling, (
         f"{big} probes, and the budget allows {ceiling}: a declined token has to "
         f"cost what its look-back read, or the budget bounds nothing")
+
+
+def test_a_claim_search_cut_off_inside_a_stream_says_so():
+    """The loop that walks the streams reports when it stops. Three limits stop
+    the search *inside* one and were silent: a stream truncated at
+    `MAX_INFLATED_PER_STREAM`, a body longer than `MAX_STREAM_SCAN`, and packets
+    past `MAX_XMP_PACKETS` in one haystack.
+
+    Each of them leaves a file whose claim sits past the cut looking exactly
+    like a file with no claim in it — which is the answer this pair exists to
+    keep apart. All three are the file being larger than a bounded scan reads,
+    so all three answer `"file"`.
+    """
+    import zlib
+
+    from vdi2770 import pdfread
+
+    xmp = (b'<?xpacket begin="" ?><rdf:RDF '
+           b'xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">'
+           b'<rdf:Description xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/">'
+           b"<pdfaid:part>2</pdfaid:part>"
+           b"<pdfaid:conformance>B</pdfaid:conformance>"
+           b'</rdf:Description></rdf:RDF><?xpacket end="w"?>')
+    head = b"%PDF-1.7\n1 0 obj\n<< /Type /Catalog >>\nendobj\ntrailer\n%%EOF\n"
+    decoy = b'<?xpacket begin="" ?><rdf:RDF></rdf:RDF><?xpacket end="w"?>'
+
+    ways = {
+        "inflated past the per-stream cap":
+            head + b"stream\n" + zlib.compress(
+                b"A" * (pdfread.MAX_INFLATED_PER_STREAM + 10_000) + xmp),
+        "compressed body past the scan window":
+            head + b"stream\n" + zlib.compress(b"A" * 20_000_000 + xmp, 9),
+        "claim after more packets than one haystack is read for":
+            head + b"stream\n" + zlib.compress(
+                decoy * (pdfread.MAX_XMP_PACKETS + 2) + xmp),
+    }
+    for why, body in ways.items():
+        facts, cut_short = pdfread.reader(1 << 32)(body)
+        if facts.pdfa_claim is not None:
+            continue          # it was reached after all; nothing to report
+        assert cut_short == "file", (
+            f"a claim {why} was not found and the scan did not say it stopped: "
+            f"cut_short={cut_short!r}")

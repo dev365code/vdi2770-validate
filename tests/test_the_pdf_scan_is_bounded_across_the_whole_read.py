@@ -15,6 +15,7 @@ reaches about 300 GiB.
 from __future__ import annotations
 
 import io
+import json
 import re
 import zipfile
 import zlib
@@ -23,7 +24,8 @@ import pytest
 
 from conftest import A_PDF, CLEAN_DOCUMENT, CLEAN_DOCUMENTATION
 from vdi2770 import pdfread
-from vdi2770_validate.model import Severity
+from vdi2770_validate.model import About, Severity
+from vdi2770_validate.report import as_json
 from vdi2770_validate.runner import check_bytes
 
 # Ten streams, so one file wants ten times what a single stream may become.
@@ -289,6 +291,70 @@ def test_the_read_allowance_is_still_the_one_that_says_so(counted, monkeypatch):
     assert stopped, sorted(f.rule.id for f in report.findings)
     assert "this read spent" in stopped[0].detail, stopped[0].detail
     assert "Split the delivery" in stopped[0].remedy, stopped[0].remedy
+
+
+def test_a_scan_that_stopped_inside_a_file_says_so_and_owns_it(counted,
+                                                              monkeypatch):
+    """`P3` said one sentence whether the scan reached the end of the file or
+    not, and `complete` came back `true` either way.
+
+    The remedy already covered both — *"if the file does carry one, our scan did
+    not reach it"* — so the rule knew this could happen. The detail did not say
+    which had happened, and a sender cannot tell those apart from the outside.
+    `_OVERSIZE` carries a PDF/A-2b claim; an unbudgeted read of the same bytes
+    finds it.
+
+    Not `Z5`: that is an error on the tool axis and an ordinary multi-page PDF
+    reaches this ceiling. The finding stays a warning about the container's
+    document, and takes the tool axis for this one occurrence — which is what
+    `Finding.as_about` is for, and what makes `complete` false without a rule
+    changing severity.
+    """
+    monkeypatch.setattr(pdfread, "MAX_INFLATED_PER_READ", 1_000_000_000)
+    raw = _container_of({"big.pdf": _OVERSIZE})
+    with zipfile.ZipFile(io.BytesIO(raw)) as z:
+        body = z.read("big.pdf")
+    with monkeypatch.context() as wide:
+        # `counted` lowers the per-file ceiling to make this file reach it, so
+        # the oracle has to be read with that ceiling out of the way -- the
+        # question is what is in the file, not what a bounded scan sees.
+        wide.setattr(pdfread, "MAX_INFLATED_TOTAL", 100_000_000)
+        assert pdfread.read(body).pdfa_claim, (
+            "the premise: an unbudgeted read finds a claim in this file")
+
+    report = check_bytes(raw, "oversize.zip")
+    p3 = [f for f in report.findings
+          if f.rule.id == "P3" and f.where.member == "big.pdf"]
+    assert len(p3) == 1, sorted(f.rule.id for f in report.findings)
+    one = p3[0]
+
+    assert "did not reach" in one.detail or "stopped" in one.detail, (
+        f"the detail does not say the scan was cut short: {one.detail!r}")
+    assert one.about is About.TOOL, (
+        "a scan this tool stopped is this tool's, not the sender's")
+    assert one.severity is Severity.WARNING, (
+        "an ordinary file this tool cannot scan to the end must not fail a build")
+    assert report.count(Severity.ERROR) == 0
+
+    payload = json.loads(as_json(report))
+    assert payload["read"]["complete"] is False, (
+        "the read stopped inside a file and reported itself complete")
+
+
+def test_a_scan_that_did_reach_the_end_still_says_the_plain_thing(counted):
+    """The control. Without it the test above passes on a rule that says "cut
+    short" about everything, which is the same defect pointing the other way."""
+    raw = _container_of({"tiny.pdf": A_PDF})
+    report = check_bytes(raw, "tiny.zip")
+    p3 = [f for f in report.findings
+          if f.rule.id == "P3" and f.where.member == "tiny.pdf"]
+    assert len(p3) == 1, sorted(f.rule.id for f in report.findings)
+    one = p3[0]
+
+    assert one.detail == "no pdfaid identification found in the XMP metadata", one.detail
+    assert one.about is About.CONTAINER, (
+        "a scan that ran to the end and found nothing is about the file")
+    assert json.loads(as_json(report))["read"]["complete"] is True
 
 
 def _real_pdf(decoys: int = 0) -> bytes:

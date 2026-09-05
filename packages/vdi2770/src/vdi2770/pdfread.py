@@ -496,17 +496,27 @@ def _haystacks(data: bytes, allowance: Optional[List[int]] = None,
                           else "file")
             return
         chunk = data[m.end():m.end() + MAX_STREAM_SCAN]
+        engine = zlib.decompressobj()
         try:
-            out = zlib.decompressobj().decompress(chunk, MAX_INFLATED_PER_STREAM)
+            out = engine.decompress(chunk, MAX_INFLATED_PER_STREAM)
         except zlib.error:
             continue
+        # Two limits end a stream early and both used to do it in silence: the
+        # window this reads of the compressed body, and the ceiling on what one
+        # stream may become. `eof` is the one answer that covers both -- the
+        # stream did not reach its own end -- and a claim sitting past the cut
+        # then looks exactly like a file with no claim in it. Both are this file
+        # being larger than a bounded scan reads, so both answer "file"; the
+        # loop's own stop, below, overwrites this when it is the allowance.
+        if not engine.eof and cut is not None and cut[0] is None:
+            cut[0] = "file"
         spent += len(out)
         if allowance is not None:
             allowance[0] -= len(out)
         yield out
 
 
-def _packets(hay: bytes):
+def _packets(hay: bytes, cut: Optional[List[Optional[str]]] = None):
     """The XMP packets in one haystack, in linear time.
 
     An unterminated opener ends the search for that kind outright: if there is no
@@ -526,7 +536,14 @@ def _packets(hay: bytes):
     spans = []
     for start_re, end_lit, tail in _PACKET_KINDS:
         pos = seen = 0
-        while seen < MAX_XMP_PACKETS:
+        while True:
+            if seen >= MAX_XMP_PACKETS:
+                # The third door. A haystack holding more packets than this
+                # reads hides whatever is behind them, and a caller cannot tell
+                # that from "no claim here".
+                if cut is not None and cut[0] is None:
+                    cut[0] = "file"
+                break
             begin = start_re.search(hay, pos)
             if begin is None:
                 break
@@ -689,7 +706,7 @@ def _read(data: bytes, allowance: Optional[List[int]]):
     claim = None
     cut = [None]
     for hay in _haystacks(data, allowance, cut):
-        for packet in _packets(hay):
+        for packet in _packets(hay, cut):
             claim = _claim_in(packet)
             if claim:
                 break

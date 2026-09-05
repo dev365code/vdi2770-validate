@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from typing import Iterator
 
 from ..catalog import rule
-from ..model import MAIN_PDF, Finding, Kind
+from ..model import MAIN_PDF, About, Finding, Kind
 from ..names import Members, as_written, folder_path
 
 UNVERIFIED = "this tool cannot verify PDF/A conformance"
@@ -27,8 +27,16 @@ class Stopped:
     one only says so.
     """
 
+    #: What this read may inflate in total. Only the `"read"` reason spends it,
+    #: and only `Z5` prints it; it is carried rather than read because a rule
+    #: module may not import a parser.
     ceiling: int
     facts: object
+    #: Which limit ended the search. `"read"` is the allowance across the whole
+    #: read and is the only one `Z5` speaks for -- it says nothing about this
+    #: file, so it belongs to the container. `"file"` and `"streams"` are this
+    #: file being larger than a bounded scan reads, which is `P3` saying so.
+    reason: str
 
 # The most files one finding will name before it counts the rest, as everywhere
 # else a finding lists members.
@@ -84,10 +92,16 @@ def check(container, document, facts_for) -> Iterator[Finding]:
             # A claim sitting in bytes no stream had to be inflated for is found
             # whether or not the allowance is spent, so the budget took nothing
             # away from this file and counting it among the cut-short ones would
-            # be a report saying it looked away from a file it read.
+            # be a report saying it looked away from a file it read. The reader
+            # already only reports a cut search when it found nothing, but it is
+            # separately versioned and the pin admits releases nobody here has
+            # run, so this stays.
             stopped, facts = facts, facts.facts
             cut_short = facts.pdfa_claim is None
-            if cut_short:
+            # Only the read's allowance is somebody else's doing. The other two
+            # are this file against a bounded scan, and `Z5` is an error on the
+            # tool axis -- an ordinary multi-page PDF reaches them.
+            if cut_short and stopped.reason == "read":
                 unopened.append((name, stopped))
         where = container.where.child(member=name, subject=name)
         if not facts.is_pdf:
@@ -114,11 +128,32 @@ def check(container, document, facts_for) -> Iterator[Finding]:
             # we do not get to say.
             pass
         elif facts.pdfa_claim is None:
-            if cut_short:
-                continue      # the search for one did not run; `Z5` says so
+            if cut_short and stopped.reason == "read":
+                continue      # the search did not run at all; `Z5` says so
             r = rule("P3")
-            yield Finding(r, r.title, where,
-                          detail="no pdfaid identification found in the XMP metadata")
+            if cut_short:
+                # Same rule, same severity: this is still a warning about a
+                # document in the container, and an ordinary multi-page PDF
+                # reaches these limits. What changes is that the sentence says
+                # the scan stopped, and that this one occurrence takes the tool
+                # axis -- the limit is ours. The remedy already ends "if the
+                # file does carry one, our scan did not reach it"; until now the
+                # detail gave a reader no way to tell which had happened.
+                #
+                # No number: `MAX_STREAMS` counts stream *markers* and
+                # `stream\n` matches `endstream\n` too, so any count printed
+                # here would be about twice what a PDF parser sees in the file.
+                yield Finding(
+                    r, r.title, where,
+                    detail="this scan stopped before the end of the file, "
+                           "against a limit of this tool rather than anything "
+                           "in the file; there is no pdfaid identification in "
+                           "the part it read",
+                    as_about=About.TOOL)
+            else:
+                yield Finding(
+                    r, r.title, where,
+                    detail="no pdfaid identification found in the XMP metadata")
         else:
             r = rule("P4")
             if facts.pdfa_claim.endswith("?"):

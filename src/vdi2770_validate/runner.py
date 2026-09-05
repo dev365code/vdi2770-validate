@@ -141,8 +141,9 @@ def _facts_for(raw: bytes, accepted, read_pdf):
                 # across the read says nothing about this file -- it was not
                 # looked at because of the files before it -- and that is what
                 # `Z5` reports, once, for the container.
-                cache[name] = (Stopped(pdfread.MAX_INFLATED_PER_READ, facts)
-                               if cut_short == "read" else facts)
+                cache[name] = (Stopped(pdfread.MAX_INFLATED_PER_READ, facts,
+                                       cut_short)
+                               if cut_short else facts)
         return cache[name]
 
     return get
