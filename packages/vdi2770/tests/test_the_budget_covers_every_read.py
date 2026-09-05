@@ -179,3 +179,77 @@ def test_a_claim_search_cut_off_inside_a_stream_says_so():
         assert cut_short == "file", (
             f"a claim {why} was not found and the scan did not say it stopped: "
             f"cut_short={cut_short!r}")
+
+
+def test_the_reason_is_which_limit_stopped_it_not_which_ran_out():
+    """`cap` is `min(per-file ceiling, what the allowance has left)` and it is
+    fixed on the way in. So a file stopped by its **own** ceiling can also spend
+    the last of an allowance that was larger — and reading the reason off *did
+    the allowance reach zero* calls that the read's.
+
+    They differ over a window: allowances from the per-file ceiling up to what
+    the file actually spends. It is narrow against the shipped numbers, four
+    megabytes in four gigabytes, which is why nothing but a test holds it.
+
+    It matters because the two answers are different findings. The read's is
+    `Z5`, an error on the tool axis whose remedy is *split the delivery*; the
+    file's is a warning, and splitting a delivery of one file gives one file.
+    """
+    import zlib
+
+    from vdi2770 import pdfread
+
+    per_stream, ceiling = 300_000, 4_000_000
+    blob = zlib.compress(b"A" * per_stream)
+    body = (b"%PDF-1.7\n1 0 obj\n<< /Type /Catalog >>\nendobj\n"
+            + b"".join(b"stream\n" + blob for _ in range(20)))
+
+    saved = (pdfread.MAX_INFLATED_PER_STREAM, pdfread.MAX_INFLATED_TOTAL)
+    pdfread.MAX_INFLATED_PER_STREAM, pdfread.MAX_INFLATED_TOTAL = per_stream, ceiling
+    try:
+        # Inside the window: more left than one file may inflate, and this file
+        # spends the rest of it on the way to its own ceiling.
+        _, over = pdfread.reader(ceiling + 100_000)(body)
+        assert over == "file", (
+            f"the allowance had {ceiling + 100_000} and this file may inflate "
+            f"{ceiling}, so what stopped it was its own ceiling: got {over!r}")
+
+        # And the other side of the boundary still answers the read.
+        _, under = pdfread.reader(ceiling - 1)(body)
+        assert under == "read", (
+            f"the allowance was smaller than this file's ceiling, so it is what "
+            f"ran out: got {under!r}")
+    finally:
+        pdfread.MAX_INFLATED_PER_STREAM, pdfread.MAX_INFLATED_TOTAL = saved
+
+
+def test_a_stream_cut_short_before_the_answer_is_not_a_cut_short_search():
+    """Stopping inside one stream does not stop the walk: the next stream is
+    still read, and the claim can be in it. Then the search has its answer and
+    there is nothing for the caller to report — a file that was read is not a
+    file this tool looked away from.
+
+    The guard that says so (`cut_short` only when no claim was found) had no
+    reachable path while the only way to stop was to end the walk. Reporting a
+    stream's own limit brought this one back.
+    """
+    import zlib
+
+    from vdi2770 import pdfread
+
+    xmp = (b'<?xpacket begin="" ?><rdf:RDF '
+           b'xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">'
+           b'<rdf:Description xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/">'
+           b"<pdfaid:part>2</pdfaid:part>"
+           b"<pdfaid:conformance>B</pdfaid:conformance>"
+           b'</rdf:Description></rdf:RDF><?xpacket end="w"?>')
+    body = (b"%PDF-1.7\n1 0 obj\n<< /Type /Catalog >>\nendobj\ntrailer\n%%EOF\n"
+            + b"stream\n"
+            + zlib.compress(b"A" * (pdfread.MAX_INFLATED_PER_STREAM + 10_000))
+            + b"\nendstream\nstream\n" + zlib.compress(xmp))
+
+    facts, cut_short = pdfread.reader(1 << 32)(body)
+    assert facts.pdfa_claim == "2b", "the premise: the claim is past a cut stream"
+    assert cut_short is None, (
+        f"the search found what it was looking for; there is nothing to say it "
+        f"stopped short of: {cut_short!r}")

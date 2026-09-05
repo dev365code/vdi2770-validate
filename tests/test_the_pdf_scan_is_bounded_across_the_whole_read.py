@@ -181,6 +181,29 @@ def _container_of(bodies: dict) -> bytes:
     return buf.getvalue()
 
 
+def _a_boundary_file_exists(raw: bytes, names, ceiling: int, counted) -> bool:
+    """Whether some file's claim search starts under this allowance and does not
+    finish — which is what these two tests are about, and what "a `Z5` exists"
+    does not give.
+
+    An allowance that is an exact multiple of what one file inflates stops
+    cleanly *between* files: every later file is cut short before it is opened,
+    a `Z5` says so, and there is no boundary file at all. Both tests then pass
+    against the code they were written to fail against, and their premises stay
+    true while they do it. The window is narrow — multiples of one file's cost,
+    and one byte either side — which is why it is measured here rather than
+    argued from the fixture's arithmetic.
+    """
+    read_one = pdfread.reader(ceiling)
+    with zipfile.ZipFile(io.BytesIO(raw)) as archive:
+        for name in names:
+            counted[0] = 0
+            _, cut_short = read_one(archive.read(name))
+            if counted[0] and cut_short:
+                return True          # it inflated something and still stopped
+    return False
+
+
 def test_a_file_the_budget_ran_out_inside_is_not_accused_of_carrying_no_claim(
         counted, monkeypatch):
     """The test above conserves a count, and a file can be on the wrong side of
@@ -204,9 +227,9 @@ def test_a_file_the_budget_ran_out_inside_is_not_accused_of_carrying_no_claim(
     bodies = {f"c{i}.pdf": _CLAIMED for i in range(4)}
     raw = _container_of(bodies)
 
+    assert _a_boundary_file_exists(raw, bodies, 6_000_000, counted), (
+        "the premise: some file's search has to start and not finish")
     report = check_bytes(raw, "boundary.zip")
-    assert [f for f in report.findings if f.rule.id == "Z5"], (
-        "the premise: this read has to stop somewhere in these files")
 
     with zipfile.ZipFile(io.BytesIO(raw)) as z:
         carries = {name for name in bodies
@@ -239,11 +262,13 @@ def test_the_boundary_file_is_not_reported_as_a_complete_read(counted,
 
     monkeypatch.setattr(pdfread, "MAX_INFLATED_PER_READ", 5_000_000)
     raw = _container_of({f"c{i}.pdf": _CLAIMED for i in range(2)})
-    report = check_bytes(raw, "boundary.zip")
+    names = [f"c{i}.pdf" for i in range(2)]
+    assert _a_boundary_file_exists(raw, names, 5_000_000, counted), (
+        "the premise: some file's search has to start and not finish")
     with zipfile.ZipFile(io.BytesIO(raw)) as z:
-        assert all(pdfread.read(z.read(f"c{i}.pdf")).pdfa_claim for i in range(2)), (
+        assert all(pdfread.read(z.read(n)).pdfa_claim for n in names), (
             "the premise: there is something in these files to have missed")
-    payload = json.loads(as_json(report))
+    payload = json.loads(as_json(check_bytes(raw, "boundary.zip")))
     assert payload["read"]["complete"] is False, (
         "a read that stopped inside a file reported itself complete")
 

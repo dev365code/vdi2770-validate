@@ -506,6 +506,9 @@
     },
     "read_pdf": {
       "signature": "(data: 'bytes') -> 'PdfFacts'"
+    },
+    "reader": {
+      "signature": "(allowance: 'int') -> 'Callable[[bytes], tuple]'"
     }
   },
   "version": "0.6.2"

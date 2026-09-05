@@ -44,7 +44,7 @@ from .domain import (
 )
 from .domain import build as build_document
 from .model import DEFECT_KINDS, REFUSAL_KINDS, Defect, Location
-from .pdfread import PdfFacts
+from .pdfread import PdfFacts, reader
 from .pdfread import read as read_pdf
 from .xmlread import NS, Node, UnsafeXml, XmlError, XmlTooLarge
 from .xmlread import parse as parse_xml
@@ -69,4 +69,4 @@ __all__ = ["ClassName", "Classification", "Container", "DEFECT_KINDS", "Defect",
            "MAIN_PDF", "MAIN_XML", "METADATA_XML", "Member", "NS", "Node", "PdfFacts",
            "REFUSAL_KINDS", "Tagged", "UnsafeXml", "XmlError", "XmlTooLarge", "__version__",
            "build_document", "member_bytes", "member_reader", "nfc", "parse_xml", "read_container",
-           "read_container_file", "read_pdf"]
+           "read_container_file", "read_pdf", "reader"]
