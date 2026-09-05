@@ -85,3 +85,54 @@ def test_the_budget_still_lets_an_ordinary_tree_through(monkeypatch):
     assert spent > 1_000_000, f"the premise: this tree really does inflate a lot ({spent:,})"
     box = zipread.read(data, "x.zip")
     assert len(box.children) == 20, "an ordinary tree must still be opened in full"
+
+
+def test_a_trailer_the_keyword_check_declines_still_costs_budget(monkeypatch):
+    """`MAX_TRAILERS` bounds how many trailer dictionaries the fallback reads.
+    A token the keyword check declined never reached the subtraction — `continue`
+    stepped over it — so a file of decoys was examined once per decoy.
+
+    That would be linear and survivable on its own. The check itself is what
+    squares it: to see whether a `%` opens the line, it walks back to the last
+    newline, and a file with no newline in it makes every one of those walks run
+    to the start of the file. Measured on this machine: 64 KB took 0.14 s, 128 KB
+    0.66 s, 256 KB 2.76 s, 512 KB 11.17 s — four times the work for twice the
+    input. End to end that is a 13 KB archive holding a 2 MB member and taking
+    minutes, on a path the compression-ratio and member-size guards never see,
+    because it reads raw bytes and inflates nothing.
+
+    The same shape as the XMP scan that once held this tool for hours on a 20 KB
+    file. It is counted here rather than timed: the budget exists to bound how
+    many times the file is examined, so that is the number asserted.
+
+    The charge has to stay small. `test_a_decoy_that_brings_its_own_startxref…`
+    holds the opposite corner: make examining a token expensive and a supplier
+    can bury the real trailer behind enough decoys to spend the budget before it
+    is reached, which hides an encrypted document. `MAX_LINE_LOOKBACK` is the
+    only thing holding both off, so both tests have to pass at one value of it.
+    """
+    from vdi2770 import pdfread
+
+    seen = []
+    real = pdfread._is_a_keyword_here
+    monkeypatch.setattr(pdfread, "_is_a_keyword_here",
+                        lambda data, at, length: (seen.append(at),
+                                                  real(data, at, length))[1])
+
+    def probes(decoys: int) -> int:
+        seen.clear()
+        # No newline anywhere, so every look-back runs the length of the file,
+        # and a `%` early in the line makes every token decline.
+        pdfread._is_encrypted(b"%PDF-1.4 1 0 obj % " + b"trailer " * decoys
+                              + b" endobj")
+        return len(seen)
+
+    small, big = probes(20_000), probes(80_000)
+    assert big <= small, (
+        f"{small} probes for 20,000 decoys and {big} for 80,000: the decoys are "
+        f"paying nothing, so the file is scanned once per token")
+
+    ceiling = pdfread.MAX_TRAILER_BYTES // pdfread.MAX_LINE_LOOKBACK + pdfread.MAX_TRAILERS
+    assert big <= ceiling, (
+        f"{big} probes, and the budget allows {ceiling}: a declined token has to "
+        f"cost what its look-back read, or the budget bounds nothing")

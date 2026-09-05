@@ -62,6 +62,23 @@ MAX_TRAILER_SCAN = 65536  # the most of ONE trailer dictionary that is read
 # their number finite. The last ones are read, because an incremental update
 # appends and the newest trailer is the one that counts.
 MAX_TRAILERS = 64
+# How far back a keyword looks for the start of its own line, which is also what
+# examining one costs. Unbounded, this was the quadratic: the look-back decides
+# whether a `%` on the same line commented the keyword out, and a file with no
+# newline made every one of those walks run to the start of the file. A cap on
+# *where* to look was not a cap on *how much* looking costs.
+#
+# The size is a balance between two attacks that pull opposite ways, and it is
+# the only thing holding both off. Decoy tokens that cost nothing let a small
+# file be scanned once per token -- 512 KB took eleven seconds. Decoy tokens that
+# cost a lot let a supplier bury the real trailer behind enough of them to spend
+# the budget before it is reached, which hides an encrypted document. So the
+# charge is small and the number of tokens it admits is large:
+# `MAX_TRAILER_BYTES` over this is sixteen thousand tokens examined, while the
+# bytes they may scan between them stays fixed. Beyond the window a `%` is not
+# seen, so a commented-out `trailer` in a very long line is read rather than
+# skipped -- which costs one bounded dictionary scan and cannot cost more.
+MAX_LINE_LOOKBACK = 256
 # Not a number of trailers any more, but the bytes all of them together may cost.
 # Sixty-four was a bound on *where* to look, and every bound on where is pushable
 # by whoever appends: sixty-four `%trailer` decoys and one `startxref` of their
@@ -162,6 +179,11 @@ def _is_encrypted(data: bytes) -> bool:
         if at == -1:
             return False
         end = at
+        # Examining a token costs the look-back, whether or not it turns out to
+        # be a keyword. Only the dictionaries were charged before, and a decoy
+        # reaches no dictionary: the scan stepped over one space and returned,
+        # so a file of them cost one byte each and was examined once per token.
+        budget -= min(MAX_LINE_LOOKBACK, at)
         if not _is_a_keyword_here(data, at, len(b"trailer")):
             continue
         spent, found = _scan_dictionary(data, at + len(b"trailer"),
@@ -234,9 +256,9 @@ def _is_a_keyword_here(data: bytes, at: int, length: int) -> bool:
     after = data[at + length:at + length + 1]
     if before.isalnum() or before == b"_" or after.isalnum() or after == b"_":
         return False
-    line = data.rfind(b"\n", 0, at)
-    carriage = data.rfind(b"\r", 0, at)
-    return b"%" not in data[max(line, carriage) + 1:at]
+    window = data[max(0, at - MAX_LINE_LOOKBACK):at]
+    cut = max(window.rfind(b"\n"), window.rfind(b"\r"))
+    return b"%" not in window[cut + 1:]
 
 
 def _end_of_comment(data: bytes, i: int, limit: int) -> int:

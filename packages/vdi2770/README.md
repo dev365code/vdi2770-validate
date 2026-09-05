@@ -119,12 +119,16 @@ references — a 4.1 KiB archive — held 48 MB before this bound existed and ho
 23 MB now. The last two bound the
 attributes hung off it, which neither of the others sees: attributes are cheap
 to write and the schema check downstream is quadratic in how many sit on one
-element, so 12,000 of them in a 27 KiB archive cost 13.6 seconds. `vdi2770.pdfread` has eleven of its own for the PDF scan:
+element, so 12,000 of them in a 27 KiB archive cost 13.6 seconds. `vdi2770.pdfread` has twelve of its own for the PDF scan:
 `MAX_STREAMS`, `MAX_STREAM_SCAN`, `MAX_INFLATED_PER_STREAM`,
 `MAX_INFLATED_TOTAL`, `MAX_INFLATED_PER_READ`, `MAX_OBJ_PROBES`, `MAX_XMP_PACKETS`, `MAX_PDFA_PREFIXES`,
 `MAX_TRAILER_SCAN` with `MAX_TRAILER_BYTES` and the `MAX_TRAILERS` the second is
 derived from — one bounds how much of a single trailer dictionary is read and
-the other how much all of them together may cost. Every trailer in the file is
+the other how much all of them together may cost — and `MAX_LINE_LOOKBACK`, how
+far back a token looks for the start of its line, which is what examining one
+costs. That last is small on purpose: it divides into `MAX_TRAILER_BYTES` to
+bound how many tokens are examined at all, and the two attacks it sits between
+pull in opposite directions. Every trailer in the file is
 a candidate, newest first, because a bound on *how many* to read is a bound on
 where to look, and whoever appends to a file can push the real trailer past
 one. A test fails if

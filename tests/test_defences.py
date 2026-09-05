@@ -64,6 +64,11 @@ PDF_BUDGETS = {
     # What all the trailers together may cost to read. The floor is one
     # full dictionary: below that the file's own trailer might not fit.
     "MAX_TRAILER_BYTES": (1 << 16, 256 << 20),
+    # How far back a keyword looks for the start of its line, which is also what
+    # examining one costs. The ceiling matters more than the floor here: this
+    # divides into `MAX_TRAILER_BYTES` to bound how many tokens are examined at
+    # all, and unbounded look-back was the quadratic.
+    "MAX_LINE_LOOKBACK": (64, 1 << 16),
     "MAX_XMP_PACKETS": (4, 4096),
     "MAX_PDFA_PREFIXES": (1, 64),
     # Occurrences of `obj` looked behind before a file is called "no
