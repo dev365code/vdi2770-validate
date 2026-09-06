@@ -292,7 +292,7 @@ saying it declined to look rather than that your container is wrong; the exit
 code does not distinguish the two, so a CI job that gates on it will fail on a
 delivery nothing is wrong with. `about` is itself new here, so there is nothing
 to read in 0.6.0's output before you upgrade: upgrade, then gate on `about`, or
-triage those three ids. Nothing that passed 0.6.0 has become non-conformant — the
+triage those four ids. Nothing that passed 0.6.0 has become non-conformant — the
 tool has become honest about what it was not checking. It is also quieter than
 0.6.0 on a container that trips one of the new reader budgets: the model is
 refused, so the rules that needed it say nothing and `X6` says why. That is less
