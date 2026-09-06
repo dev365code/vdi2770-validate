@@ -59,6 +59,12 @@ asset, so the only route is building it, and the page did not say so. An offer o
 a file nobody can obtain reads like a download. Both are gated now — a `.pyz` the
 page names has to have its origin named too.
 
+The page now points at the released `vdi2770.pyz` as well as at the command
+that builds one. `/releases/latest/download/` is the address that does not move
+between releases, and the release beside it prints the file's SHA-256 — which is
+the whole trust story for somebody carrying it across an air gap: the hash on
+the page is the hash of the file they carried in.
+
 - **`make standalone`** runs each of the 74 test files on its own.
 - The mutation harness carries 116 rows, each naming the pytest selection or the
   tool that has to go red. Seven are new and all seven are about this page: a

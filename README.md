@@ -121,7 +121,12 @@ flowchart LR
 
 No route to a package index? No pip, no virtual environment, no rights to make
 one? Carry **one file** in instead. It still needs a Python — that is the one
-thing it cannot bring — and nothing else:
+thing it cannot bring — and nothing else.
+
+Take it from the
+[latest release](https://github.com/dev365code/vdi2770-validate/releases/latest/download/vdi2770.pyz),
+where its SHA-256 is printed beside it, or build the one this working tree
+produces:
 
 ```bash
 python tools/build_zipapp.py --check     # writes dist/vdi2770.pyz and runs it
