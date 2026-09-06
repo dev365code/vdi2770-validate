@@ -13,13 +13,9 @@ check that — the normative text is paywalled.
 
 ## How much of this was measured
 
-It is measured now. There are 49 containers in `corpus/` and
-`tests/fixtures/`, and **47 of the 49 containers** have been put through the
-reference implementation at its pinned commit
-`e47c13c`, with the locale forced to `en_US`. The other two arrived with the
-`M11`/`M12` rules below and are waiting for the next run; they are named in the
-sweep's `_unswept` block, they are excluded from every count on this page, and
-the release gate refuses while they are there. The result is checked in at
+It is measured now. All 49 containers in `corpus/` and
+`tests/fixtures/` were put through the reference implementation at its pinned commit
+`e47c13c`, with the locale forced to `en_US`, and the result is checked in at
 [`docs/oracle-sweep.json`](oracle-sweep.json). `tools/capture_oracle.py --check`
 re-runs it and fails if either side has moved, and
 [`.github/workflows/oracle.yml`](../.github/workflows/oracle.yml) is that run:

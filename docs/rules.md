@@ -254,11 +254,11 @@ Reference implementation: `core:Document_VAL4` (displayed as `D_004`). Citing a 
 
 ### `M12` — A document refers to a document this delivery does not carry
 
-*info* · obligation `reference`
+*error* · obligation `reference`
 
 Reference implementation: `core:Document_VAL4` (displayed as `D_004`). Citing a key records that the other project checks something in the same area; it does not borrow its claim.
 
-**Remedy.** Add the document this relationship names, or remove the relationship if it points somewhere outside this handover on purpose. Reported as a note rather than an error because the reference implementation reports it as information when the document doing the pointing is not the main document.
+**Remedy.** Add the document this relationship names, or remove the relationship. The container this points from promises a document the handover does not deliver, and a recipient reading the metadata has no way to tell the difference between a document that is missing and one that was never meant to travel.
 
 ## pdf
 

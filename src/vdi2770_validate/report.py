@@ -6,11 +6,45 @@ import json
 from typing import Dict, List
 
 from . import __version__
-from .model import About, Report, Severity
+from .model import About, Obligation, Report, Severity
 from .names import as_written
 from .resources import schema_stamp
 
 MARK = {Severity.ERROR: "error", Severity.WARNING: "warn ", Severity.INFO: "info "}
+
+#: What a finding's judgement rests on, in fixed words.
+#:
+#: Derived from the rule's `obligation`, never written at the rule: thirteen
+#: remedies whose basis is somebody else's Java program reached the reader as
+#: unqualified imperatives, and the repair that suggests itself -- qualify each
+#: sentence by hand -- is thirteen chances to say `reference` thirteen slightly
+#: different ways. `Z9` had already qualified itself inside its own remedy,
+#: which is what proved the rest could have.
+#:
+#: The noun phrase only. `basis()` puts `per` in front of it, so the two
+#: surfaces cannot drift over the preposition either.
+BASIS = {
+    Obligation.SCHEMA: "the VDI 2770 schema, which VDI publishes free",
+    Obligation.PUBLISHED_TABLE: "a table published free (IDTA 02004)",
+    Obligation.CONTAINER: "ZIP and XML mechanics, true without VDI 2770",
+    Obligation.REFERENCE: ("the reference implementation - observed there, "
+                           "not verified against the standard"),
+    Obligation.OURS: "this tool's own rule",
+}
+
+
+def basis(rule) -> str:
+    """The `per ...` line for one rule.
+
+    A `reference` basis names the codes the rule records, because "somebody
+    else's program requires this" is a claim a reader may want to go and check,
+    and this project already knows which of its checks it means.
+    """
+    words = BASIS[rule.obligation]
+    if rule.obligation is Obligation.REFERENCE and rule.ref_codes:
+        words += f" ({', '.join(rule.ref_codes)})"
+    return f"per {words}"
+
 
 #: The version of this report format. A consumer keys off it, so it moves when a
 #: field changes meaning or leaves — adding one does not move it.
@@ -75,6 +109,11 @@ def as_text(report: Report, show_info: bool = True) -> str:
         lines.append(f"         at {_where(f.where)}")
         if f.detail:
             lines.append(f"         {f.detail}")
+        # With the evidence, not with the remedy. The basis answers *why this is
+        # being reported* and belongs beside what was observed; the remedy
+        # answers *what to do*, and a reader skimming for the fix should not
+        # have to step over the justification to reach it.
+        lines.append(f"         {basis(f.rule)}")
         # Every finding carries its remedy. Printing it once per rule saved a few
         # lines and quietly broke the promise the docs make.
         lines.append(f"         -> {f.remedy}")

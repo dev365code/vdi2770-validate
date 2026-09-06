@@ -14,7 +14,7 @@
 
 ## Ten seconds
 
-<img src="https://raw.githubusercontent.com/dev365code/vdi2770-validate/main/docs/assets/tenseconds.svg?v=5202a554" alt="Real vdi2770-validate output: error F1, a file named in the metadata is not in the container, with the metadata line it is declared on and the remedy; error Z7, the documentation container has no VDI2770_Main.pdf, with its remedy; three errors, one warning." width="100%">
+<img src="https://raw.githubusercontent.com/dev365code/vdi2770-validate/main/docs/assets/tenseconds.svg?v=802840d4" alt="Real vdi2770-validate output: error F1, a file named in the metadata is not in the container, with the metadata line it is declared on and the remedy; error Z7, the documentation container has no VDI2770_Main.pdf, with its remedy; three errors, one warning." width="100%">
 
 ```console
 $ pip install vdi2770-validate
@@ -59,13 +59,16 @@ folders.zip
   error  F1  A file named in the metadata is not in the container
          at folders.zip!/VDI2770_Main.xml:56:2
          'VDI2770_Main.pdf' is declared but not in the archive
+         per the reference implementation - observed there, not verified against the standard (REP_007)
          -> Add the missing file to the container, or remove its DigitalFile entry from the metadata. The two must agree.
   error  Z7  The documentation container has no VDI2770_Main.pdf
          at folders.zip
+         per the reference implementation - observed there, not verified against the standard (REP_025)
          -> Add the main document as VDI2770_Main.pdf at the root of the documentation container, next to VDI2770_Main.xml.
   error  Z13  Documents are delivered as folders, which this tool does not open
          at folders.zip
          2 folders hold VDI2770_Metadata.xml: 456-29201/, AB393/
+         per this tool's own rule
          -> Nothing here is necessarily wrong with the container. Zip each document folder into its own .zip member if you want this tool to check it, or check those folders with something that reads them.
 
   … 1 more Z9 warning

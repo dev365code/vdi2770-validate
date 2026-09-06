@@ -20,10 +20,20 @@ it finds none, raises
 
     isMainDocument ? FaultLevel.ERROR : FaultLevel.INFORMATION
 
-which is why there are two rules here and not one severity. Promoting their
-information to our error would be a claim about VDI 2770 that nobody here can
-support -- the guideline is paid and was not read -- and `obligation: reference`
-is a promise that the judgement is theirs.
+which is where the first version of this got two severities -- and that method
+is not the surface anybody validates a container through.
+`ContainerValidator.validateDocumentRelations` takes each directory's own
+metadata (`VDI2770_Main.xml`, or `VDI2770_Metadata.xml` where there is no main)
+and calls it with `isMainDocument` hard-coded `true`, so the information branch
+never runs on a container at all. The differential sweep said so before any
+reasoning did: the reference reports `D_004` as an ERROR on both fixtures here
+and we reported one of them as a note, which is the expensive direction to be
+wrong in -- a note passes a delivery they fail.
+
+So: two rules, because a reader is owed a different sentence depending on which
+document made the promise, and one severity, because the reference makes one
+judgement. `obligation: reference` is a promise that the judgement is theirs,
+and the guideline that could settle it is paid and was not read.
 """
 from __future__ import annotations
 
@@ -46,13 +56,22 @@ def _identity(document_id) -> tuple:
             document_id.domain_id.strip().casefold())
 
 
-def known_document_ids(documents) -> set:
-    """Every identifier the delivery declares, from every container in it."""
-    return {_identity(i) for _container, doc in documents for i in doc.identifiers}
+def known_document_ids(documents, excluding=None) -> set:
+    """Every identifier the delivery declares, excluding one document's own.
+
+    `ContainerValidator` removes the current document from the map before
+    comparing, so a relationship naming the identifier of the document it sits
+    in is dangling to the reference implementation. It was not to us, and no
+    container in the corpus refers to itself -- a divergence with nothing in
+    the corpus to expose it, which is the kind that ships.
+    """
+    return {_identity(i)
+            for _container, doc in documents if doc is not excluding
+            for i in doc.identifiers}
 
 
 def refers_to(documents) -> Iterator[tuple]:
-    """Each (container, relationship, identifier) the delivery points at.
+    """Each (container, document, relationship, identifier) pointed at.
 
     A relationship may name more than one document, and each is a separate
     promise: taking the first would let a delivery leave out every document
@@ -62,7 +81,7 @@ def refers_to(documents) -> Iterator[tuple]:
         for version in doc.versions:
             for relationship in version.relationships:
                 for target in relationship.identifiers:
-                    yield container, relationship, target
+                    yield container, doc, relationship, target
 
 
 def check(documents, read_everything: bool) -> Iterator[Finding]:
@@ -85,9 +104,13 @@ def check(documents, read_everything: bool) -> Iterator[Finding]:
     """
     if not read_everything:
         return
-    known = known_document_ids(documents)
-    for container, relationship, target in refers_to(documents):
-        if _identity(target) in known:
+    # One set per referring document, because each excludes its own
+    # identifiers, and built once per document rather than once per reference.
+    known_to = {}
+    for container, doc, relationship, target in refers_to(documents):
+        if id(doc) not in known_to:
+            known_to[id(doc)] = known_document_ids(documents, excluding=doc)
+        if _identity(target) in known_to[id(doc)]:
             continue
         from_main = container.metadata_name == MAIN_XML
         r = rule("M11" if from_main else "M12")

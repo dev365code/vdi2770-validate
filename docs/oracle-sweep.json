@@ -494,7 +494,30 @@
       }
     },
     "m11-refers-to-a-document-not-delivered.zip": {
-      "reference": {},
+      "reference": {
+        "ERROR": [
+          "D_004",
+          "REP_029"
+        ],
+        "INFO": [
+          "D_003",
+          "REP_003",
+          "REP_005",
+          "REP_008",
+          "REP_009",
+          "REP_010",
+          "REP_011",
+          "REP_012",
+          "REP_015",
+          "REP_020",
+          "REP_028",
+          "REP_032",
+          "REP_036",
+          "REP_041",
+          "REP_043",
+          "ZU_005"
+        ]
+      },
       "ours": {
         "error": [
           "M11"
@@ -505,10 +528,36 @@
       }
     },
     "m12-a-document-refers-to-one-not-delivered.zip": {
-      "reference": {},
+      "reference": {
+        "ERROR": [
+          "D_004"
+        ],
+        "INFO": [
+          "D_003",
+          "REP_003",
+          "REP_005",
+          "REP_008",
+          "REP_009",
+          "REP_010",
+          "REP_011",
+          "REP_012",
+          "REP_015",
+          "REP_020",
+          "REP_028",
+          "REP_030",
+          "REP_031",
+          "REP_032",
+          "REP_036",
+          "REP_041",
+          "REP_043",
+          "ZU_005"
+        ]
+      },
       "ours": {
+        "error": [
+          "M12"
+        ],
         "info": [
-          "M12",
           "P4"
         ]
       }
@@ -1332,9 +1381,5 @@
         ]
       }
     }
-  },
-  "_unswept": {
-    "m11-refers-to-a-document-not-delivered.zip": "added with the M11/M12 relationship rules; the reference implementation has not judged it yet",
-    "m12-a-document-refers-to-one-not-delivered.zip": "added with the M11/M12 relationship rules; the reference implementation has not judged it yet"
   }
 }

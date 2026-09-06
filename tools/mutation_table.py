@@ -1025,7 +1025,7 @@ RELATIONSHIPS = [
      'r = rule("M11" if from_main else "M12")',
      'r = rule("M11")',
      ["tests/test_a_delivery_carries_the_documents_it_refers_to.py::"
-      "test_the_same_defect_from_a_document_that_is_not_the_main_one_is_a_note"],
+      "test_the_same_defect_from_a_document_that_is_not_the_main_one_is_also_an_error"],
      "the reference implementation raises this as information unless the main "
      "document is the one pointing, and `obligation: reference` promises the "
      "judgement is theirs -- one severity turns their note into our error"),
@@ -1040,6 +1040,37 @@ RELATIONSHIPS = [
      "the same drawing number issued by two domains is two documents, and "
      "comparing the bare number accepts a delivery carrying something else"),
 ]
+
+BASIS_ROWS = [
+    ("report/every-finding-says-what-it-rests-on",
+     "src/vdi2770_validate/report.py",
+     '        lines.append(f"         {basis(f.rule)}")',
+     '        pass',
+     ["tests/test_the_report_says_what_its_judgement_rests_on.py::"
+      "test_the_text_report_prints_a_basis_for_every_finding_it_lists"],
+     "the person at a terminal reads an imperative with nothing behind it, "
+     "while the JSON beside it says the requirement is somebody else's program"),
+
+    ("report/the-basis-is-derived-and-not-written",
+     "src/vdi2770_validate/report.py",
+     '        lines.append(f"         {basis(f.rule)}")',
+     '        lines.append("         per the reference implementation")',
+     ["tests/test_the_report_says_what_its_judgement_rests_on.py::"
+      "test_the_two_surfaces_say_the_same_thing_about_every_finding"],
+     "one risk written on two surfaces drifts: the text would call our own "
+     "judgement somebody else's, with the JSON still telling the truth"),
+
+    ("rules/a-document-cannot-answer-its-own-reference",
+     "src/vdi2770_validate/rules/delivery.py",
+     "for _container, doc in documents if doc is not excluding",
+     "for _container, doc in documents",
+     ["tests/test_a_delivery_carries_the_documents_it_refers_to.py::"
+      "test_a_document_does_not_satisfy_its_own_reference"],
+     "`ContainerValidator` drops the current document before comparing, so a "
+     "relationship naming its own id is dangling to them and was not to us"),
+]
+
+TABLE += BASIS_ROWS
 
 TABLE += RELATIONSHIPS
 

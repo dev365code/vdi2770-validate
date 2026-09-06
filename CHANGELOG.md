@@ -65,6 +65,32 @@ between releases, and the release beside it prints the file's SHA-256 — which 
 the whole trust story for somebody carrying it across an air gap: the hash on
 the page is the hash of the file they carried in.
 
+**Every finding now says what its judgement rests on.** `rules.json` carries an
+`obligation` on every rule so that no claim about VDI 2770 travels without its
+source, and the JSON report printed it. The text report — the surface a person
+at a terminal actually reads — printed nothing. So thirteen rules whose basis is
+*the reference implementation, not the guideline* arrived as unqualified
+imperatives: "Add a DocumentClassification whose ClassificationSystem is
+VDI2770:2018", with no hint that the thing requiring it is somebody else's Java
+program and that the guideline which could settle it is paid and was never read
+here. `Z9` was the only remedy that named its source inside its own sentence,
+which is what proved the rest could have.
+
+    error  M2  The class id is not one of the published VDI 2770 classes
+           at container.zip!/VDI2770_Metadata.xml:13:4
+           ClassId '99-99'
+           per a table published free (IDTA 02004)
+           -> Use one of: 01-01, 02-01, …
+
+The words are derived from the rule's obligation and its recorded reference
+codes, never written at the rule: thirteen hand-qualified sentences are thirteen
+chances to say `reference` thirteen slightly different ways. The line sits with
+the evidence rather than with the remedy, because it answers *why this is being
+reported* and not *what to do about it*. And the two surfaces are held to each
+other — a test walks every finding of a run and asserts the text's `per` line is
+the same statement as the JSON's `obligation`, because one risk written on two
+surfaces is one risk that drifts.
+
 **A delivery that refers to documents it does not carry now fails.** A main
 document's `DocumentRelationship` names other documents by identifier, and
 nothing here read the element at all — so a documentation container whose main
@@ -98,12 +124,30 @@ Without the guard the first version of this rule reported two errors,
 `about: container`, saying a delivery had not brought documents it had brought.
 The corpus caught that; the minimal fixture could not have.
 
-Against the reference implementation across the 47 swept containers the two
-agree exactly: both containers where it reports `D_004` now report `M11`, none
-where it reports `D_004` are silent here, and none report `M11` where it says
-nothing. The two new fixtures have not been through it yet and are parked in the
-sweep's `_unswept` block, so they are outside every count on this page and the
-release gate refuses until they have been.
+The severity was wrong on the first pass, and the differential sweep is what
+said so. `Document.validateDocumentRelations` really does raise ERROR when the
+referring document is the main one and INFORMATION otherwise — reading that
+method is where `M12` started life as a note. But that method is not the surface
+anybody validates a container through:
+`ContainerValidator.validateDocumentRelations` takes each directory's own
+metadata and calls it with `isMainDocument` hard-coded `true`, so the
+information branch never runs on a container at all. The sweep reported `D_004`
+as an ERROR on the `M12` fixture while we reported a note — the expensive
+direction to be wrong in, because a note passes a delivery they fail. Both rules
+are errors; the two ids remain because a reader is owed a different sentence
+depending on which document made the promise.
+
+The known set also excludes the document doing the pointing, which is what
+`ContainerValidator` does when it removes the current document from the map
+before comparing. A relationship naming its own document's identifier is
+dangling to them and was not to us — a divergence with nothing in the corpus to
+expose it, so a container was built for it.
+
+Across all 49 containers the two now agree exactly: four containers where the
+reference reports `D_004` and all four report `M11` or `M12` here, none where it
+reports `D_004` and we are silent, and none where we report it and it says
+nothing. The two new fixtures were put through the reference implementation for
+this release, which is what closed the `_unswept` block.
 
 The attribute figures move with the containers, so they are restated here.
 The worst element carries three and the worst document **50**.
@@ -115,8 +159,8 @@ The container that took the record is the new `M12` fixture — a
 `DocumentRelationship` is two more attributes — which is exactly why the divisor
 is counted out of the containers instead of read back out of this paragraph.
 
-- **`make standalone`** runs each of the 75 test files on its own.
-- The mutation harness carries 119 rows, each naming the pytest selection or the
+- **`make standalone`** runs each of the 76 test files on its own.
+- The mutation harness carries 122 rows, each naming the pytest selection or the
   tool that has to go red. Seven are new and all seven are about this page: a
   picture the page no longer points at, a sentence in the terminal shot the tool
   never printed, an elision that stands for the wrong findings, a quoted pin the

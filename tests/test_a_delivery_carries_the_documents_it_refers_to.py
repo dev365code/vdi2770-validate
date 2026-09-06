@@ -166,18 +166,56 @@ def test_a_reference_is_not_dangling_when_this_tool_declined_to_read_the_deliver
         "as undelivered bills this tool's refusal to the sender.")
 
 
-def test_the_same_defect_from_a_document_that_is_not_the_main_one_is_a_note():
-    """The asymmetry, which is the whole reason there are two rules.
+def test_the_same_defect_from_a_document_that_is_not_the_main_one_is_also_an_error():
+    """Two rules for two sentences, one severity — and the severity was wrong
+    the first time.
 
-    `Document.validateDocumentRelations` raises ERROR when the referring
-    document is the main one and INFORMATION otherwise, and `obligation:
-    reference` says our judgement is theirs. A single rule at one severity would
-    either invent an error they do not raise, or lose the one they do.
+    `Document.validateDocumentRelations` really does raise ERROR when the
+    referring document is the main one and INFORMATION otherwise, and reading
+    that method is where the first version of this rule got `M12` as a note.
+    But that method is not the surface anybody validates a container through.
+    `ContainerValidator.validateDocumentRelations` takes each directory's own
+    metadata — `VDI2770_Main.xml`, or `VDI2770_Metadata.xml` where there is no
+    main — and calls it with `isMainDocument` hard-coded `true`. The
+    information branch never runs on a container at all.
+
+    The differential sweep is what caught it: the reference reports `D_004` as
+    an ERROR on the `M12` fixture, and we reported a note. A note is the
+    expensive direction to be wrong in here — it passes a delivery they fail.
     """
     found = findings(FIXTURES / "m12-a-document-refers-to-one-not-delivered.zip")
     assert "M12" in found, sorted(found)
-    assert found["M12"].rule.severity is Severity.INFO
+    assert found["M12"].rule.severity is Severity.ERROR, (
+        "the container validator hard-codes isMainDocument, so every dangling "
+        "reference it finds is an error")
     assert "M11" not in found, (
-        "the referring document here is the nested container's own, not the "
-        "main document; raising M11 would report their information as our error")
+        "the referring document here is the nested container's own; the two "
+        "rules differ in the sentence they print, not in the verdict")
     assert "not-delivered-77" in (found["M12"].detail or "")
+
+
+def test_a_document_does_not_satisfy_its_own_reference(tmp_path):
+    """`ContainerValidator` builds the known set from *other* documents: it
+    removes the current one from the map before comparing. A document whose
+    relationship names its own identifier is dangling to them, and was not to
+    us — a latent divergence with nothing in the corpus to expose it, which is
+    why it is built here.
+
+    The clean container's main document is `XCP328490` and refers to
+    `ts-ddd-234`. Point it at itself and the delivery still carries every id it
+    names, so a set built over all documents finds nothing wrong.
+    """
+    import zipfile
+
+    target = tmp_path / "self-reference.zip"
+    with zipfile.ZipFile(CLEAN) as src, zipfile.ZipFile(target, "w") as out:
+        for item in src.namelist():
+            data = src.read(item)
+            if item == "VDI2770_Main.xml":
+                data = data.replace(b">ts-ddd-234<", b">XCP328490<")
+            out.writestr(item, data)
+    found = findings(target)
+    assert "M11" in found, (
+        "the main document's only relationship names itself, and no other "
+        "document in the delivery declares that id")
+    assert "XCP328490" in (found["M11"].detail or ""), found["M11"].detail
