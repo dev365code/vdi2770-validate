@@ -978,8 +978,8 @@ FRONT_DOOR = [
 
     ("gates/the-badge-counts-the-catalogue",
      "README.md",
-     "rules-39_each_with_a_remedy",
-     "rules-40_each_with_a_remedy",
+     "rules-41_each_with_a_remedy",
+     "rules-42_each_with_a_remedy",
      ["tests/test_the_front_page_points_at_what_it_shows.py::"
       "test_the_badge_that_counts_rules_counts_the_catalogue"],
      "a number inside a shields.io URL is not the shape the prose gate reads, "
@@ -1008,6 +1008,40 @@ FRONT_DOOR = [
      "a claim stated in the release below stops being read the moment a new "
      "section opens, and every number it pins goes unchecked"),
 ]
+
+RELATIONSHIPS = [
+    ("rules/a-half-read-delivery-cannot-say-what-is-missing",
+     "src/vdi2770_validate/rules/delivery.py",
+     "    if not read_everything:\n        return",
+     "    if not read_everything:\n        pass",
+     ["tests/test_a_delivery_carries_the_documents_it_refers_to.py::"
+      "test_a_reference_is_not_dangling_when_this_tool_declined_to_read_the_delivery"],
+     "documents delivered as folders are in the container and this tool does "
+     "not open them, so without the guard our refusal is billed to the sender "
+     "as an error about their delivery"),
+
+    ("rules/the-main-document-is-the-one-that-makes-it-an-error",
+     "src/vdi2770_validate/rules/delivery.py",
+     'r = rule("M11" if from_main else "M12")',
+     'r = rule("M11")',
+     ["tests/test_a_delivery_carries_the_documents_it_refers_to.py::"
+      "test_the_same_defect_from_a_document_that_is_not_the_main_one_is_a_note"],
+     "the reference implementation raises this as information unless the main "
+     "document is the one pointing, and `obligation: reference` promises the "
+     "judgement is theirs -- one severity turns their note into our error"),
+
+    ("rules/an-identifier-is-the-number-and-the-domain",
+     "src/vdi2770_validate/rules/delivery.py",
+     "    return (document_id.id.strip().casefold(),\n"
+     "            document_id.domain_id.strip().casefold())",
+     "    return (document_id.id.strip().casefold(),)",
+     ["tests/test_a_delivery_carries_the_documents_it_refers_to.py::"
+      "test_the_domain_is_part_of_the_identity"],
+     "the same drawing number issued by two domains is two documents, and "
+     "comparing the bare number accepts a delivery carrying something else"),
+]
+
+TABLE += RELATIONSHIPS
 
 TABLE += FRONT_DOOR
 

@@ -228,6 +228,36 @@
       "about": "container"
     },
     {
+      "id": "M11",
+      "layer": "metadata",
+      "severity": "error",
+      "obligation": "reference",
+      "title": "The main document refers to a document this delivery does not carry",
+      "remedy": "Add the document container holding the document this relationship names, or remove the DocumentRelationship. A main document is the list a recipient reads to find out what arrived, so a reference into nothing sends them looking for a document that is not there.",
+      "refKeys": [
+        "core:Document_VAL4"
+      ],
+      "refCodes": [
+        "D_004"
+      ],
+      "about": "container"
+    },
+    {
+      "id": "M12",
+      "layer": "metadata",
+      "severity": "info",
+      "obligation": "reference",
+      "title": "A document refers to a document this delivery does not carry",
+      "remedy": "Add the document this relationship names, or remove the relationship if it points somewhere outside this handover on purpose. Reported as a note rather than an error because the reference implementation reports it as information when the document doing the pointing is not the main document.",
+      "refKeys": [
+        "core:Document_VAL4"
+      ],
+      "refCodes": [
+        "D_004"
+      ],
+      "about": "container"
+    },
+    {
       "id": "P1",
       "layer": "pdf",
       "severity": "error",

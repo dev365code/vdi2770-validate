@@ -65,8 +65,58 @@ between releases, and the release beside it prints the file's SHA-256 — which 
 the whole trust story for somebody carrying it across an air gap: the hash on
 the page is the hash of the file they carried in.
 
-- **`make standalone`** runs each of the 74 test files on its own.
-- The mutation harness carries 116 rows, each naming the pytest selection or the
+**A delivery that refers to documents it does not carry now fails.** A main
+document's `DocumentRelationship` names other documents by identifier, and
+nothing here read the element at all — so a documentation container whose main
+document pointed at two documents and delivered neither reported `0 error(s)`
+and exited `0`, which is the number a CI intake gate reads. The reference
+implementation calls it `D_004` and errors on it; we passed it.
+
+Two rules, because the reference implementation makes a distinction worth
+keeping. Read at the commit the oracle is pinned to,
+`Document.validateDocumentRelations` raises an error when the *main* document is
+the one pointing at nothing and information when any other document is, so `M11`
+is an error and `M12` a note. `obligation: reference` is a promise that the
+judgement is theirs; one severity would have turned their note into our error,
+and the guideline that could settle it is paid and was not read. Identity is the
+number *and* the domain, compared case-insensitively — the same drawing number
+issued by two domains is two documents.
+
+This is the first rule here that needs the whole delivery. Every other layer
+judges one container alone, which is right for almost everything: a metadata
+file is well-formed or it is not. A relationship names a document that lives in
+a *sibling* container, so the question cannot be asked from inside the container
+doing the pointing, and the check runs after the walk.
+
+It stays quiet unless every metadata file the archives list was read, and that
+guard is the whole difference between a rule and a liability.
+`corpus/examples/missingdocuments/folders.zip` delivers its documents as folders
+— `456-29201/` and `AB393/`, each with its own metadata — and its main document
+refers to exactly those two identifiers. The documents are there. This tool does
+not open folders, which is what `Z13` says and why `Z13` is `about: tool`.
+Without the guard the first version of this rule reported two errors,
+`about: container`, saying a delivery had not brought documents it had brought.
+The corpus caught that; the minimal fixture could not have.
+
+Against the reference implementation across the 47 swept containers the two
+agree exactly: both containers where it reports `D_004` now report `M11`, none
+where it reports `D_004` are silent here, and none report `M11` where it says
+nothing. The two new fixtures have not been through it yet and are parked in the
+sweep's `_unswept` block, so they are outside every count on this page and the
+release gate refuses until they have been.
+
+The attribute figures move with the containers, so they are restated here.
+The worst element carries three and the worst document **50**.
+The per-element cap therefore sits 43× above the worst element seen,
+and the whole-document budget sits 2,000× above the worst document.
+Both halves get said, and the multiple is written the same way twice:
+100,000 over 50 is 2,000× above the worst document either way.
+The container that took the record is the new `M12` fixture — a
+`DocumentRelationship` is two more attributes — which is exactly why the divisor
+is counted out of the containers instead of read back out of this paragraph.
+
+- **`make standalone`** runs each of the 75 test files on its own.
+- The mutation harness carries 119 rows, each naming the pytest selection or the
   tool that has to go red. Seven are new and all seven are about this page: a
   picture the page no longer points at, a sentence in the terminal shot the tool
   never printed, an elision that stands for the wrong findings, a quoted pin the

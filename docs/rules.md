@@ -11,10 +11,10 @@ tool, because both are errors on purpose and severity cannot carry the differenc
 - **`schema`** (1) — the XSD VDI publishes free says so, mechanically
 - **`table`** (2) — a freely published table says so (IDTA 02004)
 - **`container`** (4) — mechanics of ZIP and XML — true without VDI 2770
-- **`reference`** (13) — observed in the MIT reference implementation, **not** verified against the guideline, which is paywalled
+- **`reference`** (15) — observed in the MIT reference implementation, **not** verified against the guideline, which is paywalled
 - **`ours`** (19) — our own judgement, and it carries a reason
 
-39 rules.
+41 rules.
 
 ## container
 
@@ -243,6 +243,22 @@ Why this is ours: The reference implementation checks that exactly one identifie
 Reference implementation: `core:DocumentId_VAL2` (displayed as `DI_002`). Citing a key records that the other project checks something in the same area; it does not borrow its claim.
 
 **Remedy.** Give the DocumentId element the identifier as its text. An empty identifier names nothing, and the recipient has no way to refer to this document.
+
+### `M11` — The main document refers to a document this delivery does not carry
+
+*error* · obligation `reference`
+
+Reference implementation: `core:Document_VAL4` (displayed as `D_004`). Citing a key records that the other project checks something in the same area; it does not borrow its claim.
+
+**Remedy.** Add the document container holding the document this relationship names, or remove the DocumentRelationship. A main document is the list a recipient reads to find out what arrived, so a reference into nothing sends them looking for a document that is not there.
+
+### `M12` — A document refers to a document this delivery does not carry
+
+*info* · obligation `reference`
+
+Reference implementation: `core:Document_VAL4` (displayed as `D_004`). Citing a key records that the other project checks something in the same area; it does not borrow its claim.
+
+**Remedy.** Add the document this relationship names, or remove the relationship if it points somewhere outside this handover on purpose. Reported as a note rather than an error because the reference implementation reports it as information when the document doing the pointing is not the main document.
 
 ## pdf
 

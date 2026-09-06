@@ -76,6 +76,9 @@ class DocumentVersion:
     languages: Tuple[Tagged, ...]
     descriptions: Tuple[Description, ...]
     files: Tuple[DigitalFile, ...]
+    #: `DocumentRelationship` sits beside `DigitalFile` under a version, not
+    #: under the document, so it is a property of the version that declares it.
+    relationships: Tuple[DocumentRelationship, ...]
     life_cycle_status: str
     # Where `LifeCycleStatus` itself is. A `DocumentVersion` is the largest
     # element in the file -- languages, descriptions, parties, status and every
@@ -96,6 +99,27 @@ class DocumentId:
 
     domain_id: str
     id: str
+    src: Location = Location()
+
+
+@dataclass(frozen=True)
+class DocumentRelationship:
+    """A pointer from this document version to another document.
+
+    `Type` is the relationship's kind -- `RefersTo` and the others the schema
+    allows -- and the identifiers are the documents pointed at. Read as a tuple
+    rather than as one: the element admits more than one `DocumentId`, and a
+    reader that takes the first silently drops the rest of what a delivery
+    promised.
+
+    This element was invisible to this package until now, which meant no caller
+    could ask the one question it exists to answer -- *is the document this one
+    points at actually here* -- and a documentation container that referred to
+    documents it did not carry read as complete.
+    """
+
+    type: str
+    identifiers: Tuple[DocumentId, ...]
     src: Location = Location()
 
 
@@ -121,12 +145,23 @@ def _loc(base: Location, n: Node, subject: Optional[str] = None) -> Location:
     return base.child(line=n.line, column=n.column, subject=subject)
 
 
-def build(root: Node, base: Location) -> Document:
-    identifiers = tuple(
+def _document_ids(parent: Node, base: Location) -> Tuple[DocumentId, ...]:
+    """The `DocumentId` children of one element.
+
+    `find_all` reads direct children only, which is what keeps a document's own
+    identifiers separate from the ones it merely points at: both are spelled
+    `DocumentId`, and a recursive read would fold the documents a version refers
+    to into the list of what this document *is*.
+    """
+    return tuple(
         DocumentId(domain_id=n.attrib.get("DomainId", "").strip(),
                    id=n.text.strip(),
                    src=_loc(base, n, n.text.strip() or None))
-        for n in root.find_all("DocumentId"))
+        for n in parent.find_all("DocumentId"))
+
+
+def build(root: Node, base: Location) -> Document:
+    identifiers = _document_ids(root, base)
 
     classifications = []
     for c in root.find_all("DocumentClassification"):
@@ -166,6 +201,14 @@ def build(root: Node, base: Location) -> Document:
             )
             for d in v.find_all("DocumentDescription")
         )
+        relationships = tuple(
+            DocumentRelationship(
+                type=r.attrib.get("Type", "").strip(),
+                identifiers=_document_ids(r, base),
+                src=_loc(base, r, r.attrib.get("Type", "").strip() or None),
+            )
+            for r in v.find_all("DocumentRelationship")
+        )
         lcs = v.find("LifeCycleStatus")
         versions.append(DocumentVersion(
             version_id=v.text_of("DocumentVersionId"),
@@ -173,6 +216,7 @@ def build(root: Node, base: Location) -> Document:
                             for n in v.find_all("Language")),
             descriptions=descriptions,
             files=files,
+            relationships=relationships,
             life_cycle_status=(lcs.attrib.get("StatusValue", "").strip() if lcs else ""),
             life_cycle_src=(_loc(base, lcs, lcs.attrib.get("StatusValue", "").strip() or None)
                             if lcs else _loc(base, v)),

@@ -21,6 +21,7 @@ from .catalog import rule
 from .model import MAIN_XML, METADATA_XML, NS, Finding, Location, Report
 from .names import folder_path
 from .rules import container as r_container
+from .rules import delivery as r_delivery
 from .rules import files as r_files
 from .rules import metadata as r_metadata
 from .rules import pdf as r_pdf
@@ -213,6 +214,13 @@ def check_bytes(data: bytes, name: str) -> Report:
     # its own ceiling is the same unbounded product one level up.
     read_pdf = pdfread.reader(pdfread.MAX_INFLATED_PER_READ)
     raw_of = {}          # id(container) -> (depth, its own bytes or None)
+    # Every document the walk built a model of, kept for the one layer that
+    # cannot work from a single container: a relationship names a document in a
+    # *sibling*, so "is what this points at here" has no answer until the walk
+    # is done. Not `modelled` -- that name is already a per-container flag in
+    # this scope, and taking it shadowed the flag with a list. The clean
+    # container turned red on `.append` before anything else noticed.
+    delivery = []
     declared_of = {}     # id(container) -> the names its metadata declares
 
     for c in root.walk():
@@ -430,6 +438,12 @@ def check_bytes(data: bytes, name: str) -> Report:
         _into(report, r_schema.check(c, parse_error, schema_errors), c.where, "schema")
         if document is None:
             continue
+        # Only the modelled ones. A container this tool declined to read declares
+        # no identifiers, and counting its documents as absent would turn one
+        # refusal by this tool into a page of findings about the sender -- every
+        # reference into that subtree reported as dangling. `X6` already says the
+        # tool did not look, and that is the true statement.
+        delivery.append((c, document))
 
         _into(report, r_files.check(c, document, foreign), c.where, "files")
         _into(report, r_metadata.check(c, document, foreign), c.where, "metadata")
@@ -439,6 +453,13 @@ def check_bytes(data: bytes, name: str) -> Report:
                   r_pdf.check(c, document, _facts_for(raw, set(c.file_names), read_pdf)),
                   c.where, "pdf")
 
+    # After the walk, because this is the one question that needs all of it:
+    # a relationship names a document in a sibling container, so nothing
+    # inside the container doing the pointing can answer it.
+    _into(report,
+          r_delivery.check(delivery,
+                           report.read.metadata_read >= report.read.metadata_found),
+          root.where, "delivery")
     return report
 
 

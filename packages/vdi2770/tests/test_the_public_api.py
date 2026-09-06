@@ -897,3 +897,43 @@ def test_a_size_the_archive_only_claims_is_not_stated_as_fact():
     assert "629145600" in said, said
     assert "says" in said or "claims" in said, (
         f"a size the archive only claims is stated as fact: {said}")
+
+
+def test_every_type_the_model_hands_back_can_be_named_by_the_caller():
+    """A field whose type is not exported is a value nobody can annotate.
+
+    `DocumentVersion.relationships` was added returning `DocumentRelationship`,
+    and the class stayed out of `__all__` — so a caller could hold the objects
+    and had no way to write `isinstance`, a type hint, or an import for them,
+    while every sibling type in the same module was exported. The record in
+    `API.json` did not catch it either: it records the annotation as the string
+    `Tuple[DocumentRelationship, ...]`, which reads exactly the same whether the
+    name resolves for a caller or not.
+
+    Derived from the annotations rather than from a list, because a hand-kept
+    list is how the next one goes missing.
+    """
+    import dataclasses
+    import re
+
+    import vdi2770
+    from vdi2770 import domain
+
+    exported = set(vdi2770.__all__)
+    named = set()
+    for name in dir(domain):
+        cls = getattr(domain, name)
+        if not (isinstance(cls, type) and dataclasses.is_dataclass(cls)):
+            continue
+        for field in dataclasses.fields(cls):
+            named |= set(re.findall(r"\b([A-Z][A-Za-z0-9]*)\b", str(field.type)))
+    # Only this package's own types; `Tuple`, `Optional` and the like belong to
+    # the standard library and a caller already has them.
+    ours = {n for n in named
+            if isinstance(getattr(domain, n, None), type)
+            and dataclasses.is_dataclass(getattr(domain, n))}
+    assert ours, "no dataclass types found in the model's annotations"
+    assert ours <= exported, (
+        f"the model hands back {sorted(ours - exported)} and `vdi2770` does not "
+        f"export {'it' if len(ours - exported) == 1 else 'them'}, so a caller "
+        f"cannot name what they are holding")

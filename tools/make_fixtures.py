@@ -162,6 +162,40 @@ def main() -> int:
     f[MAIN_XML] = edit(basen[MAIN_XML], 'StatusValue="Released"', 'StatusValue="InReview"')
     add("m7-main-not-released.zip", f, "M7", [MAIN_XML], "LifeCycleStatus InReview")
 
+    # M11 — the main document refers to a document the delivery does not carry.
+    # One character class of edit: the clean container's main document points at
+    # `ts-ddd-234`, which the nested document container declares. Point it
+    # somewhere nothing declares and the delivery promises a document it never
+    # ships. The reference implementation calls this D_004 and makes it an error
+    # when the *main* document is the one referring.
+    f = dict(basen)
+    f[MAIN_XML] = edit(basen[MAIN_XML], "ts-ddd-234", "ts-ddd-999")
+    add("m11-refers-to-a-document-not-delivered.zip", f, "M11", [MAIN_XML],
+        "the main document's RefersTo names an id nothing in the container declares")
+
+    # M12 — a document that is *not* the main one refers to a document nobody
+    # delivers. The reference implementation reports this as information rather
+    # than as an error, so this pair exists to prove the two are told apart:
+    # `M11` is the same defect raised from `VDI2770_Main.xml`.
+    #
+    # The edit is inside the nested document container, which means rebuilding
+    # it: the relationship goes on the *inner* metadata, beside its own
+    # `DigitalFile`, which is where the schema puts it.
+    innerz = io.BytesIO(basen["documentcontainer.zip"])
+    with zipfile.ZipFile(innerz) as src:
+        parts = {n: src.read(n) for n in src.namelist()}
+    parts[META] = edit(
+        parts[META], '        <DigitalFile FileFormat="application/pdf">B.pdf',
+        '        <DocumentRelationship Type="RefersTo">\n'
+        '            <DocumentId DomainId="BSP-OEM">not-delivered-77</DocumentId>\n'
+        '        </DocumentRelationship>\n'
+        '        <DigitalFile FileFormat="application/pdf">B.pdf')
+    f = dict(basen)
+    f["documentcontainer.zip"] = write_bytes(parts)
+    add("m12-a-document-refers-to-one-not-delivered.zip", f, "M12",
+        ["documentcontainer.zip"],
+        "the nested document container's own RefersTo names an id nothing declares")
+
     # P1 — a file declared as PDF that is not one
     f = dict(base)
     f["B.pdf"] = b"I am not a PDF.\n"

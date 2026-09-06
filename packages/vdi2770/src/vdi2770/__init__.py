@@ -39,6 +39,7 @@ from .domain import (
     DigitalFile,
     Document,
     DocumentId,
+    DocumentRelationship,
     DocumentVersion,
     Tagged,
 )
@@ -65,7 +66,8 @@ from .zipread import read_file as read_container_file
 __version__ = "0.8.0.dev0"
 
 __all__ = ["ClassName", "Classification", "Container", "DEFECT_KINDS", "Defect", "Description",
-           "DigitalFile", "Document", "DocumentId", "DocumentVersion", "Kind", "Location",
+           "DigitalFile", "Document", "DocumentId", "DocumentRelationship", "DocumentVersion",
+           "Kind", "Location",
            "MAIN_PDF", "MAIN_XML", "METADATA_XML", "Member", "NS", "Node", "PdfFacts",
            "REFUSAL_KINDS", "Tagged", "UnsafeXml", "XmlError", "XmlTooLarge", "__version__",
            "build_document", "member_bytes", "member_reader", "nfc", "parse_xml", "read_container",

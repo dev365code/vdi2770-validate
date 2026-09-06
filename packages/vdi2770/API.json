@@ -230,6 +230,27 @@
       "methods": [],
       "properties": []
     },
+    "DocumentRelationship": {
+      "bases": [
+        "object"
+      ],
+      "fields": {
+        "identifiers": [
+          "Tuple[DocumentId, ...]",
+          "no-default"
+        ],
+        "src": [
+          "Location",
+          "has-default"
+        ],
+        "type": [
+          "str",
+          "no-default"
+        ]
+      },
+      "methods": [],
+      "properties": []
+    },
     "DocumentVersion": {
       "bases": [
         "object"
@@ -253,6 +274,10 @@
         ],
         "life_cycle_status": [
           "str",
+          "no-default"
+        ],
+        "relationships": [
+          "Tuple[DocumentRelationship, ...]",
           "no-default"
         ],
         "src": [

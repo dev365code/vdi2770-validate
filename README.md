@@ -3,7 +3,7 @@
 
 [![CI](https://github.com/dev365code/vdi2770-validate/actions/workflows/ci.yml/badge.svg)](https://github.com/dev365code/vdi2770-validate/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/vdi2770-validate?label=PyPI&color=2f6fb3)](https://pypi.org/project/vdi2770-validate/)
-[![rules](https://img.shields.io/badge/rules-39_each_with_a_remedy-a8721c)](https://github.com/dev365code/vdi2770-validate/blob/main/docs/rules.md)
+[![rules](https://img.shields.io/badge/rules-41_each_with_a_remedy-a8721c)](https://github.com/dev365code/vdi2770-validate/blob/main/docs/rules.md)
 [![license](https://img.shields.io/badge/license-Apache--2.0-5f6a75)](https://github.com/dev365code/vdi2770-validate/blob/main/LICENSE)
 
 &nbsp;**Apache-2.0**&nbsp;·&nbsp;**Python 3.9 · 3.12 · 3.13**&nbsp;·&nbsp;**pure Python, nothing compiled**&nbsp;·&nbsp;**zero network, by design**
@@ -94,6 +94,7 @@ does not open cannot come back looking like one it read end to end.
 | documents delivered as folders instead of nested containers | `error Z13` — and it says plainly that this is the tool declining to look, not the container being wrong |
 | a member name that would escape the extraction directory | `error Z4` — refused, and nothing was ever written to disk to escape into |
 | a declared PDF the scan could not confirm is a PDF | `error P5` — reported as *not confirmed*, never as *not a PDF* |
+| a main document that refers to documents the handover does not contain | `error M11` — each dangling reference named, and silent when this tool did not read the whole delivery |
 
 Every code carries a remedy and the source its requirement comes from —
 [docs/rules.md](https://github.com/dev365code/vdi2770-validate/blob/main/docs/rules.md)
@@ -175,8 +176,8 @@ iiRDS, if that is the handover format you are on.
   rendered as [docs/rules.md](https://github.com/dev365code/vdi2770-validate/blob/main/docs/rules.md) — each
   rule carries where its requirement comes from, a remedy sentence, and — where the
   reference implementation checks the same thing — the message keys it uses.
-- **26 of 39 rules have a minimal fixture pair** — a container that violates the rule
-  and a conforming one differing in as little as a single member. A 27th has a violating
+- **28 of 41 rules have a minimal fixture pair** — a container that violates the rule
+  and a conforming one differing in as little as a single member. A 29th has a violating
   fixture and no counterpart, because there is no conforming version of *this file is not
   a ZIP*. The rest are exercised by the vendored corpus. A rule that fires nowhere fails
   the build, and every rule here has been checked against its own mutations.
@@ -196,7 +197,7 @@ An item moves right when it is built and checked, not when it is decided.
 timeline
     title Where vdi2770-validate is going
     Shipped : Reader and rules, same version, one tag, one install
-            : 39 rules, each with a source and a remedy
+            : 41 rules, each with a source and a remedy
             : Versioned JSON report, exit codes, single-file offline build
     Building : An obligation index — what is asked for, and how much of it is covered
              : Deeper documentation-container checks

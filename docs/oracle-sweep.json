@@ -493,6 +493,26 @@
         ]
       }
     },
+    "m11-refers-to-a-document-not-delivered.zip": {
+      "reference": {},
+      "ours": {
+        "error": [
+          "M11"
+        ],
+        "info": [
+          "P4"
+        ]
+      }
+    },
+    "m12-a-document-refers-to-one-not-delivered.zip": {
+      "reference": {},
+      "ours": {
+        "info": [
+          "M12",
+          "P4"
+        ]
+      }
+    },
     "m2-unknown-class-id.zip": {
       "reference": {
         "ERROR": [
@@ -726,6 +746,7 @@
       },
       "ours": {
         "error": [
+          "M11",
           "Z3"
         ],
         "info": [
@@ -757,6 +778,9 @@
         ]
       },
       "ours": {
+        "error": [
+          "M11"
+        ],
         "info": [
           "P4"
         ],
@@ -1308,5 +1332,9 @@
         ]
       }
     }
+  },
+  "_unswept": {
+    "m11-refers-to-a-document-not-delivered.zip": "added with the M11/M12 relationship rules; the reference implementation has not judged it yet",
+    "m12-a-document-refers-to-one-not-delivered.zip": "added with the M11/M12 relationship rules; the reference implementation has not judged it yet"
   }
 }
