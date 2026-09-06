@@ -8,7 +8,15 @@ repository holds, the count is derived here and compared.
 import json
 import re
 
-from conftest import CORPUS, FIXTURES, ROOT, newest_changelog_section, spelled
+from conftest import (
+    CORPUS,
+    FIXTURES,
+    ROOT,
+    changelog_sections,
+    latest_changelog_claim,
+    newest_changelog_section,
+    spelled,
+)
 
 
 def containers():
@@ -327,17 +335,16 @@ def test_the_changelog_counts_the_mutation_rows_it_describes():
     number in prose about a checked-in list is a number that drifts the first
     time the list grows, and this one describes the gate that checks the gates.
     """
-    import re
     import sys
 
     sys.path.insert(0, str(ROOT / "tools"))
     from mutation_table import TABLE
 
-    unreleased = newest_changelog_section()
     # `[a-z-]+` could not match a count past twenty-nine, where `spelled` starts
     # returning digits — so at thirty rows this gate reported "the sentence has
     # been reworded" and no wording could satisfy it.
-    m = re.search(r"([a-z0-9-]+) rows, each\s*\n?\s*naming the pytest selection", unreleased)
+    _, m = latest_changelog_claim(
+        r"([a-z0-9-]+) rows, each\s*\n?\s*naming the pytest selection")
     assert m, "the CHANGELOG sentence this test pins has been reworded"
     said = m.group(1)
     expected = spelled(len(TABLE))
@@ -381,9 +388,16 @@ def test_no_document_cites_a_file_that_is_not_here():
     # A floor of 12 against a real count in the twenties lets ten citations vanish in
     # silence, which is the failure this whole file is about. Exact, and updated
     # when a citation is added or removed -- that is the point of it.
-    assert seen == 23, (
-        f"{seen} citations found, not 23. If you added or removed one, say so here; "
-        f"if you did not, ten of them just stopped being checked.")
+    #
+    # 23 to 17 when 0.7.0 was cut and work continued above it: six of the 23 were
+    # cited by that release's own section, and the newest section is a new one
+    # that does not repeat them. Nothing stopped being checked -- the released
+    # section is history and out of scope by design -- but the number moving for
+    # that reason is worth writing down, because it will move again at every
+    # release and "the count dropped" must not become a thing anyone waves past.
+    assert seen == 18, (
+        f"{seen} citations found, not 18. If you added or removed one, say so here; "
+        f"if you did not, six of them just stopped being checked.")
 
 
 def test_the_changelog_counts_the_rules_that_fire_because_we_declined():
@@ -393,14 +407,13 @@ def test_the_changelog_counts_the_rules_that_fire_because_we_declined():
     that made it stale: it said four while this release shipped seven.
     """
     import json
-    import re
 
     catalogue = json.loads(
         (ROOT / "src" / "vdi2770_validate" / "data" / "rules.json").read_text(encoding="utf-8"))
     declined = [r["id"] for r in catalogue["rules"] if r["about"] == "tool"]
 
-    unreleased = newest_changelog_section()
-    m = re.search(r"([A-Za-z0-9-]+) rules fire because the validator declined", unreleased)
+    _, m = latest_changelog_claim(
+        r"([A-Za-z0-9-]+) rules fire because the validator declined")
     assert m, "the CHANGELOG sentence this test pins has been reworded"
     assert m.group(1).lower() == spelled(len(declined)), (
         f"{len(declined)} rules are `about: tool` ({sorted(declined)}); the "
@@ -413,13 +426,11 @@ def test_the_changelog_counts_the_files_make_standalone_runs():
     in prose about a directory listing drifts the first time anyone adds a file,
     which is every day this project is worked on.
     """
-    import re
 
     files = sorted((ROOT / "tests").glob("test_*.py"))
     files += sorted((ROOT / "packages" / "vdi2770" / "tests").glob("test_*.py"))
 
-    unreleased = newest_changelog_section()
-    m = re.search(r"runs each of the (\d+) test files on its own", unreleased)
+    _, m = latest_changelog_claim(r"runs each of the (\d+) test files on its own")
     assert m, "the CHANGELOG sentence this test pins has been reworded"
     assert int(m.group(1)) == len(files), (
         f"`make standalone` runs {len(files)} files; the CHANGELOG says {m.group(1)}")
@@ -434,10 +445,8 @@ def test_the_changelog_counts_the_trailer_shapes_it_claims_are_pinned():
     table -- so this one exists for the other number in the same section.
     """
     import ast
-    import re
 
-    unreleased = newest_changelog_section()
-    m = re.search(r"([A-Za-z-]+) shapes are pinned", unreleased)
+    _, m = latest_changelog_claim(r"([A-Za-z-]+) shapes are pinned")
     assert m, "the sentence counting the pinned trailer shapes has been reworded"
     words = {"Seventeen": 17, "Eighteen": 18, "Nineteen": 19, "Twenty": 20,
              "Twenty-one": 21, "Twenty-two": 22, "Twenty-three": 23,
@@ -540,8 +549,9 @@ def test_the_upgrade_warning_names_only_rules_a_container_can_ask_for():
     # The paragraph, found by what it says rather than by its position: the
     # section opens with its own heading, and counting paragraphs made this gate
     # read the date line and pass on an empty set of ids.
-    paragraphs = [t for t in newest_changelog_section().split("\n\n")
-                  if "Upgrading from" in t]
+    stating = next((text for _heading, text in changelog_sections()
+                    if "Upgrading from" in text), "")
+    paragraphs = [t for t in stating.split("\n\n") if "Upgrading from" in t]
     assert len(paragraphs) == 1, "the release no longer opens with one upgrade warning"
     warning = paragraphs[0]
     named = set(re.findall(r"`([A-Z][0-9]+)`", warning))
@@ -610,7 +620,9 @@ def test_the_changelog_multiplies_the_attribute_caps_the_same_way_twice():
 
     from vdi2770.xmlread import MAX_ATTRIBUTES
 
-    unreleased = newest_changelog_section()
+    unreleased = next((text for _heading, text in changelog_sections()
+                       if re.search(r"×\*{0,2} (?:above )?the worst document", text)),
+                      "")
     # `\*{0,2}` because one of the two is bold and the other is not. A pattern
     # that matched only the plain one found a single value, agreed with itself,
     # and could not have failed -- which is the shape of defect this gate exists
@@ -653,12 +665,10 @@ def test_the_changelog_states_the_per_rule_ceiling_the_budget_allows():
     a hundred thousand* — which is the right thing for the page to say, since
     which rule the file provokes moves the exact number.
     """
-    import re
 
     from vdi2770.xmlread import MAX_ELEMENTS
 
-    unreleased = newest_changelog_section()
-    m = re.search(r"real ceiling is \*\*([\d,]+)\*\*", unreleased)
+    _, m = latest_changelog_claim(r"real ceiling is \*\*([\d,]+)\*\*")
     assert m, "the CHANGELOG sentence this test pins has been reworded"
     assert int(m.group(1).replace(",", "")) == MAX_ELEMENTS - 1, (
         f"the budget admits {MAX_ELEMENTS} elements, so one rule can fire "
@@ -740,9 +750,9 @@ def test_the_upgrade_warning_counts_the_rules_it_names():
 
     from conftest import spelled
 
-    section = newest_changelog_section()
-    said = re.search(r"\*\*Upgrading from [\d.]+ will turn some green runs red\.\*\*\s+"
-                     r"(\w+) rules? can do it:(.*?)\n\n", section, re.S)
+    _, said = latest_changelog_claim(
+        r"\*\*Upgrading from [\d.]+ will turn some green runs red\.\*\*\s+"
+        r"(\w+) rules? can do it:(.*?)\n\n", re.S)
     assert said, "the upgrade warning has been reworded; this counts its ids"
     # The list is the sentence after the colon, and only that. What follows it
     # explains one of the ids and names others in passing -- `F2`, for what
@@ -798,3 +808,58 @@ def test_the_readme_names_the_classes_the_two_sources_actually_disagree_on():
     assert not (named - set(differ_en)), (
         f"the page names {sorted(named - set(differ_en))} as disputed and the "
         f"sources agree on them")
+
+
+def test_a_claim_is_held_where_it_was_last_made():
+    """The gates in this file pin sentences, and they looked for them in the
+    newest changelog section only — on the reasoning that work lands above the
+    releases, so the top section is the one whose claims must still be true.
+
+    Half of that is right. The other half is not: a new section does not restate
+    what a release already said, so the first change made *after* a release is
+    cut turns seven gates red on prose that is entirely correct. And the repair
+    that suggests itself then is editing the released section to match today,
+    which is the one thing this project's changelog rule forbids — that is
+    falsifying the record, not fixing a number.
+
+    So a claim stands until it is restated: the sections are read newest first
+    and the first one that makes the claim is the one held to it. Proved here on
+    both halves, because a helper that finds a sentence is worthless without the
+    guarantee that it stops at the *newest* one — a stale duplicate below would
+    otherwise answer for a claim that has since changed.
+    """
+    from conftest import latest_changelog_claim
+
+    heading, match = latest_changelog_claim(r"runs each of the (\d+) test files")
+    assert match, "no changelog section says how many files run standalone"
+    assert heading.startswith("## "), heading
+
+    # And it says so rather than answering with something: a gate whose helper
+    # invents a match for a sentence nobody wrote is a gate that cannot fail.
+    assert latest_changelog_claim(r"\bzzz-no-section-says-this\b") == (None, None)
+
+
+def test_the_claim_reader_prefers_the_newer_of_two_statements(tmp_path,
+                                                              monkeypatch):
+    """The ordering, on a changelog built for it. Reading the real file cannot
+    prove this: it proves whatever that file happens to hold today."""
+    import conftest
+
+    page = tmp_path / "CHANGELOG.md"
+    page.write_text("# Changelog\n\n"
+                    "## Unreleased\n\nit runs 9 files\n\n"
+                    "## 0.1.0 — 2020-01-01\n\nit runs 4 files\n",
+                    encoding="utf-8")
+    monkeypatch.setattr(conftest, "ROOT", tmp_path)
+    heading, match = conftest.latest_changelog_claim(r"it runs (\d+) files")
+    assert heading.startswith("## Unreleased"), heading
+    assert match.group(1) == "9", match.group(1)
+
+    # And it reaches past the top section when the top does not restate it.
+    page.write_text("# Changelog\n\n"
+                    "## Unreleased\n\nsomething else entirely\n\n"
+                    "## 0.1.0 — 2020-01-01\n\nit runs 4 files\n",
+                    encoding="utf-8")
+    heading, match = conftest.latest_changelog_claim(r"it runs (\d+) files")
+    assert heading.startswith("## 0.1.0"), heading
+    assert match.group(1) == "4", match.group(1)

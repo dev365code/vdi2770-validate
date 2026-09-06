@@ -99,7 +99,14 @@ def test_the_rules_name_the_reader_exactly_and_not_a_range():
     against one, and that is the one it should install."""
     spec = asked_of(manifest(RULES), "vdi2770")
     assert spec, "the rules do not depend on the reader at all"
-    assert re.fullmatch(r"vdi2770==\d+(\.\d+)*", spec), (
+    # A release number, and PEP 440's spellings of one that is not final yet:
+    # this project runs the cycle between releases on a `.devN` above the last
+    # tag, and the first pattern here could not express that -- so the gate that
+    # forbids a *range* also forbade the ordinary state of the working tree, and
+    # the obvious way out would have been to loosen it to something that admits
+    # `0.8.*` too. Still no wildcard, no range, no comparison operator.
+    assert re.fullmatch(r"vdi2770==\d+(\.\d+)*"
+                        r"(?:(?:a|b|rc)\d+)?(?:\.post\d+)?(?:\.dev\d+)?", spec), (
         f"the reader is pinned as {spec!r}. Anything but `==` lets pip choose a "
         f"reader this release was never run against, which is how a fix that "
         f"shipped failed to arrive once already.")

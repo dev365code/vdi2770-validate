@@ -521,7 +521,7 @@ TABLE = [
 
     ("gates/the-pin-names-the-reader-that-was-built",
      "packages/vdi2770/pyproject.toml",
-     'version = "0.7.0"',
+     'version = "0.8.0.dev0"',
      'version = "0.7.1"',
      ["tools/check_wheel.py"],
      "the two manifests agree with each other and the artifacts do not: the "
@@ -937,6 +937,80 @@ TABLE = [
      ["tests/test_readme_sample.py"],
      "MUST SURVIVE: if this dies, the harness reports red for everything"),
 ]
+#: The front door. Seven ways to put something false on the page a stranger
+#: reads first, each one leaving every other gate green.
+FRONT_DOOR = [
+    ("gates/the-page-points-at-the-picture-it-committed",
+     "docs/assets/tenseconds.svg",
+     "vdi2770-validate — real output, colour added",
+     "vdi2770-validate — output, colour added",
+     ["tests/test_the_front_page_points_at_what_it_shows.py::"
+      "test_every_picture_on_the_page_is_the_one_committed"],
+     "the committed picture changes and the page's ?v= does not, so GitHub's "
+     "image proxy keeps serving the old one to everybody who has been here"),
+
+    ("gates/the-shot-draws-only-what-the-tool-prints",
+     "tools/gen_door.py",
+     '"A file named in the metadata is not in the container"',
+     '"A file named in the metadata is missing from the container"',
+     ["tests/test_the_front_door_pictures_are_true.py::"
+      "test_every_line_drawn_in_the_shot_is_one_the_tool_really_prints"],
+     "the terminal shot shows a sentence no version ever printed, which reads "
+     "exactly like one that did"),
+
+    ("gates/the-elision-in-the-shot-says-what-it-elided",
+     "tools/gen_door.py",
+     '"… 1 more error (Z13) and 1 warning (Z9)"',
+     '"… 1 more error (Z9) and 1 warning (Z13)"',
+     ["tests/test_the_front_door_pictures_are_true.py::"
+      "test_the_elision_in_the_shot_says_what_it_elided"],
+     "a marked gap is a claim about the output, and this project has already "
+     "shipped one that stood for findings of a different kind"),
+
+    ("gates/the-page-quotes-the-pin-the-project-declares",
+     "README.md",
+     "`vdi2770==0.8.0.dev0`",
+     "`vdi2770==0.7.0`",
+     ["tests/test_the_front_page_points_at_what_it_shows.py::"
+      "test_the_pin_the_page_quotes_is_the_pin_the_project_declares"],
+     "the paragraph whose whole subject is that the pin is exact quotes a pin "
+     "the project does not declare"),
+
+    ("gates/the-badge-counts-the-catalogue",
+     "README.md",
+     "rules-39_each_with_a_remedy",
+     "rules-40_each_with_a_remedy",
+     ["tests/test_the_front_page_points_at_what_it_shows.py::"
+      "test_the_badge_that_counts_rules_counts_the_catalogue"],
+     "a number inside a shields.io URL is not the shape the prose gate reads, "
+     "so the badge could say anything at all"),
+
+    ("gates/the-gallery-shows-the-severity-the-tool-prints",
+     "README.md",
+     "| `error Z13` — and it says plainly",
+     "| `warn Z13` — and it says plainly",
+     ["tests/test_the_front_page_points_at_what_it_shows.py::"
+      "test_every_rule_the_gallery_names_is_a_rule_with_that_severity"],
+     "the shortest promise on the page -- ship this, it says that -- advertises "
+     "a verdict the tool does not give"),
+
+    ("gates/a-claim-is-held-where-it-was-last-made",
+     "tests/conftest.py",
+     "    for heading, text in changelog_sections():",
+     "    for heading, text in changelog_sections()[:1]:",
+     # Not the standalone-file count, which was the first choice and survived
+     # this exact mutation: that claim is restated in the section being written,
+     # so cutting the reader down to one section still finds it. The row was
+     # testing nothing. This claim is made by the release below and by nothing
+     # above it, which is the whole condition the reader exists for.
+     ["tests/test_the_docs_count_what_they_claim.py::"
+      "test_the_changelog_counts_the_trailer_shapes_it_claims_are_pinned"],
+     "a claim stated in the release below stops being read the moment a new "
+     "section opens, and every number it pins goes unchecked"),
+]
+
+TABLE += FRONT_DOOR
+
 CANARY = "canary/a-comment-nobody-reads"
 
 

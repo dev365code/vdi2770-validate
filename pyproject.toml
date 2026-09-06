@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "vdi2770-validate"
-version = "0.7.0"
+version = "0.8.0.dev0"
 description = "Offline conformance checker for VDI 2770 containers — every finding comes with a remedy"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -28,7 +28,7 @@ classifiers = [
 # permits the fixed version does not deliver it. The two numbers move together
 # and go out under one tag, so there is no version of one to pair with a
 # different version of the other.
-dependencies = ["vdi2770==0.7.0", "xmlschema==4.2.0"]
+dependencies = ["vdi2770==0.8.0.dev0", "xmlschema==4.2.0"]
 
 [project.urls]
 Homepage = "https://github.com/dev365code/vdi2770-validate"

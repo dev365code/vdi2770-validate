@@ -7,6 +7,11 @@ recursive-include tests *.py *.json
 recursive-include tools *.py *.java *.md
 recursive-include corpus *
 recursive-include docs *.md *.json
+# The front page shows two pictures and a suite reads both. `*.md *.json` does
+# not carry an `.svg`, so an sdist would ship the gate without its subject --
+# and it would go unnoticed locally, because setuptools carries SOURCES.txt
+# forward from any earlier build.
+include docs/assets/door.svg docs/assets/tenseconds.svg
 recursive-include .github *.yml
 # The reader is its own distribution and its source lives here. Its manifest and
 # its pytest settings travel too: an sdist of this repository without them runs

@@ -75,19 +75,58 @@ def newest_changelog_section() -> str:
     file with no sections at all -- beside a sibling whose docstring says a gate
     that crashes instead of reporting is a gate nobody can read the output of.
     """
+    sections = changelog_sections()
+    return sections[0][1] if sections else ""
+
+
+def changelog_sections():
+    """Every `## ` section of CHANGELOG.md, newest first, as (heading, text).
+
+    Line-anchored, fence-aware, and it does not raise. The first draft of the
+    caller above sliced on the substring `"\\n## "`, which missed a heading on
+    the very first line, ended a section at a `## ` inside a fenced code block,
+    and raised `ValueError` on a file with no sections at all -- beside a
+    sibling whose docstring says a gate that crashes instead of reporting is a
+    gate nobody can read the output of.
+    """
     lines = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8").splitlines(keepends=True)
-    fenced, start = False, None
+    fenced, starts = False, []
     for n, line in enumerate(lines):
         if line.lstrip().startswith("```"):
             fenced = not fenced
             continue
-        if fenced or not line.startswith("## "):
-            continue
-        if start is None:
-            start = n
-        else:
-            return "".join(lines[start:n])
-    return "".join(lines[start:]) if start is not None else ""
+        if not fenced and line.startswith("## "):
+            starts.append(n)
+    bounds = list(zip(starts, starts[1:] + [len(lines)]))
+    return [(lines[a].rstrip("\n"), "".join(lines[a:b])) for a, b in bounds]
+
+
+def latest_changelog_claim(pattern, flags=0):
+    """The newest statement of one claim, and the section that makes it.
+
+    Several gates here pin a sentence, and they looked for it in the newest
+    section only -- on the reasoning that work lands above the releases, so the
+    top section is the one whose claims must still be true. Half of that is
+    right. The other half is not: a new section does not restate what a release
+    already said, so the first change made *after* a release is cut turns those
+    gates red on prose that is entirely correct, and the repair that suggests
+    itself then is editing the released section to match today. That is
+    falsifying the record rather than fixing a number, which is the one thing
+    this changelog's rule forbids.
+
+    So a claim stands until it is restated. Sections are read newest first and
+    the first one that makes the claim answers for it -- a claim restated
+    wrongly in a newer section still fails, because that section is found
+    first. `(None, None)` when nothing states it at all, which is also a
+    failure, and one the caller words better than this could.
+    """
+    import re as _re
+
+    for heading, text in changelog_sections():
+        found = _re.search(pattern, text, flags)
+        if found:
+            return heading, found
+    return None, None
 
 
 # The least a file can be and still be a PDF: a header and one indirect object.

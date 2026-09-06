@@ -1,5 +1,77 @@
 # Changelog
 
+## Unreleased
+
+**The front page is drawn, and the drawing is checked.** `README.md` now opens
+with two pictures: a banner, which carries no count and no version so there is
+nothing in it that can go stale, and a terminal shot of a real run on a
+container that ships in this repository. A drawing of a verdict is the one asset
+that can go quietly false — the tool changes a sentence, the SVG keeps the old
+one, and the page shows output no version ever produced, with every gate green.
+
+So none of it is hand-kept. `tools/gen_door.py` holds the shot's lines as data
+and draws both files; `tools/gen_door.py --check` fails if what is committed
+differs from what the generator produces today; and the suite rebuilds every
+logical line out of that data and asserts it against a live run, walking one
+cursor forward so a line drawn above the one the tool prints first fails as
+loudly as a line the tool never prints. The elision in the shot — *"1 more error
+(Z13) and 1 warning (Z9)"* — has its own gate, because a marked gap is still a
+claim about the output, and this project has had that exact sentence be wrong
+before.
+
+The page also points at the pictures by hash. GitHub serves images through a
+proxy that caches by URL, so a changed file behind an unchanged address reaches
+nobody who has already seen the page: the `?v=` on each picture is the first
+eight hex digits of that file's SHA-256, the generator writes it, and a test
+compares it against the committed bytes. Two of the three questions here were
+already asked by other gates — *is the drawing what the tool prints*, *is the
+committed file what the generator draws* — and the third, *does the page point
+at the committed file*, was asked by nobody.
+
+Smaller things on the same page. Every link is absolute, because this file is
+also the description the package index renders, where a relative target resolves
+against nothing. The badge that counts rules is held to the catalogue: a number
+inside a shields.io URL is not the shape the existing prose gate looks for, so
+it could have said anything. The gallery of what the tool catches names rule ids
+and the word each one prints, both checked against the catalogue and against the
+renderer's own label table rather than against a second copy of it.
+
+The version is `0.8.0.dev0` on both halves and the pin moved with it, which is
+what this project does between releases — 0.7.0 is cut and published, and work
+above it is not 0.7.0. The front page quotes that pin in the paragraph explaining
+why it is exact, and that quotation is now held to `pyproject.toml`: it is the
+one number on the page a release moves, and it was prose nothing read.
+
+Gates that pin a changelog sentence now look for it in the newest section that
+*makes* the claim, rather than in the newest section full stop. A new section
+does not restate what a release already said, so the first change after a
+release turned seven of them red on prose that was correct — and the repair that
+suggests itself is editing the released section to match today, which is
+falsifying the record rather than fixing a number.
+
+Two sentences on that page were wrong, and both came from copying a template
+instead of reading the tool. It said *"No Python where the containers are?"* over
+the single-file form, which `tools/build_zipapp.py` contradicts in its own first
+paragraph — a `.pyz` needs a copy of the file **and a Python**; what it removes is
+the index, pip, a virtual environment and the rights to make one. And it said
+*copy one file in* while nothing here publishes that file: there is no release
+asset, so the only route is building it, and the page did not say so. An offer of
+a file nobody can obtain reads like a download. Both are gated now — a `.pyz` the
+page names has to have its origin named too.
+
+- **`make standalone`** runs each of the 74 test files on its own.
+- The mutation harness carries 116 rows, each naming the pytest selection or the
+  tool that has to go red. Seven are new and all seven are about this page: a
+  picture the page no longer points at, a sentence in the terminal shot the tool
+  never printed, an elision that stands for the wrong findings, a quoted pin the
+  project does not declare, a badge counting something other than the catalogue,
+  a gallery advertising a severity the tool does not give, and a changelog claim
+  that stops being read the moment a new section opens.
+- `MANIFEST.in` now names the two pictures. It grafts `docs/` by suffix — `*.md
+  *.json` — and an `.svg` is neither, so an sdist would have shipped the gates
+  without the files they read. That failure appears only on a clean checkout,
+  because setuptools carries `SOURCES.txt` forward from any earlier build.
+
 ## 0.7.0 — 2026-09-06
 
 **Two distributions, one release.** This project ships as `vdi2770-validate`

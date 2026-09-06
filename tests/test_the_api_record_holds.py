@@ -12,6 +12,8 @@ distribution, and `sdk-v<version>` below it, when the reader was published on
 its own.
 """
 import json
+import os
+import re
 import shutil
 import subprocess
 import sys
@@ -22,6 +24,22 @@ from conftest import ROOT
 
 TOOL = ROOT / "tools" / "api_fingerprint.py"
 BASELINE = ROOT / "packages" / "vdi2770" / "API.json"
+
+
+def _cold(**kw):
+    """The environment the tool is run in here: no bytecode cache, ever.
+
+    These fixtures rewrite the reader's `__version__` and then run the tool, and
+    a `.pyc` is validated against its source's *(mtime in whole seconds, size)*.
+    `"0.7.0"` and `"0.7.1"` are the same size, and two writes inside one second
+    carry the same mtime -- so the second version silently never loaded and the
+    tool answered about the first. The test still failed, which is the lucky
+    half; the unlucky half is a fixture that writes a version the tool agrees
+    with by accident.
+    """
+    env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1")
+    env.update(kw)
+    return env
 
 
 def tag_for(version: str) -> str:
@@ -35,14 +53,68 @@ def tag_for(version: str) -> str:
     return ("v" if parts >= (0, 7, 0) else "sdk-v") + version
 
 
+def release_of(version: str) -> str:
+    """The `X.Y.Z` a version is a release of, with any pre-release dropped.
+
+    Every fixture here stages "the repository as it looked when version X was
+    published", and each one used to get X by reading whatever the record
+    happened to hold. That works in the window right after a release and stops
+    working the moment the next cycle starts on a `.devN`: `int("dev0")` raises,
+    `tag_for` builds a tag no release ever carries, and the scenario the test
+    names -- *published* -- is not the one it built.
+
+    The tool itself already draws this line: `_parts` keeps pre-release
+    suffixes out of the comparison because 0.8.0.dev0 and 0.8.0 differ in what
+    is installable, not in which surface they promise.
+    """
+    head = re.match(r"^(\d+\.\d+\.\d+)", version)
+    assert head, f"{version!r} is not a release number this fixture can stage"
+    return head.group(1)
+
+
+def stage_at_its_release(tree) -> str:
+    """Put a copied tree at the release its record is a record of, and say which.
+
+    Both files, because the tool reads one and compares against the other: the
+    reader's `__version__` is what it records *as*, and `API.json` is what it
+    records *over*. A fixture that moved one and not the other was testing a
+    tree no commit ever looked like.
+    """
+    version = release_of(json.loads(
+        (tree / "packages" / "vdi2770" / "API.json").read_text(
+            encoding="utf-8"))["version"])
+
+    init = tree / "packages" / "vdi2770" / "src" / "vdi2770" / "__init__.py"
+    body = init.read_text(encoding="utf-8")
+    stamped = re.sub(r'__version__ = "[^"]+"', f'__version__ = "{version}"', body)
+    assert '__version__ = "' in stamped, "the reader no longer states a version"
+    init.write_text(stamped, encoding="utf-8")
+
+    record = tree / "packages" / "vdi2770" / "API.json"
+    body = json.loads(record.read_text(encoding="utf-8"))
+    body["version"] = version
+    body["surface"]["__version__"]["value"] = repr(version)
+    record.write_text(json.dumps(body, indent=2) + "\n", encoding="utf-8")
+    return version
+
+
 def run(tmp_path, *args, published=True):
     """Run the tool against a copy whose `ROOT` is a throwaway git repo."""
     tree = tmp_path / "tree"
-    shutil.copytree(ROOT / "packages", tree / "packages")
+    shutil.copytree(ROOT / "packages", tree / "packages",
+                    ignore=shutil.ignore_patterns("__pycache__"))
     (tree / "tools").mkdir()
     shutil.copy(TOOL, tree / "tools" / "api_fingerprint.py")
     subprocess.run(["git", "init", "-q"], cwd=tree, check=True)
-    version = json.loads((tree / "packages" / "vdi2770" / "API.json").read_text())["version"]
+    # Every test here is about a surface moving under a version that has already
+    # shipped, and the fixture used to get that for free: right after a release
+    # the tree's version and the recorded one are the same number. They are the
+    # same number for exactly as long as nobody starts the next cycle -- and the
+    # moment the version went to a `.dev` above the record, the tool answered
+    # "different minor, a compatible-release pin on the old one cannot reach
+    # this, go ahead", which is correct and meant these were exercising the
+    # *permitted* path while asserting the refused one.
+    version = stage_at_its_release(tree)
     # Commit the tree, not an empty commit. Tagging nothing made `_at_tag` return
     # None for every test in this file, so the comparison that matters --
     # "the baseline is not what its tag published" -- was never exercised: every
@@ -66,7 +138,8 @@ def run(tmp_path, *args, published=True):
     zr.write_text(text.replace(anchor, anchor + "\n    sneak: Optional[str] = None"),
                   encoding="utf-8")
     return tree, subprocess.run([sys.executable, "tools/api_fingerprint.py", "--write", *args],
-                                cwd=tree, capture_output=True, text=True)
+                                cwd=tree, env=_cold(),
+                          capture_output=True, text=True)
 
 
 def test_a_moved_surface_under_a_published_version_is_refused(tmp_path):
@@ -84,7 +157,8 @@ def test_editing_the_record_does_not_steer_the_refusal(tmp_path, field, value):
         subprocess.run(["git", "tag", tag_for(value)], cwd=tree, check=True)
     baseline.write_text(json.dumps(body, indent=2), encoding="utf-8")
     done = subprocess.run([sys.executable, "tools/api_fingerprint.py", "--write"],
-                          cwd=tree, capture_output=True, text=True)
+                          cwd=tree, env=_cold(),
+                          capture_output=True, text=True)
     assert done.returncode == 1, f"editing {field} let it record: {done.stdout}{done.stderr}"
 
 
@@ -127,7 +201,8 @@ def test_deleting_the_record_does_not_make_it_the_first_one(tmp_path):
     tree, _ = run(tmp_path)
     (tree / "packages" / "vdi2770" / "API.json").unlink()
     done = subprocess.run([sys.executable, "tools/api_fingerprint.py", "--write", "--first"],
-                          cwd=tree, capture_output=True, text=True)
+                          cwd=tree, env=_cold(),
+                          capture_output=True, text=True)
     assert done.returncode == 1, done.stdout + done.stderr
 
 
@@ -243,7 +318,8 @@ def test_a_baseline_that_is_not_what_its_tag_published_is_refused(tmp_path):
     baseline.write_text(json.dumps(body, indent=2), encoding="utf-8")
 
     done = subprocess.run([sys.executable, "tools/api_fingerprint.py", "--write"],
-                          cwd=tree, capture_output=True, text=True)
+                          cwd=tree, env=_cold(),
+                          capture_output=True, text=True)
     assert done.returncode == 1, done.stdout + done.stderr
     assert f"not what {tag_for('0.0.9')} published" in done.stderr, done.stderr
 
@@ -256,13 +332,15 @@ def test_a_checkout_without_tags_is_refused_rather_than_waved_through(tmp_path):
     green. A guard that cannot see is a guard that says yes.
     """
     tree = tmp_path / "tree"
-    shutil.copytree(ROOT / "packages", tree / "packages")
+    shutil.copytree(ROOT / "packages", tree / "packages",
+                    ignore=shutil.ignore_patterns("__pycache__"))
     (tree / "tools").mkdir()
     shutil.copy(TOOL, tree / "tools" / "api_fingerprint.py")
     subprocess.run(["git", "init", "-q"], cwd=tree, check=True)      # no tags at all
 
     done = subprocess.run([sys.executable, "tools/api_fingerprint.py", "--write"],
-                          cwd=tree, capture_output=True, text=True)
+                          cwd=tree, env=_cold(),
+                          capture_output=True, text=True)
     assert done.returncode == 1, done.stdout + done.stderr
     assert "no release tags at all" in done.stderr, done.stderr
 
@@ -284,13 +362,13 @@ def test_a_version_that_is_already_published_is_not_recorded_over(tmp_path):
     already installed the number being written.
     """
     tree = tmp_path / "tree"
-    shutil.copytree(ROOT / "packages", tree / "packages")
+    shutil.copytree(ROOT / "packages", tree / "packages",
+                    ignore=shutil.ignore_patterns("__pycache__"))
     (tree / "tools").mkdir()
     shutil.copy(TOOL, tree / "tools" / "api_fingerprint.py")
     subprocess.run(["git", "init", "-q"], cwd=tree, check=True)
 
-    was = json.loads((tree / "packages" / "vdi2770" / "API.json").read_text(
-        encoding="utf-8"))["version"]
+    was = stage_at_its_release(tree)
     subprocess.run(["git", "add", "-A"], cwd=tree, check=True)
     subprocess.run(["git", "-c", "user.email=t@t", "-c", "user.name=t",
                     "commit", "-q", "-m", "x"], cwd=tree, check=True)
@@ -298,7 +376,7 @@ def test_a_version_that_is_already_published_is_not_recorded_over(tmp_path):
     # it and the "restore it from the tag" branch above cannot fire instead.
     subprocess.run(["git", "tag", tag_for(was)], cwd=tree, check=True)
 
-    major, minor, _patch = (int(x) for x in was.split("."))
+    major, minor, _patch = (int(x) for x in was.split(".")[:3])
     # The *minor*: the addition below changes a dataclass's signature, and the
     # pin is `~=`, so a patch bump is refused one guard earlier and this test
     # would pass on the wrong sentence.
@@ -308,7 +386,15 @@ def test_a_version_that_is_already_published_is_not_recorded_over(tmp_path):
     # own while it was published separately, and the number lives in one place
     # now.
     f = tree / "packages" / "vdi2770" / "src" / "vdi2770" / "__init__.py"
-    f.write_text(f.read_text(encoding="utf-8").replace(was, now), encoding="utf-8")
+    # Set, not substituted. `replace(was, now)` assumed the file already said
+    # the recorded version, which is true only in the window right after a
+    # release: once the cycle starts on a `.dev` above it, the substitution
+    # finds nothing, silently changes nothing, and the test goes on to assert a
+    # refusal of a version that was never set.
+    stamped = re.sub(r'__version__ = "[^"]+"', f'__version__ = "{now}"',
+                     f.read_text(encoding="utf-8"))
+    assert f'"{now}"' in stamped, "the reader no longer states a __version__"
+    f.write_text(stamped, encoding="utf-8")
     # An addition, so `compatible()` is happy with the patch bump and the only
     # thing left to object to is the number itself.
     zr = tree / "packages" / "vdi2770" / "src" / "vdi2770" / "zipread.py"
@@ -319,7 +405,8 @@ def test_a_version_that_is_already_published_is_not_recorded_over(tmp_path):
                   encoding="utf-8")
 
     done = subprocess.run([sys.executable, "tools/api_fingerprint.py", "--write"],
-                          cwd=tree, capture_output=True, text=True)
+                          cwd=tree, env=_cold(),
+                          capture_output=True, text=True)
     assert done.returncode == 1, done.stdout + done.stderr
     assert f"{tag_for(now)} is already published" in done.stderr, done.stderr
     kept = json.loads((tree / "packages" / "vdi2770" / "API.json").read_text(
@@ -356,7 +443,8 @@ def test_pointing_the_record_at_a_tag_that_does_not_exist_is_refused(tmp_path):
     baseline.write_text(json.dumps(body, indent=2), encoding="utf-8")
 
     done = subprocess.run([sys.executable, "tools/api_fingerprint.py", "--write"],
-                          cwd=tree, capture_output=True, text=True)
+                          cwd=tree, env=_cold(),
+                          capture_output=True, text=True)
     assert done.returncode == 1, done.stdout + done.stderr
     assert "no release tag ever named it" in done.stderr, done.stderr
 
@@ -379,7 +467,8 @@ def test_a_baseline_that_differs_from_its_tag_is_refused(tmp_path):
                  encoding="utf-8")
 
     done = subprocess.run([sys.executable, "tools/api_fingerprint.py", "--write"],
-                          cwd=tree, capture_output=True, text=True)
+                          cwd=tree, env=_cold(),
+                          capture_output=True, text=True)
     assert done.returncode == 1, done.stdout + done.stderr
     assert "is not what v" in done.stderr, done.stderr
     assert "no baseline at all" not in done.stderr, (
@@ -400,7 +489,8 @@ def test_an_unreleased_version_is_told_to_re_record_not_to_bump(tmp_path):
     has shipped nothing.
     """
     tree = tmp_path / "tree"
-    shutil.copytree(ROOT / "packages", tree / "packages")
+    shutil.copytree(ROOT / "packages", tree / "packages",
+                    ignore=shutil.ignore_patterns("__pycache__"))
     (tree / "tools").mkdir()
     shutil.copy(TOOL, tree / "tools" / "api_fingerprint.py")
     subprocess.run(["git", "init", "-q"], cwd=tree, check=True)
@@ -417,7 +507,8 @@ def test_an_unreleased_version_is_told_to_re_record_not_to_bump(tmp_path):
                   encoding="utf-8")
 
     done = subprocess.run([sys.executable, "tools/api_fingerprint.py", "--check"],
-                          cwd=tree, capture_output=True, text=True)
+                          cwd=tree, env=_cold(),
+                          capture_output=True, text=True)
     assert done.returncode == 1, done.stdout + done.stderr
     assert "from PyPI does not get this" not in done.stderr, done.stderr
     assert "--write" in done.stderr, (

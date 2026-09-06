@@ -1,22 +1,40 @@
-# vdi2770-validate
+<div align="center">
+  <img src="https://raw.githubusercontent.com/dev365code/vdi2770-validate/main/docs/assets/door.svg?v=9f702803" alt="vdi2770-validate — check VDI 2770 document containers before they ship: offline, deterministic, and every finding tells you how to fix it. AI proposes, rules judge, people decide." width="100%">
 
-Point it at a VDI 2770 container and it tells you, offline, whether the archive is
-one — and if something is wrong, what to do about it.
+[![CI](https://github.com/dev365code/vdi2770-validate/actions/workflows/ci.yml/badge.svg)](https://github.com/dev365code/vdi2770-validate/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/vdi2770-validate?label=PyPI&color=2f6fb3)](https://pypi.org/project/vdi2770-validate/)
+[![rules](https://img.shields.io/badge/rules-39_each_with_a_remedy-a8721c)](https://github.com/dev365code/vdi2770-validate/blob/main/docs/rules.md)
+[![license](https://img.shields.io/badge/license-Apache--2.0-5f6a75)](https://github.com/dev365code/vdi2770-validate/blob/main/LICENSE)
+
+&nbsp;**Apache-2.0**&nbsp;·&nbsp;**Python 3.9 · 3.12 · 3.13**&nbsp;·&nbsp;**pure Python, nothing compiled**&nbsp;·&nbsp;**zero network, by design**
+
+[Ten seconds](#ten-seconds) · [What it catches](#what-it-catches) · [Where it sits](#where-it-sits) · [Three doors](#three-doors-one-judgement) · [What it will not tell you](#what-it-will-not-tell-you) · [Roadmap](#roadmap) · [Two layers](#one-install-two-layers) · [In your product](#using-this-validator-in-your-product)
+
+</div>
+
+## Ten seconds
+
+<img src="https://raw.githubusercontent.com/dev365code/vdi2770-validate/main/docs/assets/tenseconds.svg?v=5202a554" alt="Real vdi2770-validate output: error F1, a file named in the metadata is not in the container, with the metadata line it is declared on and the remedy; error Z7, the documentation container has no VDI2770_Main.pdf, with its remedy; three errors, one warning." width="100%">
+
+```console
+$ pip install vdi2770-validate
+```
+
+**Three parts, every time: what is wrong → the evidence as read from your file → how to fix it.** A rule without a remedy does not ship.
+
+> [!TIP]
+> No install for a first try: `uvx vdi2770-validate check YOUR-CONTAINER.zip` runs it in a throwaway environment.
 
 VDI 2770 is how manufacturers hand over technical documentation in the process
 industry: PDFs bundled into ZIP "document containers" with an XML metadata file,
-those bundled into a "documentation container". Operators in the process industry
-increasingly ask for it in purchase orders, and a container rejected on intake holds
-up a delivery. The reference implementation is a Java library and web service; this
-is a small offline CLI you can drop into a CI job.
+those bundled into a "documentation container". Operators increasingly ask for it in
+purchase orders, and a container rejected on intake holds up a delivery. The
+reference implementation is a Java library and web service; this is a small offline
+CLI you can drop into a CI job.
 
-**Unofficial.** Not affiliated with VDI, the Digital Data Chain Consortium, or IDTA.
-Names are used descriptively.
-
-```bash
-pip install vdi2770-validate
-vdi2770-validate check YOUR-CONTAINER.zip
-```
+> [!IMPORTANT]
+> **Unofficial.** Not affiliated with VDI, the Digital Data Chain Consortium, or IDTA.
+> Names are used descriptively.
 
 It exits `0` when it found no error, `1` when it found at least one or could not
 read a path you gave it, and `2` when it could read none of them. A warning does
@@ -24,6 +42,9 @@ not move the number, so `0` means *no error*, not *nothing to look at* — the
 report says what it found either way. An intake gate that wants none of the
 warnings either can say `--fail-on warning`; the default is `error`, because a
 warning here is a warning on purpose.
+
+<details>
+<summary>The whole session the picture above is taken from, checked line by line by the test suite</summary>
 
 The rest of this page runs on containers that ship here, so to follow along:
 
@@ -62,7 +83,55 @@ line says how much of the container was reached, counted over the names the
 archive itself lists — so a delivery whose documents are in folders this tool
 does not open cannot come back looking like one it read end to end.
 
-That is real output, not a hand-written sample: a test in this repository runs the command and compares.
+</details>
+
+## What it catches
+
+| You ship this | vdi2770-validate says |
+|---|---|
+| metadata that declares `VDI2770_Main.pdf`, and an archive without it | `error F1` — with the line and column of the declaration that has nothing behind it |
+| a class id outside the twelve VDI 2770 publishes | `error M2` — the id is quoted back, and the twelve are listed |
+| documents delivered as folders instead of nested containers | `error Z13` — and it says plainly that this is the tool declining to look, not the container being wrong |
+| a member name that would escape the extraction directory | `error Z4` — refused, and nothing was ever written to disk to escape into |
+| a declared PDF the scan could not confirm is a PDF | `error P5` — reported as *not confirmed*, never as *not a PDF* |
+
+Every code carries a remedy and the source its requirement comes from —
+[docs/rules.md](https://github.com/dev365code/vdi2770-validate/blob/main/docs/rules.md)
+lists all of them.
+
+## Where it sits
+
+```mermaid
+flowchart LR
+    A[Authoring · CAD · ERP · supplier documents] --> P([documentation container .zip])
+    P --> C{{vdi2770-validate check}}
+    C -- "exit 0 · with what was reached" --> D[Operator intake · plant handover]
+    C -- "findings, each with a remedy" --> A
+    classDef judge fill:#2f5d8a,stroke:#8fb8dd,color:#e8edf2
+    class C judge
+```
+
+## Three doors, one judgement
+
+| Door | For | One line |
+|---|---|---|
+| Terminal | build scripts, people | `vdi2770-validate check handover.zip` |
+| Python | your own tooling | `import vdi2770` / `import vdi2770_validate` |
+| Single file | closed networks, approvals | `python vdi2770.pyz check handover.zip` |
+
+No route to a package index? No pip, no virtual environment, no rights to make
+one? Carry **one file** in instead. It still needs a Python — that is the one
+thing it cannot bring — and nothing else:
+
+```bash
+python tools/build_zipapp.py --check     # writes dist/vdi2770.pyz and runs it
+```
+
+Pure Python, nothing compiled, and an ordinary readable zip: whoever has to
+approve software entering the network can open it and read every line, which
+matters more than convenience when the approval is the hard part.
+
+Exit codes and a versioned JSON report make it a CI gate in one line.
 
 ## What it will not tell you
 
@@ -76,38 +145,74 @@ each carrying that `path`. An entry for a container that was checked also carrie
 because there is nothing to report about a file nobody read. It carries the
 three fields that say what produced the run, like every other entry: a run where
 some entries can be version-checked and some cannot is worse for a consumer than
-one where none can. The rest of the refusals
-are in [docs/scope.md](https://github.com/dev365code/vdi2770-validate/blob/main/docs/scope.md).
+one where none can.
 
-## How it is built
+**Documents delivered as folders.** They are reported, not opened — `Z13` above.
 
-- **Offline by design.** No network at runtime, proven by a test that counts socket
-  attempts rather than waiting for one to fail — a tool that reaches out and falls
-  back quietly on error would satisfy the weaker check. Nothing is extracted to disk; a supplier archive does not get to pick a
-  path on your filesystem or expand an XML entity.
-- **Rules are data.** [`rules.json`](https://github.com/dev365code/vdi2770-validate/blob/main/src/vdi2770_validate/data/rules.json), rendered as [docs/rules.md](https://github.com/dev365code/vdi2770-validate/blob/main/docs/rules.md) — each
+**What the guideline text says.** It is sold by DIN Media and was not read. Every
+rule names a free source instead, or says the judgement is ours and explains
+itself. The rest of the refusals are in
+[docs/scope.md](https://github.com/dev365code/vdi2770-validate/blob/main/docs/scope.md).
+
+If you want the parsed container and not a verdict, take the reader on its own —
+[two layers](#one-install-two-layers), below.
+[iirds-validate](https://github.com/dev365code/iirds-validate) is the same idea for
+iiRDS, if that is the handover format you are on.
+
+## Why trust the answer
+
+- **Deterministic and offline.** No network at runtime, proven by a test that counts
+  socket attempts rather than waiting for one to fail — a tool that reaches out and
+  falls back quietly on error would satisfy the weaker check. Nothing is extracted to
+  disk; a supplier archive does not get to pick a path on your filesystem or expand
+  an XML entity.
+- **Rules are data.** [`rules.json`](https://github.com/dev365code/vdi2770-validate/blob/main/src/vdi2770_validate/data/rules.json),
+  rendered as [docs/rules.md](https://github.com/dev365code/vdi2770-validate/blob/main/docs/rules.md) — each
   rule carries where its requirement comes from, a remedy sentence, and — where the
   reference implementation checks the same thing — the message keys it uses.
 - **26 of 39 rules have a minimal fixture pair** — a container that violates the rule
   and a conforming one differing in as little as a single member. A 27th has a violating
   fixture and no counterpart, because there is no conforming version of *this file is not
   a ZIP*. The rest are exercised by the vendored corpus. A rule that fires nowhere fails
-  the build.
+  the build, and every rule here has been checked against its own mutations.
 - **Rules cannot reach the parser.** A test fails if a rule module imports `zipfile`
   or an XML library, so a rule cannot accidentally check how a document was spelled
-  instead of what it says. Rules may read the readers' constants — the reserved file names, the container kinds — but not call a parser.
+  instead of what it says. Rules may read the readers' constants — the reserved file
+  names, the container kinds — but not call a parser.
+- **Recorded disagreements.** Where the free sources disagree, this project picks one
+  reading, marks the finding, and writes down the question in
+  [docs/divergences.md](https://github.com/dev365code/vdi2770-validate/blob/main/docs/divergences.md).
 
-## Two packages
+## Roadmap
 
-The reader lives in [`vdi2770`](https://pypi.org/project/vdi2770/), a separate
-package with no dependencies: it opens a container, refuses what it should
-refuse, and hands back a typed model with a line number on every node. It decides
-nothing, and it imports nothing — no dependency of this package is reachable from
-it, which a test asserts rather than promises.
+An item moves right when it is built and checked, not when it is decided.
 
-This package is that library plus a rule set. The split is not cosmetic — a test
+```mermaid
+timeline
+    title Where vdi2770-validate is going
+    Shipped : Reader and rules, same version, one tag, one install
+            : 39 rules, each with a source and a remedy
+            : Versioned JSON report, exit codes, single-file offline build
+    Building : An obligation index — what is asked for, and how much of it is covered
+             : Deeper documentation-container checks
+    Planned : Browser-local checking — no install, and the file never leaves the machine
+            : Cross-checks with neighbouring handover standards
+```
+
+## One install, two layers
+
+`pip install vdi2770-validate` brings both halves and there is nothing else to do.
+They are two distributions on purpose.
+
+The reader lives in [`vdi2770`](https://pypi.org/project/vdi2770/), which has no
+dependencies of its own: it opens a container, refuses what it should refuse, and
+hands back a typed model with a line number on every node. It decides nothing, and
+it imports nothing — no dependency of the rule set is reachable from it, which a
+test asserts rather than promises.
+
+The rule set is that library plus an opinion. The split is not cosmetic — a test
 fails if the reader can so much as import the rules — and it exists because a rule
-set is an opinion. If your customer's supplement disagrees with ours, or you want
+set *is* an opinion. If your customer's supplement disagrees with ours, or you want
 the parsed model for something other than a verdict, take the reader and leave the
 opinion behind:
 
@@ -122,8 +227,8 @@ container = read_container_file("corpus/examples/container/documentcontainer.zip
 print(container.kind, len(container.members))
 ```
 
-The two carry the same version and are released together under one tag, and this
-package names the reader exactly — `vdi2770==0.7.0`, not a range. A range was a
+The two carry the same version and are released together under one tag, and the
+rule set names the reader exactly — `vdi2770==0.8.0.dev0`, not a range. A range was a
 standing way to be wrong: it had already let `pip` install a reader without the
 fix a release existed for, so the correction never reached the people it was
 written for.
@@ -144,6 +249,34 @@ $ vdi2770-validate classes
 ```
 
 Details in [docs/divergences.md](https://github.com/dev365code/vdi2770-validate/blob/main/docs/divergences.md).
+
+## Using this validator in your product
+
+<details>
+<summary>Embedding, versions and support</summary>
+
+Apache-2.0. You may embed it in commercial products, ship it to your customers and
+run it inside closed networks; keep the LICENSE and NOTICE files with it. A run
+makes no network requests and uploads nothing. The surfaces you can build on are the
+report JSON, the exit codes and the command-line options documented above — those
+are versioned, and a change to any of them is announced as a breaking change in the
+CHANGELOG. Everything else may change between releases.
+
+Releases follow semantic versioning, and the reader and the rule set move together
+under one tag. Released files are not deleted; a release with a security problem is
+marked as yanked and superseded, so a version you have pinned keeps installing. When
+the free sources a rule is built on change, the CHANGELOG says what changed in the
+judgement and why.
+
+The software is free and stays free, and there is no paid tier of the judgement
+itself: a free run and a supported run give the same result on the same file.
+Professional support is available for the work around it — update guarantees when
+the sources change, backports to a version you have frozen, help with embedding, and
+change-impact notes for your product. Contact: zero8004paz@gmail.com. For security
+reports see
+[SECURITY.md](https://github.com/dev365code/vdi2770-validate/blob/main/SECURITY.md).
+
+</details>
 
 ## Licensing
 
