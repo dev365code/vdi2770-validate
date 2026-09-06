@@ -822,80 +822,203 @@ def test_every_workflow_that_installs_this_project_installs_the_reader_first():
             f"instead of this commit.")
 
 
-def test_the_upgrade_harness_judges_by_running_the_command(monkeypatch):
-    """`pip check` may be recorded and may not be believed.
-
-    That is the decision `tools/check_upgrade_paths.py` exists to hold: a
-    destroyed install has consistent metadata and no entry point, so every path
-    this project has broken looked healthy to `pip check` and was found by
-    running the command.
-
-    Asserted by running the harness's own assertion against installs that are
-    broken in each of the ways it has to notice, rather than by reading its
-    source for the call. The first version of this did read the source -- it
-    checked that `env.command(` appeared -- and a mutation that deleted the
-    line *deciding anything about the answer* left the call sitting there and
-    walked straight past it.
-    """
+def _harness(monkeypatch):
     monkeypatch.syspath_prepend(str(ROOT / "tools"))
     import check_upgrade_paths as harness
 
     class Fine:
-        """What a subprocess that worked looks like."""
-
         returncode, stdout, stderr = 0, "", ""
 
-    # The import half is stubbed out with the rest. The first version let it run
-    # for real against this interpreter, which imports the package because the
-    # suite arranges that -- so the test passed here and failed wherever it did
-    # not, and the thing it was actually asserting was the environment.
+    # The import half is stubbed with the rest. Letting it run for real against
+    # this interpreter made the test assert that the suite arranges an
+    # importable package -- it passed here and failed in a copy of the tree
+    # without one, which is where the mutation sweep runs.
     monkeypatch.setattr(harness, "run", lambda *a, **k: Fine())
+    return harness
 
-    class Stub:
-        """An install whose imports work and whose command answers as told."""
 
-        python = "python"
+class Install:
+    """An install that works, until one thing about it is changed.
 
-        def __init__(self, code, said):
-            self._answer = (code, said)
+    Modelled rather than described: every way this gate has to notice is a
+    keyword here, and the test below turns each on in turn.
+    """
 
-        def command(self, *args):
-            return self._answer
+    python = "python"
+    version = "0.8.0"
 
-        def check(self):
-            return "(not consulted)"
+    def __init__(self, **broken):
+        self.broken = broken
 
-    harness.both_halves_run(Stub(0, "0.8.0"), "a working install")
+    def versions(self):
+        return {"vdi2770": self.version,
+                "vdi2770-validate": self.broken.get("metadata", self.version)}
 
-    for code, said, broken in ((1, "Traceback", "a command that exits non-zero"),
-                               (None, "not installed", "an entry point that was deleted"),
-                               (0, "   ", "a command that prints nothing")):
+    def check(self):
+        return "(not consulted)"
+
+    def command(self, *args):
+        if self.broken.get("no_entry_point"):
+            return None, "not installed"
+        if args and args[0] == "--version":
+            if self.broken.get("version_exits_nonzero"):
+                # The right version, and a non-zero exit. One axis at a time:
+                # a case that got both wrong at once was refused by whichever
+                # check ran first, so deleting the other one changed nothing
+                # and the mutation for it survived.
+                return 1, self.version
+            if self.broken.get("version_prints_nothing"):
+                return 0, "   "
+            return 0, self.broken.get("says_version", self.version)
+        # `check <container>`: 0 for the clean one, 1 for the failing one.
+        clean = args[-1].endswith("documentcontainer.zip")
+        if self.broken.get("always_passes"):
+            return 0, "0 error(s)"
+        if self.broken.get("always_fails"):
+            return 1, "1 error(s)"
+        return (0 if clean else 1), "verdict"
+
+
+def test_the_upgrade_harness_judges_by_running_the_command(monkeypatch):
+    """`pip check` may be recorded and may not be believed — and "it started"
+    is not the same as "it works".
+
+    A build that printed *the rule catalogue could not be loaded; validating
+    nothing*, reported a version it did not have, and exited 0 on every input
+    passed the first version of this gate, which asked only for exit 0 and a
+    non-empty line. That gate is the last thing that runs before a release is
+    published.
+
+    Each way of being broken is injected and the harness has to refuse it.
+    """
+    harness = _harness(monkeypatch)
+    harness.both_halves_run(Install(), "a working install")
+
+    for broken, why in (
+            ({"no_entry_point": True}, "an entry point that was deleted"),
+            ({"version_exits_nonzero": True}, "a command that exits non-zero"),
+            ({"version_prints_nothing": True}, "a command that prints nothing"),
+            ({"says_version": "0.7.0"}, "a build reporting a version it is not"),
+            ({"always_passes": True}, "a build that exits 0 on every input"),
+            ({"always_fails": True}, "a build that fails a clean container")):
         try:
-            harness.both_halves_run(Stub(code, said), broken)
+            harness.both_halves_run(Install(**broken), why)
         except AssertionError:
             continue
         raise AssertionError(
-            f"the harness accepted {broken}; every install this project has "
+            f"the harness accepted {why}; every install this project has "
             f"broken passed `pip check` and failed exactly this way")
+
+
+def test_every_case_the_harness_runs_asks_that_question(monkeypatch):
+    """The gate above pins one function. Three ways round it leave that
+    function untouched: run no cases at all, keep the function and stop calling
+    it, or move the lie into `Env.command` so the function is fed a lie it
+    cannot see. The first two are structural and checked here."""
+    import inspect
+
+    harness = _harness(monkeypatch)
+    assert len(harness.CASES) >= 3, (
+        f"the harness runs {len(harness.CASES)} cases; it reports success "
+        f"having done nothing")
+    for case in harness.CASES:
+        body = inspect.getsource(case)
+        assert "both_halves_run" in body, (
+            f"{case.__name__} never asks whether the tool works")
+
+
+def test_the_env_the_harness_builds_reports_a_missing_command(tmp_path,
+                                                              monkeypatch):
+    """And the third way round: `Env.command` is what feeds the assertion, and
+    a change there hands it an answer it has no way to doubt. Run against a
+    real directory with no executable in it."""
+    harness = _harness(monkeypatch)
+    env = harness.Env.__new__(harness.Env)
+    env.root = tmp_path
+    (tmp_path / "bin").mkdir()
+    code, said = env.command("--version")
+    assert code is None, f"a missing entry point answered {code!r}: {said!r}"
+
+
+#: Publishing jobs the upgrade gate cannot stand in front of, with the reason.
+#: Not an escape hatch: a job here is one where the ordering makes the gate
+#: impossible, and the entry has to say why. Anything else that can publish has
+#: to wait.
+UNGUARDABLE = {
+    "publish-reader": "the gate installs both halves and upgrades to them, so "
+                      "it cannot run until both wheels exist -- and the rules "
+                      "are not built until the reader is on the index, which is "
+                      "what `check_release_order.py` is for. The reader is "
+                      "therefore already published by the time there is "
+                      "anything to test. What this costs is bounded: the "
+                      "reader has no console script and no dependency of its "
+                      "own, so the failures this gate exists for reach a user "
+                      "through the rules, which it does guard.",
+}
+
+
+def test_the_unguarded_publisher_is_named_and_explained():
+    """An exemption is a decision or it is an oversight, and the two look the
+    same in a workflow file. Naming it here makes the next person removing a
+    gate say why, and makes a job that quietly stops waiting fail above."""
+    for name, why in UNGUARDABLE.items():
+        assert len(why) > 60, f"{name} is exempted without a real reason"
+    import yaml
+    jobs = yaml.safe_load(
+        (ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8"))["jobs"]
+    for name in UNGUARDABLE:
+        assert name in jobs, f"{name} is exempted and the workflow has no such job"
 
 
 def test_nothing_publishes_before_the_check_that_guards_it():
     """A gate that runs beside the thing it guards is not a gate.
 
     `upgrade-gate` installs what the index serves today and upgrades to the
-    wheel about to replace it. If the publish job merely runs at the same time,
-    a release that breaks an existing install goes out while the job that would
-    have said so is still starting.
+    wheel about to replace it. Four ways to keep this file looking protected
+    while removing the protection, all of which the first version of this test
+    accepted: comment the `needs:` line out and let a regex read the comment;
+    keep `needs:` byte-identical and give the gate `continue-on-error: true`;
+    give its one step an `if:` that never holds on a tag; give the publish an
+    `if: always()` so it goes out when the gate failed. A fifth: add a second
+    publishing job that needs nothing.
+
+    So the shape is parsed rather than matched, every publishing job is found
+    by what makes it one -- it can mint an OIDC token -- and the assertions are
+    about effect rather than about the presence of a word.
     """
-    import re
+    import yaml
 
     text = (ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
-    jobs = dict(re.findall(r"(?m)^  ([a-z][\w-]*):\n(.*?)(?=^  [a-z][\w-]*:\n|\Z)",
-                           text, re.S))
-    assert "upgrade-gate" in jobs, "the release workflow has no upgrade gate"
-    publish = jobs.get("publish-rules", "")
-    needs = re.search(r"needs:\s*(\[[^\]]*\]|\S+)", publish)
-    assert needs, "publish-rules declares no needs at all"
-    assert "upgrade-gate" in needs.group(1), (
-        f"publish-rules needs {needs.group(1)} and not the upgrade gate, so the "
-        f"two run together and the gate guards nothing")
+    jobs = yaml.safe_load(text)["jobs"]
+
+    def publishes(job):
+        return "write" in str(job.get("permissions", {}).get("id-token", ""))
+
+    publishers = {name: job for name, job in jobs.items() if publishes(job)}
+    assert publishers, "no job in the release workflow can publish; is this the right file?"
+
+    gate = jobs.get("upgrade-gate")
+    assert gate, f"the release workflow has no upgrade gate; jobs are {sorted(jobs)}"
+    assert not gate.get("continue-on-error"), (
+        "the upgrade gate is allowed to fail, so it reports success either way")
+    assert "if" not in gate, (
+        f"the upgrade gate is conditional ({gate['if']!r}); a gate that can "
+        f"decline to run does not guard the run it declined")
+    for step in gate.get("steps", []):
+        assert "if" not in step, (
+            f"a step of the upgrade gate is conditional ({step['if']!r}), so "
+            f"the job can pass having skipped the check")
+
+    for name, job in publishers.items():
+        if name in UNGUARDABLE:
+            continue
+        needs = job.get("needs") or []
+        needs = [needs] if isinstance(needs, str) else list(needs)
+        assert "upgrade-gate" in needs, (
+            f"{name} can publish and does not wait for the upgrade gate "
+            f"(needs: {needs}); the two run together and the gate guards nothing")
+        # `always()` and `success()` are not the same word for the same thing:
+        # the first runs the publish when the gate has already failed.
+        assert "always(" not in str(job.get("if", "")), (
+            f"{name} publishes with `if: {job['if']}`, which fires even when "
+            f"the gate it needs has failed")

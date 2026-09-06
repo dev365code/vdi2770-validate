@@ -71,17 +71,40 @@ def manifests():
 
 
 def import_names(path):
-    """What a distribution puts on `sys.path`, read from where it says its
-    packages live rather than from its name -- the two are not the same, and
-    this whole file is about the case where they diverge."""
-    block = re.search(r"^where = \[(.*?)\]", manifest(path), re.M | re.S)
+    """The top-level names a distribution puts on `sys.path`.
+
+    Read from where it says its packages live rather than from its name -- the
+    two are not the same, and this whole file is about the case where they
+    diverge.
+
+    A directory counts when it holds Python anywhere beneath it, not when it
+    holds an `__init__.py`. That is not pedantry: setuptools finds namespace
+    packages by default, so a distribution shipping `vdi2770/validate/` with no
+    `vdi2770/__init__.py` claims the top-level name `vdi2770` while an
+    `__init__.py` test sees nothing at all. That layout is not hypothetical --
+    it is the shape under discussion for splitting these two -- and the gate
+    written to protect that decision could not see the decision being broken.
+
+    A bare `.py` at the root counts too: `py-modules = ["vdi2770"]` ships
+    `vdi2770.py`, which occupies the same name as the package would.
+    """
+    text = manifest(path)
+    block = re.search(r"^where = \[(.*?)\]", text, re.M | re.S)
     assert block, f"{path.name} does not say where its packages are found"
     names = set()
     for where in re.findall(r'"([^"]+)"', block.group(1)):
         here = path.parent / where
         assert here.is_dir(), f"{path.name} looks for packages in {where}, which is not there"
-        names |= {d.name for d in here.iterdir()
-                  if d.is_dir() and (d / "__init__.py").exists()}
+        for child in here.iterdir():
+            if child.is_dir() and any(child.rglob("*.py")):
+                names.add(child.name)
+            elif child.suffix == ".py":
+                names.add(child.stem)
+    # And what the manifest names outright, for the spellings that do not put a
+    # file where `where` can see it.
+    listed = re.search(r"^py-modules = \[(.*?)\]", text, re.M | re.S)
+    if listed:
+        names |= set(re.findall(r'"([^"]+)"', listed.group(1)))
     return names
 
 

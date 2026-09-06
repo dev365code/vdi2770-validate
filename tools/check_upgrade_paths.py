@@ -24,10 +24,13 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
 
 #: The command a user types, and what it must print. Read from the installed
 #: package rather than hard-coded, so a release cannot pass by agreeing with a
@@ -35,7 +38,16 @@ from pathlib import Path
 COMMAND = "vdi2770-validate"
 
 
+#: Everything here starts a fresh interpreter to find out what an install can
+#: do, and the parent's `PYTHONPATH` would let this tree answer for it -- the
+#: imports would resolve against the source and the case would pass over a venv
+#: holding nothing. `PIP_*` settings would steer the installs the same way.
+_CLEAN = {k: v for k, v in os.environ.items()
+          if not k.startswith(("PYTHON", "PIP_"))} | {"PYTHONDONTWRITEBYTECODE": "1"}
+
+
 def run(*args, **kw):
+    kw.setdefault("env", _CLEAN)
     return subprocess.run(args, capture_output=True, text=True, **kw)
 
 
@@ -73,20 +85,51 @@ def expect(condition, said: str):
         raise AssertionError(said)
 
 
-def both_halves_run(env: Env, why: str) -> None:
-    """The assertion this file is for: the thing a person types works.
+#: Two containers that ship here, and what this tool has to say about them. A
+#: verdict in both directions, because either one alone is satisfied by a
+#: program that answers the same way to everything -- and a release that exits
+#: 0 on every input is precisely the shape this gate stands in front of.
+VERDICTS = (("corpus/examples/container/documentcontainer.zip", 0),
+            ("corpus/examples/missingdocuments/folders.zip", 1))
 
-    Both import names, because the reader is published for use on its own and a
-    caller that only ever imports `vdi2770` is a caller this project invites.
-    And the console script, because an entry point is a file like any other and
-    an uninstall can delete it while every import still resolves.
+
+def both_halves_run(env: Env, why: str) -> None:
+    """The assertion this file is for: the thing a person types *works*.
+
+    Working is three questions and the first version asked one of them. That it
+    starts -- both import names, because the reader is published for use on its
+    own, and the console script, because an entry point is a file like any
+    other and an uninstall can delete it while every import still resolves.
+    That it knows what it is -- `--version` has to print the version that is
+    installed, not merely print something. And that it judges -- a container
+    with an error in it has to come back as an error and a clean one as clean.
+
+    The first version asked only whether the command exited 0 and printed a
+    non-empty line. A build whose entry point printed "the rule catalogue could
+    not be loaded; validating nothing", printed a version that was not
+    installed, and exited 0 on every input passed all of it, and this gate is
+    the last thing that runs before a release is published.
     """
     for name in ("vdi2770", "vdi2770_validate"):
         done = run(env.python, "-c", f"import {name}")
         expect(done.returncode == 0, f"{why}: import {name} failed\n{done.stderr}")
+
     code, said = env.command("--version")
     expect(code == 0, f"{why}: `{COMMAND} --version` gave {code}: {said}")
-    expect(said.strip(), f"{why}: `{COMMAND} --version` printed nothing")
+    installed = env.versions().get("vdi2770-validate")
+    expect(installed, f"{why}: nothing named vdi2770-validate is installed")
+    expect(installed in said, (
+        f"{why}: `{COMMAND} --version` says {said!r} and what is installed is "
+        f"{installed}. A build that reports a version it is not is a build "
+        f"whose reports name an engine nobody has."))
+
+    for path, wanted in VERDICTS:
+        target = str(ROOT / path)
+        code, said = env.command("check", target)
+        expect(code == wanted, (
+            f"{why}: `{COMMAND} check {path}` exited {code} and this container "
+            f"is a {'clean' if wanted == 0 else 'failing'} one. A program that "
+            f"answers the same way to everything answers nothing."))
 
 
 def case_1_clean(env: Env) -> str:
@@ -110,8 +153,14 @@ def case_2_upgrade_from_0_6_0(env: Env) -> str:
     """
     env.install("vdi2770-validate==0.6.0")
     before = env.versions()
-    expect(before.get("vdi2770") == "0.4.0",
-           f"0.6.0 no longer drags 0.4.0 behind it; this case is about that: {before}")
+    # Older, not `== "0.4.0"`. The exact number is a fact about an index this
+    # repository does not control: a `vdi2770 0.4.1` upload satisfies `~=0.4.0`
+    # and would turn this gate red -- blocking a release for a reason that has
+    # nothing to do with the release. What the case is about is the mismatch,
+    # and the mismatch is that the pair does not match.
+    expect(before.get("vdi2770") and before["vdi2770"] != before["vdi2770-validate"],
+           f"0.6.0 no longer arrives with a reader of its own vintage; this "
+           f"case is about a pair that a range left mismatched: {before}")
     done = env.install("-U", "vdi2770-validate")
     expect(done.returncode == 0, f"the upgrade itself failed:\n{done.stderr}")
     after = env.versions()
@@ -125,10 +174,16 @@ def case_2_upgrade_from_0_6_0(env: Env) -> str:
 def case_3_the_pin_is_exact(env: Env) -> str:
     """What the installed metadata asks for, not what the repository declares.
 
-    An exact pin is what makes the pair impossible to half-move, and it is also
-    what makes a *mixed* install complain out loud instead of silently working
-    until something is removed. That second property is why this is checked
-    against the index rather than against `pyproject.toml`.
+    An exact pin is what makes the pair impossible to half-move: there is no
+    version of one that can be paired with a different version of the other, so
+    a release cannot arrive half-applied. Checked against the index rather than
+    against `pyproject.toml` because what a release shipped and what this tree
+    declares are different questions and only the first reaches anybody.
+
+    It is *not* checked here that a mixed install is refused, because it is
+    not: pip prints its conflict line and exits 0. `pip check` goes red, which
+    is the one place in this whole area where it says something true — and a
+    thing that has to be run separately is not a refusal.
     """
     env.install("vdi2770-validate")
     have = env.versions()
@@ -141,6 +196,11 @@ def case_3_the_pin_is_exact(env: Env) -> str:
     expect(asked == f"vdi2770=={have['vdi2770']}",
            f"the installed rules ask for {asked!r}, not an exact pin on "
            f"{have['vdi2770']}")
+    # This case installs a whole working pair on its way to reading one field,
+    # so it asks the same question the others do. A case that installs and
+    # never runs anything is a case that would not notice the install being
+    # broken in the way this file exists to notice.
+    both_halves_run(env, "the pinned pair")
     return f"{asked}; pip check: {env.check()}"
 
 
@@ -158,7 +218,13 @@ def case_4_the_release_being_made(env: Env, wheels: str) -> str:
     """
     env.install("vdi2770-validate")
     before = env.versions()
-    done = env.install("-U", "--find-links", wheels, "vdi2770-validate")
+    # `--pre`, because the ordinary state of this tree is a `.devN` and pip
+    # will not select one otherwise: without it this case fails on every
+    # working tree and blames the wheels. `--no-index`, because `--find-links`
+    # is additive and "the release being made" could otherwise be satisfied by
+    # what is already published.
+    done = env.install("-U", "--pre", "--no-index", "--find-links", wheels,
+                       "vdi2770-validate")
     expect(done.returncode == 0, f"the upgrade to the built wheels failed:\n{done.stderr}")
     after = env.versions()
     expect(after["vdi2770"] != before["vdi2770"] or
