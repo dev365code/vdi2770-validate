@@ -136,8 +136,10 @@ references — a 4.1 KiB archive — held 48 MB before this bound existed and ho
 23 MB now. The last two bound the
 attributes hung off it, which neither of the others sees: attributes are cheap
 to write and the schema check downstream is quadratic in how many sit on one
-element, so 12,000 of them in a 27 KiB archive cost 13.6 seconds. `vdi2770.pdfread` has twelve of its own for the PDF scan:
-`MAX_STREAMS`, `MAX_STREAM_SCAN`, `MAX_INFLATED_PER_STREAM`,
+element, so 12,000 of them in a 27 KiB archive cost 13.6 seconds. `vdi2770.pdfread` has thirteen of its own for the PDF scan:
+`MAX_STREAMS` with the `MAX_STREAM_MARKERS` that bounds how many places are
+looked at to find that many — the second exists because a marker the scan
+rejects still costs it something — `MAX_STREAM_SCAN`, `MAX_INFLATED_PER_STREAM`,
 `MAX_INFLATED_TOTAL`, `MAX_INFLATED_PER_READ`, `MAX_OBJ_PROBES`, `MAX_XMP_PACKETS`, `MAX_PDFA_PREFIXES`,
 `MAX_TRAILER_SCAN` with `MAX_TRAILER_BYTES` and the `MAX_TRAILERS` the second is
 derived from — one bounds how much of a single trailer dictionary is read and

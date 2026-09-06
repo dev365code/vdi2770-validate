@@ -130,3 +130,49 @@ def test_a_clean_container_prints_no_basis_lines():
         check_file(str(clean)), "count_errors") else True
     out = run("--quiet", str(clean))
     assert not [ln for ln in out.splitlines() if ln.strip().startswith("per ")]
+
+
+def test_a_scan_stopped_by_the_stream_budget_names_it(tmp_path):
+    """The detail withheld the number for a reason that no longer exists.
+
+    It read: *"No number: `MAX_STREAMS` counts stream markers and `stream\\n`
+    matches `endstream\\n` too, so any count printed here would be about twice
+    what a PDF parser sees in the file."* That was true and it is not any more —
+    the marker counts streams now. Withholding it on a freshly-invented reason
+    would be rationalising a decision whose only ground was a defect.
+
+    Only where the stream budget is what stopped it. The other reason a file's
+    own scan ends covers two different ceilings at once, and one number would
+    pick one of them and be wrong about the other.
+    """
+    import io
+    import zipfile
+    import zlib
+
+    from vdi2770.pdfread import MAX_STREAMS
+
+    blob = zlib.compress(b"a page\n")
+    pdf = [b"%PDF-1.7\n", b"1 0 obj\n<< /Type /Catalog >>\nendobj\n"]
+    for i in range(2, MAX_STREAMS + 4):
+        pdf.append(b"%d 0 obj\n<< /Length %d /Filter /FlateDecode >>\nstream\n"
+                   % (i, len(blob)))
+        pdf.append(blob)
+        pdf.append(b"\nendstream\nendobj\n")
+    pdf.append(b"trailer\n%%EOF\n")
+
+    # A real document container with one member swapped, so everything else
+    # about it is conforming and the finding can only be about the PDF.
+    source = CORPUS / "container" / "documentcontainer.zip"
+    buf = io.BytesIO()
+    with zipfile.ZipFile(source) as src, zipfile.ZipFile(buf, "w") as out:
+        for name in src.namelist():
+            out.writestr(name, b"".join(pdf) if name == "B.pdf" else src.read(name))
+    target = tmp_path / "many-streams.zip"
+    target.write_bytes(buf.getvalue())
+
+    said = [f.detail or "" for f in check_file(str(target)).sorted()
+            if f.rule.id == "P3"]
+    assert said, "a PDF past the stream budget produced no P3 at all"
+    assert any(str(MAX_STREAMS) in d for d in said), (
+        f"the scan stopped at the stream budget and the detail does not say "
+        f"how many that is: {said}")

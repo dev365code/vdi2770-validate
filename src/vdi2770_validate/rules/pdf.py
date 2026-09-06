@@ -31,6 +31,10 @@ class Stopped:
     #: and only `Z5` prints it; it is carried rather than read because a rule
     #: module may not import a parser.
     ceiling: int
+    #: And how many streams one file may open, carried the same way and for the
+    #: same reason. Only the `"streams"` reason spends it and only `P3` prints
+    #: it.
+    streams: int
     facts: object
     #: Which limit ended the search. `"read"` is the allowance across the whole
     #: read and is the only one `Z5` speaks for -- it says nothing about this
@@ -199,15 +203,29 @@ def check(container, document, facts_for) -> Iterator[Finding]:
                 # file does carry one, our scan did not reach it"; until now the
                 # detail gave a reader no way to tell which had happened.
                 #
-                # No number: `MAX_STREAMS` counts stream *markers* and
-                # `stream\n` matches `endstream\n` too, so any count printed
-                # here would be about twice what a PDF parser sees in the file.
+                # The number is named where one number is the answer, and it
+                # is a ceiling rather than a count of this file: "at most" is
+                # doing the work. It used to be withheld because the marker
+                # matched `endstream\n` as well, so any figure would have been
+                # about twice what a PDF parser sees. That is gone. What is
+                # left -- the scan counts marker positions in raw bytes, so a
+                # body carrying the marker still adds to them -- makes the
+                # count an upper bound on this tool's own effort and not a
+                # statement about the document, which is what the sentence
+                # says.
+                #
+                # Not for the other reason a file's own scan ends: that one
+                # covers two ceilings at once, the window read of a single
+                # compressed body and what one stream may become, and a single
+                # number would name one of them and be wrong about the other.
+                limit = (f" — it opens at most {stopped.streams} streams in "
+                         f"one file" if stopped.reason == "streams" else "")
                 yield Finding(
                     r, r.title, where,
                     detail="this scan stopped before the end of the file, "
                            "against a limit of this tool rather than anything "
-                           "in the file; there is no pdfaid identification in "
-                           "the part it read",
+                           f"in the file{limit}; there is no pdfaid "
+                           "identification in the part it read",
                     as_about=About.TOOL)
             else:
                 yield Finding(

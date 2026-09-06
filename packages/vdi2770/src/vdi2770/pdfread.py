@@ -24,6 +24,18 @@ _PDFA_NS = re.compile(
     rb"""xmlns:([A-Za-z_][\w.\-]{0,63})\s*=\s*["']http://www\.aiim\.org/pdfa/ns/id/["']""",
     re.I)
 MAX_PDFA_PREFIXES = 4     # one is normal; a packet listing hundreds gets four tries
+#: A bare literal, deliberately, with the `endstream` filtering done outside it.
+#: `endstream` ends in `stream`, so the matches have to be filtered somehow --
+#: and putting that filter at the *front* of the pattern is what costs. A
+#: leading lookbehind and a leading character class each cost CPython's literal
+#: prefilter: the compiled pattern loses its `prefix='stream'` and the file is
+#: walked rather than skimmed. Over a large file that was two orders of
+#: magnitude here, and the two alternatives were not even the same cost as each
+#: other, so no single multiple is worth writing down.
+#:
+#: It is the position, not the assertion: a lookbehind written *after* the
+#: literal keeps the prefix and times the same as the bare pattern. This stays
+#: bare because the filter below is cheaper still and reads plainly.
 _STREAM = re.compile(rb"stream\r?\n")
 
 # A PDF/A identification lives in the XMP metadata. Matching the words anywhere
@@ -371,6 +383,16 @@ def _scan_dictionary(data: bytes, start: int, budget: int):
 MAX_STREAM_SCAN = 400_000        # compressed bytes read after each stream marker
 MAX_INFLATED_PER_STREAM = 4_000_000   # and what we will let one of them become
 MAX_STREAMS = 512                     # zlib is cheap per call; a million calls are not
+#: And how many places the scan will *look at* before giving up, which is a
+#: different budget and has to be one. The rejected markers do not reach the
+#: caller, so they cannot spend `MAX_STREAMS`: a member whose markers are all
+#: closings advances nothing and would be walked end to end. `endstream\n`
+#: compresses to almost nothing, so that member arrives as a small upload.
+#:
+#: Twice the stream budget is what a conforming file costs -- it closes every
+#: stream it opens -- and one more, so that a file which merely has too many
+#: streams trips `MAX_STREAMS` and gets that sentence rather than this one.
+MAX_STREAM_MARKERS = 2 * MAX_STREAMS + 1
 MAX_INFLATED_TOTAL = 32_000_000       # the whole budget for one file
 # And the whole budget for one read, however many files it opens. The line above
 # bounds a file; a container declares many, and a caller that reads them all
@@ -472,6 +494,47 @@ def _has_an_indirect_object(data: bytes) -> Optional[bool]:
     return None
 
 
+def _stream_starts(data: bytes, cut: Optional[List[Optional[str]]] = None):
+    """Where each stream's bytes begin, for the streams that open one.
+
+    `endstream` ends in `stream`, so the marker matched twice per stream: once
+    where it opened and once where it closed. Every stream in an ordinary PDF
+    therefore took two places out of `MAX_STREAMS`, and a budget of 512 stopped
+    at 257 -- measured, both sides of the boundary. Half the *places*, and a
+    small fraction of the time: the slice taken after a closing `endstream` is
+    handed to a `decompressobj` that rejects it on the two-byte header, so it
+    costs the copy and little else.
+
+    Excluded by the three bytes `end`, and not by "a letter": that was the
+    first rule and it was measurably wrong. This scan reads whole files, so a
+    compressed blob whose last byte happens to be a letter would have had the
+    next marker dropped -- which the reader's own budget suite caught, on a
+    fixture whose streams abut a checksum.
+
+    `end` is exact for syntax, because `stream` and `endstream` are the only
+    keywords ending in those letters. It is not a parser, though, and does not
+    claim to be: what this counts is marker positions in raw bytes, so a body
+    that contains the marker adds to the count. That is a ceiling on work,
+    which is all it is for.
+
+    A stream at offset zero has nothing before it and is kept.
+
+    The rejected ones still cost a place. They have to: the caller counts what
+    it receives, so markers filtered out here would advance nothing and a member
+    made entirely of closings would be walked to its end with no ceiling in
+    reach. `cut` is set when that budget is what stopped the walk, because a
+    scan that gave up and said nothing reads as a scan that finished.
+    """
+    for examined, m in enumerate(_STREAM.finditer(data)):
+        if examined >= MAX_STREAM_MARKERS:
+            if cut is not None and cut[0] is None:
+                cut[0] = "streams"
+            return
+        if data[max(0, m.start() - 3):m.start()] == b"end":
+            continue
+        yield m.end()
+
+
 def _haystacks(data: bytes, allowance: Optional[List[int]] = None,
                cut: Optional[List[Optional[str]]] = None):
     """The raw bytes, then each stream inflated — under a budget.
@@ -491,7 +554,7 @@ def _haystacks(data: bytes, allowance: Optional[List[int]] = None,
     spent = 0
     cap = (MAX_INFLATED_TOTAL if allowance is None
            else min(MAX_INFLATED_TOTAL, allowance[0]))
-    for seen, m in enumerate(_STREAM.finditer(data)):
+    for seen, at in enumerate(_stream_starts(data, cut)):
         if seen >= MAX_STREAMS or spent >= cap:
             # Stopping here used to be silent, and a caller that cannot tell
             # "searched and found nothing" from "stopped searching" has to
@@ -513,7 +576,7 @@ def _haystacks(data: bytes, allowance: Optional[List[int]] = None,
                           else "read" if cap < MAX_INFLATED_TOTAL
                           else "file")
             return
-        chunk = data[m.end():m.end() + MAX_STREAM_SCAN]
+        chunk = data[at:at + MAX_STREAM_SCAN]
         engine = zlib.decompressobj()
         try:
             out = engine.decompress(chunk, MAX_INFLATED_PER_STREAM)

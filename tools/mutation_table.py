@@ -1070,6 +1070,50 @@ BASIS_ROWS = [
      "relationship naming its own id is dangling to them and was not to us"),
 ]
 
+STREAM_ROWS = [
+    ("reader/the-marker-does-not-count-the-word-that-ends-a-stream",
+     "packages/vdi2770/src/vdi2770/pdfread.py",
+     '        if data[max(0, m.start() - 3):m.start()] == b"end":\n            continue',
+     '        if False:\n            continue',
+     ["packages/vdi2770/tests/test_the_stream_budget_counts_streams.py::"
+      "test_the_scan_stops_where_the_budget_says_and_not_at_half_of_it"],
+     "`endstream` ends in `stream`, so every stream takes two places out of "
+     "`MAX_STREAMS` and a published budget of 512 stops at 257"),
+
+    ("reader/the-stream-marker-stays-a-bare-literal",
+     "packages/vdi2770/src/vdi2770/pdfread.py",
+     '_STREAM = re.compile(rb"stream\\r?\\n")',
+     '_STREAM = re.compile(rb"(?<![A-Za-z])stream\\r?\\n")',
+     ["packages/vdi2770/tests/test_the_stream_budget_counts_streams.py::"
+      "test_the_marker_stays_a_bare_literal"],
+     "a filter at the front of the pattern reads like the tidy version and "
+     "costs the literal prefilter, so a large file is walked rather than "
+     "skimmed -- on the reader's untrusted-input path. It also drops a marker "
+     "after any letter, which is a second defect the same edit brings back"),
+
+    ("rules/a-scan-stopped-by-the-stream-budget-names-it",
+     "src/vdi2770_validate/rules/pdf.py",
+     'f"one file" if stopped.reason == "streams" else "")',
+     'f"one file" if False else "")',
+     ["tests/test_the_report_says_what_its_judgement_rests_on.py::"
+      "test_a_scan_stopped_by_the_stream_budget_names_it"],
+     "the number was withheld because the marker double-counted; the defect is "
+     "gone and withholding it on a new reason would be rationalising"),
+]
+
+STREAM_ROWS.append(
+    ("reader/a-rejected-marker-still-costs-a-place",
+     "packages/vdi2770/src/vdi2770/pdfread.py",
+     "        if examined >= MAX_STREAM_MARKERS:",
+     "        if False:",
+     ["packages/vdi2770/tests/test_the_stream_budget_counts_streams.py::"
+      "test_markers_the_filter_rejects_still_cost_something"],
+     "only yielded markers reach the caller's count, so a member made entirely "
+     "of closings advances nothing and is walked end to end -- and it arrives "
+     "small, because `endstream` compresses to almost nothing"))
+
+TABLE += STREAM_ROWS
+
 TABLE += BASIS_ROWS
 
 TABLE += RELATIONSHIPS

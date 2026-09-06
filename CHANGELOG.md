@@ -65,6 +65,62 @@ between releases, and the release beside it prints the file's SHA-256 — which 
 the whole trust story for somebody carrying it across an air gap: the hash on
 the page is the hash of the file they carried in.
 
+**`MAX_STREAMS` is 512 and the scan stopped at 257.** The marker it looks for is
+`stream` followed by an end of line, and `endstream` ends in exactly that. Every
+stream in an ordinary PDF matched twice — once where it opened, once where it
+closed — so a budget of 512 was spent after 256 streams. Measured on both sides:
+256 streams scans to the end, 257 comes back cut short. The largest PDF in this
+repository's corpus holds eleven streams; a handover document is a manual.
+
+Half the budget's places went on the closings, and only a little of its time:
+the slice taken after an `endstream` is rejected on the two-byte zlib header, so
+it costs the copy and almost nothing else.
+
+The filter is three bytes — `end` — and it sits outside the pattern. Putting it
+at the *front* of the pattern is the tidy-looking version and it costs CPython's
+literal prefilter: the compiled pattern loses its `stream` prefix and a large
+file is walked rather than skimmed. On this machine that was two orders of
+magnitude, and a leading lookbehind and a leading character class were not even
+the same cost as each other, so no single multiple belongs in this entry. It is
+the position and not the assertion — a lookbehind written *after* the literal
+keeps the prefix and times like the bare pattern. There is a gate on the pattern
+staying bare, because the change reads like an oversight.
+
+`end` rather than "a letter": that was the first rule and it was wrong. This
+scan reads whole files, so a compressed body whose last byte happens to be a
+letter would have had the next marker dropped — which the reader's own budget
+suite caught, on a fixture whose streams abut a checksum.
+
+**A second budget, because the filter needed one.** Rejected markers do not
+reach the caller, so they cannot spend `MAX_STREAMS` — and a member made
+entirely of `endstream` would have advanced nothing and been walked end to end
+with no ceiling in reach. `endstream` compresses to almost nothing, so that
+member arrives as a small upload. `MAX_STREAM_MARKERS` bounds the places looked
+at: twice the stream budget, because a conforming file closes every stream it
+opens, and one more so that a file which merely has too many streams trips
+`MAX_STREAMS` and gets that sentence instead. It reports the same cut, because a
+scan that gives up and says nothing reads as a scan that finished.
+
+The corpus is unchanged, in findings and in time. A file built to be expensive
+— streams of empty deflate blocks, which is input the scan must chew through
+and output the budgets never see — costs somewhat more than before for twice
+the streams actually read, on the order of a quarter again rather than
+proportionally. Worth
+writing down that the read-wide allowance counts *output* bytes and this shape
+produces none, so what bounds it is the two stream budgets together with the
+archive reader's own ceilings on member and total size — not the inflation
+allowance, which never sees it.
+
+And `P3` now says which limit stopped it — *"it opens at most 512 streams in one
+file"*. That number was withheld, and the reason given was that the marker
+counted double, so any figure would have been about twice what a PDF parser
+sees. That is gone. What remains — this scan counts marker positions in raw
+bytes, so a body carrying the marker adds to them — is why the sentence is an
+upper bound on the tool's own effort and not a count of the document. The limit
+is carried on the record the rule already receives rather than imported, because
+a rule module may not reach the parser: the same door the inflation ceiling has
+always used.
+
 **Every finding now says what its judgement rests on.** `rules.json` carries an
 `obligation` on every rule so that no claim about VDI 2770 travels without its
 source, and the JSON report printed it. The text report — the surface a person
@@ -159,9 +215,9 @@ The container that took the record is the new `M12` fixture — a
 `DocumentRelationship` is two more attributes — which is exactly why the divisor
 is counted out of the containers instead of read back out of this paragraph.
 
-- **`make standalone`** runs each of the 76 test files on its own.
-- The mutation harness carries 122 rows, each naming the pytest selection or the
-  tool that has to go red. Seven are new and all seven are about this page: a
+- **`make standalone`** runs each of the 77 test files on its own.
+- The mutation harness carries 126 rows, each naming the pytest selection or the
+  tool that has to go red. Of the rows added this cycle, seven are about the front page: a
   picture the page no longer points at, a sentence in the terminal shot the tool
   never printed, an elision that stands for the wrong findings, a quoted pin the
   project does not declare, a badge counting something other than the catalogue,

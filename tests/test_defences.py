@@ -59,6 +59,7 @@ PDF_BUDGETS = {
     # the first PDF it was given.
     "MAX_INFLATED_PER_READ": (32_000_000, 64 << 30),
     "MAX_STREAMS": (16, 100_000),
+    "MAX_STREAM_MARKERS": (2 * 512 + 1, 100_000),
     "MAX_TRAILER_SCAN": (256, 1 << 20),
     "MAX_TRAILERS": (8, 4_096),
     # What all the trailers together may cost to read. The floor is one
