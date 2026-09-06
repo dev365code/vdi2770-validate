@@ -400,7 +400,7 @@ TABLE = [
      '\nwhere = ["src"]',
      '\nwhere = ["src", "packages/vdi2770/src"]',
      ["tests/test_the_two_halves_carry_one_version.py::"
-      "test_neither_half_claims_the_others_import_name"],
+      "test_no_two_distributions_here_claim_one_import_name"],
      "two distributions shipping one import package install over each other "
      "without complaint, and uninstalling either deletes files the other is "
      "still using -- reproduced against the published 0.6.0"),
@@ -1111,6 +1111,31 @@ STREAM_ROWS.append(
      "only yielded markers reach the caller's count, so a member made entirely "
      "of closings advances nothing and is walked end to end -- and it arrives "
      "small, because `endstream` compresses to almost nothing"))
+
+UPGRADE_ROWS = [
+    ("gates/an-upgrade-is-judged-by-running-the-command",
+     "tools/check_upgrade_paths.py",
+     '    code, said = env.command("--version")\n'
+     '    expect(code == 0, f"{why}: `{COMMAND} --version` gave {code}: {said}")',
+     '    code, said = env.command("--version")',
+     ["tests/test_ci_parity.py::"
+      "test_the_upgrade_harness_judges_by_running_the_command"],
+     "the harness would agree with `pip check` instead of contradicting it, "
+     "which is the one thing it exists to do -- a destroyed install has "
+     "consistent metadata and no entry point"),
+
+    ("gates/the-release-gate-runs-before-the-publish-it-guards",
+     ".github/workflows/release.yml",
+     "    needs: [build-rules, upgrade-gate]",
+     "    needs: build-rules",
+     ["tests/test_ci_parity.py::"
+      "test_nothing_publishes_before_the_check_that_guards_it"],
+     "the upgrade check would run beside the publish instead of before it, so "
+     "a release that breaks an existing install goes out while the job that "
+     "would have said so is still starting"),
+]
+
+TABLE += UPGRADE_ROWS
 
 TABLE += STREAM_ROWS
 

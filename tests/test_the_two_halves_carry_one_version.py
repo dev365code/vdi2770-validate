@@ -59,6 +59,17 @@ def asked_of(text, distribution):
     return None
 
 
+def manifests():
+    """Every distribution this repository builds, found rather than listed.
+
+    A manifest added under `packages/` and left off a hand-kept list is exactly
+    the distribution whose import names nobody compared.
+    """
+    found = [ROOT / "pyproject.toml"]
+    found += sorted((ROOT / "packages").glob("*/pyproject.toml"))
+    return [p for p in found if p.is_file()]
+
+
 def import_names(path):
     """What a distribution puts on `sys.path`, read from where it says its
     packages live rather than from its name -- the two are not the same, and
@@ -142,7 +153,7 @@ def test_the_command_is_not_named_after_the_other_distribution():
         f"the commands are {named}; `vdi2770` is the other distribution's name")
 
 
-def test_neither_half_claims_the_others_import_name():
+def test_no_two_distributions_here_claim_one_import_name():
     """The gate on the failure described at the top of this file.
 
     Two distributions that both ship `vdi2770_validate/` do not conflict at
@@ -151,9 +162,25 @@ def test_neither_half_claims_the_others_import_name():
     lists files the other one is still using. Keeping the sets disjoint is what
     makes that unreachable, and it is cheap to check and impossible to see by
     reading two manifests side by side.
+
+    Written over whatever manifests this repository has rather than over the
+    two it has today. That is not tidiness: the shape is under discussion, and
+    a version of this repository that publishes one distribution owning both
+    import names is a version where a gate phrased as "the reader and the
+    rules" has nothing to compare and passes by having no work to do. The
+    property is the same at any count -- no import name is claimed twice by
+    things that get installed separately -- and it is the property that decides
+    whether an uninstall can delete a file something else is still using.
     """
-    reader, rules = import_names(READER), import_names(RULES)
-    assert reader and rules, f"one of them ships no package at all: {reader}, {rules}"
-    assert not (reader & rules), (
-        f"both distributions ship {sorted(reader & rules)}. Installing one "
-        f"overwrites the other's files and uninstalling either deletes them.")
+    found = {m: import_names(m) for m in manifests()}
+    assert found, "no distribution manifest found at all"
+    for path, names in found.items():
+        assert names, f"{path.name} ships no package at all"
+    seen = {}
+    for path, names in found.items():
+        for name in names:
+            other = seen.setdefault(name, path)
+            assert other is path, (
+                f"{other.parent.name} and {path.parent.name} both ship "
+                f"{name!r}. Installing one overwrites the other's files and "
+                f"uninstalling either deletes them.")

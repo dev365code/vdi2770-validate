@@ -65,6 +65,39 @@ between releases, and the release beside it prints the file's SHA-256 — which 
 the whole trust story for somebody carrying it across an air gap: the hash on
 the page is the hash of the file they carried in.
 
+**An install somebody already has is now something this project checks.** Every
+gate here reads this tree; none of them could ask what happens to a machine that
+has an older version on it. That is where the failures have been — a version
+range that could not reach its own fix, and a distribution uninstalled out from
+under the one replacing it — and it was checked by hand each time.
+
+`make upgrade-paths` builds a fresh interpreter per case, installs from the
+index, and **the verdict is running the command**. A distribution can be removed
+out from under another one, leaving an install whose metadata is consistent and
+whose entry point is gone, and `pip check` reports that as fine — so what it
+said is recorded beside the result and never instead of it. Three paths are real
+today: a clean install, the upgrade from 0.6.0 (which is the pair a range pin
+left mismatched, reader 0.4.0 under rules 0.6.0), and the exact pin read out of
+the *installed* metadata rather than out of `pyproject.toml`.
+
+A fourth takes `--from` and upgrades to the wheels being built, which is the
+only one about the release being made rather than about the index as it already
+stands. The release workflow runs it between building the rules and publishing
+them. It cannot protect the reader's publish — by the time both wheels exist the
+reader is already on the index, which is the price of the order gate — so it
+protects the name people install by, where every upgrade failure here has been.
+
+It is not in `make check` and not in per-push CI: it needs the network that
+`make check` refuses and minutes it does not have. The exemption is written down
+with its reason beside the others, because a target nobody runs is a gate nobody
+has.
+
+The gate on two distributions claiming one import name now reads whatever
+manifests this repository builds rather than the two it has today. The property
+is the same at any count — no import name claimed twice by things installed
+separately — and phrasing it as "the reader and the rules" is how a gate ends up
+with nothing to compare and passes by having no work to do.
+
 **`MAX_STREAMS` is 512 and the scan stopped at 257.** The marker it looks for is
 `stream` followed by an end of line, and `endstream` ends in exactly that. Every
 stream in an ordinary PDF matched twice — once where it opened, once where it
@@ -216,7 +249,7 @@ The container that took the record is the new `M12` fixture — a
 is counted out of the containers instead of read back out of this paragraph.
 
 - **`make standalone`** runs each of the 77 test files on its own.
-- The mutation harness carries 126 rows, each naming the pytest selection or the
+- The mutation harness carries 128 rows, each naming the pytest selection or the
   tool that has to go red. Of the rows added this cycle, seven are about the front page: a
   picture the page no longer points at, a sentence in the terminal shot the tool
   never printed, an elision that stands for the wrong findings, a quoted pin the

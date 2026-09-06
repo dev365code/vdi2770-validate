@@ -6,7 +6,7 @@ RUFF_VERSION   := 0.16.3
 PYTEST_VERSION := 8.3.4
 XMLSCHEMA_VERSION := 4.2.0
 
-.PHONY: zipapp check lint test fixtures corpus coverage-check rules-doc oracle-half sdist-runs-its-own-tests wheel-installs-and-runs reader-api-matches-its-version mutations standalone clean oracle-fully-swept
+.PHONY: upgrade-paths zipapp check lint test fixtures corpus coverage-check rules-doc oracle-half sdist-runs-its-own-tests wheel-installs-and-runs reader-api-matches-its-version mutations standalone clean oracle-fully-swept
 
 check: lint fixtures test corpus coverage-check rules-doc oracle-half reader-api-matches-its-version sdist-runs-its-own-tests wheel-installs-and-runs
 
@@ -37,6 +37,13 @@ rules-doc:
 # while docs/divergences.md goes on counting from it.
 oracle-half:
 	$(PYTHON) tools/capture_oracle.py --check-ours
+
+# Deliberately not in `check`: needs the network and a clean interpreter per
+# case, and it answers a question `check` cannot ask -- what happens to an
+# install somebody already has. The verdict is running the command, not
+# `pip check`, which reports a destroyed install as fine.
+upgrade-paths:
+	$(PYTHON) tools/check_upgrade_paths.py
 
 # Deliberately not in `check`: it copies the tree, rebuilds the fixtures and runs
 # pytest once per row, which is minutes rather than seconds. It answers the

@@ -30,6 +30,13 @@ OUTSIDE_CHECK = {
     "mutations": "minutes rather than seconds, and it is a check *on* the suite "
                  "rather than part of it — it only tells you something new when a "
                  "gate changes",
+    "upgrade-paths": "it builds a fresh interpreter per case and installs from "
+                     "the index, so it needs the network `make check` refuses "
+                     "and minutes it does not have. It also asks a question no "
+                     "check of this tree can: what happens to an install "
+                     "somebody already has. It runs where both are already "
+                     "true — before the name people type gets a new version "
+                     "behind it, in the release workflow",
     "standalone": "one interpreter start per test file — a minute, and it only "
                   "tells you something new when a file gains an import. It asks "
                   "what a shared process cannot: does any file pass only because "
@@ -813,3 +820,82 @@ def test_every_workflow_that_installs_this_project_installs_the_reader_first():
             f"index for it: before the release that is a hard failure, and "
             f"after it the run silently becomes about the published reader "
             f"instead of this commit.")
+
+
+def test_the_upgrade_harness_judges_by_running_the_command(monkeypatch):
+    """`pip check` may be recorded and may not be believed.
+
+    That is the decision `tools/check_upgrade_paths.py` exists to hold: a
+    destroyed install has consistent metadata and no entry point, so every path
+    this project has broken looked healthy to `pip check` and was found by
+    running the command.
+
+    Asserted by running the harness's own assertion against installs that are
+    broken in each of the ways it has to notice, rather than by reading its
+    source for the call. The first version of this did read the source -- it
+    checked that `env.command(` appeared -- and a mutation that deleted the
+    line *deciding anything about the answer* left the call sitting there and
+    walked straight past it.
+    """
+    monkeypatch.syspath_prepend(str(ROOT / "tools"))
+    import check_upgrade_paths as harness
+
+    class Fine:
+        """What a subprocess that worked looks like."""
+
+        returncode, stdout, stderr = 0, "", ""
+
+    # The import half is stubbed out with the rest. The first version let it run
+    # for real against this interpreter, which imports the package because the
+    # suite arranges that -- so the test passed here and failed wherever it did
+    # not, and the thing it was actually asserting was the environment.
+    monkeypatch.setattr(harness, "run", lambda *a, **k: Fine())
+
+    class Stub:
+        """An install whose imports work and whose command answers as told."""
+
+        python = "python"
+
+        def __init__(self, code, said):
+            self._answer = (code, said)
+
+        def command(self, *args):
+            return self._answer
+
+        def check(self):
+            return "(not consulted)"
+
+    harness.both_halves_run(Stub(0, "0.8.0"), "a working install")
+
+    for code, said, broken in ((1, "Traceback", "a command that exits non-zero"),
+                               (None, "not installed", "an entry point that was deleted"),
+                               (0, "   ", "a command that prints nothing")):
+        try:
+            harness.both_halves_run(Stub(code, said), broken)
+        except AssertionError:
+            continue
+        raise AssertionError(
+            f"the harness accepted {broken}; every install this project has "
+            f"broken passed `pip check` and failed exactly this way")
+
+
+def test_nothing_publishes_before_the_check_that_guards_it():
+    """A gate that runs beside the thing it guards is not a gate.
+
+    `upgrade-gate` installs what the index serves today and upgrades to the
+    wheel about to replace it. If the publish job merely runs at the same time,
+    a release that breaks an existing install goes out while the job that would
+    have said so is still starting.
+    """
+    import re
+
+    text = (ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
+    jobs = dict(re.findall(r"(?m)^  ([a-z][\w-]*):\n(.*?)(?=^  [a-z][\w-]*:\n|\Z)",
+                           text, re.S))
+    assert "upgrade-gate" in jobs, "the release workflow has no upgrade gate"
+    publish = jobs.get("publish-rules", "")
+    needs = re.search(r"needs:\s*(\[[^\]]*\]|\S+)", publish)
+    assert needs, "publish-rules declares no needs at all"
+    assert "upgrade-gate" in needs.group(1), (
+        f"publish-rules needs {needs.group(1)} and not the upgrade gate, so the "
+        f"two run together and the gate guards nothing")

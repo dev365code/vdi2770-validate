@@ -129,8 +129,30 @@ jobs:
           name: dist-rules
           path: dist/
 
-  publish-rules:
+  # The last thing before the name people type gets a new version behind it.
+  # It installs what is on the index today and then upgrades to the wheel that
+  # is about to replace it, and the verdict is that the command still runs --
+  # `pip check` calls a destroyed install healthy, so it is recorded and not
+  # believed. This cannot protect the reader's publish, which has already
+  # happened by the time both wheels exist; it protects the one people install
+  # by name, which is where every upgrade failure here has been.
+  upgrade-gate:
     needs: build-rules
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist-rules
+          path: dist/
+      - name: An install somebody already has must survive this release
+        run: python tools/check_upgrade_paths.py --from dist
+
+  publish-rules:
+    needs: [build-rules, upgrade-gate]
     runs-on: ubuntu-latest
     # Not the reader's environment. The environment is half of what PyPI keys
     # the publisher on, so sharing it would let either job publish as the other
