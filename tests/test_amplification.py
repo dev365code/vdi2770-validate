@@ -8,9 +8,10 @@ import io
 import time
 import zipfile
 
+from vdi2770_validate.runner import check_bytes
+
 from conftest import A_PDF, CLEAN_DOCUMENT
 from vdi2770 import pdfread, zipread
-from vdi2770_validate.runner import check_bytes
 
 BASE = {n: zipfile.ZipFile(CLEAN_DOCUMENT).read(n)
         for n in zipfile.ZipFile(CLEAN_DOCUMENT).namelist()}

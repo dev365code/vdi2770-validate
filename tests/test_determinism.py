@@ -3,10 +3,11 @@ order its members happen to be stored in."""
 import io
 import zipfile
 
-from conftest import CLEAN_DOCUMENT
-from vdi2770_validate import report as rendering
 from vdi2770_validate.model import MAX_LISTED_PER_RULE
 from vdi2770_validate.runner import check_bytes, check_file
+
+from conftest import CLEAN_DOCUMENT
+from vdi2770_validate import report as rendering
 
 
 def test_two_runs_are_byte_identical():

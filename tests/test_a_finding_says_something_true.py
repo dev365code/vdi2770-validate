@@ -17,9 +17,10 @@ import pathlib
 import re
 import zipfile
 
-from conftest import CLEAN_DOCUMENT, CORPUS, counts_line
 from vdi2770_validate.rules.container import MAX_FOLDERS
 from vdi2770_validate.runner import check_bytes
+
+from conftest import CLEAN_DOCUMENT, CORPUS, counts_line
 
 SRC = zipfile.ZipFile(CLEAN_DOCUMENT)
 
@@ -309,8 +310,9 @@ def test_the_summary_says_how_many_errors_are_this_tool_declining():
     count. A supplier reads the last line of the report, sees one error against
     their delivery, and the axis lives only in the JSON.
     """
-    from conftest import CLEAN_DOCUMENT, CLEAN_DOCUMENTATION
     from vdi2770_validate.report import as_text
+
+    from conftest import CLEAN_DOCUMENT, CLEAN_DOCUMENTATION
 
     docn = zipfile.ZipFile(CLEAN_DOCUMENTATION)
     doc = zipfile.ZipFile(CLEAN_DOCUMENT)
@@ -642,8 +644,9 @@ def test_m4_does_not_offer_a_choice_where_the_sources_agree():
     one thing, a plural verb over a single item, and a disagreement to wait out
     that does not exist. It reproduces on a container this repository ships.
     """
-    from conftest import CORPUS
     from vdi2770_validate.runner import check_bytes
+
+    from conftest import CORPUS
 
     raw = (CORPUS / "demo_invalid_doc_type_names.zip").read_bytes()
     m4 = [f for f in check_bytes(raw, "demo.zip").findings if f.rule.id == "M4"]

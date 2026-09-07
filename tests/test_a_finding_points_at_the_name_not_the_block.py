@@ -11,8 +11,9 @@ it points at differs.
 import io
 import zipfile
 
-from conftest import CLEAN_DOCUMENT
 from vdi2770_validate.runner import check_bytes
+
+from conftest import CLEAN_DOCUMENT
 
 SRC = zipfile.ZipFile(CLEAN_DOCUMENT)
 

@@ -19,9 +19,10 @@ from __future__ import annotations
 import io
 import zipfile
 
-from conftest import CLEAN_DOCUMENT, CLEAN_DOCUMENTATION, counts_line
 from vdi2770_validate.report import as_text
 from vdi2770_validate.runner import check_bytes
+
+from conftest import CLEAN_DOCUMENT, CLEAN_DOCUMENTATION, counts_line
 
 #: The report's own indent for a summary line. A finding's detail is indented
 #: nine, and `rules/container.py` builds one that opens with a member name the
@@ -186,8 +187,9 @@ def test_an_archive_that_could_not_be_opened_at_all_is_one_archive(monkeypatch):
     """
     import json
 
-    from vdi2770 import zipread
     from vdi2770_validate.report import as_json
+
+    from vdi2770 import zipread
 
     def boom(*_a, **_k):
         raise RuntimeError("the reader raised")
@@ -211,9 +213,10 @@ def test_complete_says_more_than_the_numbers_beside_it():
     """
     import json
 
-    from conftest import FIXTURES
     from vdi2770_validate.report import as_json
     from vdi2770_validate.runner import check_file
+
+    from conftest import FIXTURES
 
     stopped = check_file(str(FIXTURES / "x6-too-many-elements.zip"))
     r = stopped.read

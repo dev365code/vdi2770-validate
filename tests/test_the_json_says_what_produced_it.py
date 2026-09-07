@@ -12,11 +12,11 @@ import json
 import re
 
 import pytest
+from vdi2770_validate.cli import main
+from vdi2770_validate.resources import schema_text
 
 from conftest import CLEAN_DOCUMENT
 from vdi2770_validate import __version__
-from vdi2770_validate.cli import main
-from vdi2770_validate.resources import schema_text
 
 
 def run(capsys, argv):

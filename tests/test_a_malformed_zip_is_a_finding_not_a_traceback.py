@@ -15,9 +15,9 @@ import sys
 import zipfile
 
 import pytest
+from vdi2770_validate.runner import check_file
 
 from conftest import CLEAN_DOCUMENT, ROOT
-from vdi2770_validate.runner import check_file
 
 
 def one_member_zip():

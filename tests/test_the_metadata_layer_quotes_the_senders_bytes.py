@@ -20,8 +20,9 @@ import re
 import unicodedata
 import zipfile
 
-from conftest import CLEAN_DOCUMENT
 from vdi2770_validate.runner import check_bytes
+
+from conftest import CLEAN_DOCUMENT
 
 
 def _with_metadata(text: str) -> bytes:

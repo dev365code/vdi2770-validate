@@ -8,9 +8,10 @@ import contextlib
 import io
 import re
 
-from conftest import ROOT, ordinal, under_test
 from vdi2770_validate.model import Severity
 from vdi2770_validate.runner import check_file
+
+from conftest import ROOT, ordinal, under_test
 
 README = (ROOT / "README.md").read_text(encoding="utf-8")
 BLOCK = re.search(r"```\n\$ vdi2770-validate check (\S+)\n(.*?)```", README, re.S)
@@ -105,8 +106,9 @@ def test_the_readme_counts_its_own_fixture_pairs():
     import json
     import re
 
-    from conftest import FIXTURES
     from vdi2770_validate.catalog import rules
+
+    from conftest import FIXTURES
 
     fixtures = json.loads((FIXTURES / "MANIFEST.json").read_text(encoding="utf-8"))["fixtures"]
     paired = {m["rule"] for m in fixtures.values() if m["basedOn"] is not None}
@@ -231,8 +233,9 @@ def test_a_reader_who_has_only_installed_it_can_run_the_first_command():
 def test_the_readme_states_the_exit_codes_the_tool_really_returns(tmp_path):
     """It is sold as something to drop into a CI job, and the numbers a CI job
     reads were written down in one source docstring and nowhere a user looks."""
-    from conftest import CLEAN_DOCUMENT, FIXTURES
     from vdi2770_validate.cli import main
+
+    from conftest import CLEAN_DOCUMENT, FIXTURES
 
     text = README
     measured = {}

@@ -7,8 +7,9 @@ is wrong when the element holding it is absent.
 import io
 import zipfile
 
-from conftest import FIXTURES  # noqa: F401  (keeps the fixture dir on the radar)
 from vdi2770_validate.runner import check_file
+
+from conftest import FIXTURES  # noqa: F401  (keeps the fixture dir on the radar)
 
 META_NO_CLASSID = b"""<?xml version="1.0"?>
 <Document xmlns="http://www.vdi.de/schemas/vdi2770">

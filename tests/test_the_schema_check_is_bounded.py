@@ -16,10 +16,11 @@ import re
 import time
 import zipfile
 
+from vdi2770_validate.runner import check_bytes
+
 from conftest import CLEAN_DOCUMENT
 from vdi2770 import xmlread
 from vdi2770_validate import xsdvalidate
-from vdi2770_validate.runner import check_bytes
 
 SRC = zipfile.ZipFile(CLEAN_DOCUMENT)
 META = SRC.read("VDI2770_Metadata.xml").decode()
@@ -163,8 +164,9 @@ def test_a_schema_complaint_carries_the_line_it_is_about():
     """The whole reason `xsdvalidate.py` walks our own tree: xmlschema reports an
     XPath and ElementTree threw the lines away. `_resolve` returning `None` for
     everything — no complaint ever gets a position — left the suite green."""
-    from conftest import FIXTURES
     from vdi2770_validate.runner import check_file
+
+    from conftest import FIXTURES
 
     x2 = [f for f in check_file(str(FIXTURES / "x2-schema-violation.zip")).findings
           if f.rule.id == "X2"]
@@ -178,8 +180,9 @@ def test_an_index_of_zero_is_not_the_last_child():
     test and indexes the *last* sibling — a complaint with a confidently wrong
     line. XPath is 1-based so `[0]` should never arrive, which is exactly why
     nobody would notice."""
-    from vdi2770 import parse_xml
     from vdi2770_validate.xsdvalidate import _resolve
+
+    from vdi2770 import parse_xml
 
     tree = parse_xml(b"<Document xmlns='http://www.vdi.de/schemas/vdi2770'>"
                      b"<A>first</A><A>second</A></Document>")
@@ -253,10 +256,10 @@ def test_the_schema_is_compiled_once_and_not_once_per_container():
     # Count what the cache does *not* answer: `_schema` is memoised, so the
     # thing to watch is how often it reaches the compiler underneath.
     import xmlschema
+    from vdi2770_validate.runner import check_bytes
 
     from conftest import CLEAN_DOCUMENT
     from vdi2770_validate import xsdvalidate as xv
-    from vdi2770_validate.runner import check_bytes
 
     built = 0
     real = xmlschema.XMLSchema

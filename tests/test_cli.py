@@ -8,9 +8,9 @@ import sys
 import zipfile
 
 import pytest
+from vdi2770_validate.cli import main
 
 from conftest import CLEAN_DOCUMENT, CORPUS, FIXTURES, under_test
-from vdi2770_validate.cli import main
 
 capsys_holder = [None]
 

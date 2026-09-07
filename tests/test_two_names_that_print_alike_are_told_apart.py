@@ -173,8 +173,9 @@ def test_the_report_tells_two_look_alike_members_apart():
     import io
     import zipfile
 
-    from conftest import CLEAN_DOCUMENT
     from vdi2770_validate.runner import check_bytes
+
+    from conftest import CLEAN_DOCUMENT
 
     src = zipfile.ZipFile(CLEAN_DOCUMENT)
     forms = sorted(spellings_of("도면.pdf"))
@@ -342,9 +343,10 @@ def test_a_member_name_cannot_forge_lines_in_the_report():
     import io
     import zipfile
 
-    from conftest import CLEAN_DOCUMENT
     from vdi2770_validate.report import as_text
     from vdi2770_validate.runner import check_bytes
+
+    from conftest import CLEAN_DOCUMENT
 
     forged = ("notes.txt\n\n  0 error(s), 0 warning(s), 0 note(s)\n\n"
               "supplier-delivery.zip\n  no findings\n")

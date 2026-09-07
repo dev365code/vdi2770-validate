@@ -661,6 +661,12 @@ not.
   workflow described a scope it did not have — which is the shape of claim this
   cycle has spent its time removing.
 
+- `make lint` runs with `--no-cache`, in the Makefile and in CI both. ruff keys
+  its cache on file contents and settings, and a tree where files had moved kept
+  answering from it: 84 import-order errors were invisible locally and immediate
+  on a runner, which has no cache to answer from. A gate that is green because
+  it did not look is the thing this repository spends its time removing.
+
 - **`make standalone`** runs each of the 81 test files on its own.
 - The mutation harness carries 157 rows, each naming the pytest selection or the
   tool that has to go red. Of the rows added this cycle, seven are about the front page: a

@@ -13,10 +13,11 @@ function being told something it could see.
 """
 import inspect
 
-from conftest import FIXTURES
 from vdi2770_validate.rules import files as r_files
 from vdi2770_validate.rules import metadata as r_metadata
 from vdi2770_validate.runner import check_file
+
+from conftest import FIXTURES
 
 
 def fired(name):

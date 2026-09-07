@@ -10,8 +10,9 @@ import io
 import re
 import zipfile
 
-from conftest import CLEAN_DOCUMENTATION
 from vdi2770_validate.runner import check_bytes
+
+from conftest import CLEAN_DOCUMENTATION
 
 JUNK = b"not a pdf at all\n\n"
 

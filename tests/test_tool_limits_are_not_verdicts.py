@@ -6,11 +6,11 @@ dependency was being reported as "your metadata does not conform to the schema",
 with a remedy telling the reader to go and edit a line that is perfectly fine.
 """
 import pytest
-
-from conftest import CLEAN_DOCUMENT
 from vdi2770_validate.catalog import rules
 from vdi2770_validate.model import Obligation, Severity
 from vdi2770_validate.runner import check_file
+
+from conftest import CLEAN_DOCUMENT
 
 
 def test_a_broken_installation_is_not_a_schema_violation(monkeypatch):

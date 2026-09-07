@@ -10,8 +10,9 @@ import io
 import pathlib
 import zipfile
 
-from conftest import CLEAN_DOCUMENT, CLEAN_DOCUMENTATION
 from vdi2770_validate.runner import check_file
+
+from conftest import CLEAN_DOCUMENT, CLEAN_DOCUMENTATION
 
 DOCN = zipfile.ZipFile(CLEAN_DOCUMENTATION)
 MAINXML = DOCN.read("VDI2770_Main.xml").decode()

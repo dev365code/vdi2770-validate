@@ -9,8 +9,9 @@ real information, which makes a warning worse than silence.
 import io
 import zipfile
 
-from conftest import CLEAN_DOCUMENT
 from vdi2770_validate.runner import check_file
+
+from conftest import CLEAN_DOCUMENT
 
 SRC = zipfile.ZipFile(CLEAN_DOCUMENT)
 META = SRC.read("VDI2770_Metadata.xml").decode()

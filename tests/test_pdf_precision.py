@@ -82,9 +82,10 @@ def test_the_level_the_report_prints_is_the_level_the_file_claims():
     """
     import zipfile
 
+    from vdi2770_validate.runner import check_file
+
     from conftest import CORPUS
     from vdi2770 import read_pdf
-    from vdi2770_validate.runner import check_file
 
     for container in sorted(CORPUS.rglob("*.zip")):
         claims = {}

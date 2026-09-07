@@ -12,9 +12,10 @@ bytes behind a name does not unsay the name.
 import io
 import zipfile
 
+from vdi2770_validate.runner import check_bytes
+
 from conftest import CLEAN_DOCUMENTATION
 from vdi2770 import Kind, zipread
-from vdi2770_validate.runner import check_bytes
 
 SRC = zipfile.ZipFile(CLEAN_DOCUMENTATION)
 
@@ -164,8 +165,9 @@ def test_every_kind_that_can_refuse_a_member_has_a_sentence():
     The reader publishes the set. That is the only version of this that cannot
     rot.
     """
-    from vdi2770 import REFUSAL_KINDS
     from vdi2770_validate.names import Members
+
+    from vdi2770 import REFUSAL_KINDS
 
     missing = sorted(REFUSAL_KINDS - set(Members.SAID))
     assert not missing, f"a refused member would print a bare defect kind: {missing}"
@@ -194,8 +196,9 @@ def test_a_budget_refusal_reads_as_a_sentence():
     import io
     import zipfile
 
-    from vdi2770 import zipread
     from vdi2770_validate.names import Members
+
+    from vdi2770 import zipread
 
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
@@ -251,8 +254,9 @@ def test_a_remedy_tells_the_sender_what_to_do_about_that_kind():
     at all. Nothing connected the keys to the kinds they are keyed by, so a
     renamed kind would take its remedy off every report without a red test.
     """
-    from vdi2770.model import DEFECT_KINDS
     from vdi2770_validate.rules.container import REMEDY_FOR_DEFECT
+
+    from vdi2770.model import DEFECT_KINDS
 
     stray = sorted(set(REMEDY_FOR_DEFECT) - DEFECT_KINDS)
     assert not stray, f"remedies keyed by something the reader cannot emit: {stray}"

@@ -23,10 +23,10 @@ import io
 import zipfile
 
 import pytest
-
-from conftest import CLEAN_DOCUMENT, CLEAN_DOCUMENTATION
 from vdi2770_validate.model import Severity
 from vdi2770_validate.runner import check_bytes
+
+from conftest import CLEAN_DOCUMENT, CLEAN_DOCUMENTATION
 
 DOC = zipfile.ZipFile(CLEAN_DOCUMENT)
 DOCN = zipfile.ZipFile(CLEAN_DOCUMENTATION)

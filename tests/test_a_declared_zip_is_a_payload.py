@@ -14,8 +14,9 @@ only looks at declared files". A declared one is not past that check.
 import io
 import zipfile
 
-from conftest import CLEAN_DOCUMENT, CLEAN_DOCUMENTATION
 from vdi2770_validate.runner import check_file
+
+from conftest import CLEAN_DOCUMENT, CLEAN_DOCUMENTATION
 
 DOC = zipfile.ZipFile(CLEAN_DOCUMENT)
 DOCN = zipfile.ZipFile(CLEAN_DOCUMENTATION)
@@ -213,8 +214,9 @@ def test_metadata_the_reader_would_not_hand_over_declares_nothing_known():
     import re
     import zipfile
 
-    from conftest import CLEAN_DOCUMENT
     from vdi2770_validate.runner import check_bytes
+
+    from conftest import CLEAN_DOCUMENT
 
     src = zipfile.ZipFile(CLEAN_DOCUMENT)
     meta = src.read("VDI2770_Metadata.xml").decode("utf-8")
@@ -268,8 +270,9 @@ def test_an_undeclared_payload_is_told_once_and_told_what_to_do():
     import io
     import zipfile
 
-    from conftest import CLEAN_DOCUMENT
     from vdi2770_validate.runner import check_bytes
+
+    from conftest import CLEAN_DOCUMENT
 
     src = zipfile.ZipFile(CLEAN_DOCUMENT)
     inner = io.BytesIO()
@@ -307,8 +310,9 @@ def test_z13_does_not_look_inside_a_declared_payload():
     import re
     import zipfile
 
-    from conftest import CLEAN_DOCUMENT
     from vdi2770_validate.runner import check_bytes
+
+    from conftest import CLEAN_DOCUMENT
 
     src = zipfile.ZipFile(CLEAN_DOCUMENT)
     meta = src.read("VDI2770_Metadata.xml").decode("utf-8")
@@ -357,8 +361,9 @@ def test_a_member_of_an_unopened_folder_is_not_judged_by_the_roots_metadata():
     import io
     import zipfile
 
-    from conftest import CLEAN_DOCUMENT, CLEAN_DOCUMENTATION
     from vdi2770_validate.runner import check_bytes
+
+    from conftest import CLEAN_DOCUMENT, CLEAN_DOCUMENTATION
 
     doc = zipfile.ZipFile(CLEAN_DOCUMENT)
     docn = zipfile.ZipFile(CLEAN_DOCUMENTATION)
@@ -405,8 +410,9 @@ def test_a_declared_payload_that_is_a_container_is_said_to_be_one():
     import re
     import zipfile
 
-    from conftest import CLEAN_DOCUMENT
     from vdi2770_validate.runner import check_bytes
+
+    from conftest import CLEAN_DOCUMENT
 
     doc = zipfile.ZipFile(CLEAN_DOCUMENT)
     meta = doc.read("VDI2770_Metadata.xml").decode("utf-8")
@@ -445,8 +451,9 @@ def test_a_documentation_container_holding_only_a_declared_payload_delivers_noth
     import io
     import zipfile
 
-    from conftest import CLEAN_DOCUMENTATION
     from vdi2770_validate.runner import check_bytes
+
+    from conftest import CLEAN_DOCUMENTATION
 
     docn = zipfile.ZipFile(CLEAN_DOCUMENTATION)
     main_xml = docn.read("VDI2770_Main.xml").decode("utf-8")
@@ -490,9 +497,10 @@ def test_following_the_remedy_settles_it_or_the_remedy_does_not_say_it_will():
     import io
     import zipfile
 
-    from conftest import CLEAN_DOCUMENT
     from vdi2770_validate.catalog import rule
     from vdi2770_validate.runner import check_bytes
+
+    from conftest import CLEAN_DOCUMENT
 
     base = zipfile.ZipFile(CLEAN_DOCUMENT)
     meta = base.read("VDI2770_Metadata.xml").decode("utf-8")

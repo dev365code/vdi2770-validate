@@ -5,9 +5,9 @@ it, so `--write` followed by `--check` reported "ok ... 1 unexercised", exit 0 â
 the baseline blessing exactly the thing the tool exists to catch.
 """
 import pytest
+from vdi2770_validate.catalog import rules
 
 from conftest import ROOT
-from vdi2770_validate.catalog import rules
 
 
 @pytest.fixture
@@ -199,8 +199,9 @@ def test_the_observer_actually_runs_the_tool(rule_coverage):
 
     # And it must see a container, not a file of names: P4 fires once per PDF
     # that claims a level, which is a count only a real run knows.
-    from conftest import CORPUS
     from vdi2770_validate.runner import check_file
+
+    from conftest import CORPUS
     live = sum(1 for f in check_file(str(CORPUS / "container" / "documentcontainer.zip")).findings
                if f.rule.id == "P4")
     assert live >= 1 and fired.get("P4", 0) >= live, (

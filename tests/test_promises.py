@@ -7,12 +7,12 @@ could be flipped — all without a single test failing. These are those tests.
 import socket
 
 import pytest
-
-from conftest import CLEAN_DOCUMENT, CLEAN_DOCUMENTATION, FIXTURES
-from vdi2770_validate import report as rendering
 from vdi2770_validate.catalog import rules
 from vdi2770_validate.model import Severity
 from vdi2770_validate.runner import check_file
+
+from conftest import CLEAN_DOCUMENT, CLEAN_DOCUMENTATION, FIXTURES
+from vdi2770_validate import report as rendering
 
 
 def test_nothing_is_written_to_disk(monkeypatch, tmp_path):
@@ -128,8 +128,9 @@ def test_every_rule_count_in_prose_is_the_real_one():
     """
     import re
 
-    from conftest import ROOT
     from vdi2770_validate.catalog import rules
+
+    from conftest import ROOT
 
     real = len(rules())
     docs = [ROOT / "README.md", ROOT / "THIRD_PARTY.md", *sorted((ROOT / "docs").glob("*.md")),
@@ -157,9 +158,10 @@ def test_the_json_says_who_each_finding_is_about():
     so severity cannot carry that and the field has to."""
     import json
 
+    from vdi2770_validate.runner import check_file
+
     from conftest import FIXTURES
     from vdi2770_validate import report as rendering
-    from vdi2770_validate.runner import check_file
 
     payload = json.loads(rendering.as_json(check_file(str(FIXTURES / "z6-nesting-too-deep.zip"))))
     findings = payload["findings"]

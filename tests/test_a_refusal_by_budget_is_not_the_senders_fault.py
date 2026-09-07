@@ -18,10 +18,11 @@ filtering for the sender's faults saw an error caused only by our ratio floor.
 """
 import json
 
-from conftest import FIXTURES
-from vdi2770_validate import report as rendering
 from vdi2770_validate.model import About
 from vdi2770_validate.runner import check_file
+
+from conftest import FIXTURES
+from vdi2770_validate import report as rendering
 
 BUDGET = FIXTURES / "z5b-declared-bomb.zip"
 
@@ -58,8 +59,9 @@ def test_a_broken_member_is_still_the_containers_problem():
     import io
     import zipfile
 
-    from conftest import CLEAN_DOCUMENTATION
     from vdi2770_validate.runner import check_bytes
+
+    from conftest import CLEAN_DOCUMENTATION
 
     src = zipfile.ZipFile(CLEAN_DOCUMENTATION)
     out = io.BytesIO()

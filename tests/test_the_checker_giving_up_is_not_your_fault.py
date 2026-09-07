@@ -12,9 +12,10 @@ that sort of thing.
 import io
 import zipfile
 
-from conftest import CLEAN_DOCUMENT
 from vdi2770_validate.catalog import rule
 from vdi2770_validate.runner import check_file
+
+from conftest import CLEAN_DOCUMENT
 
 DEEP = (b'<Document xmlns="http://www.vdi.de/schemas/vdi2770">'
         + b"<a>" * 1001 + b"</a>" * 1001 + b"</Document>")
@@ -165,7 +166,6 @@ def test_the_catalogue_cannot_be_emptied_by_a_caller():
     """`catalog.py`'s first paragraph says both families are immutable after
     import, and `lru_cache` handed out the same mutable dict every call."""
     import pytest
-
     from vdi2770_validate.catalog import document_classes, rules
 
     for family in (rules, document_classes):

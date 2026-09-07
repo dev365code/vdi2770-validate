@@ -5,8 +5,9 @@ clean, exit 0."""
 import io
 import zipfile
 
-from conftest import CLEAN_DOCUMENT, CLEAN_DOCUMENTATION
 from vdi2770_validate.runner import check_bytes
+
+from conftest import CLEAN_DOCUMENT, CLEAN_DOCUMENTATION
 
 SRC = zipfile.ZipFile(CLEAN_DOCUMENTATION)
 MAIN_XML = SRC.read("VDI2770_Main.xml").decode()

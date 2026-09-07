@@ -13,9 +13,9 @@ import socket
 import urllib.request  # noqa: F401
 
 import pytest
+from vdi2770_validate.runner import check_file
 
 from conftest import CLEAN_DOCUMENTATION, FIXTURES
-from vdi2770_validate.runner import check_file
 
 
 class ReachedForTheNetwork(BaseException):

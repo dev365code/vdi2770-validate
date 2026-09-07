@@ -16,8 +16,9 @@ suppressed on an archive nobody declared.
 import io
 import zipfile
 
-from conftest import CLEAN_DOCUMENT, CLEAN_DOCUMENTATION
 from vdi2770_validate.runner import check_file
+
+from conftest import CLEAN_DOCUMENT, CLEAN_DOCUMENTATION
 
 DOC = zipfile.ZipFile(CLEAN_DOCUMENT)
 META = DOC.read("VDI2770_Metadata.xml").decode()

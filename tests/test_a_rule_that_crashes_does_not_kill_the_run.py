@@ -7,10 +7,10 @@ unchecked. A validator that stops at the first surprise has the failure mode it
 exists to prevent.
 """
 import pytest
+from vdi2770_validate.model import About, Severity
 
 from conftest import CLEAN_DOCUMENT, CLEAN_DOCUMENTATION
 from vdi2770_validate import runner
-from vdi2770_validate.model import About, Severity
 
 
 class Surprise(Exception):

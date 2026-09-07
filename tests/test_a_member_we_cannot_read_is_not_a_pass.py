@@ -13,9 +13,9 @@ import unicodedata
 import zipfile
 
 import pytest
+from vdi2770_validate.runner import check_bytes, check_file
 
 from conftest import CLEAN_DOCUMENT
-from vdi2770_validate.runner import check_bytes, check_file
 
 SRC = zipfile.ZipFile(CLEAN_DOCUMENT)
 META = SRC.read("VDI2770_Metadata.xml").decode()

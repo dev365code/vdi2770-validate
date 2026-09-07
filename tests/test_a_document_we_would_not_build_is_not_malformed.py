@@ -12,11 +12,12 @@ limit, and the project keeps those apart everywhere else.
 import io
 import zipfile
 
-from conftest import CLEAN_DOCUMENT, CLEAN_DOCUMENTATION
-from vdi2770 import xmlread
 from vdi2770_validate.catalog import rules
 from vdi2770_validate.model import About
 from vdi2770_validate.runner import check_bytes
+
+from conftest import CLEAN_DOCUMENT, CLEAN_DOCUMENTATION
+from vdi2770 import xmlread
 
 HEAD = b'<?xml version="1.0"?><Document xmlns="http://www.vdi.de/schemas/vdi2770">'
 
@@ -177,8 +178,9 @@ def test_a_document_we_did_not_model_is_not_then_judged():
     """
     import zipfile as zf
 
-    from conftest import CLEAN_DOCUMENT
     from vdi2770_validate.model import About
+
+    from conftest import CLEAN_DOCUMENT
 
     src = zf.ZipFile(CLEAN_DOCUMENT)
     meta = src.read("VDI2770_Metadata.xml").decode()

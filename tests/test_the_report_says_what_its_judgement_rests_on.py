@@ -24,11 +24,11 @@ import subprocess
 import sys
 
 import pytest
-
-from conftest import CORPUS, FIXTURES, ROOT, under_test
 from vdi2770_validate.model import Obligation
 from vdi2770_validate.report import BASIS, basis
 from vdi2770_validate.runner import check_file
+
+from conftest import CORPUS, FIXTURES, ROOT, under_test
 
 BROKEN = FIXTURES / "m2-unknown-class-id.zip"
 

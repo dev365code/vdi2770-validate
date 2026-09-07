@@ -14,9 +14,9 @@ import unicodedata
 import zipfile
 
 import pytest
+from vdi2770_validate.runner import check_bytes, check_file
 
 from conftest import CLEAN_DOCUMENT
-from vdi2770_validate.runner import check_bytes, check_file
 
 SRC = zipfile.ZipFile(CLEAN_DOCUMENT)
 META = SRC.read("VDI2770_Metadata.xml").decode()
@@ -145,8 +145,9 @@ def test_an_exactly_repeated_name_is_as_ambiguous_as_a_normalised_one():
     import io
     import zipfile
 
-    from conftest import CLEAN_DOCUMENT
     from vdi2770_validate.runner import check_bytes
+
+    from conftest import CLEAN_DOCUMENT
 
     src = zipfile.ZipFile(CLEAN_DOCUMENT)
     real, junk = src.read("B.pdf"), b"not a pdf at all"
@@ -562,9 +563,10 @@ def test_joining_the_members_that_collide_does_not_scan_them_all():
     import io
     import zipfile
 
-    from vdi2770_validate import names as names_module
     from vdi2770_validate.rules import container as container_rules
     from vdi2770_validate.runner import check_bytes
+
+    from vdi2770_validate import names as names_module
 
     calls = []
     real = names_module.folder_path
@@ -757,9 +759,10 @@ def test_one_collision_group_is_walked_once_per_member(monkeypatch):
     Counted on the axis that is: how much of the group each member's finding
     touches.
     """
-    from vdi2770_validate import names as names_module
     from vdi2770_validate.rules import container as container_rules
     from vdi2770_validate.runner import check_bytes
+
+    from vdi2770_validate import names as names_module
 
     # Every normalisation the rule performs, not just the partner list. The
     # first draft counted `folder_path` calls, which stayed at 3n while the wall

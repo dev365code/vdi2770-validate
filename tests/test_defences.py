@@ -14,12 +14,12 @@ import os
 import zipfile
 
 import pytest
+from vdi2770_validate.rules import container as r_container
+from vdi2770_validate.rules import pdf as r_pdf
 
 from conftest import CLEAN_DOCUMENT, under_test
 from vdi2770 import pdfread, xmlread, zipread
 from vdi2770_validate import model, xsdvalidate
-from vdi2770_validate.rules import container as r_container
-from vdi2770_validate.rules import pdf as r_pdf
 
 BASE = {n: zipfile.ZipFile(CLEAN_DOCUMENT).read(n)
         for n in zipfile.ZipFile(CLEAN_DOCUMENT).namelist()}
@@ -419,8 +419,9 @@ def test_a_container_we_declined_to_parse_is_not_then_schema_checked(monkeypatch
     to `xmlschema`, and this asserts the decision, which is the thing that is
     actually being made.
     """
-    from vdi2770_validate import runner
     from vdi2770_validate.runner import MAX_TOTAL_ELEMENTS, check_bytes
+
+    from vdi2770_validate import runner
 
     calls = []
     real = runner.xsdvalidate.validate
@@ -492,8 +493,9 @@ def test_reading_the_declared_pdfs_parses_the_archive_once(monkeypatch):
     """
     import zipfile as zipfile_module
 
-    from vdi2770 import zipread
     from vdi2770_validate.runner import check_bytes
+
+    from vdi2770 import zipread
 
     built = []
     real = zipfile_module.ZipFile
@@ -527,9 +529,10 @@ def test_matching_the_declared_names_against_the_twins_is_not_quadratic(monkeypa
     import io
     import zipfile
 
-    from vdi2770_validate import names as names_module
     from vdi2770_validate.rules import files as file_rules
     from vdi2770_validate.runner import check_bytes
+
+    from vdi2770_validate import names as names_module
 
     calls = []
     real = names_module.extracts_to
@@ -581,9 +584,10 @@ def test_naming_the_spellings_of_a_declaration_is_bounded(monkeypatch):
     import unicodedata
     import zipfile
 
-    from vdi2770_validate import names as names_module
     from vdi2770_validate.rules import files as file_rules
     from vdi2770_validate.runner import check_bytes
+
+    from vdi2770_validate import names as names_module
 
     touched = []
     for attr in ("escaped", "without_edge_space"):

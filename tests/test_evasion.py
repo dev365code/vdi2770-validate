@@ -8,10 +8,10 @@ import io
 import zipfile
 
 import pytest
-
-from conftest import CLEAN_DOCUMENT
 from vdi2770_validate.model import Severity
 from vdi2770_validate.runner import check_bytes
+
+from conftest import CLEAN_DOCUMENT
 
 BASE = {n: zipfile.ZipFile(CLEAN_DOCUMENT).read(n)
         for n in zipfile.ZipFile(CLEAN_DOCUMENT).namelist()}

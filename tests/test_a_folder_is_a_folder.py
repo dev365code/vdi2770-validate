@@ -9,8 +9,9 @@ one `anhang/` entry added did not.
 import io
 import zipfile
 
-from conftest import CLEAN_DOCUMENT
 from vdi2770_validate.runner import check_bytes, check_file
+
+from conftest import CLEAN_DOCUMENT
 
 SRC = zipfile.ZipFile(CLEAN_DOCUMENT)
 META = SRC.read("VDI2770_Metadata.xml").decode()
@@ -82,9 +83,10 @@ def test_a_declared_folder_path_resolves_so_z9_stands_alone():
     import re
     import zipfile
 
-    from conftest import CLEAN_DOCUMENT
     from vdi2770_validate.catalog import rule
     from vdi2770_validate.runner import check_bytes
+
+    from conftest import CLEAN_DOCUMENT
 
     src = zipfile.ZipFile(CLEAN_DOCUMENT)
     meta = src.read("VDI2770_Metadata.xml").decode()

@@ -6,10 +6,10 @@ fires on the conforming container is not about what it claims to be about.
 import json
 
 import pytest
-
-from conftest import CLEAN_DOCUMENT, CLEAN_DOCUMENTATION, FIXTURES, ROOT
 from vdi2770_validate.catalog import rules
 from vdi2770_validate.runner import check_file
+
+from conftest import CLEAN_DOCUMENT, CLEAN_DOCUMENTATION, FIXTURES, ROOT
 
 MANIFEST = json.loads((FIXTURES / "MANIFEST.json").read_text(encoding="utf-8"))["fixtures"]
 CLEAN = {"documentcontainer.zip": CLEAN_DOCUMENT, "documentationcontainer.zip": CLEAN_DOCUMENTATION}

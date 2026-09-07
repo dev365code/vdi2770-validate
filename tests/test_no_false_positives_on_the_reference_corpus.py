@@ -6,9 +6,9 @@ Written before the fix it forced, because the alternative — changing a constan
 and then finding out — is how this file came to exist.
 """
 import pytest
+from vdi2770_validate.runner import check_file
 
 from conftest import CORPUS
-from vdi2770_validate.runner import check_file
 
 # Archives the upstream project named as broken. Everything else is theirs to
 # consider valid, and our structural rules must not contradict that.

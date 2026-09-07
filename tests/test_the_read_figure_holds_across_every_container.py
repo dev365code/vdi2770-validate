@@ -13,11 +13,11 @@ from __future__ import annotations
 import json
 
 import pytest
-
-from conftest import CORPUS, FIXTURES
 from vdi2770_validate.model import Severity
 from vdi2770_validate.report import as_json
 from vdi2770_validate.runner import check_file
+
+from conftest import CORPUS, FIXTURES
 
 CONTAINERS = sorted(CORPUS.rglob("*.zip")) + sorted(FIXTURES.rglob("*.zip"))
 

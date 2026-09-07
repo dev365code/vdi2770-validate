@@ -25,9 +25,9 @@ import re
 import zipfile
 
 import pytest
+from vdi2770_validate.runner import check_bytes
 
 from conftest import CLEAN_DOCUMENT, CLEAN_DOCUMENTATION
-from vdi2770_validate.runner import check_bytes
 
 FOREIGN = ('<x:DocumentClassification xmlns:x="urn:not-vdi" '
            'ClassificationSystem="VDI2770:2018">'

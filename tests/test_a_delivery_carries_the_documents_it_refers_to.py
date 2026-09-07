@@ -24,10 +24,10 @@ import subprocess
 import sys
 
 import pytest
-
-from conftest import CORPUS, FIXTURES, ROOT, under_test
 from vdi2770_validate.model import Severity
 from vdi2770_validate.runner import check_file
+
+from conftest import CORPUS, FIXTURES, ROOT, under_test
 
 DANGLING = FIXTURES / "m11-refers-to-a-document-not-delivered.zip"
 CLEAN = CORPUS / "container" / "documentationcontainer.zip"

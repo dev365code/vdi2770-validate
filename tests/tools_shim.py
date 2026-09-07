@@ -1,8 +1,9 @@
 """Rules exercised by the vendored corpus rather than by a built fixture."""
 from functools import lru_cache
 
-from conftest import CORPUS
 from vdi2770_validate.runner import check_file
+
+from conftest import CORPUS
 
 
 @lru_cache(maxsize=1)

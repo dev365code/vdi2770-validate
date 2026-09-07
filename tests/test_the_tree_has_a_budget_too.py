@@ -131,8 +131,9 @@ def test_the_runner_holds_one_chain_of_buffers_not_one_per_container(tmp_path):
     import tracemalloc
     import zipfile
 
-    from conftest import CLEAN_DOCUMENT, CLEAN_DOCUMENTATION
     from vdi2770_validate.runner import check_bytes
+
+    from conftest import CLEAN_DOCUMENT, CLEAN_DOCUMENTATION
 
     docn = zipfile.ZipFile(CLEAN_DOCUMENTATION)
     leaf = io.BytesIO()

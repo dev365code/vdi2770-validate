@@ -10,8 +10,14 @@ XMLSCHEMA_VERSION := 4.2.0
 
 check: lint fixtures test corpus coverage-check rules-doc oracle-half reader-api-matches-its-version sdist-runs-its-own-tests wheel-installs-and-runs
 
+# `--no-cache`: ruff keys its cache on file contents and settings, and a tree
+# where files had moved kept answering from it -- 84 import-order errors were
+# invisible here and immediate in CI, which has no cache. A gate that is green
+# because it did not look is the thing this repository spends its time removing.
+# The comment lives above the recipe: a `#` line inside one is a command as far
+# as anything reading recipes is concerned, and the parity gate read it as one.
 lint:
-	$(PYTHON) -m ruff check src tests tools packages
+	$(PYTHON) -m ruff check --no-cache src tests tools packages
 
 test:
 	$(PYTHON) -m pytest

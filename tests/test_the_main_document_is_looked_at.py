@@ -10,8 +10,9 @@ other PDF is schema-legal, so an eighteen-byte text file called
 import io
 import zipfile
 
-from conftest import A_PDF, CLEAN_DOCUMENT, CLEAN_DOCUMENTATION
 from vdi2770_validate.runner import check_file
+
+from conftest import A_PDF, CLEAN_DOCUMENT, CLEAN_DOCUMENTATION
 
 DOCN = zipfile.ZipFile(CLEAN_DOCUMENTATION)
 MAINXML = DOCN.read("VDI2770_Main.xml").decode()
