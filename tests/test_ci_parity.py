@@ -82,14 +82,20 @@ def test_ci_actually_exercises_the_oldest_python_we_promise():
         f"pyproject promises Python {floor.group(1)} but CI never runs it: {versions}")
 
 
-def ci_commands():
-    """The commands CI actually runs, not the text of the file.
+def ci_commands(path=None):
+    """The commands a workflow actually runs, not the text of the file.
 
     Searching the raw YAML for a command string passes when the step is
     commented out, which is one keystroke away from a CI that runs nothing.
+
+    Takes a path because there were two of these, reading the same file format
+    with different rules: the other one missed `- run: make check` written on
+    one line and treated `|-` as a command rather than a block marker, so
+    reformatting a workflow without changing what it does turned the suite red.
+    One reader, and the stricter of the two.
     """
     out, in_block, indent = [], False, 0
-    for raw in CI.read_text(encoding="utf-8").splitlines():
+    for raw in (path or CI).read_text(encoding="utf-8").splitlines():
         stripped = raw.strip()
         if in_block:
             if stripped and (len(raw) - len(raw.lstrip())) > indent:
@@ -336,27 +342,14 @@ def test_contributing_installs_what_ci_installs():
 
 
 def workflows():
-    return sorted((ROOT / ".github" / "workflows").glob("*.yml"))
+    """Every workflow file, both spellings.
 
-
-def commands_in(path):
-    """The commands a workflow actually runs, not the text of the file."""
-    out, in_block, indent = [], False, 0
-    for raw in path.read_text(encoding="utf-8").splitlines():
-        stripped = raw.strip()
-        if in_block:
-            if stripped and (len(raw) - len(raw.lstrip())) > indent:
-                if not stripped.startswith("#"):
-                    out.append(stripped.split("#")[0].strip())
-                continue
-            in_block = False
-        if stripped.startswith("run:"):
-            rest = stripped[4:].strip()
-            if rest in ("|", ">"):
-                in_block, indent = True, len(raw) - len(raw.lstrip())
-            elif rest:
-                out.append(rest)
-    return out
+    `*.yml` alone missed `*.yaml`, which GitHub runs just the same -- so a
+    second publishing workflow named the other way was invisible to every gate
+    in this file.
+    """
+    return sorted(p for p in (ROOT / ".github" / "workflows").iterdir()
+                  if p.suffix in (".yml", ".yaml"))
 
 
 def test_a_workflow_that_publishes_runs_the_whole_gate():
@@ -386,7 +379,7 @@ def test_a_workflow_that_publishes_runs_the_whole_gate():
     publishing = [w for w in workflows() if publishes(w)]
     assert publishing, "no workflow publishes anything; this test is looking in the wrong place"
     for w in publishing:
-        ran = commands_in(w)
+        ran = ci_commands(w)
         assert any(c.strip() == "make check" for c in ran), (
             f"{w.name} publishes and does not run `make check`. It runs: {ran}")
         # And that the evidence it publishes counts is complete. `OUTSIDE_CHECK`
@@ -957,68 +950,214 @@ UNGUARDABLE = {
 }
 
 
+def _yaml(path):
+    import yaml
+    return yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+
+
+#: Actions that put a distribution on an index.
+PUBLISHER_ACTIONS = ("pypa/gh-action-pypi-publish",)
+
+#: And the client a `run:` step invokes by hand. Matched on the tool name
+#: alone: no other subcommand of it belongs in a release workflow, and spelling
+#: the whole phrase out here makes this file trip the guard that keeps a
+#: publish from being run out of a working session.
+PUBLISHER_TOOLS = ("twine",)
+
+#: Ways to write a step that fails and reports success anyway.
+SWALLOWS = ("|| true", "|| :", "; true", "set +e", "|| exit 0")
+
+
+def _permissions(value):
+    """`permissions:` is a map, or one of two words standing for a map."""
+    if isinstance(value, str):
+        return {"id-token": "write"} if value == "write-all" else {}
+    return dict(value or {})
+
+
+def effective_permissions(workflow, job):
+    """What a job actually gets.
+
+    A job with no `permissions:` of its own inherits the workflow's, so reading
+    the job alone says a job can do less than it can -- and `id-token: write`
+    set once at the top of the file grants every job in it the token that
+    publishes.
+    """
+    merged = _permissions(workflow.get("permissions"))
+    merged.update(_permissions(job.get("permissions")))
+    return merged
+
+
+def publishing_jobs(workflow):
+    """The jobs that can put a release on an index.
+
+    Three ways of doing it, because reading only the first -- can it mint an
+    OIDC token -- makes a job that uploads with a stored API token invisible to
+    the ordering gate, and invisible is the same as exempt without the entry
+    that has to say why.
+    """
+    found = {}
+    for name, job in (workflow.get("jobs") or {}).items():
+        job = job or {}
+        if "write" in str(effective_permissions(workflow, job).get("id-token", "")):
+            found[name] = job
+            continue
+        for step in job.get("steps") or []:
+            uses, runs = str(step.get("uses", "")), str(step.get("run", ""))
+            if (any(a in uses for a in PUBLISHER_ACTIONS)
+                    or any(tool in runs for tool in PUBLISHER_TOOLS)):
+                found[name] = job
+                break
+    return found
+
+
+def upgrade_gate_jobs(workflow):
+    """The jobs that actually run the upgrade check on what is being built.
+
+    Found by what the job runs rather than by its name. A job called
+    `upgrade-gate` whose one step is `echo skipping` is not a gate, and the
+    first version of this test could not tell the two apart -- it asserted the
+    job existed and that four things about it were absent, and never that it
+    ran anything.
+
+    `--from` is part of the question: without it the check reads the index and
+    never installs the wheel it is standing in front of, which is the one state
+    nobody else is testing.
+    """
+    found = {}
+    for name, job in (workflow.get("jobs") or {}).items():
+        for step in (job or {}).get("steps") or []:
+            runs = str(step.get("run", ""))
+            if "tools/check_upgrade_paths.py" in runs and "--from" in runs:
+                found[name] = job
+                break
+    return found
+
+
+def artifacts_downloaded(job):
+    """The names a job pulls out of the run.
+
+    What a job publishes is what it downloaded, so this is how a gate and a
+    publisher are tied to the same files instead of to each other's names.
+    """
+    got = set()
+    for step in (job or {}).get("steps") or []:
+        if "download-artifact" in str(step.get("uses", "")):
+            name = ((step.get("with") or {}).get("name"))
+            if name:
+                got.add(str(name))
+    return got
+
+
 def test_the_unguarded_publisher_is_named_and_explained():
     """An exemption is a decision or it is an oversight, and the two look the
     same in a workflow file. Naming it here makes the next person removing a
-    gate say why, and makes a job that quietly stops waiting fail above."""
+    gate say why, and makes a job that quietly stops waiting fail above.
+
+    And the exemption is held to what the job handles, not to its name. Keyed
+    on the name alone, changing the exempt job's `download-artifact` to the
+    rules made the rules publish with no gate in front of them, permanently and
+    silently exempt.
+    """
     for name, why in UNGUARDABLE.items():
         assert len(why) > 60, f"{name} is exempted without a real reason"
-    import yaml
-    jobs = yaml.safe_load(
-        (ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8"))["jobs"]
+    release = _yaml(ROOT / ".github" / "workflows" / "release.yml")
+    jobs = release["jobs"]
+    gated = set()
+    for gate in upgrade_gate_jobs(release).values():
+        gated |= artifacts_downloaded(gate)
     for name in UNGUARDABLE:
         assert name in jobs, f"{name} is exempted and the workflow has no such job"
+        also = artifacts_downloaded(jobs[name]) & gated
+        assert not also, (
+            f"{name} is exempted from the upgrade gate and publishes {sorted(also)}, "
+            f"which is what the gate tested. An exemption for a job that handles "
+            f"the guarded artifact is the gate removed, not a gate that could not "
+            f"be placed.")
 
 
 def test_nothing_publishes_before_the_check_that_guards_it():
     """A gate that runs beside the thing it guards is not a gate.
 
     `upgrade-gate` installs what the index serves today and upgrades to the
-    wheel about to replace it. Four ways to keep this file looking protected
-    while removing the protection, all of which the first version of this test
-    accepted: comment the `needs:` line out and let a regex read the comment;
-    keep `needs:` byte-identical and give the gate `continue-on-error: true`;
-    give its one step an `if:` that never holds on a tag; give the publish an
-    `if: always()` so it goes out when the gate failed. A fifth: add a second
-    publishing job that needs nothing.
+    wheel about to replace it. The ways to keep a workflow looking protected
+    while removing the protection are all edits nobody reviewing a diff would
+    stop on, and every one of them was accepted at some point by an earlier
+    version of this test: comment the `needs:` line out and let a regex read
+    the comment; keep `needs:` byte-identical and give the gate
+    `continue-on-error: true`; give a step an `if:` that never holds on a tag;
+    give the publish an `if: always()` so it goes out when the gate failed; add
+    a second publishing job that needs nothing.
 
-    So the shape is parsed rather than matched, every publishing job is found
-    by what makes it one -- it can mint an OIDC token -- and the assertions are
-    about effect rather than about the presence of a word.
+    Then five more, which is why this was rewritten a second time. Put
+    `continue-on-error: true` on the *step* rather than the job. Append
+    `|| true` to the command. Drop `--from dist`, so the check reads the index
+    and never installs the release being made. Replace the step with `echo
+    skipping`. Give the job no steps at all. Every one of those left the whole
+    suite green, and the reason is the same in all five: the test asserted
+    things were *absent* from the gate and never that the gate did anything.
+
+    So a gate is a job that runs the check on the artifact being published, a
+    publisher is a job that can put a distribution on an index by any of the
+    three ways there are, and the two are tied together by the artifact they
+    both name rather than by a job title.
     """
-    import yaml
-
-    text = (ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
-    jobs = yaml.safe_load(text)["jobs"]
-
-    def publishes(job):
-        return "write" in str(job.get("permissions", {}).get("id-token", ""))
-
-    publishers = {name: job for name, job in jobs.items() if publishes(job)}
-    assert publishers, "no job in the release workflow can publish; is this the right file?"
-
-    gate = jobs.get("upgrade-gate")
-    assert gate, f"the release workflow has no upgrade gate; jobs are {sorted(jobs)}"
-    assert not gate.get("continue-on-error"), (
-        "the upgrade gate is allowed to fail, so it reports success either way")
-    assert "if" not in gate, (
-        f"the upgrade gate is conditional ({gate['if']!r}); a gate that can "
-        f"decline to run does not guard the run it declined")
-    for step in gate.get("steps", []):
-        assert "if" not in step, (
-            f"a step of the upgrade gate is conditional ({step['if']!r}), so "
-            f"the job can pass having skipped the check")
-
-    for name, job in publishers.items():
-        if name in UNGUARDABLE:
+    for path in workflows():
+        workflow = _yaml(path)
+        publishers = publishing_jobs(workflow)
+        if not publishers:
             continue
-        needs = job.get("needs") or []
-        needs = [needs] if isinstance(needs, str) else list(needs)
-        assert "upgrade-gate" in needs, (
-            f"{name} can publish and does not wait for the upgrade gate "
-            f"(needs: {needs}); the two run together and the gate guards nothing")
-        # `always()` and `success()` are not the same word for the same thing:
-        # the first runs the publish when the gate has already failed.
-        assert "always(" not in str(job.get("if", "")), (
-            f"{name} publishes with `if: {job['if']}`, which fires even when "
-            f"the gate it needs has failed")
+        gates = upgrade_gate_jobs(workflow)
+        for name, gate in gates.items():
+            steps = gate.get("steps") or []
+            assert steps, f"{path.name}: {name} has no steps and runs nothing"
+            assert not gate.get("continue-on-error"), (
+                f"{path.name}: {name} is allowed to fail, so it reports success either way")
+            assert "if" not in gate, (
+                f"{path.name}: {name} is conditional ({gate['if']!r}); a gate that "
+                f"can decline to run does not guard the run it declined")
+            for step in steps:
+                assert "if" not in step, (
+                    f"{path.name}: a step of {name} is conditional ({step['if']!r}), "
+                    f"so the job can pass having skipped the check")
+                assert not step.get("continue-on-error"), (
+                    f"{path.name}: a step of {name} is allowed to fail, so the job "
+                    f"passes whatever the check said")
+                runs = str(step.get("run", ""))
+                for swallow in SWALLOWS:
+                    assert swallow not in runs, (
+                        f"{path.name}: a step of {name} ends in `{swallow}`, which "
+                        f"turns a failed check into a passed job")
+
+        for name, job in publishers.items():
+            if name in UNGUARDABLE:
+                continue
+            needs = job.get("needs") or []
+            needs = [needs] if isinstance(needs, str) else list(needs)
+            waits_for = set(needs) & set(gates)
+            assert waits_for, (
+                f"{path.name}: {name} can publish and waits for no job that runs "
+                f"the upgrade check (needs: {needs}, gates here: {sorted(gates)}); "
+                f"a gate beside the publish guards nothing")
+            # The gate has to have tested what this job is about to publish.
+            # Two jobs named in the right order over different artifacts is the
+            # same as no gate, and it reads as a gate in the diff.
+            mine = artifacts_downloaded(job)
+            tested = set()
+            for waited in waits_for:
+                tested |= artifacts_downloaded(gates[waited])
+            assert not mine or (mine & tested), (
+                f"{path.name}: {name} publishes {sorted(mine)} and the gate it "
+                f"waits for tested {sorted(tested)}. The gate ran, and not on this.")
+            # An `if:` on a publish is how a failed gate gets published anyway.
+            # `always()` was the only spelling blocked and it is one of several:
+            # `!cancelled()`, `success() || failure()` and a test on
+            # `needs.<job>.result` all fire when the gate has failed. A publish
+            # has no reason to be conditional at all -- the tag it runs on is
+            # the condition -- so none is allowed rather than a list of the
+            # spellings somebody thought of.
+            assert "if" not in job, (
+                f"{path.name}: {name} publishes with `if: {job['if']}`. A "
+                f"condition on a publish is how the publish outlives the gate "
+                f"that failed; the trigger is where a release decides whether "
+                f"to happen.")

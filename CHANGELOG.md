@@ -271,8 +271,40 @@ would filter nothing and say so to nobody — and the distribution a third-party
 import belongs to is read from the installed file records, because `import yaml`
 comes from `PyYAML` and no amount of string manipulation gets there.
 
+**The gate before the publish is now a job that runs the check, not a job with
+the right name.** Five more ways to keep `release.yml` looking protected while
+removing the protection, all of which left the whole suite green: put
+`continue-on-error: true` on the *step* rather than the job; append `|| true` to
+the command; drop `--from dist`, so the check reads the index and never installs
+the release being made; replace the step with `echo skipping`; give the job no
+steps at all. The reason is the same in all five — the test asserted that things
+were *absent* from the gate and never that the gate did anything.
+
+Four more came from the other direction, where the gate could not see a
+publisher at all. A job publishes if it can mint an OIDC token — or if it uses
+the publishing action, or runs the upload client by hand, which a job with a
+stored API token does and which was invisible here. `permissions:` written once
+at the top of a workflow is inherited by every job in it, and only the job's own
+block was read. `always()` was blocked by name while `!cancelled()`,
+`success() || failure()` and a test on `needs.<job>.result` all publish when the
+gate has failed, so a publish may now carry no condition at all: the tag it runs
+on is the condition. And the workflow directory was globbed for `*.yml`, which
+GitHub runs no more than it runs `*.yaml`.
+
+The exemption is held to what a job handles rather than to its name.
+`publish-reader` is exempt because the gate needs both wheels and the rules are
+not built until the reader is on the index — but keyed on the name alone,
+pointing that job at `dist-rules` published the rules with no gate in front of
+them, permanently and silently. A gate and a publisher are now tied by the
+artifact they both name.
+
+One reader of workflow files, not two. The weaker one missed `- run: make check`
+written on a single line and read `|-` as a command rather than as a block
+marker, so reformatting a workflow without changing what it does turned this
+suite red.
+
 - **`make standalone`** runs each of the 78 test files on its own.
-- The mutation harness carries 129 rows, each naming the pytest selection or the
+- The mutation harness carries 132 rows, each naming the pytest selection or the
   tool that has to go red. Of the rows added this cycle, seven are about the front page: a
   picture the page no longer points at, a sentence in the terminal shot the tool
   never printed, an elision that stands for the wrong findings, a quoted pin the

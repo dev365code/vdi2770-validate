@@ -1146,6 +1146,39 @@ DECLARED_ROWS = [
      "not -- and this project has already spent a red main on exactly that"),
 ]
 
+WORKFLOW_ROWS = [
+    ("gates/the-gate-installs-the-release-being-made",
+     ".github/workflows/release.yml",
+     "        run: python tools/check_upgrade_paths.py --from dist",
+     "        run: python tools/check_upgrade_paths.py",
+     ["tests/test_ci_parity.py::"
+      "test_nothing_publishes_before_the_check_that_guards_it"],
+     "the job before the publish would read the index and never install the "
+     "wheel it is standing in front of -- the one state nobody else tests"),
+
+    ("gates/a-step-cannot-swallow-the-check-it-runs",
+     ".github/workflows/release.yml",
+     "        run: python tools/check_upgrade_paths.py --from dist",
+     "        run: python tools/check_upgrade_paths.py --from dist || true",
+     ["tests/test_ci_parity.py::"
+      "test_nothing_publishes_before_the_check_that_guards_it"],
+     "a failed upgrade check would report a passed job, which is the gate "
+     "removed by four characters that read as caution in a diff"),
+
+    ("gates/a-publish-has-no-condition-of-its-own",
+     ".github/workflows/release.yml",
+     "  publish-rules:\n",
+     "  publish-rules:\n    if: ${{ !cancelled() }}\n",
+     ["tests/test_ci_parity.py::"
+      "test_nothing_publishes_before_the_check_that_guards_it"],
+     "the publish would fire when the gate it waits for has failed -- one of "
+     "several spellings for that, which is why no condition is allowed rather "
+     "than a list of the ones somebody thought of"),
+
+]
+
+TABLE += WORKFLOW_ROWS
+
 TABLE += DECLARED_ROWS
 
 TABLE += UPGRADE_ROWS
