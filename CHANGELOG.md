@@ -303,8 +303,42 @@ written on a single line and read `|-` as a command rather than as a block
 marker, so reformatting a workflow without changing what it does turned this
 suite red.
 
+**And an import that handles its own absence is not an undeclared one.**
+`try: import tomllib / except ImportError: import tomli` says out loud that the
+first may not be there, and demanding a declaration for it would be a false
+positive on the one shape that is already handled. Decided by what the handler
+catches rather than by the presence of the word `try`, because a `try` whose
+handler catches `ValueError` does nothing at all about a package that is not
+installed — two files a character apart, and only one of them is excused.
+
+The fallback branch is excused too. A chain ending in
+`except ImportError: from pip._vendor.packaging import …` would otherwise make
+this gate demand a declaration for `pip`, and the only way to satisfy that is to
+write something false into a manifest. The two errors are not the same size: a
+false positive here is answered by corrupting the dependency list, while the
+case it gives up — a chain where no branch is installed — fails at import on
+every machine including the author's, the first time the file runs. This gate is
+for the accident, and the accident is never written as a fallback chain.
+
+And *underneath* the standard library directory is not the standard library.
+The interpreter this project is developed on — Apple's command-line tools —
+keeps its own `site-packages` inside `stdlib`, names one directory in `purelib`
+and puts the user site somewhere in neither, so `pip`, `setuptools` and
+`pkg_resources` came back as the standard library and would have been excused
+from declaring anything. Debian's `/usr/lib/python3.x/dist-packages` has the
+same shape. Where a package is installed is now asked first and from five
+places rather than two, and a path with `site-packages` or `dist-packages` in it
+is an install wherever it sits.
+
+That distinction is invisible on the machine that has it: every package it
+misclassifies is one nothing here imports, so a version of the gate that got it
+wrong passed every other test and would have failed on somebody else's machine.
+So the question is asked of a path rather than of this machine —
+`<stdlib>/site-packages/somepkg` against `<stdlib>/json`, one component apart —
+and that pair is what the harness mutates.
+
 - **`make standalone`** runs each of the 78 test files on its own.
-- The mutation harness carries 132 rows, each naming the pytest selection or the
+- The mutation harness carries 134 rows, each naming the pytest selection or the
   tool that has to go red. Of the rows added this cycle, seven are about the front page: a
   picture the page no longer points at, a sentence in the terminal shot the tool
   never printed, an elision that stands for the wrong findings, a quoted pin the

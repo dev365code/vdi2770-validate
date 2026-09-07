@@ -1177,6 +1177,37 @@ WORKFLOW_ROWS = [
 
 ]
 
+GUARDED_ROWS = [
+    ("gates/a-try-is-not-an-excuse-unless-it-catches-the-absence",
+     "tests/test_the_suite_declares_what_it_imports.py",
+     "    named = caught.elts if isinstance(caught, ast.Tuple) else [caught]",
+     "    return True\n    named = caught.elts if isinstance(caught, ast.Tuple) else [caught]",
+     ["tests/test_the_suite_declares_what_it_imports.py::"
+      "test_a_try_that_catches_something_else_does_not_excuse_the_import"],
+     "the word `try` would excuse an undeclared import whatever the handler "
+     "catches, and a `try` that catches ValueError does nothing at all about a "
+     "package that is not installed"),
+
+]
+
+LOCATION_ROWS = [
+    ("gates/underneath-the-stdlib-directory-is-not-the-stdlib",
+     "tests/test_the_suite_declares_what_it_imports.py",
+     '    for installed in _SITE:\n        if _within(origin, installed):\n            return "third-party"\n    if any(part in _INSTALLED_DIRS for part in origin.parts):\n        return "third-party"\n    if _within(origin, _STDLIB):\n        return "stdlib"',
+     '    if _within(origin, _STDLIB):\n        return "stdlib"\n    for installed in _SITE:\n        if _within(origin, installed):\n            return "third-party"',
+     ["tests/test_the_suite_declares_what_it_imports.py::"
+      "test_a_package_installed_under_the_stdlib_directory_is_not_the_stdlib"],
+     "an interpreter that keeps its site-packages inside the stdlib directory "
+     "-- Apple's command-line tools, Debian's dist-packages -- would have "
+     "setuptools and pkg_resources excused as the standard library, and the "
+     "machine that shows it is the developer's, never CI"),
+
+]
+
+TABLE += LOCATION_ROWS
+
+TABLE += GUARDED_ROWS
+
 TABLE += WORKFLOW_ROWS
 
 TABLE += DECLARED_ROWS
