@@ -1,0 +1,12 @@
+# Bytes, unchanged, on every platform.
+#
+# The corpus is vendored evidence: the reference implementation's verdicts were
+# recorded against these exact files, and a gate hashes them to say they have
+# not moved. Git's default is to rewrite line endings on checkout, so a Windows
+# runner got a working tree where every XML file differed from its manifest —
+# fifteen "changed" entries in a corpus nobody had touched.
+#
+# The same is true of the fixtures a generator writes, the SVGs the front page
+# points at by hash, and the wheels a gate opens. This project decides what its
+# files contain; the checkout does not get a vote.
+* -text

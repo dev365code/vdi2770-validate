@@ -585,6 +585,19 @@ by platform. That question is asked of a name rather than of this machine, so
 the case holds on the platform that has each of them and on the one that does
 not.
 
+- A `.gitattributes` stops the checkout rewriting bytes. The corpus is vendored
+  evidence — the reference implementation's verdicts were recorded against those
+  exact files, and a gate hashes them to say they have not moved — and git's
+  default line-ending conversion gave a Windows runner a working tree where
+  fifteen XML files differed from a manifest nobody had touched. The same
+  applies to the fixtures a generator writes and the pictures the front page
+  points at by hash: this project decides what its files contain, and the
+  checkout does not get a vote.
+- And the Windows row now does what the comment beside it says. The previous
+  commit narrowed the test step and left seven others running there, so the
+  workflow described a scope it did not have — which is the shape of claim this
+  cycle has spent its time removing.
+
 - **`make standalone`** runs each of the 81 test files on its own.
 - The mutation harness carries 157 rows, each naming the pytest selection or the
   tool that has to go red. Of the rows added this cycle, seven are about the front page: a
