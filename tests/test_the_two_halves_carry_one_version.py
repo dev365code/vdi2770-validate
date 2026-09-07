@@ -24,6 +24,11 @@ keeps them from ever claiming the same import name.
 """
 import re
 
+try:
+    import tomllib
+except ImportError:                                   # < 3.11
+    import tomli as tomllib
+
 from conftest import ROOT
 
 READER = ROOT / "packages" / "vdi2770" / "pyproject.toml"
@@ -70,6 +75,35 @@ def manifests():
     return [p for p in found if p.is_file()]
 
 
+def _parsed(path):
+    """The manifest as data.
+
+    Read rather than pattern-matched. Four separate regexes stood here and each
+    was wrong about a spelling that setuptools accepts: `where` indented under
+    its own table header was invisible, `packages = [...]` with no `where` at
+    all raised instead of answering, `exclude` was ignored so an excluded
+    directory manufactured a collision, and `^where = \\[` had no table context,
+    so the first such line anywhere in the file won.
+    """
+    with path.open("rb") as f:
+        return tomllib.load(f)
+
+
+#: Directories that are never a shipped package, whatever a `find` says. A
+#: manifest with `where = ["."]` -- a flat layout, and legal -- reported this
+#: repository as shipping `.venv`, which exists on the machine that has one and
+#: not in CI. The same commit then had two different answers.
+NOT_PACKAGES = {"build", "dist", "tests", "tools", "docs", "corpus", "packages"}
+
+
+def _is_package_dir(child):
+    if child.name.startswith(".") or child.name in NOT_PACKAGES:
+        return False
+    if child.name.endswith(".egg-info"):
+        return False
+    return child.is_dir() and any(child.rglob("*.py"))
+
+
 def import_names(path):
     """The top-level names a distribution puts on `sys.path`.
 
@@ -85,27 +119,71 @@ def import_names(path):
     it is the shape under discussion for splitting these two -- and the gate
     written to protect that decision could not see the decision being broken.
 
+    `package-dir` is read too, and it is the sharpest of these. A manifest can
+    map one name onto another directory outright:
+
+        [tool.setuptools.package-dir]
+        vdi2770 = "src/vdi2770_validate"
+
+    which ships the top-level name `vdi2770` -- the reader's name -- out of a
+    directory called something else. Reading the directory names alone answered
+    `vdi2770_validate` and passed, on the one spelling that produces the exact
+    collision this file exists to make unreachable. Twice now a gate written to
+    protect a decision has been blind to the way that decision breaks, so what
+    is compared here is what would be installed.
+
     A bare `.py` at the root counts too: `py-modules = ["vdi2770"]` ships
     `vdi2770.py`, which occupies the same name as the package would.
     """
-    text = manifest(path)
-    block = re.search(r"^where = \[(.*?)\]", text, re.M | re.S)
-    assert block, f"{path.name} does not say where its packages are found"
+    data = _parsed(path)
+    tools = data.get("tool", {}).get("setuptools", {})
     names = set()
-    for where in re.findall(r'"([^"]+)"', block.group(1)):
-        here = path.parent / where
-        assert here.is_dir(), f"{path.name} looks for packages in {where}, which is not there"
-        for child in here.iterdir():
-            if child.is_dir() and any(child.rglob("*.py")):
-                names.add(child.name)
-            elif child.suffix == ".py":
-                names.add(child.stem)
-    # And what the manifest names outright, for the spellings that do not put a
-    # file where `where` can see it.
-    listed = re.search(r"^py-modules = \[(.*?)\]", text, re.M | re.S)
-    if listed:
-        names |= set(re.findall(r'"([^"]+)"', listed.group(1)))
+
+    find = tools.get("packages", {})
+    listed = find if isinstance(find, list) else None
+    find = {} if listed is not None else find.get("find", {})
+    if listed is not None:
+        # `packages = ["a", "a.b"]` -- named outright, no discovery.
+        names |= {n.split(".")[0] for n in listed}
+    else:
+        wheres = find.get("where") or ["."]
+        excluded = tuple(find.get("exclude") or ())
+        for where in wheres:
+            here = path.parent / where
+            assert here.is_dir(), (
+                f"{path.name} looks for packages in {where}, which is not there")
+            for child in sorted(here.iterdir()):
+                if _is_package_dir(child) or child.suffix == ".py":
+                    name = child.name if child.is_dir() else child.stem
+                    if any(_excluded(name, pattern) for pattern in excluded):
+                        continue
+                    names.add(name)
+
+    # What a `package-dir` mapping claims, whatever the directory is called.
+    for claimed in (tools.get("package-dir") or {}):
+        if claimed:                                  # `"" = "src"` names nothing
+            names.add(claimed.split(".")[0])
+
+    names |= {n.split(".")[0] for n in (tools.get("py-modules") or [])}
+    names |= {n.split(".")[0] for n in (tools.get("py_modules") or [])}
     return names
+
+
+def _excluded(name, pattern):
+    import fnmatch
+    return fnmatch.fnmatch(name, pattern) or fnmatch.fnmatch(name, pattern.rstrip("*"))
+
+
+def console_scripts(path):
+    """The commands a distribution installs.
+
+    Compared across manifests for the same reason import names are: two
+    distributions writing `bin/vdi2770-validate` do not conflict at install
+    time and cannot both be uninstalled -- pip removes the file by the record
+    that lists it, and the other one is still using it. One directory over from
+    the failure this file is about, and nothing was looking.
+    """
+    return set(_parsed(path).get("project", {}).get("scripts") or {})
 
 
 def test_the_reader_is_still_its_own_distribution():
@@ -207,3 +285,87 @@ def test_no_two_distributions_here_claim_one_import_name():
                 f"{other.parent.name} and {path.parent.name} both ship "
                 f"{name!r}. Installing one overwrites the other's files and "
                 f"uninstalling either deletes them.")
+
+
+def test_no_two_distributions_here_claim_one_command():
+    """The same property, one directory over.
+
+    A console script is a file in `bin/` like any other, written by whichever
+    distribution installed last and deleted by whichever is uninstalled first.
+    Two manifests declaring `vdi2770-validate` would leave the survivor with no
+    command and every import still resolving -- which is the shape of the
+    original failure exactly, and the import-name gate cannot see it because a
+    script name is not an import name.
+    """
+    seen = {}
+    for path in manifests():
+        for command in console_scripts(path):
+            other = seen.setdefault(command, path)
+            assert other is path, (
+                f"{other.parent.name} and {path.parent.name} both install a "
+                f"`{command}` command. Uninstalling either deletes the file the "
+                f"other one is still using.")
+
+
+def _manifest_in(tmp_path, body, files=()):
+    for rel in files:
+        made = tmp_path / rel
+        made.parent.mkdir(parents=True, exist_ok=True)
+        made.write_text("", encoding="utf-8")
+    written = tmp_path / "pyproject.toml"
+    written.write_text(body, encoding="utf-8")
+    return written
+
+
+def test_a_manifest_that_renames_a_directory_claims_the_name_it_ships(tmp_path):
+    """`package-dir` maps a name onto a directory called something else.
+
+    The sharpest of these, and the one this file exists for:
+
+        [tool.setuptools.package-dir]
+        vdi2770 = "src/vdi2770_validate"
+
+    ships the *reader's* top-level name out of the rules' directory. Reading the
+    directory names alone answered `vdi2770_validate`, and the collision this
+    whole file is written to make unreachable went unseen on the one spelling
+    that produces it.
+    """
+    written = _manifest_in(tmp_path, (
+        '[project]\nname = "vdi2770-validate"\nversion = "0.8.0"\n\n'
+        '[tool.setuptools.packages.find]\nwhere = ["src"]\n\n'
+        '[tool.setuptools.package-dir]\nvdi2770 = "src/vdi2770_validate"\n'),
+        ["src/vdi2770_validate/__init__.py"])
+    assert "vdi2770" in import_names(written)
+
+
+def test_a_flat_layout_does_not_ship_the_working_directory(tmp_path):
+    """`where = ["."]` is legal, and it made this repository report `.venv` as a
+    shipped package -- a directory that exists on the machine that has one and
+    not in CI, so the same commit had two answers."""
+    written = _manifest_in(tmp_path, (
+        '[project]\nname = "x"\nversion = "1"\n\n'
+        '[tool.setuptools.packages.find]\nwhere = ["."]\n'),
+        [".venv/x.py", "build/x.py", "tests/x.py", "tools/x.py", "keepme/__init__.py"])
+    assert import_names(written) == {"keepme"}
+
+
+def test_a_directory_the_manifest_excludes_is_not_shipped(tmp_path):
+    """`exclude` was ignored, so an excluded directory could manufacture a
+    collision and turn this gate red on a correct tree."""
+    written = _manifest_in(tmp_path, (
+        '[project]\nname = "x"\nversion = "1"\n\n'
+        '[tool.setuptools.packages.find]\nwhere = ["src"]\n'
+        'exclude = ["gone*"]\n'),
+        ["src/gone/__init__.py", "src/keepme/__init__.py"])
+    assert import_names(written) == {"keepme"}
+
+
+def test_a_manifest_that_names_its_packages_outright_is_read(tmp_path):
+    """`packages = [...]` with no `find` table at all. The regex that stood here
+    raised on it -- a hard failure on a correct manifest, which is a gate that
+    stops the build for a spelling it simply could not read."""
+    written = _manifest_in(tmp_path, (
+        '[project]\nname = "x"\nversion = "1"\n\n'
+        '[tool.setuptools]\npackages = ["keepme", "keepme.deeper"]\n'),
+        ["keepme/__init__.py", "keepme/deeper/__init__.py"])
+    assert import_names(written) == {"keepme"}

@@ -374,8 +374,40 @@ could have shown it. A sister project's Windows row did. Anything in the
 interpreter's own tree is the standard library now — checked after the install
 directories, never before, because `site-packages` lives in that tree too.
 
+**The gate that keeps two distributions from claiming one import name reads the
+manifest now, rather than four regexes over it.** Each of the four was wrong
+about a spelling setuptools accepts, and one of them was wrong in the direction
+that matters: `[tool.setuptools.package-dir]` can map a name onto a directory
+called something else, so
+
+    vdi2770 = "src/vdi2770_validate"
+
+ships the *reader's* top-level name out of the rules' directory. Reading the
+directory names alone answered `vdi2770_validate` and passed — on the one
+spelling that produces the exact collision this gate exists to make unreachable,
+and the shape under discussion for splitting these two. That is the second time
+a gate written to protect a decision could not see the decision being broken.
+
+The other three: a flat layout (`where = ["."]`) is legal and reported `.venv`
+as a shipped package, which exists on the machine that has one and not in CI, so
+the same commit had two answers; `exclude` was ignored, so an excluded directory
+could manufacture a collision and turn a correct tree red; and a manifest that
+names its packages outright, with no `find` table, raised instead of answering —
+a hard stop on a manifest that is simply written another way.
+
+None of those spellings is used by either manifest here, so every one of these
+repairs is invisible to this repository: delete the code and nothing goes red.
+The manifests that show them are written into the tests, one axis apart, and
+that is what the harness mutates.
+
+Console script names are compared across manifests too. Two distributions
+declaring `vdi2770-validate` would both write `bin/vdi2770-validate`, and
+uninstalling either deletes the file the other is still using — the failure this
+gate is entirely about, one directory over, where an import-name comparison
+cannot see it.
+
 - **`make standalone`** runs each of the 78 test files on its own.
-- The mutation harness carries 138 rows, each naming the pytest selection or the
+- The mutation harness carries 142 rows, each naming the pytest selection or the
   tool that has to go red. Of the rows added this cycle, seven are about the front page: a
   picture the page no longer points at, a sentence in the terminal shot the tool
   never printed, an elision that stands for the wrong findings, a quoted pin the

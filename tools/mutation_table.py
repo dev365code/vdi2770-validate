@@ -1138,8 +1138,8 @@ UPGRADE_ROWS = [
 DECLARED_ROWS = [
     ("gates/an-import-nobody-declared-is-caught-here-not-in-ci",
      "pyproject.toml",
-     'dev = ["packaging==26.3", "pytest==8.3.4", "PyYAML==6.0.3", "ruff==0.16.3"]',
-     'dev = ["packaging==26.3", "pytest==8.3.4", "ruff==0.16.3"]',
+     'dev = ["packaging==26.3", "pytest==8.3.4", "PyYAML==6.0.3", "ruff==0.16.3",',
+     'dev = ["packaging==26.3", "pytest==8.3.4", "ruff==0.16.3",',
      ["tests/test_the_suite_declares_what_it_imports.py"],
      "a package the suite imports would be declared nowhere, which is green on "
      "the machine that happens to have it and red on every machine that does "
@@ -1241,6 +1241,39 @@ WINDOWS_ROWS = [
      "from either machine"),
 
 ]
+
+MANIFEST_ROWS = [
+    ('gates/a-renamed-directory-still-claims-the-name-it-ships',
+     'tests/test_the_two_halves_carry_one_version.py',
+     '    for claimed in (tools.get("package-dir") or {}):\n        if claimed:                                  # `"" = "src"` names nothing\n            names.add(claimed.split(".")[0])',
+     '    pass',
+     ['tests/test_the_two_halves_carry_one_version.py::test_a_manifest_that_renames_a_directory_claims_the_name_it_ships'],
+     "a manifest mapping `vdi2770` onto the rules' directory would ship the reader's top-level name and the gate written to make that collision unreachable would answer with the directory's name and pass"),
+
+    ('gates/an-excluded-directory-is-not-shipped',
+     'tests/test_the_two_halves_carry_one_version.py',
+     '                    if any(_excluded(name, pattern) for pattern in excluded):\n                        continue',
+     '                    pass',
+     ['tests/test_the_two_halves_carry_one_version.py::test_a_directory_the_manifest_excludes_is_not_shipped'],
+     'a directory the manifest excludes would be counted as shipped, manufacturing a collision that turns the release red on a correct tree'),
+
+    ('gates/a-flat-layout-does-not-ship-the-working-directory',
+     'tests/test_the_two_halves_carry_one_version.py',
+     'def _is_package_dir(child):\n    if child.name.startswith(".") or child.name in NOT_PACKAGES:\n        return False',
+     'def _is_package_dir(child):\n    if False:\n        return False',
+     ['tests/test_the_two_halves_carry_one_version.py::test_a_flat_layout_does_not_ship_the_working_directory'],
+     'a flat layout is legal and would report `.venv` as a shipped package -- present on the machine that has one and absent in CI, so the same commit would have two answers'),
+
+    ('gates/two-distributions-cannot-install-one-command',
+     'tests/test_the_two_halves_carry_one_version.py',
+     '    return set(_parsed(path).get("project", {}).get("scripts") or {})',
+     '    return {"vdi2770-validate"}',
+     ['tests/test_the_two_halves_carry_one_version.py::test_no_two_distributions_here_claim_one_command'],
+     'a console script is a file in bin/ like any other, written by whichever distribution installed last and deleted by whichever is uninstalled first -- the failure this file is about, one directory over, and the import-name gate cannot see it'),
+
+]
+
+TABLE += MANIFEST_ROWS
 
 TABLE += WINDOWS_ROWS
 

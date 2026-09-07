@@ -42,7 +42,13 @@ Changelog = "https://github.com/dev365code/vdi2770-validate/blob/main/CHANGELOG.
 # workflow and declared nowhere, so four green gates locally meant nothing about
 # CI; `packaging` was the same shape and had not gone off yet, quietly green on
 # every push because the runner image carries it.
-dev = ["packaging==26.3", "pytest==8.3.4", "PyYAML==6.0.3", "ruff==0.16.3"]
+dev = ["packaging==26.3", "pytest==8.3.4", "PyYAML==6.0.3", "ruff==0.16.3",
+       # 3.11 has `tomllib`; below it a manifest has to be read by something.
+       # The gates here read manifests rather than pattern-matching them --
+       # four regexes over one file format were wrong about four spellings
+       # setuptools accepts, one of which produced the exact collision they
+       # exist to prevent.
+       "tomli==2.4.1; python_version < '3.11'"]
 
 [project.scripts]
 # One command, and deliberately not also `vdi2770`: that is the *other*
