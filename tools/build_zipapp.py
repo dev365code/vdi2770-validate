@@ -35,11 +35,12 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 
-#: Both first-party packages, copied from the tree rather than installed. The
-#: reader is not a dependency to be fetched; it is the other half of the same
-#: distribution, and pip has nothing to look up for it.
-PACKAGES = (ROOT / "src" / "vdi2770_validate",
-            ROOT / "packages" / "vdi2770" / "src" / "vdi2770")
+#: One package now, copied from the tree rather than installed: the readers and
+#: the validator are one distribution, and pip has nothing to look up for it.
+#: Listing `vdi2770/validate` beside `vdi2770` would copy it twice — once at the
+#: top of the archive and once inside its parent — and the copy at the top is
+#: the one nothing imports.
+PACKAGES = (ROOT / "packages" / "vdi2770" / "src" / "vdi2770",)
 
 #: A ZIP entry keeps its year as a seven-bit offset from 1980, so a build that
 #: inherits file mtimes is reproducible on one machine and nowhere else — the
@@ -104,9 +105,14 @@ FIRST_PARTY = {"vdi2770", "vdi2770-validate"}
 def dependencies() -> list:
     """The runtime dependencies to bundle, as written. Not `pip freeze` of this
     environment: that carries whatever the development extras dragged in."""
-    block = re.search(r"^dependencies\s*=\s*\[(.*?)\]", _MANIFEST, re.M | re.S)
+    # The reader's manifest, because that is where the validator lives and what
+    # it needs is declared as its `validate` extra. The alias distribution's own
+    # requirement is `vdi2770[validate]`, which names this project and would
+    # send pip to an index for a package this file is assembling by hand.
+    reader = (ROOT / "packages" / "vdi2770" / "pyproject.toml").read_text(encoding="utf-8")
+    block = re.search(r"^validate\s*=\s*\[(.*?)\]", reader, re.M | re.S)
     if not block:
-        raise SystemExit("pyproject.toml declares no dependencies list")
+        raise SystemExit("the reader declares no `validate` extra to bundle")
     return [s for s in re.findall(r'"([^"]+)"', block.group(1))
             if _distribution_name(s) not in FIRST_PARTY]
 
@@ -157,7 +163,7 @@ if zipfile.is_zipfile(_archive):
         _z.extractall(_room, [n for n in _z.namelist() if n.startswith("xmlschema/")])
     sys.path.insert(0, _room)
 
-from vdi2770_validate.entry import run  # noqa: E402 - after the path is arranged
+from vdi2770.validate.entry import run  # noqa: E402 - after the path is arranged
 
 sys.exit(run())
 '''

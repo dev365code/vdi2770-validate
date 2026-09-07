@@ -42,23 +42,30 @@ def manifest(path):
     return path.read_text(encoding="utf-8")
 
 
-def field(text, key):
-    found = re.search(rf'^{key} = "([^"]+)"', text, re.M)
-    assert found, f"the manifest declares no {key}"
-    return found.group(1)
+def field(path, key):
+    value = _parsed(path).get("project", {}).get(key)
+    assert value, f"the manifest declares no {key}"
+    return value
 
 
-def requirements(text):
-    """The runtime dependency list, and only that one. Anchored because
-    `[project.optional-dependencies]` holds a list two lines away and a loose
-    pattern reads that instead."""
-    block = re.search(r"^dependencies = \[(.*?)\]", text, re.M | re.S)
-    assert block, "the manifest declares no dependencies list"
-    return re.findall(r'"([^"]+)"', block.group(1))
+def requirements(path):
+    """The runtime dependency list, and only that one.
+
+    Read rather than matched. The regex that stood here anchored on
+    `^dependencies = [` and stopped at the first `]` — which is inside the name
+    when a requirement carries an extra, so `vdi2770[validate]>=0.8` parsed as
+    nothing at all and the gate reported that the rules depend on no reader.
+    """
+    return list(_parsed(path).get("project", {}).get("dependencies") or [])
 
 
-def asked_of(text, distribution):
-    for spec in requirements(text):
+def extras(path):
+    """The optional dependency groups, by name."""
+    return dict(_parsed(path).get("project", {}).get("optional-dependencies") or {})
+
+
+def asked_of(path, distribution):
+    for spec in requirements(path):
         if re.split(r"[<>=!~\[; ]", spec, maxsplit=1)[0].strip() == distribution:
             return spec
     return None
@@ -190,17 +197,17 @@ def test_the_reader_is_still_its_own_distribution():
     """It is published separately because it is useful separately: a container
     reader that costs nothing to depend on, for people who want the parsing and
     not the judgement."""
-    assert field(manifest(READER), "name") == "vdi2770"
+    assert field(READER, "name") == "vdi2770"
 
 
 def test_the_rules_keep_the_name_people_already_typed():
-    assert field(manifest(RULES), "name") == "vdi2770-validate"
+    assert field(RULES, "name") == "vdi2770-validate"
 
 
 def test_both_halves_carry_the_same_version():
     """The number is the pair. Two halves at different numbers cannot be named
     by one tag, and the pin below would have two answers to choose between."""
-    reader, rules = field(manifest(READER), "version"), field(manifest(RULES), "version")
+    reader, rules = field(READER, "version"), field(RULES, "version")
     assert reader == rules, (
         f"the reader is {reader} and the rules are {rules}; they are released "
         f"together under one tag and cannot disagree about which release it is")
@@ -209,34 +216,36 @@ def test_both_halves_carry_the_same_version():
 def test_the_rules_name_the_reader_exactly_and_not_a_range():
     """A range says "some reader that ought to work". The release was tested
     against one, and that is the one it should install."""
-    spec = asked_of(manifest(RULES), "vdi2770")
+    spec = asked_of(RULES, "vdi2770")
     assert spec, "the rules do not depend on the reader at all"
-    # A release number, and PEP 440's spellings of one that is not final yet:
-    # this project runs the cycle between releases on a `.devN` above the last
-    # tag, and the first pattern here could not express that -- so the gate that
-    # forbids a *range* also forbade the ordinary state of the working tree, and
-    # the obvious way out would have been to loosen it to something that admits
-    # `0.8.*` too. Still no wildcard, no range, no comparison operator.
-    assert re.fullmatch(r"vdi2770==\d+(\.\d+)*"
-                        r"(?:(?:a|b|rc)\d+)?(?:\.post\d+)?(?:\.dev\d+)?", spec), (
-        f"the reader is pinned as {spec!r}. Anything but `==` lets pip choose a "
-        f"reader this release was never run against, which is how a fix that "
-        f"shipped failed to arrive once already.")
-
-
-def test_the_pin_names_the_version_this_repository_is_publishing():
-    """Otherwise the tag names one pair and the wheel installs another."""
-    spec = asked_of(manifest(RULES), "vdi2770")
-    here = field(manifest(RULES), "version")
-    assert spec == f"vdi2770=={here}", (
-        f"this repository publishes {here} and pins {spec!r}; the release would "
-        f"install a reader it did not build")
+    here = field(RULES, "version")
+    # A floor, and this release's number as the floor. That is a change, and it
+    # is worth saying why an exact pin was right before and is not now.
+    #
+    # The pin existed because two distributions carried code that had to match:
+    # `~=0.3.0` let pip install a reader without the fix the release was made
+    # for, and the fix never reached anybody. `==` made a mismatched pair
+    # unreachable, because there was no version of one that paired with a
+    # different version of the other.
+    #
+    # There is no pair any more. The rules are two lines that make the old
+    # import name the same object as `vdi2770.validate`; they carry no logic
+    # that a reader version could disagree with. What the alias needs is an
+    # engine at least as new as the alias claims to be — install
+    # `vdi2770-validate 0.9` and you get an engine of 0.9 or later, never 0.8's
+    # — and the extra, because a schema check without a parser is `X0`.
+    assert spec == f"vdi2770[validate]>={here}", (
+        f"the rules ask for {spec!r} and this repository publishes {here}. The "
+        f"alias has to name the engine it is an alias for: a floor below its "
+        f"own version would install an engine that does not have what this "
+        f"release describes, and no extra would leave the schema check unable "
+        f"to run.")
 
 
 def test_the_reader_depends_on_nothing():
     """The reason it is worth publishing on its own. Asserted rather than
     promised in prose."""
-    assert requirements(manifest(READER)) == []
+    assert requirements(READER) == []
 
 
 def test_the_command_is_not_named_after_the_other_distribution():
@@ -246,10 +255,7 @@ def test_the_command_is_not_named_after_the_other_distribution():
     has nothing to run -- and the message the user gets is `command not found`,
     which points at their PATH rather than at the package they needed.
     """
-    block = re.search(r"^\[project\.scripts\]\n(.*?)(?=^\[)",
-                      manifest(RULES), re.M | re.S)
-    assert block, "the rules declare no command"
-    named = re.findall(r"^([\w.\-]+) = ", block.group(1), re.M)
+    named = sorted(console_scripts(RULES))
     assert named == ["vdi2770-validate"], (
         f"the commands are {named}; `vdi2770` is the other distribution's name")
 

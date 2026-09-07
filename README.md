@@ -175,7 +175,7 @@ iiRDS, if that is the handover format you are on.
   falls back quietly on error would satisfy the weaker check. Nothing is extracted to
   disk; a supplier archive does not get to pick a path on your filesystem or expand
   an XML entity.
-- **Rules are data.** [`rules.json`](https://github.com/dev365code/vdi2770-validate/blob/main/src/vdi2770_validate/data/rules.json),
+- **Rules are data.** [`rules.json`](https://github.com/dev365code/vdi2770-validate/blob/main/packages/vdi2770/src/vdi2770/validate/data/rules.json),
   rendered as [docs/rules.md](https://github.com/dev365code/vdi2770-validate/blob/main/docs/rules.md) — each
   rule carries where its requirement comes from, a remedy sentence, and — where the
   reference implementation checks the same thing — the message keys it uses.
@@ -236,11 +236,18 @@ container = read_container_file("corpus/examples/container/documentcontainer.zip
 print(container.kind, len(container.members))
 ```
 
-The two carry the same version and are released together under one tag, and the
-rule set names the reader exactly — `vdi2770==0.8.0.dev0`, not a range. A range was a
-standing way to be wrong: it had already let `pip` install a reader without the
-fix a release existed for, so the correction never reached the people it was
-written for.
+They are one distribution now. `vdi2770` carries the readers and the validator;
+`vdi2770-validate` is the old import name kept working, two lines that make it
+the same object as `vdi2770.validate`, and it asks for
+`vdi2770[validate]>=0.8.0.dev0`.
+
+That is a range, and this project spent a release learning why ranges are a
+standing way to be wrong: `~=0.3.0` let `pip` install a reader without the fix a
+release existed for, so the correction never reached the people it was written
+for. An exact pin made a mismatched pair unreachable. What changed is that there
+is no pair — the alias carries no logic a reader version could disagree with, so
+what it needs is an engine at least as new as it claims to be, and the extra
+that lets the schema check run.
 
 ## The classification table, and a disagreement
 

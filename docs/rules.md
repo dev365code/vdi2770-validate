@@ -1,6 +1,6 @@
 # The rules
 
-Generated from [`rules.json`](../src/vdi2770_validate/data/rules.json) by
+Generated from [`rules.json`](../packages/vdi2770/src/vdi2770/validate/data/rules.json) by
 `tools/rules_doc.py`. Edit the data, not this page — `make check` compares them.
 
 `obligation` says where a requirement comes from, and the vocabulary is deliberately

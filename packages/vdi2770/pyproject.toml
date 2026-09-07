@@ -31,6 +31,13 @@ classifiers = [
 dependencies = []
 
 [project.optional-dependencies]
+# The schema check, and only it, needs a parser — `xsdvalidate` imports it
+# inside the function that uses it. Optional so that `pip install vdi2770`
+# stays what the line above calls it: a reader with no dependencies. A
+# machine that installs the reader alone and then asks for a schema check
+# gets `X0`, which is this tool declining to look rather than a verdict on
+# anybody's container.
+validate = ["xmlschema==4.2.0"]
 dev = ["pytest==8.3.4", "ruff==0.16.3"]
 
 [project.urls]
@@ -39,13 +46,16 @@ Source = "https://github.com/dev365code/vdi2770-validate"
 Issues = "https://github.com/dev365code/vdi2770-validate/issues"
 
 [tool.setuptools]
-license-files = ["LICENSE", "NOTICE"]
+# The wheel bundles VDI's schema and a table derived from an IDTA
+# publication, so the notices have to travel with it.
+license-files = ["LICENSE", "NOTICE", "THIRD_PARTY.md"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.setuptools.package-data]
 vdi2770 = ["py.typed"]
+"vdi2770.validate" = ["data/*.json", "data/*.xsd"]
 
 # How this package's own suite runs is in `pytest.ini` beside this file, not
 # here: it is not about packaging, and it has to keep working in an sdist that

@@ -153,12 +153,31 @@ def _disagreement() -> Optional[str]:
     except Exception as e:                                  # noqa: BLE001
         return f"the reader this tool is built on did not import: {e!r}"
     try:
-        import vdi2770_validate as rules
+        from vdi2770 import validate as rules
     except Exception as e:                                  # noqa: BLE001
         return f"the rules did not import: {e!r}"
 
     reader = getattr(vdi2770, "__version__", None)
     ruleset = getattr(rules, "__version__", None)
+
+    # And the old name, when a machine still has it. Absent is fine -- the
+    # single-file build carries no alias and a clean install of 0.8 has no
+    # reason to. What is not fine is a *stale* one: `vdi2770-validate` shipped
+    # real code with a version of its own until 0.7, so a machine that upgraded
+    # the engine and left that behind imports seven releases of rules under a
+    # name everything written before this still uses. Same shape as the split
+    # pair, and the reason this check exists.
+    legacy = None
+    try:
+        import vdi2770_validate as _old
+        legacy = getattr(_old, "__version__", None)
+    except Exception:                                       # noqa: BLE001
+        pass
+    if legacy is not None and ruleset is not None and folded(legacy) != folded(ruleset):
+        return (f"`import vdi2770_validate` gives {legacy} and the rules in "
+                f"`vdi2770.validate` are {ruleset}. The old name is an alias "
+                f"for the new one from 0.8 on, so a different number there is "
+                f"an older release still installed under it.")
     if reader is None or ruleset is None:
         missing = "reader" if reader is None else "rules"
         return (f"the {missing} half does not say what version it is; what is "

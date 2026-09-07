@@ -40,8 +40,22 @@ ROOT = Path(__file__).resolve().parent.parent
 # nearby -- which is the whole reason it is published separately.
 DISTRIBUTIONS = [
     (ROOT / "packages" / "vdi2770", []),
-    (ROOT, ["tools/make_fixtures.py"]),
+    (ROOT, None),
 ]
+
+#: A distribution that ships no suite, and why. `None` above is not "skip": it
+#: is answered below by a different question, and a distribution reaching this
+#: table has to say what it is.
+NO_SUITE = {
+    "vdi2770-validate": "two lines that make the old import name the same "
+                        "object as `vdi2770.validate`. The rules, the data and "
+                        "the suite are in the other distribution and travel in "
+                        "its sdist; shipping them here would run them against "
+                        "whatever happened to be installed nearby, which is the "
+                        "borrowed green result two sdists exist to avoid. What "
+                        "is asked instead is that the alias is in the archive "
+                        "and that no test file is.",
+}
 
 
 def _distribution(project: Path) -> str:
@@ -114,6 +128,26 @@ def _build_and_run(project: Path, before: list) -> int:
             except TypeError:
                 tf.extractall(tmp)                                # noqa: S202
         unpacked = next(p for p in Path(tmp).iterdir() if p.is_dir())
+        if before is None:
+            name = _distribution(project)
+            why = NO_SUITE.get(name)
+            if not why:
+                print(f"{name}: ships no suite and this gate has no entry "
+                      f"saying why", file=sys.stderr)
+                return 1
+            alias = list(unpacked.rglob("vdi2770_validate/__init__.py"))
+            if not alias:
+                print(f"{name}: the sdist does not carry the module it exists "
+                      f"to ship", file=sys.stderr)
+                return 1
+            stray = list(unpacked.rglob("test_*.py"))
+            if stray:
+                print(f"{name}: the sdist carries {len(stray)} test file(s) it "
+                      f"cannot run: {[p.name for p in stray[:3]]}",
+                      file=sys.stderr)
+                return 1
+            print(f"{name}: ships the alias and no suite it could not run")
+            return 0
         # Fixtures are generated, so the sdist carries the generator, not the
         # output — build them there exactly as `make check` does here.
         for step in ([*before], ["-m", "pytest", "-q"]):

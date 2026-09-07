@@ -28,7 +28,12 @@ classifiers = [
 # permits the fixed version does not deliver it. The two numbers move together
 # and go out under one tag, so there is no version of one to pair with a
 # different version of the other.
-dependencies = ["vdi2770==0.8.0.dev0", "xmlschema==4.2.0"]
+# The validator lives in `vdi2770` now and this distribution is the old
+# import name kept working. A range rather than an exact pin, because what
+# this ships is a two-line alias: there is no version of it that can
+# disagree with a version of the engine. The exact pin existed to stop the
+# pair being half-moved, and after the merge there is no pair to move.
+dependencies = ["vdi2770[validate]>=0.8.0.dev0"]
 
 [project.urls]
 Homepage = "https://github.com/dev365code/vdi2770-validate"
@@ -60,7 +65,9 @@ vdi2770-validate = "vdi2770_validate.entry:run"
 [tool.setuptools]
 # The wheel bundles VDI's schema and a table derived from an IDTA publication,
 # so the notices have to travel with it.
-license-files = ["LICENSE", "NOTICE", "THIRD_PARTY.md"]
+# The schema and the IDTA-derived table ship with `vdi2770` now, so the
+# notices for them travel there. What is left here is an alias.
+license-files = ["LICENSE", "NOTICE"]
 
 [tool.setuptools.packages.find]
 # This distribution only. The reader is built from its own manifest under
@@ -69,8 +76,7 @@ license-files = ["LICENSE", "NOTICE", "THIRD_PARTY.md"]
 # to keep unreachable.
 where = ["src"]
 
-[tool.setuptools.package-data]
-vdi2770_validate = ["data/*.json", "data/*.xsd"]
+
 
 [tool.ruff]
 line-length = 110

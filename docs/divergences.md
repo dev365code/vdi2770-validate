@@ -115,7 +115,7 @@ working group.
 
 IDTA's rendering is not a one-off either. It is in 02004 Table 1 at v2.0.1,
 which is the edition this project transcribed and the edition
-[`document-classes.json`](../src/vdi2770_validate/data/document-classes.json)
+[`document-classes.json`](../packages/vdi2770/src/vdi2770/validate/data/document-classes.json)
 names; and it appears again in **IDTA 02035-2**, the battery-passport profile of
 handover documentation, published by a different group — its README calls it "a
 joint result of the Model Expert Group comprising IDTA and Catena-X". That

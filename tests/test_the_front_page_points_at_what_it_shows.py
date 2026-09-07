@@ -155,20 +155,20 @@ def test_every_rule_the_gallery_names_is_a_rule_with_that_severity():
             f"{label[catalogue[rule_id].severity]}")
 
 
-def test_the_pin_the_page_quotes_is_the_pin_the_project_declares():
-    """The page tells a reader the rule set names the reader *exactly*, and then
-    quotes the pin. That quotation is prose: nothing read it.
+def test_the_requirement_the_page_quotes_is_the_one_the_project_declares():
+    """The page explains what the old name asks for, and quotes it. That
+    quotation is prose: nothing read it.
 
-    It is the one number on this page that a release moves, and it moves in
-    `pyproject.toml` — so a reader arriving on the front page after a version
-    bump would be shown a pin the project no longer declares, on the very
-    paragraph whose subject is that an inexact pin ships the wrong reader.
+    It is the one requirement on this page that a release moves, and it moves in
+    `pyproject.toml` — so a reader arriving after a version bump would be shown
+    something the project no longer declares, in the paragraph whose whole
+    subject is which engine you get.
     """
     project = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
-    declared = re.search(r'"vdi2770==([^"]+)"', project)
-    assert declared, "pyproject.toml no longer pins the reader exactly"
-    quoted = re.findall(r"`vdi2770==([^`]+)`", README)
-    assert quoted, "the front page no longer quotes the pin it explains"
+    declared = re.search(r'"(vdi2770\[[^"]+)"', project)
+    assert declared, "pyproject.toml no longer asks for the engine by name"
+    quoted = re.findall(r"`(vdi2770\[[^`]+)`", README)
+    assert quoted, "the front page no longer quotes the requirement it explains"
     assert set(quoted) == {declared.group(1)}, (
         f"the page quotes {sorted(set(quoted))} and pyproject.toml declares "
         f"{declared.group(1)!r}")

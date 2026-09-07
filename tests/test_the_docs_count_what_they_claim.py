@@ -157,8 +157,9 @@ def test_scope_md_states_the_limits_the_code_enforces():
     container" — and nothing derived any of them. It is the page a buyer reads
     to decide whether this tool will cope with their delivery.
     """
-    from vdi2770 import pdfread, xmlread, zipread
     from vdi2770_validate.model import MAX_LISTED_PER_RULE
+
+    from vdi2770 import pdfread, xmlread, zipread
 
     prose = (ROOT / "docs" / "scope.md").read_text(encoding="utf-8")
     # How many times one rule can be true. This sentence said "two hundred
@@ -216,7 +217,7 @@ def test_the_divergence_numbers_are_derived_from_the_sweep_and_the_catalogue():
 
     prose = (ROOT / "docs" / "divergences.md").read_text(encoding="utf-8")
     catalogue = json.loads(
-        (ROOT / "src" / "vdi2770_validate" / "data" / "rules.json").read_text(encoding="utf-8"))
+        (ROOT / "packages" / "vdi2770" / "src" / "vdi2770" / "validate" / "data" / "rules.json").read_text(encoding="utf-8"))
     recorded = json.loads(
         (ROOT / "docs" / "oracle-sweep.json").read_text(encoding="utf-8"))
     # Only what was actually put through the reference implementation. A
@@ -296,8 +297,9 @@ def test_the_json_report_carries_what_each_finding_actually_says():
     """
     import json
 
-    from vdi2770_validate import report as rendering
     from vdi2770_validate.runner import check_file
+
+    from vdi2770_validate import report as rendering
 
     target = ROOT / "corpus" / "examples" / "missingdocuments" / "folders.zip"
     rep = check_file(str(target))
@@ -409,7 +411,7 @@ def test_the_changelog_counts_the_rules_that_fire_because_we_declined():
     import json
 
     catalogue = json.loads(
-        (ROOT / "src" / "vdi2770_validate" / "data" / "rules.json").read_text(encoding="utf-8"))
+        (ROOT / "packages" / "vdi2770" / "src" / "vdi2770" / "validate" / "data" / "rules.json").read_text(encoding="utf-8"))
     declined = [r["id"] for r in catalogue["rules"] if r["about"] == "tool"]
 
     _, m = latest_changelog_claim(
@@ -780,7 +782,7 @@ def test_the_readme_names_the_classes_the_two_sources_actually_disagree_on():
     import json
 
     classes = json.loads(
-        (ROOT / "src" / "vdi2770_validate" / "data" / "document-classes.json")
+        (ROOT / "packages" / "vdi2770" / "src" / "vdi2770" / "validate" / "data" / "document-classes.json")
         .read_text(encoding="utf-8"))["classes"]
     # Whitespace collapsed: these sentences wrap, and a line break between
     # "twelve" and "German" is not a change of claim. The first version of this

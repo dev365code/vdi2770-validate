@@ -64,12 +64,22 @@ def recipe_commands(include=None):
 
 
 def test_pinned_versions_match_pyproject():
-    pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    """Both manifests, because a pin moves when the code that needs it moves.
+
+    `xmlschema` is the validator's, and the validator now ships with `vdi2770`
+    — so the version the Makefile names is declared over there, in the extra
+    that keeps `pip install vdi2770` free of it. Reading only the manifest at
+    the root said the Makefile pinned something nobody declared.
+    """
+    manifests = "\n".join(
+        (ROOT / where).read_text(encoding="utf-8")
+        for where in ("pyproject.toml", "packages/vdi2770/pyproject.toml"))
     for name in ("ruff", "pytest", "xmlschema"):
         m = re.search(rf"{name.upper()}_VERSION\s*:=\s*([0-9.]+)", MAKEFILE)
         assert m, f"Makefile does not pin {name}"
-        assert f'{name}=={m.group(1)}' in pyproject, (
-            f"{name} is pinned to {m.group(1)} in the Makefile but not in pyproject.toml")
+        assert f'{name}=={m.group(1)}' in manifests, (
+            f"{name} is pinned to {m.group(1)} in the Makefile and no manifest "
+            f"here declares that version")
 
 
 def test_ci_actually_exercises_the_oldest_python_we_promise():
@@ -230,8 +240,8 @@ def test_every_file_that_carries_the_version_carries_the_same_one():
             stated(ROOT / "pyproject.toml", r'^version = "([^"]+)"'),
         "packages/vdi2770/pyproject.toml":
             stated(reader / "pyproject.toml", r'^version = "([^"]+)"'),
-        "src/vdi2770_validate/__init__.py":
-            stated(ROOT / "src" / "vdi2770_validate" / "__init__.py",
+        "packages/vdi2770/src/vdi2770/validate/__init__.py":
+            stated(ROOT / "packages" / "vdi2770" / "src" / "vdi2770" / "validate" / "__init__.py",
                    r'^__version__ = "([^"]+)"'),
         "packages/vdi2770/src/vdi2770/__init__.py":
             stated(reader / "src" / "vdi2770" / "__init__.py",

@@ -59,7 +59,7 @@ DISTRIBUTIONS = [
      ("LICENSE", "NOTICE")),
     (ROOT,
      [(ROOT / "src", "vdi2770_validate")],
-     ("LICENSE", "NOTICE", "THIRD_PARTY.md")),
+     ("LICENSE", "NOTICE")),
 ]
 # A container that produces findings, used to prove the installed wheel runs.
 SMOKE = ROOT / "corpus" / "examples" / "missingdocuments" / "folders.zip"
@@ -165,8 +165,13 @@ def _metadata(wheel: Path):
 
 
 def pin_names_what_was_built(wheels: list) -> list:
-    """The rules pin the reader exactly; the pin has to name the reader this
-    build produced.
+    """The alias asks for an engine at least as new as itself, with the extra.
+
+    An exact pin was the invariant while two distributions carried code that had
+    to match. The alias carries none — it is two lines making one name another —
+    so what has to be true is narrower and different: the floor equals the
+    alias's own version, and the extra is named, or the schema check cannot run
+    on a machine that did everything right.
 
     Read from the two artifacts rather than from the two manifests. Everything
     else that checks this reads `pyproject.toml`, and a manifest is a claim
@@ -194,18 +199,24 @@ def pin_names_what_was_built(wheels: list) -> list:
     if len(needed) != 1:
         return [f"vdi2770-validate requires {needed}; it depends on the reader "
                 f"exactly once or the order gate has no single version to check"]
-    asked = re.search(r"==\s*([^\s,;]+)", needed[0])
+    if "[validate]" not in needed[0]:
+        return [f"vdi2770-validate asks for {needed[0]!r}, without the extra "
+                f"that installs the schema parser -- so the schema check would "
+                f"report X0 on a machine that did everything right"]
+    asked = re.search(r">=\s*([^\s,;]+)", needed[0])
     if not asked:
-        return [f"vdi2770-validate asks for {needed[0]!r}, which is not an exact "
-                f"pin, so the pair that installs is whatever the index holds"]
+        return [f"vdi2770-validate asks for {needed[0]!r}, which names no floor. "
+                f"The alias has to require an engine at least as new as itself: "
+                f"without that, installing it can leave an older engine in place "
+                f"and the release describes something nobody has."]
     if "vdi2770" not in built:
-        return ["the reader was not built here, so the pin cannot be checked "
-                "against the artifact it names"]
-    if asked.group(1) != built["vdi2770"]:
-        return [f"vdi2770-validate {built['vdi2770-validate']} pins the reader at "
-                f"{asked.group(1)} and the reader built here is "
-                f"{built['vdi2770']}. Published as a pair, this is an install "
-                f"nobody can complete."]
+        return ["the reader was not built here, so the requirement cannot be "
+                "checked against the artifact it names"]
+    if asked.group(1) != built["vdi2770-validate"]:
+        return [f"vdi2770-validate {built['vdi2770-validate']} asks for an engine "
+                f">= {asked.group(1)}. The floor is its own version or it is "
+                f"wrong: lower and an older engine satisfies it, higher and the "
+                f"release cannot install itself."]
     return []
 
 

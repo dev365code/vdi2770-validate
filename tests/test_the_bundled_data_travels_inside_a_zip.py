@@ -22,7 +22,7 @@ import pytest
 from conftest import CLEAN_DOCUMENT, ROOT
 
 READER = ROOT / "packages" / "vdi2770" / "src" / "vdi2770"
-VALIDATOR = ROOT / "src" / "vdi2770_validate"
+VALIDATOR = ROOT / "packages" / "vdi2770" / "src" / "vdi2770" / "validate"
 
 
 @pytest.fixture(scope="module")

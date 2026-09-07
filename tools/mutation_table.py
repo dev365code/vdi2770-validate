@@ -73,7 +73,7 @@ TABLE = [
      "a duplicate name could be hidden by making one copy oversized"),
 
     ("report/listing-cap-does-not-soften-the-count",
-     "src/vdi2770_validate/model.py",
+     "packages/vdi2770/src/vdi2770/validate/model.py",
      "        return (sum(1 for f in self.findings if f.severity is sev)\n"
      "                + self._suppressed_severity.get(sev, 0))",
      "        return sum(1 for f in self.findings if f.severity is sev)",
@@ -81,28 +81,28 @@ TABLE = [
      "a bounded listing would have become a quieter verdict"),
 
     ("runner/a-crashing-rule-is-a-finding",
-     "src/vdi2770_validate/runner.py",
+     "packages/vdi2770/src/vdi2770/validate/runner.py",
      "        for f in findings:\n            report.add(f)",
      "        for f in list(findings)[:0]:\n            report.add(f)",
      ["tests/test_a_rule_that_crashes_does_not_kill_the_run.py"],
      "one rule's exception killed a whole sweep"),
 
     ("cli/one-bad-path-does-not-stop-the-rest",
-     "src/vdi2770_validate/cli.py",
+     "packages/vdi2770/src/vdi2770/validate/cli.py",
      'why = getattr(e, "strerror", None) or str(e)',
      'why = e.strerror or str(e)',
      ["tests/test_cli.py"],
      "the handler that existed to keep going was itself stopping"),
 
     ("rules/z8-counts-document-containers",
-     "src/vdi2770_validate/rules/container.py",
+     "packages/vdi2770/src/vdi2770/validate/rules/container.py",
      "        if not delivered and not stopped and not as_folders:",
      "        if not container.children and not stopped and not as_folders:",
      ["tests/test_z8_counts_document_containers.py"],
      "a documentation container delivering nothing came back clean"),
 
     ("rules/f2-emits-in-a-fixed-order",
-     "src/vdi2770_validate/rules/files.py",
+     "packages/vdi2770/src/vdi2770/validate/rules/files.py",
      "    for name in sorted(set(members.present) - accounted_for - structural - collides):",
      "    for name in set(members.present) - accounted_for - structural - collides:",
      ["tests/test_determinism.py"],
@@ -123,14 +123,14 @@ TABLE = [
      "an excuse could be rewritten from impossible to unwritten"),
 
     ("layering/a-rule-cannot-reach-a-parser",
-     "src/vdi2770_validate/rules/files.py",
+     "packages/vdi2770/src/vdi2770/validate/rules/files.py",
      "from typing import Iterator",
      "import zipfile\nfrom typing import Iterator",
      ["tests/test_layering.py"],
      "a rule could check the spelling instead of the model"),
 
     ("gates/our-half-of-the-sweep-is-current",
-     "src/vdi2770_validate/data/rules.json",
+     "packages/vdi2770/src/vdi2770/validate/data/rules.json",
      '"id": "F3",\n      "layer": "files",\n      "severity": "warning"',
      '"id": "F3",\n      "layer": "files",\n      "severity": "error"',
      ["tools/capture_oracle.py --check-ours"],
@@ -185,10 +185,10 @@ TABLE = [
      "have compared"),
 
     ("gates/the-wheel-carries-only-the-package",
-     "pyproject.toml",
-     'vdi2770_validate = ["data/*.json", "data/*.xsd"]',
-     'vdi2770_validate = ["data/*.json", "data/*.xsd"]\n\n'
-     '[tool.setuptools.data-files]\n"share/vdi2770" = ["docs/oracle-sweep.json"]',
+     "packages/vdi2770/pyproject.toml",
+     '"vdi2770.validate" = ["data/*.json", "data/*.xsd"]',
+     '"vdi2770.validate" = ["data/*.json", "data/*.xsd"]\n\n'
+     '[tool.setuptools.data-files]\n"share/vdi2770" = ["README.md"]',
      ["tools/check_wheel.py"],
      "NOTICE tells readers the MIT-derived oracle evidence is in the sdist and in "
      "neither wheel; nothing checked the wheel from that direction"),
@@ -238,7 +238,7 @@ TABLE = [
      "saying the member had been refused"),
 
     ("rules/a-refusal-to-model-is-not-a-malformed-file",
-     "src/vdi2770_validate/rules/schema.py",
+     "packages/vdi2770/src/vdi2770/validate/rules/schema.py",
      '               else "X6" if isinstance(parse_error, XmlTooLarge) else "X1")',
      '               else "X1")',
      ["tests/test_a_document_we_would_not_build_is_not_malformed.py"],
@@ -255,7 +255,7 @@ TABLE = [
      "refused, including one that changed nothing else"),
 
     ("reader/the-tree-of-documents-has-a-ceiling-too",
-     "src/vdi2770_validate/runner.py",
+     "packages/vdi2770/src/vdi2770/validate/runner.py",
      "        if c.metadata_bytes is not None and elements >= MAX_TOTAL_ELEMENTS:",
      "        if False:",
      ["tests/test_a_document_we_would_not_build_is_not_malformed.py"],
@@ -271,7 +271,7 @@ TABLE = [
      "malformed document was reported as this tool crashing"),
 
     ("rules/a-dot-slash-prefix-is-not-a-folder",
-     "src/vdi2770_validate/rules/container.py",
+     "packages/vdi2770/src/vdi2770/validate/rules/container.py",
      '        if not folder_path(prefix + "/"):',
      "        if False:",
      ["tests/test_documents_delivered_as_folders.py"],
@@ -328,7 +328,7 @@ TABLE = [
      "every element they care to write"),
 
     ("runner/a-path-that-blocks-is-a-path-we-cannot-read",
-     "src/vdi2770_validate/runner.py",
+     "packages/vdi2770/src/vdi2770/validate/runner.py",
      "        fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK)",
      '        fd = os.open(path, os.O_RDONLY)',
      ["tests/test_defences.py"],
@@ -337,7 +337,7 @@ TABLE = [
      "hangs"),
 
     ("rules/a-repeated-name-is-not-a-bad-checksum",
-     "src/vdi2770_validate/rules/files.py",
+     "packages/vdi2770/src/vdi2770/validate/rules/files.py",
      '                     or (because is not None and because.kind == "ambiguous-name"))',
      "                     or False)",
      ["tests/test_a_member_we_cannot_read_is_not_a_pass.py"],
@@ -345,7 +345,7 @@ TABLE = [
      "send it again, which reproduces the same archive"),
 
     ("rules/two-rules-name-one-folder-one-way",
-     "src/vdi2770_validate/rules/container.py",
+     "packages/vdi2770/src/vdi2770/validate/rules/container.py",
      '        named = [folder_path(f) + "/" for f, _ in as_folders[:5]]',
      "        named = [f for f, _ in as_folders[:5]]",
      ["tests/test_documents_delivered_as_folders.py"],
@@ -455,7 +455,7 @@ TABLE = [
      "is swallowed and both sides of the comparison come back equal"),
 
     ("runner/a-container-we-did-not-parse-is-not-schema-checked",
-     "src/vdi2770_validate/runner.py",
+     "packages/vdi2770/src/vdi2770/validate/runner.py",
      "                         if tree is not None else [])",
      "                         if True else [])",
      ["tests/test_defences.py"],
@@ -463,7 +463,7 @@ TABLE = [
      "document the reader called too expensive, with no tree behind it"),
 
     ("rules/one-sibling-list-per-parent-not-per-error",
-     "src/vdi2770_validate/xsdvalidate.py",
+     "packages/vdi2770/src/vdi2770/validate/xsdvalidate.py",
      "        if kids_of is None:\n            return node.find_all(tag)",
      "        if True:\n            return node.find_all(tag)",
      ["tests/test_the_schema_check_is_bounded.py"],
@@ -471,7 +471,7 @@ TABLE = [
      "of the 29 seconds this area exists because of"),
 
     ("rules/a-name-that-matches-two-members-is-not-absent",
-     "src/vdi2770_validate/rules/files.py",
+     "packages/vdi2770/src/vdi2770/validate/rules/files.py",
      "            spellings = members.spelled_more_than_one_way(f.file_name)",
      "            spellings = ()",
      ["tests/test_two_spellings_are_two_files.py"],
@@ -481,7 +481,7 @@ TABLE = [
      "declaration"),
 
     ("rules/two-names-that-print-alike-are-told-apart",
-     "src/vdi2770_validate/rules/container.py",
+     "packages/vdi2770/src/vdi2770/validate/rules/container.py",
      "            if not alike:",
      "            if True:",
      ["tests/test_two_spellings_are_two_files.py"],
@@ -489,7 +489,7 @@ TABLE = [
      "member each was about, or that the difference was in the encoding"),
 
     ("rules/a-locked-member-is-not-a-truncated-transfer",
-     "src/vdi2770_validate/rules/files.py",
+     "packages/vdi2770/src/vdi2770/validate/rules/files.py",
      '            elif "encrypted" in (because.detail or "").lower():',
      "            elif False:",
      ["tests/test_a_member_we_cannot_read_is_not_a_pass.py"],
@@ -577,7 +577,7 @@ TABLE = [
      "about the commit"),
 
     ("runner/metadata-we-could-not-model-declares-nothing-known",
-     "src/vdi2770_validate/runner.py",
+     "packages/vdi2770/src/vdi2770/validate/runner.py",
      "        if c.kind in (Kind.DOCUMENT, Kind.DOCUMENTATION) and (document is None",
      "        if False and (document is None",
      ["tests/test_a_declared_zip_is_a_payload.py"],
@@ -586,7 +586,7 @@ TABLE = [
      "being in it"),
 
     ("rules/a-folder-count-under-the-cap-is-exact",
-     "src/vdi2770_validate/rules/container.py",
+     "packages/vdi2770/src/vdi2770/validate/rules/container.py",
      "        capped = len(named) >= MAX_FOLDERS",
      "        capped = True",
      ["tests/test_a_finding_says_something_true.py"],
@@ -602,7 +602,7 @@ TABLE = [
      "fingerprint could not see it and a caller could not catch it"),
 
     ("gates/canonical-form-is-read-not-grepped",
-     "src/vdi2770_validate/names.py",
+     "packages/vdi2770/src/vdi2770/validate/names.py",
      "from vdi2770 import nfc",
      "import unicodedata\n\n\ndef _nfc_again(name):\n"
      "    return unicodedata.normalize(\"NFC\", name)\n\n\nfrom vdi2770 import nfc  # noqa: E402",
@@ -611,7 +611,7 @@ TABLE = [
      "function counted as one -- and a real second import did not"),
 
     ("runner/the-budget-is-charged-before-the-work",
-     "src/vdi2770_validate/runner.py",
+     "packages/vdi2770/src/vdi2770/validate/runner.py",
      '            elements += (c.metadata_bytes.count(b"<") - c.metadata_bytes.count(b"</"))',
      "            pass",
      ["tests/test_a_document_we_would_not_build_is_not_malformed.py"],
@@ -619,7 +619,7 @@ TABLE = [
      "refused, and refusing is the expensive path"),
 
     ("runner/a-container-we-did-not-model-is-not-judged",
-     "src/vdi2770_validate/runner.py",
+     "packages/vdi2770/src/vdi2770/validate/runner.py",
      "            c, declared=declared if modelled else None,",
      "            c, declared=declared or frozenset(),",
      ["tests/test_a_document_we_would_not_build_is_not_malformed.py"],
@@ -675,7 +675,7 @@ TABLE = [
      "value the editor chooses: name a tag that does not exist and it never runs"),
 
     ("gates/the-bundled-schema-is-compiled-once",
-     "src/vdi2770_validate/xsdvalidate.py",
+     "packages/vdi2770/src/vdi2770/validate/xsdvalidate.py",
      "@lru_cache(maxsize=1)\ndef _schema():",
      "def _schema():",
      ["tests/test_the_schema_check_is_bounded.py"],
@@ -683,7 +683,7 @@ TABLE = [
      "recompiling the same XSD once per container"),
 
     ("rules/a-name-that-prints-alike-is-spelled-out",
-     "src/vdi2770_validate/names.py",
+     "packages/vdi2770/src/vdi2770/validate/names.py",
      "    hidden = any(_draws_nothing(c) for c in name)",
      "    return name",
      ["tests/test_two_names_that_print_alike_are_told_apart.py"],
@@ -691,7 +691,7 @@ TABLE = [
      "while two members of one archive printed as the same line"),
 
     ("rules/an-escape-cannot-be-forged",
-     "src/vdi2770_validate/names.py",
+     "packages/vdi2770/src/vdi2770/validate/names.py",
      '        _spelled(c) if c == "\\\\" or _draws_nothing(c)',
      "        _spelled(c) if _draws_nothing(c)",
      ["tests/test_two_names_that_print_alike_are_told_apart.py"],
@@ -699,7 +699,7 @@ TABLE = [
      "named with the character that escape stands for"),
 
     ("rules/one-path-is-not-one-name",
-     "src/vdi2770_validate/rules/container.py",
+     "packages/vdi2770/src/vdi2770/validate/rules/container.py",
      "            relation[key] = (len({extracts_to(n) for n in group}) == 1,",
      "            relation[key] = (True,",
      ["tests/test_two_spellings_are_two_files.py"],
@@ -707,7 +707,7 @@ TABLE = [
      "about members that land on two, in a report where `F2` treated them as two"),
 
     ("rules/one-name-is-not-one-path",
-     "src/vdi2770_validate/rules/container.py",
+     "packages/vdi2770/src/vdi2770/validate/rules/container.py",
      "                             len({nfc(n) for n in group}) == 1)",
      "                             False)",
      ["tests/test_two_spellings_are_two_files.py"],
@@ -715,7 +715,7 @@ TABLE = [
      "off left a canonically equivalent pair described as something else"),
 
     ("rules/a-difference-nobody-can-see-is-spelled-out",
-     "src/vdi2770_validate/names.py",
+     "packages/vdi2770/src/vdi2770/validate/names.py",
      "        if differing and easy_to_miss:",
      "        if False:",
      ["tests/test_two_names_that_print_alike_are_told_apart.py"],
@@ -723,7 +723,7 @@ TABLE = [
      "asking for, and `escaped` cannot see it -- both sides are their own NFC"),
 
     ("rules/collisions-are-joined-once",
-     "src/vdi2770_validate/rules/container.py",
+     "packages/vdi2770/src/vdi2770/validate/rules/container.py",
      "            alike = _partners(group, place[name])",
      "            alike = sorted(n for n in container.duplicate_names\n"
      "                           if folder_path(n) == folder_path(name) and n != name)",
@@ -732,7 +732,7 @@ TABLE = [
      "pairs from a 316 KiB archive, past every budget the reader has"),
 
     ("rules/case-is-a-collision-somewhere",
-     "src/vdi2770_validate/rules/container.py",
+     "packages/vdi2770/src/vdi2770/validate/rules/container.py",
      "        folded.setdefault(ignoring_case(member), []).append(member)",
      "        folded.setdefault(member, []).append(member)",
      ["tests/test_two_spellings_are_two_files.py"],
@@ -740,7 +740,7 @@ TABLE = [
      "and following the remedy that was offered made the report cleaner still"),
 
     ("rules/one-finding-does-not-name-the-whole-group",
-     "src/vdi2770_validate/rules/container.py",
+     "packages/vdi2770/src/vdi2770/validate/rules/container.py",
      "    stride = max(1, len(group) // MAX_ALIKE)",
      "    stride = 0 if False else 1",
      ["tests/test_two_spellings_are_two_files.py"],
@@ -748,7 +748,7 @@ TABLE = [
      "hundred and ten appeared neither as a subject nor in anybody's list"),
 
     ("runner/the-archive-is-parsed-once-per-container",
-     "src/vdi2770_validate/runner.py",
+     "packages/vdi2770/src/vdi2770/validate/runner.py",
      "    read_member = zipread.member_reader(raw, allowed=accepted)",
      "    read_member = lambda name: zipread.member_bytes(raw, name, allowed=accepted)  # noqa: E731",
      ["tests/test_defences.py"],
@@ -756,7 +756,7 @@ TABLE = [
      "20.6 s for 2,000 of them from a 210 KiB archive, 18.5 s of it in the parse"),
 
     ("rules/the-declared-paths-are-normalised-once",
-     "src/vdi2770_validate/rules/files.py",
+     "packages/vdi2770/src/vdi2770/validate/rules/files.py",
      "    collides = {n for n in container.duplicate_names if extracts_to(n) in landed_on}",
      "    collides = {n for n in container.duplicate_names\n"
      "                if any(extracts_to(n) == extracts_to(a) for a in accounted_for)}",
@@ -765,7 +765,7 @@ TABLE = [
      "split-and-join on both sides at every pair"),
 
     ("rules/a-difference-a-reader-can-see-is-left-alone",
-     "src/vdi2770_validate/names.py",
+     "packages/vdi2770/src/vdi2770/validate/names.py",
      "                                and published[plain_p[k]].isascii())",
      "                                and False)",
      ["tests/test_two_names_that_print_alike_are_told_apart.py"],
@@ -773,7 +773,7 @@ TABLE = [
      "`identification` against `Identification` came back as two walls of hex"),
 
     ("rules/free-text-has-no-path-segments",
-     "src/vdi2770_validate/names.py",
+     "packages/vdi2770/src/vdi2770/validate/names.py",
      "    stops = ([i for i, c in enumerate(name) if c == \"/\"] if segments else []) + [len(name)]",
      "    stops = [i for i, c in enumerate(name) if c == \"/\"] + [len(name)]",
      ["tests/test_two_names_that_print_alike_are_told_apart.py"],
@@ -789,7 +789,7 @@ TABLE = [
      "the file was found at a place and just needed moving"),
 
     ("rules/an-unopened-folders-member-is-not-judged-by-the-root",
-     "src/vdi2770_validate/rules/container.py",
+     "packages/vdi2770/src/vdi2770/validate/rules/container.py",
      "            if _inside(folder_path(m.name), unopened_here):",
      "            if False:",
      ["tests/test_a_declared_zip_is_a_payload.py"],
@@ -797,7 +797,7 @@ TABLE = [
      "the `Z13` saying nobody looked"),
 
     ("rules/declared-a-file-and-classified-a-container-is-a-disagreement",
-     "src/vdi2770_validate/rules/container.py",
+     "packages/vdi2770/src/vdi2770/validate/rules/container.py",
      "            if child is not None and child.kind in (Kind.DOCUMENT, Kind.DOCUMENTATION):",
      "            if False:",
      ["tests/test_a_declared_zip_is_a_payload.py"],
@@ -805,7 +805,7 @@ TABLE = [
      "the exact instruction the rule's own remedy gives"),
 
     ("rules/a-declared-payload-is-not-a-candidate-container",
-     "src/vdi2770_validate/rules/container.py",
+     "packages/vdi2770/src/vdi2770/validate/rules/container.py",
      "                and _candidate(d.where.member)",
      "                and True",
      ["tests/test_a_declared_zip_is_a_payload.py"],
@@ -844,7 +844,7 @@ TABLE = [
      "line because it counted children a different way from the schema"),
 
     ("rules/the-vocabulary-is-decided-by-what-the-model-came-out-as",
-     "src/vdi2770_validate/runner.py",
+     "packages/vdi2770/src/vdi2770/validate/runner.py",
      "            if elsewhere and not (document.identifiers or document.classifications",
      "            if elsewhere or not (document.identifiers or document.classifications",
      ["tests/test_a_name_belongs_to_a_namespace.py"],
@@ -852,7 +852,7 @@ TABLE = [
      "model, and was told that nothing in it is a VDI 2770 element"),
 
     ("rules/a-vocabulary-we-cannot-read-is-unknown-not-empty",
-     "src/vdi2770_validate/runner.py",
+     "packages/vdi2770/src/vdi2770/validate/runner.py",
      "                                                              or foreign is not None):",
      "                                                              or False):",
      ["tests/test_a_name_belongs_to_a_namespace.py"],
@@ -875,7 +875,7 @@ TABLE = [
      "syntax, which says nothing about which packet is the document's own"),
 
     ("report/the-figure-counts-what-the-archive-lists",
-     "src/vdi2770_validate/runner.py",
+     "packages/vdi2770/src/vdi2770/validate/runner.py",
      "        listed = c.present or c.file_names",
      "        listed = c.file_names",
      ["tests/test_the_report_says_how_much_it_read.py"],
@@ -883,7 +883,7 @@ TABLE = [
      "when this tool declined to look"),
 
     ("report/an-archive-nobody-opened-is-still-one-archive",
-     "src/vdi2770_validate/runner.py",
+     "packages/vdi2770/src/vdi2770/validate/runner.py",
      "    report.read.archives_found = 1\n    if root is _CRASHED:",
      "    if root is _CRASHED:",
      ["tests/test_the_report_says_how_much_it_read.py"],
@@ -891,7 +891,7 @@ TABLE = [
      "`0 of 0 archives` and called itself complete"),
 
     ("report/an-unreadable-archive-is-not-an-opened-one",
-     "src/vdi2770_validate/runner.py",
+     "packages/vdi2770/src/vdi2770/validate/runner.py",
      "        if c.kind is not Kind.UNREADABLE:",
      "        if True:",
      ["tests/test_the_report_says_how_much_it_read.py"],
@@ -899,7 +899,7 @@ TABLE = [
      "opened"),
 
     ("report/complete-knows-what-the-numbers-cannot",
-     "src/vdi2770_validate/report.py",
+     "packages/vdi2770/src/vdi2770/validate/report.py",
      "                         and not any(report.count_about(s, About.TOOL)",
      "                         and not any(False and report.count_about(s, About.TOOL)",
      ["tests/test_the_report_says_how_much_it_read.py"],
@@ -907,14 +907,14 @@ TABLE = [
      "the read complete"),
 
     ("report/the-coverage-line-is-not-a-note",
-     "src/vdi2770_validate/report.py",
+     "packages/vdi2770/src/vdi2770/validate/report.py",
      '    lines.append("  read " + ", ".join(parts))',
      '    lines.append("  read " + ", ".join(parts)) if show_info else None',
      ["tests/test_the_report_says_how_much_it_read.py"],
      "the flag that hides notes hid the line that says how much of this tool ran"),
 
     ("cli/the-run-says-what-it-never-verifies",
-     "src/vdi2770_validate/cli.py",
+     "packages/vdi2770/src/vdi2770/validate/cli.py",
      '        print("\\nThis tool does not verify PDF/A conformance. It reports the "',
      '        _unused = ("\\nThis tool does not verify PDF/A conformance. It reports the "',
      ["tests/test_cli.py"],
@@ -922,7 +922,7 @@ TABLE = [
      "flag a CI log reaches for removes every one of them"),
 
     ("cli/a-gate-can-choose-to-fail-on-warnings",
-     "src/vdi2770_validate/cli.py",
+     "packages/vdi2770/src/vdi2770/validate/cli.py",
      '                args.fail_on == "warning" and rep.count(Severity.WARNING)):',
      "                False):",
      ["tests/test_cli.py"],
@@ -931,7 +931,7 @@ TABLE = [
 
     # --- the canary -------------------------------------------------------
     ("canary/a-comment-nobody-reads",
-     "src/vdi2770_validate/report.py",
+     "packages/vdi2770/src/vdi2770/validate/report.py",
      '"""Rendering.',
      '"""Rendering, which is what this module does.',
      ["tests/test_readme_sample.py"],
@@ -967,12 +967,12 @@ FRONT_DOOR = [
      "a marked gap is a claim about the output, and this project has already "
      "shipped one that stood for findings of a different kind"),
 
-    ("gates/the-page-quotes-the-pin-the-project-declares",
+    ("gates/the-page-quotes-the-requirement-the-project-declares",
      "README.md",
-     "`vdi2770==0.8.0.dev0`",
-     "`vdi2770==0.7.0`",
+     "`vdi2770[validate]>=0.8.0.dev0`",
+     "`vdi2770[validate]>=0.7.0`",
      ["tests/test_the_front_page_points_at_what_it_shows.py::"
-      "test_the_pin_the_page_quotes_is_the_pin_the_project_declares"],
+      "test_the_requirement_the_page_quotes_is_the_one_the_project_declares"],
      "the paragraph whose whole subject is that the pin is exact quotes a pin "
      "the project does not declare"),
 
@@ -1011,7 +1011,7 @@ FRONT_DOOR = [
 
 RELATIONSHIPS = [
     ("rules/a-half-read-delivery-cannot-say-what-is-missing",
-     "src/vdi2770_validate/rules/delivery.py",
+     "packages/vdi2770/src/vdi2770/validate/rules/delivery.py",
      "    if not read_everything:\n        return",
      "    if not read_everything:\n        pass",
      ["tests/test_a_delivery_carries_the_documents_it_refers_to.py::"
@@ -1021,7 +1021,7 @@ RELATIONSHIPS = [
      "as an error about their delivery"),
 
     ("rules/the-main-document-is-the-one-that-makes-it-an-error",
-     "src/vdi2770_validate/rules/delivery.py",
+     "packages/vdi2770/src/vdi2770/validate/rules/delivery.py",
      'r = rule("M11" if from_main else "M12")',
      'r = rule("M11")',
      ["tests/test_a_delivery_carries_the_documents_it_refers_to.py::"
@@ -1031,7 +1031,7 @@ RELATIONSHIPS = [
      "judgement is theirs -- one severity turns their note into our error"),
 
     ("rules/an-identifier-is-the-number-and-the-domain",
-     "src/vdi2770_validate/rules/delivery.py",
+     "packages/vdi2770/src/vdi2770/validate/rules/delivery.py",
      "    return (document_id.id.strip().casefold(),\n"
      "            document_id.domain_id.strip().casefold())",
      "    return (document_id.id.strip().casefold(),)",
@@ -1043,7 +1043,7 @@ RELATIONSHIPS = [
 
 BASIS_ROWS = [
     ("report/every-finding-says-what-it-rests-on",
-     "src/vdi2770_validate/report.py",
+     "packages/vdi2770/src/vdi2770/validate/report.py",
      '        lines.append(f"         {basis(f.rule)}")',
      '        pass',
      ["tests/test_the_report_says_what_its_judgement_rests_on.py::"
@@ -1052,7 +1052,7 @@ BASIS_ROWS = [
      "while the JSON beside it says the requirement is somebody else's program"),
 
     ("report/the-basis-is-derived-and-not-written",
-     "src/vdi2770_validate/report.py",
+     "packages/vdi2770/src/vdi2770/validate/report.py",
      '        lines.append(f"         {basis(f.rule)}")',
      '        lines.append("         per the reference implementation")',
      ["tests/test_the_report_says_what_its_judgement_rests_on.py::"
@@ -1061,7 +1061,7 @@ BASIS_ROWS = [
      "judgement somebody else's, with the JSON still telling the truth"),
 
     ("rules/a-document-cannot-answer-its-own-reference",
-     "src/vdi2770_validate/rules/delivery.py",
+     "packages/vdi2770/src/vdi2770/validate/rules/delivery.py",
      "for _container, doc in documents if doc is not excluding",
      "for _container, doc in documents",
      ["tests/test_a_delivery_carries_the_documents_it_refers_to.py::"
@@ -1092,7 +1092,7 @@ STREAM_ROWS = [
      "after any letter, which is a second defect the same edit brings back"),
 
     ("rules/a-scan-stopped-by-the-stream-budget-names-it",
-     "src/vdi2770_validate/rules/pdf.py",
+     "packages/vdi2770/src/vdi2770/validate/rules/pdf.py",
      'f"one file" if stopped.reason == "streams" else "")',
      'f"one file" if False else "")',
      ["tests/test_the_report_says_what_its_judgement_rests_on.py::"
@@ -1275,49 +1275,49 @@ MANIFEST_ROWS = [
 
 AGREEMENT_ROWS = [
     ('agreement/a-record-somewhere-else-is-not-this-installation',
-     'src/vdi2770_validate/agreement.py',
+     'packages/vdi2770/src/vdi2770/validate/agreement.py',
      '            if base != here or dist.read_text("METADATA") is None:\n                continue',
      '            if False:\n                continue',
      ['tests/test_the_two_halves_have_to_agree.py::test_a_record_somewhere_else_on_the_path_is_not_this_installations'],
      'the single-file build would be refused on any machine that had also installed the reader, and a layered install over a base image with it -- the artifact sold to people with no route to an index, handed a `pip install` as the remedy'),
 
     ('agreement/a-build-artifact-is-not-an-install-record',
-     'src/vdi2770_validate/agreement.py',
+     'packages/vdi2770/src/vdi2770/validate/agreement.py',
      '            if base != here or dist.read_text("METADATA") is None:',
      '            if base != here:',
      ['tests/test_the_two_halves_have_to_agree.py::test_a_build_artifact_beside_the_code_is_not_an_install_record'],
      'a stale `.egg-info` in a source checkout -- which this repository has, and the Makefile already says lingers -- would refuse every verdict inside `make test`'),
 
     ('agreement/the-answer-is-computed-once',
-     'src/vdi2770_validate/agreement.py',
+     'packages/vdi2770/src/vdi2770/validate/agreement.py',
      '    if not _ANSWER:\n        _ANSWER.append(_disagreement())\n    return _ANSWER[0]',
      '    return _disagreement()',
      ['tests/test_the_two_halves_have_to_agree.py::test_it_is_computed_once'],
      'a coherent, correct, still-running process would start refusing every verdict because somebody upgraded the environment in another window -- the loaded version cannot change, so re-reading buys only that'),
 
     ('agreement/two-spellings-of-one-version-are-one-version',
-     'src/vdi2770_validate/agreement.py',
+     'packages/vdi2770/src/vdi2770/validate/agreement.py',
      '    if folded(reader) != folded(ruleset):',
      '    if reader != ruleset:',
      ['tests/test_the_two_halves_have_to_agree.py::test_the_same_release_spelled_two_ways_is_one_release'],
      '`0.8.0-rc1` is what a hand-edited literal writes and `0.8.0rc1` is what the build backend records, so a working install would be refused over punctuation'),
 
     ('agreement/the-refusal-is-not-a-verdict-on-a-container',
-     'src/vdi2770_validate/cli.py',
+     'packages/vdi2770/src/vdi2770/validate/cli.py',
      '        except InstallationDisagrees:',
      '        except InstallationDisagrees if False else RuntimeError:',
      ['tests/test_the_two_halves_have_to_agree.py::test_the_refusal_reaches_the_command_as_three_and_writes_no_report'],
      'the refusal would be caught as `cannot read it`, counted against the container, and written into the JSON as a document stamped `toolVersion` by the install that had just said it could not account for itself'),
 
     ('agreement/the-version-is-not-answered-by-half-an-installation',
-     'src/vdi2770_validate/cli.py',
+     'packages/vdi2770/src/vdi2770/validate/cli.py',
      '    p.add_argument("--version", action=_Version, nargs=0, help="show the version")',
      '    p.add_argument("--version", action="version", version=VERSION)',
      ['tests/test_the_two_halves_have_to_agree.py::test_the_version_is_not_answered_by_half_an_installation'],
      '`--version` would print the rules half during parsing, before anything could ask -- true about the package it came from and false about the tool that would run'),
 
     ('agreement/a-library-caller-goes-through-it-too',
-     'src/vdi2770_validate/runner.py',
+     'packages/vdi2770/src/vdi2770/validate/runner.py',
      '    refuse_if_disagreeing()\n    report = Report(target=name)',
      '    report = Report(target=name)',
      ['tests/test_the_two_halves_have_to_agree.py::test_a_caller_who_never_touches_the_command_still_goes_through_it'],
@@ -1327,7 +1327,7 @@ AGREEMENT_ROWS = [
 
 BOOT_ROWS = [
     ('agreement/the-check-runs-before-what-it-guards',
-     'src/vdi2770_validate/entry.py',
+     'packages/vdi2770/src/vdi2770/validate/entry.py',
      '    from .agreement import refuse_early\n    early = refuse_early()\n    if early is not None:\n        return early\n    # Only now. Everything below this line can need the reader.\n    from .cli import _run\n    return _run(argv)',
      '    from .cli import _run\n    from .agreement import refuse_early\n    early = refuse_early()\n    if early is not None:\n        return early\n    return _run(argv)',
      ['tests/test_the_two_halves_have_to_agree.py::test_the_check_runs_before_anything_that_needs_the_reader'],
@@ -1335,8 +1335,8 @@ BOOT_ROWS = [
 
     ('agreement/the-single-file-build-goes-through-the-same-door',
      'tools/build_zipapp.py',
-     'from vdi2770_validate.entry import run  # noqa: E402 - after the path is arranged\n\nsys.exit(run())',
-     'from vdi2770_validate.cli import _run  # noqa: E402 - after the path is arranged\n\nsys.exit(_run())',
+     'from vdi2770.validate.entry import run  # noqa: E402 - after the path is arranged\n\nsys.exit(run())',
+     'from vdi2770.validate.cli import _run  # noqa: E402 - after the path is arranged\n\nsys.exit(_run())',
      ['tests/test_the_two_halves_have_to_agree.py::test_every_door_this_project_ships_is_the_same_door'],
      'the single-file build would skip the check the other two doors take, which is how one door got the console handling and the other kept the crash'),
 

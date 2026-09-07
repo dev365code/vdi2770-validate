@@ -64,7 +64,11 @@ def test_the_readers_do_not_know_rule_ids():
 
 
 def test_the_declared_public_surface_is_the_real_one():
-    submodules = {"domain", "model", "pdfread", "xmlread", "zipread"}
+    # `validate` among them: the rule set lives in this distribution now, and a
+    # submodule is reached by importing it rather than off the package object.
+    # `__all__` is what `from vdi2770 import *` gives you, and that is the
+    # readers -- a name that has to be imported to exist does not belong in it.
+    submodules = {"domain", "model", "pdfread", "xmlread", "zipread", "validate"}
     for name in vdi2770.__all__:
         assert hasattr(vdi2770, name), f"__all__ names {name}, which does not exist"
     public = {n for n in dir(vdi2770) if not n.startswith("_")} - submodules

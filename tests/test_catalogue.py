@@ -2,11 +2,12 @@
 import json
 import re
 
-from conftest import ROOT
 from vdi2770_validate.catalog import document_classes, rules
 from vdi2770_validate.model import Obligation
 
-RULES_JSON = json.loads((ROOT / "src" / "vdi2770_validate" / "data" / "rules.json").read_text(encoding="utf-8"))
+from conftest import ROOT
+
+RULES_JSON = json.loads((ROOT / "packages" / "vdi2770" / "src" / "vdi2770" / "validate" / "data" / "rules.json").read_text(encoding="utf-8"))
 
 
 def test_ids_unique_and_shaped():
@@ -40,7 +41,7 @@ def test_a_basis_can_actually_be_looked_up():
     """`basis` is the receipt for a rule. It must name either a file we ship or
     a published edition precise enough to find — "a space in the string" is not
     a check, which is what this used to be."""
-    data = ROOT / "src" / "vdi2770_validate" / "data"
+    data = ROOT / "packages" / "vdi2770" / "src" / "vdi2770" / "validate" / "data"
     for r in rules().values():
         if not r.basis:
             continue
@@ -163,9 +164,10 @@ def test_every_defect_the_reader_can_emit_maps_to_a_rule():
     it. The SDK already gates its kinds against its README; this is the same
     gate pointed the other way.
     """
-    from vdi2770 import DEFECT_KINDS
     from vdi2770_validate.catalog import rules
     from vdi2770_validate.rules.container import DEFECT_TO_RULE
+
+    from vdi2770 import DEFECT_KINDS
 
     # The reader's own vocabulary, not a regex over its source. The regex broke
     # the third time a call site changed shape, and a broken scrape reports
@@ -301,9 +303,10 @@ def test_the_docs_say_that_citing_a_key_is_not_borrowing_its_claim():
     two fields were independent, so the natural reading of a cited key — "this is
     what the standard requires" — was left available, which is the one reading
     this vocabulary exists to prevent."""
-    from conftest import ROOT
     from vdi2770_validate.catalog import rules
     from vdi2770_validate.model import Obligation
+
+    from conftest import ROOT
 
     both = sorted(rid for rid, r in rules().items()
                   if r.obligation is Obligation.OURS and r.ref_keys)
@@ -320,8 +323,9 @@ def test_every_field_a_rule_carries_reaches_a_reader():
     field nobody reads is either a claim nobody can check or dead weight; this
     says which by making the generated page show it.
     """
-    from conftest import ROOT
     from vdi2770_validate.catalog import rules
+
+    from conftest import ROOT
 
     page = (ROOT / "docs" / "rules.md").read_text(encoding="utf-8")
     for rid, r in rules().items():

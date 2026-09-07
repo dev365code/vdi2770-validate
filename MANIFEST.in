@@ -1,41 +1,22 @@
-# The sdist must be able to run its own tests, or a downstream packager building
-# from it gets a green build that never ran the gate. This is the same class of
-# error as a check that reads a path outside the repository: "the gate exists"
-# and "the gate runs" differ only in someone else's environment.
-include LICENSE NOTICE THIRD_PARTY.md CHANGELOG.md CONTRIBUTING.md SECURITY.md Makefile
-# The root `conftest.py` too. It carries the rule that names a case after what
-# its parameters are rather than after what they contain, and it is at the root
-# because that is the only place a hook reaches both suites. Left out, the
-# unpacked sdist ran without it and two gates went red -- which is the sdist
-# gate saying exactly what it exists to say.
-include conftest.py
-recursive-include tests *.py *.json
-recursive-include tools *.py *.java *.md
-recursive-include corpus *
-recursive-include docs *.md *.json
-# The front page shows two pictures and a suite reads both. `*.md *.json` does
-# not carry an `.svg`, so an sdist would ship the gate without its subject --
-# and it would go unnoticed locally, because setuptools carries SOURCES.txt
-# forward from any earlier build.
-include docs/assets/door.svg docs/assets/tenseconds.svg
-recursive-include .github *.yml
-# The reader is its own distribution and its source lives here. Its manifest and
-# its pytest settings travel too: an sdist of this repository without them runs
-# a suite that cannot import half of itself, and cannot build the other
-# distribution at all.
-recursive-include packages *.py *.toml *.md *.in *.ini *.json
-# Extensionless names need naming: the recursive-include patterns above are
-# by suffix, and LICENSE and NOTICE have none. The sdist gate caught the
-# NOTICE being missing here, which is exactly what it is for.
-include packages/vdi2770/LICENSE packages/vdi2770/NOTICE packages/vdi2770/src/vdi2770/py.typed
-prune tests/fixtures
-# `recursive-include packages ... *.md` matches `.pytest_cache/README.md`, so an
-# sdist built in a tree somebody had run the suite in carried pytest's cache.
-# Gitignored is not the same as excluded: MANIFEST.in decides what ships.
-global-exclude .pytest_cache/*
-prune packages/vdi2770/.pytest_cache
-
+# What the alias distribution ships.
+#
+# `vdi2770-validate` is two lines that make the old import name the same object
+# as `vdi2770.validate`. The rules, the schema, the corpus, the tools and the
+# suite all live in `vdi2770` now and travel in its sdist — shipping them here
+# would put a copy of the tool inside a distribution that contains none of it,
+# and the tests would run against whatever happened to be installed nearby.
+# That is the borrowed green result this repository publishes two sdists to
+# avoid.
+include LICENSE NOTICE CHANGELOG.md CONTRIBUTING.md SECURITY.md
+# `prune`, explicitly. Setuptools adds a default set of its own on top of what
+# is named here, and `tests/` is in it — the sdist carried seventy-three test
+# files for a distribution containing none of the code they test, which the
+# gate below noticed and this line answers.
+prune tests
+prune tools
+prune corpus
+prune docs
+prune packages
 # Working notes are not part of the distribution.
 exclude CLAUDE.md AGENTS.md
 prune .claude
-exclude docs/findings.md docs/audits.md

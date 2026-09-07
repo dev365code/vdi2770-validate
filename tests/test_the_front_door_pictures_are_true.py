@@ -19,6 +19,7 @@ because "carries no numbers" is a property somebody has to keep.
 from __future__ import annotations
 
 import html
+import pathlib
 import re
 import subprocess
 import sys
@@ -171,21 +172,36 @@ def test_the_command_the_shot_types_is_one_this_project_offers():
                         line), f"the shot types a command this project does not offer: {line!r}"
 
 
-def test_every_picture_ships_in_the_source_distribution():
-    """`MANIFEST.in` names what `docs/` ships by suffix, and it was written
-    before there were pictures: `*.md *.json` does not carry an `.svg`. So an
-    sdist would carry this file and not the files it reads, and the failure
-    appears only on a clean checkout — setuptools carries `SOURCES.txt` forward,
-    so on any machine that had built the sdist once the pictures were in it.
+def test_no_distribution_ships_this_gate_without_its_subject():
+    """A gate and the files it reads travel together or neither travels.
 
-    Asserted against the generator's own list, so a third picture cannot be
-    added without this saying where it has to be named.
+    `MANIFEST.in` names what `docs/` ships by suffix, and it was written before
+    there were pictures: `*.md *.json` does not carry an `.svg`, so an sdist
+    carried this file and not what it reads. The failure appeared only on a
+    clean checkout, because setuptools carries `SOURCES.txt` forward and any
+    machine that had built once had the pictures in it.
+
+    Stated as the invariant rather than as one manifest's contents, because the
+    suite moved: `vdi2770-validate` is an alias now and ships neither this file
+    nor the pictures, which is consistent — what would not be consistent is
+    shipping one of them. Asserted against the generator's own list, so a third
+    picture cannot be added without this saying where it has to be named.
     """
-    manifest = (ROOT / "MANIFEST.in").read_text(encoding="utf-8")
-    for name in generator().PICTURES:
-        assert f"docs/assets/{name}" in manifest or "docs/assets *.svg" in manifest, (
-            f"docs/assets/{name} is drawn by the generator and MANIFEST.in does "
-            f"not carry it, so an sdist ships the gate without its subject")
+    here = pathlib.Path(__file__).resolve()
+    for where in (ROOT / "MANIFEST.in",
+                  ROOT / "packages" / "vdi2770" / "MANIFEST.in"):
+        manifest = where.read_text(encoding="utf-8")
+        # This file, in this distribution's tree, and not pruned back out.
+        mine = where.parent / "tests" / here.name
+        ships_the_gate = (mine.is_file() and "recursive-include tests" in manifest
+                          and "prune tests" not in manifest)
+        for name in generator().PICTURES:
+            carried = (f"docs/assets/{name}" in manifest
+                       or "docs/assets *.svg" in manifest)
+            assert carried or not ships_the_gate, (
+                f"{where.parent.name}/MANIFEST.in ships this gate and not "
+                f"docs/assets/{name}, so that sdist carries it without its "
+                f"subject")
 
 
 def test_the_elision_in_the_shot_says_what_it_elided():

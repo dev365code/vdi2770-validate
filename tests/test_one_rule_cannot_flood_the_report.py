@@ -4,7 +4,6 @@ and 107 MB of output for a 127 KB archive. The listing is now bounded; the
 count is not, so the summary and the exit code still tell the truth."""
 import json
 
-from conftest import counts_line
 from vdi2770_validate.model import (
     MAX_LISTED_PER_RULE,
     About,
@@ -16,6 +15,8 @@ from vdi2770_validate.model import (
     Severity,
 )
 from vdi2770_validate.report import as_json, as_text
+
+from conftest import counts_line
 
 
 def a_rule(rid="M10", sev=Severity.ERROR):
@@ -96,11 +97,12 @@ def _tool_rule():
     """The first `about: tool` error in the catalogue, whatever it is called."""
     import json
 
-    from conftest import ROOT
     from vdi2770_validate.catalog import rule as by_id
 
+    from conftest import ROOT
+
     catalogue = json.loads(
-        (ROOT / "src" / "vdi2770_validate" / "data" / "rules.json").read_text(encoding="utf-8"))
+        (ROOT / "packages" / "vdi2770" / "src" / "vdi2770" / "validate" / "data" / "rules.json").read_text(encoding="utf-8"))
     for entry in catalogue["rules"]:
         if entry["about"] == "tool" and entry["severity"] == "error":
             return by_id(entry["id"])

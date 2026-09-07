@@ -9,7 +9,7 @@ from pathlib import Path
 
 from conftest import ROOT
 
-SRC = ROOT / "src" / "vdi2770_validate"
+SRC = ROOT / "packages" / "vdi2770" / "src" / "vdi2770" / "validate"
 # `vdi2770` too: model.py re-exports the vocabulary a rule needs, and reaching
 # past it for `Kind` and the reserved filenames made that module's docstring
 # three-quarters true.

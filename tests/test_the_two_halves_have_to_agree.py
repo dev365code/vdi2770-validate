@@ -59,14 +59,32 @@ def _site(tmp_path, name, version, *, record=None, record_kind="dist-info"):
     return site
 
 
-def _loaded(monkeypatch, reader="0.8.0", rules="0.8.0"):
+def _loaded(monkeypatch, reader="0.8.0", rules="0.8.0", legacy=None):
     """Both halves, as loaded modules. Nothing here imports the real ones: the
-    question is about two `__version__` strings and where they came from."""
-    for name, version in (("vdi2770", reader), ("vdi2770_validate", rules)):
-        module = types.ModuleType(name)
-        module.__version__ = version
-        module.__file__ = f"/nowhere/{name}/__init__.py"
-        monkeypatch.setitem(sys.modules, name, module)
+    question is about `__version__` strings and where they came from.
+
+    The halves are `vdi2770` and `vdi2770.validate` — one distribution since the
+    merge, which is why they cannot drift through an index and why the check
+    still asks: a copy earlier on the path can make them drift anyway. `legacy`
+    is the old name when a machine still has a real one installed under it,
+    which is the state an upgrade from 0.7 leaves behind.
+    """
+    engine = types.ModuleType("vdi2770.validate")
+    engine.__version__ = rules
+    engine.__file__ = "/nowhere/vdi2770/validate/__init__.py"
+    module = types.ModuleType("vdi2770")
+    module.__version__ = reader
+    module.__file__ = "/nowhere/vdi2770/__init__.py"
+    module.validate = engine
+    monkeypatch.setitem(sys.modules, "vdi2770", module)
+    monkeypatch.setitem(sys.modules, "vdi2770.validate", engine)
+    if legacy is None:
+        monkeypatch.delitem(sys.modules, "vdi2770_validate", raising=False)
+    else:
+        old = types.ModuleType("vdi2770_validate")
+        old.__version__ = legacy
+        old.__file__ = "/nowhere/vdi2770_validate/__init__.py"
+        monkeypatch.setitem(sys.modules, "vdi2770_validate", old)
 
 
 def test_two_halves_that_agree_say_nothing(monkeypatch):
@@ -296,8 +314,42 @@ def test_every_door_this_project_ships_is_the_same_door():
         f"the console script starts at {declared.group(1)}, which is not the "
         f"door that checks the installation before importing the reader")
 
-    for door in ("src/vdi2770_validate/__main__.py", "tools/build_zipapp.py"):
+    # The single file bundles one package and no alias — the alias keeps an
+    # *installed* old name working, which has no meaning inside a self-contained
+    # archive — so it names the engine's door directly. Same module either way,
+    # which is what this is about.
+    for door, expected in (
+            ("packages/vdi2770/src/vdi2770/validate/__main__.py",
+             "from .entry import run"),
+            ("tools/build_zipapp.py",
+             "from vdi2770.validate.entry import run")):
         text = (ROOT / door).read_text(encoding="utf-8")
-        assert "from .entry import run" in text or "from vdi2770_validate.entry import run" in text, (
-            f"{door} does not start at {module}:{function}; it can run the tool "
-            f"without the check the other doors take")
+        assert expected in text, (
+            f"{door} does not start at the door that checks the installation "
+            f"before importing the reader; it can run the tool without the "
+            f"check the other doors take")
+
+
+def test_an_old_release_left_under_the_old_name_is_caught(monkeypatch):
+    """What an upgrade from 0.7 can leave behind.
+
+    `vdi2770-validate` shipped real code with a version of its own until 0.7. A
+    machine that moved the engine forward and left that package in place
+    imports seven releases of rules under the name everything written before
+    this still uses — the split pair again, one directory over, and the reason
+    this check did not go away when the two distributions became one.
+
+    One axis: the version under the old name. The halves agree with each other.
+    """
+    _loaded(monkeypatch, legacy="0.7.0")
+    monkeypatch.setattr(agreement, "_co_located_records", lambda module, name: {})
+    said = agreement.disagreement()
+    assert said and "0.7.0" in said and "vdi2770_validate" in said
+
+
+def test_the_old_name_being_absent_is_not_a_finding(monkeypatch):
+    """The single-file build carries no alias, and a clean install of 0.8 has no
+    reason to have one. Absent is the ordinary case, not a fault."""
+    _loaded(monkeypatch, legacy=None)
+    monkeypatch.setattr(agreement, "_co_located_records", lambda module, name: {})
+    assert agreement.disagreement() is None

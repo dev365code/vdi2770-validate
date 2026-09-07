@@ -12,7 +12,7 @@ from conftest import ROOT
 
 THIRD_PARTY = (ROOT / "THIRD_PARTY.md").read_text(encoding="utf-8")
 NOTICE = (ROOT / "NOTICE").read_text(encoding="utf-8")
-DATA = ROOT / "src" / "vdi2770_validate" / "data"
+DATA = ROOT / "packages" / "vdi2770" / "src" / "vdi2770" / "validate" / "data"
 
 
 def license_files(manifest=None):
@@ -26,10 +26,17 @@ def license_files(manifest=None):
 
 
 def test_the_notices_travel_with_the_wheel():
-    """Apache-2.0 requires the NOTICE to be distributed; the bundled schema and
-    table make THIRD_PARTY.md carry the MIT and CC BY texts."""
+    """Apache-2.0 requires the NOTICE to be distributed.
+
+    `THIRD_PARTY.md` carries the MIT and CC BY texts for the bundled schema and
+    the table derived from an IDTA publication — and those ship with `vdi2770`
+    now, so the notice for them is asserted against that manifest rather than
+    this one. A distribution that bundles nothing of anybody else's does not
+    need to carry a third party's terms, and saying it does would make the
+    obligation look like decoration.
+    """
     files = license_files()
-    for wanted in ("LICENSE", "NOTICE", "THIRD_PARTY.md"):
+    for wanted in ("LICENSE", "NOTICE"):
         assert wanted in files, f"{wanted} would not be packaged"
         assert (ROOT / wanted).exists()
 
@@ -40,7 +47,9 @@ def test_the_reader_packages_its_own_notice():
     else's. It has to be declared in the reader's own manifest, because that is
     the only one its wheel is built from."""
     reader = ROOT / "packages" / "vdi2770" / "pyproject.toml"
-    for wanted in ("LICENSE", "NOTICE"):
+    # And `THIRD_PARTY.md`, because the schema and the IDTA-derived table moved
+    # into this distribution with the validator that reads them.
+    for wanted in ("LICENSE", "NOTICE", "THIRD_PARTY.md"):
         assert wanted in license_files(reader), (
             f"the reader's wheel would not carry {wanted}")
         assert (reader.parent / wanted).exists()

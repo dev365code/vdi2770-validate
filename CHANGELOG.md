@@ -2,6 +2,69 @@
 
 ## Unreleased
 
+**The validator lives in `vdi2770` now, and `vdi2770-validate` is the old import
+name kept working.**
+
+Two distributions carried code that had to match, and an exact pin was what kept
+them from being half-moved. That arrangement had a failure mode nothing outside
+the tool could close: `pip install -U vdi2770` on an existing install leaves a
+pair that does not match, both commands still run, and every check reports the
+installation as healthy. The rules and the readers are one distribution now, so
+there is no pair.
+
+What ships where. `vdi2770` carries the readers and `vdi2770.validate`, the
+schema, the rule table, and the notices for both. `vdi2770-validate` is two
+lines that make the old name the same object as the new one, and asks for
+`vdi2770[validate]>=` its own version. `xmlschema` is an extra rather than a
+dependency, because `pip install vdi2770` says "no dependencies" on its own page
+and that has to stay true; the schema check imports it inside the function that
+uses it, and a reader-only install that reaches for a schema check gets `X0`,
+which is this tool declining to look rather than a verdict on anybody's
+container.
+
+**An alias is not a re-export, and `sys.modules[__name__] = engine` is not
+enough either.** A thin re-export gives a module with no submodules —
+`from vdi2770_validate.cli import main` raises, and five tools here import those
+submodules, so the specification that sounded safest would have broken this
+project's own build first. Replacing the entry in `sys.modules` fixes the top of
+it and leaves a subtler thing behind: `import vdi2770_validate.model` then finds
+`model` through the engine's `__path__` and **executes it a second time**, so
+`vdi2770_validate.model.Severity` and `vdi2770.validate.model.Severity` are two
+enums with equal members and no shared identity. The first thing that broke was
+a dictionary keyed on severity, in a report built through one path and rendered
+through the other. Nothing warns: both import, both look right, and `is` is
+false everywhere. Mixed use is not hypothetical — this repository's own suite
+reaches for the old name while the code under test uses the new one, and any
+caller moving a codebase does the same for a while. So the alias installs a
+finder that answers for the whole old prefix with the module that already
+exists, and answers `runpy` too, which asks a loader for code rather than for a
+module and made `python -m vdi2770_validate` fail with an `AttributeError`
+until it did.
+
+**The requirement changed shape, and the reason is written where it is
+asserted.** An exact pin made a mismatched pair unreachable. The alias carries
+no logic a reader version could disagree with, so what has to be true is
+narrower: the floor equals the alias's own version — install
+`vdi2770-validate 0.9` and you get an engine of 0.9 or later, never 0.8's — and
+the extra is named. Both are read off the built wheels rather than the
+manifests, because setuptools normalises versions on the way into metadata.
+
+**What the version check now watches.** Before the merge it was the reader
+against the rules. Those cannot drift through an index any more, and something
+else can: `vdi2770-validate` shipped real code with a version of its own until
+0.7, so a machine that moves the engine forward and leaves that package in place
+imports seven releases of rules under the name everything written before this
+still uses. The check compares them when the old name is there, and is silent
+when it is not — the single-file build carries no alias and a clean install has
+no reason to.
+
+**And the sdists say what they are.** The alias distribution shipped seventy-three
+test files for code it does not contain: setuptools adds a default set on top of
+`MANIFEST.in`, and `tests/` is in it. Those tests would have run against
+whatever happened to be installed nearby, which is the borrowed green result two
+sdists exist to avoid. It ships the alias and no suite now, and the gate asks
+that distribution the question it can answer rather than passing it over.
+
 **The front page is drawn, and the drawing is checked.** `README.md` now opens
 with two pictures: a banner, which carries no count and no version so there is
 nothing in it that can go stale, and a terminal shot of a real run on a
