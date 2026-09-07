@@ -364,8 +364,18 @@ And which container the stub calls clean came from a filename spelled a second
 time here, which turns this red when the corpus is rearranged — it reads the
 gate's own table.
 
+And the standard library is a tree, not a directory. `sysconfig` names one —
+`<base_prefix>/Lib` on Windows — and the extension modules are not in it:
+`unicodedata` loads from `<base_prefix>\DLLs\unicodedata.pyd`, a *sibling*. So
+the same assumption that excused `setuptools` here breaks the other way round
+there, and neither shape is visible from the other's machine: `lib-dynload` sits
+under the stdlib directory on this one, so nothing in this project's own CI
+could have shown it. A sister project's Windows row did. Anything in the
+interpreter's own tree is the standard library now — checked after the install
+directories, never before, because `site-packages` lives in that tree too.
+
 - **`make standalone`** runs each of the 78 test files on its own.
-- The mutation harness carries 137 rows, each naming the pytest selection or the
+- The mutation harness carries 138 rows, each naming the pytest selection or the
   tool that has to go red. Of the rows added this cycle, seven are about the front page: a
   picture the page no longer points at, a sentence in the terminal shot the tool
   never printed, an elision that stands for the wrong findings, a quoted pin the

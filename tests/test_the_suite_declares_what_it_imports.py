@@ -30,6 +30,7 @@ import contextlib
 import importlib.util
 import re
 import site
+import sys
 import sysconfig
 from pathlib import Path
 
@@ -37,6 +38,14 @@ from conftest import ROOT
 
 _PATHS = sysconfig.get_paths()
 _STDLIB = Path(_PATHS["stdlib"]).resolve()
+#: And the tree the interpreter itself came out of. `stdlib` names one
+#: directory, and on Windows the extension modules are not in it: `unicodedata`
+#: loads from `<base_prefix>\\DLLs\\unicodedata.pyd`, a *sibling* of `Lib`. So
+#: the same assumption breaks in both directions -- site-packages inside the
+#: stdlib directory on one interpreter, standard modules outside it on another
+#: -- and neither is visible from the other's machine. `lib-dynload` sits under
+#: `stdlib` here, which is why this project's own CI never showed it.
+_BASE = Path(sys.base_prefix).resolve()
 
 
 def _installed_into():
@@ -223,13 +232,15 @@ def kind_of(origin):
     keep its `site-packages` *inside* the stdlib directory -- the Apple
     command-line-tools build does, and Debian's `dist-packages` is the same
     shape -- so asking "is it under stdlib" first answers `setuptools` wrong.
+    The order matters twice over, because the interpreter's own tree contains
+    both: a package installed into it is still an install.
     """
     for installed in _SITE:
         if _within(origin, installed):
             return "third-party"
     if any(part in _INSTALLED_DIRS for part in origin.parts):
         return "third-party"
-    if _within(origin, _STDLIB):
+    if _within(origin, _STDLIB) or _within(origin, _BASE):
         return "stdlib"
     return None
 
@@ -379,6 +390,22 @@ def test_a_module_beside_it_in_the_stdlib_directory_still_is_the_stdlib():
     from pathlib import Path
     assert kind_of(Path(_PATHS["stdlib"]) / "json" / "__init__.py") == "stdlib"
     assert kind_of(Path(_PATHS["stdlib"]) / "zipfile.py") == "stdlib"
+
+
+def test_an_extension_module_outside_the_stdlib_directory_still_is_the_stdlib():
+    """Windows keeps them in `DLLs`, a sibling of `Lib` rather than a child.
+
+    `stdlib` names one directory and the standard library is a tree. The same
+    assumption broke the other way round a few hours earlier -- site-packages
+    *inside* that directory -- and neither shape is visible from the other's
+    machine: `lib-dynload` sits under `stdlib` here, so this project's own CI
+    would never have shown it. A sister project's Windows row did.
+    """
+    from pathlib import Path
+    assert kind_of(Path(sys.base_prefix) / "DLLs" / "unicodedata.pyd") == "stdlib"
+    assert kind_of(Path(sys.base_prefix) / "lib-dynload" / "_socket.so") == "stdlib"
+    # And still not an install that happens to live in the same tree.
+    assert kind_of(Path(sys.base_prefix) / "Lib" / "site-packages" / "x.py") == "third-party"
 
 
 def test_a_name_that_is_nowhere_is_reported(tmp_path):

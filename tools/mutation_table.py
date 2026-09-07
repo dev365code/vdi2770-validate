@@ -1193,8 +1193,8 @@ GUARDED_ROWS = [
 LOCATION_ROWS = [
     ("gates/underneath-the-stdlib-directory-is-not-the-stdlib",
      "tests/test_the_suite_declares_what_it_imports.py",
-     '    for installed in _SITE:\n        if _within(origin, installed):\n            return "third-party"\n    if any(part in _INSTALLED_DIRS for part in origin.parts):\n        return "third-party"\n    if _within(origin, _STDLIB):\n        return "stdlib"',
-     '    if _within(origin, _STDLIB):\n        return "stdlib"\n    for installed in _SITE:\n        if _within(origin, installed):\n            return "third-party"',
+     '    for installed in _SITE:\n        if _within(origin, installed):\n            return "third-party"\n    if any(part in _INSTALLED_DIRS for part in origin.parts):\n        return "third-party"\n    if _within(origin, _STDLIB) or _within(origin, _BASE):\n        return "stdlib"',
+     '    if _within(origin, _STDLIB) or _within(origin, _BASE):\n        return "stdlib"\n    for installed in _SITE:\n        if _within(origin, installed):\n            return "third-party"',
      ["tests/test_the_suite_declares_what_it_imports.py::"
       "test_a_package_installed_under_the_stdlib_directory_is_not_the_stdlib"],
      "an interpreter that keeps its site-packages inside the stdlib directory "
@@ -1227,6 +1227,22 @@ UPGRADE_BODY_ROWS = [
      'the case that installs the wheels about to be published would be outside every structural check again, which is how deleting its verdict left the suite green in the case standing closest to the publish'),
 
 ]
+
+WINDOWS_ROWS = [
+    ("gates/the-standard-library-is-a-tree-not-a-directory",
+     'tests/test_the_suite_declares_what_it_imports.py',
+     '    if _within(origin, _STDLIB) or _within(origin, _BASE):',
+     '    if _within(origin, _STDLIB):',
+     ['tests/test_the_suite_declares_what_it_imports.py::test_an_extension_module_outside_the_stdlib_directory_still_is_the_stdlib'],
+     "Windows keeps the extension modules in `DLLs`, a sibling of `Lib` "
+     "rather than a child, so `unicodedata` would be reported as an "
+     "undeclared package on every Windows run -- the same assumption that "
+     "excused setuptools here, broken in the other direction and invisible "
+     "from either machine"),
+
+]
+
+TABLE += WINDOWS_ROWS
 
 TABLE += UPGRADE_BODY_ROWS
 
