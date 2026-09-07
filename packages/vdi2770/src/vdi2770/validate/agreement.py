@@ -187,8 +187,14 @@ def _disagreement() -> Optional[str]:
                 f"at {rules.__file__} say {ruleset}. They ship together under "
                 f"one tag and carry one number.")
 
+    # Both records live where the *reader* was loaded from: a distribution's
+    # `.dist-info` sits beside the top-level package, and `vdi2770.validate` is
+    # a directory below it. Asking about `vdi2770/validate/` found nothing,
+    # ever -- so the loop's second turn was checking a stale `vdi2770-validate`
+    # record it could not see, which is the state this check kept for after the
+    # merge.
     for module, name, loaded in ((vdi2770, "vdi2770", reader),
-                                 (rules, "vdi2770-validate", ruleset)):
+                                 (vdi2770, "vdi2770-validate", ruleset)):
         records = _co_located_records(module, name)
         spellings = {folded(v) for v in records.values()}
         if len(spellings) > 1:

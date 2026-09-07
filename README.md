@@ -261,7 +261,7 @@ the ones already published to say so — and the upgrade ends with everything at
 the new version.
 
 What has not gone away, because saying so would be untrue: an installation that
-takes only half the upgrade is still an installation with old rules in it. If
+takes half the upgrade still has old rules in it. If
 you move the engine forward and leave the old `vdi2770-validate` behind, that
 older package keeps its own command and goes on judging with its own rules —
 honestly, under its own version number, which is what its reports say. And if

@@ -41,7 +41,7 @@ version.
 
 Saying otherwise would be untrue, so:
 
-- An installation that takes **half** the upgrade still has old rules in it. Move
+- An installation that takes half the upgrade still has old rules in it. Move
   the engine forward and leave this package behind, and this package keeps its
   own command and goes on judging with its own rules — honestly, under its own
   version number, which is what its reports say.

@@ -353,3 +353,51 @@ def test_the_old_name_being_absent_is_not_a_finding(monkeypatch):
     _loaded(monkeypatch, legacy=None)
     monkeypatch.setattr(agreement, "_co_located_records", lambda module, name: {})
     assert agreement.disagreement() is None
+
+
+def test_a_record_that_disagrees_is_named_without_stubbing_anything(monkeypatch, tmp_path):
+    """The half of this check that nothing else exercises.
+
+    Every other case here replaces `_co_located_records` with a stub, so the
+    comparison between what loaded and what is recorded beside it went
+    untested — deleting that block outright left all sixteen of them green.
+    This one builds a real `.dist-info` next to a real package and asks
+    `disagreement()` with nothing stubbed out.
+
+    One axis: the number in the record. The two loaded halves agree.
+    """
+    site = _site(tmp_path, "vdi2770", "0.8.0", record="0.7.1")
+    (site / "vdi2770" / "validate").mkdir()
+    (site / "vdi2770" / "validate" / "__init__.py").write_text(
+        '__version__ = "0.8.0"\n', encoding="utf-8")
+    monkeypatch.syspath_prepend(str(site))
+
+    module = types.ModuleType("vdi2770")
+    module.__file__ = str(site / "vdi2770" / "__init__.py")
+    module.__version__ = "0.8.0"
+    engine = types.ModuleType("vdi2770.validate")
+    engine.__file__ = str(site / "vdi2770" / "validate" / "__init__.py")
+    engine.__version__ = "0.8.0"
+    module.validate = engine
+    monkeypatch.setitem(sys.modules, "vdi2770", module)
+    monkeypatch.setitem(sys.modules, "vdi2770.validate", engine)
+    monkeypatch.setitem(sys.modules, "vdi2770_validate", None)
+
+    said = agreement.disagreement()
+    assert said, "a record beside the code saying 0.7.1 was not noticed"
+    assert "0.7.1" in said and "0.8.0" in said, said
+
+
+def test_the_version_in_the_record_is_what_is_compared(monkeypatch, tmp_path):
+    """And the number is read out of the record rather than off its filename.
+
+    The case that used to cover this asserted on the dictionary's key — a path
+    that already contains the version — so replacing the value with a constant
+    changed nothing and the assertion passed.
+    """
+    site = _site(tmp_path, "vdi2770", "0.8.0", record="0.7.1")
+    monkeypatch.syspath_prepend(str(site))
+    module = types.ModuleType("vdi2770")
+    module.__file__ = str(site / "vdi2770" / "__init__.py")
+    found = agreement._co_located_records(module, "vdi2770")
+    assert list(found.values()) == ["0.7.1"], found

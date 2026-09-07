@@ -117,6 +117,11 @@ def expect(condition, said: str):
 #: with it -- which is what the hard-coded `0.6.0` here did.
 RANGE_ERA = ("0.6.0", "0.5.1", "0.5.0", "0.4.0")
 
+#: Readers old enough to have no `vdi2770.validate` at all — every release
+#: before the merge. One of these has to be installable for the case that asks
+#: what happens when the engine is older than the rules that alias it.
+OLD_READERS = ("0.4.0", "0.5.0", "0.5.1", "0.6.0", "0.7.0")
+
 
 #: Two containers that ship here, and what this tool has to say about them. A
 #: verdict in both directions, because either one alone is satisfied by a
@@ -369,11 +374,15 @@ def case_7_removing_the_old_name_leaves_the_tool(env: Env, wheels: str) -> str:
     for name in ("vdi2770", "vdi2770.validate"):
         code, said = env.imports(name)
         expect(code == 0, f"{name} no longer imports after the alias was removed: {said}")
-    done = run(env.python, "-m", "vdi2770.validate", "check",
-               str(ROOT / VERDICTS[1][0]))
-    expect(done.returncode == VERDICTS[1][1], (
-        f"the engine no longer judges after the alias was removed: exit "
-        f"{done.returncode}\n{done.stderr[-400:]}"))
+    # Both directions. One of them alone is satisfied by a program that answers
+    # the same way to everything, which is the shape this file refuses
+    # everywhere else and had let through here.
+    for path, wanted in VERDICTS:
+        done = run(env.python, "-m", "vdi2770.validate", "check", str(ROOT / path))
+        expect(done.returncode == wanted, (
+            f"after the alias was removed, `check {path}` exited "
+            f"{done.returncode} and this container is a "
+            f"{'clean' if wanted == 0 else 'failing'} one\n{done.stderr[-400:]}"))
     return f"alias gone, reader {left['vdi2770']} still judges; pip check: {env.check()}"
 
 
@@ -445,8 +454,21 @@ def case_11_an_old_reader_under_new_rules_refuses(env: Env, wheels: str) -> str:
     die at import with a traceback and `rc=1`, which is this tool's code for *a
     container has findings*. The refusal has to come first and say what it is.
     """
-    done = env.install("vdi2770==0.4.0")
-    expect(done.returncode == 0, f"the old reader would not install:\n{done.stderr}")
+    # Whichever of the old readers the index still serves. A single hard-coded
+    # number here is the defect this file removed from `case_2` and then kept
+    # one function further down: a version yanked from an index this project
+    # does not control would block a release for a reason that has nothing to
+    # do with it.
+    tried = []
+    for spec in OLD_READERS:
+        done = env.install(f"vdi2770=={spec}")
+        if done.returncode == 0:
+            break
+        tried.append(spec)
+    else:
+        expect(False, ("no reader old enough to lack `vdi2770.validate` could be "
+                       f"installed, so the state this case is about cannot be "
+                       f"built: tried {tried}"))
     done = _from_the_wheels(env, wheels, "--no-deps", "vdi2770-validate")
     expect(done.returncode == 0, f"the alias would not install:\n{done.stderr}")
     # `--no-deps` on the alias leaves the old reader in place, which is the
@@ -460,7 +482,19 @@ def case_11_an_old_reader_under_new_rules_refuses(env: Env, wheels: str) -> str:
         f"the refusal does not begin `{MARKER}`, so a log cannot tell it from a "
         f"container that failed: {said[:200]}"))
     expect("Traceback" not in said, f"it died instead of refusing: {said[:400]}")
-    return "an engine older than the rules is refused, not tracebacked"
+    # And the other door. Nothing asked this until a review did, and the answer
+    # was an exit of 1 with a `__spec__ is None` ValueError -- the code that
+    # says a container has findings, from a state where nothing was read.
+    done = run(env.python, "-m", "vdi2770_validate", "--version")
+    both = (done.stdout + done.stderr).strip()
+    expect(done.returncode == 3, (
+        f"`python -m vdi2770_validate` gave {done.returncode} on a split "
+        f"installation: {both[:300]}"))
+    expect(MARKER in both, f"and did not say which kind of 3: {both[:300]}")
+    expect("Traceback" not in both, f"it died instead of refusing: {both[:400]}")
+    expect(not done.stdout.strip(), (
+        f"it wrote to stdout while refusing: {done.stdout[:200]}"))
+    return "an engine older than the rules is refused at both doors, not tracebacked"
 
 
 #: Every `pip install` the documentation gives. Read from the page rather than
@@ -470,11 +504,13 @@ def case_11_an_old_reader_under_new_rules_refuses(env: Env, wheels: str) -> str:
 def documented_installs():
     import re
     page = (ROOT / "README.md").read_text(encoding="utf-8")
-    found = []
-    for line in page.splitlines():
-        m = re.search(r"pip install ([A-Za-z0-9_.\[\]-]+)\s*$", line.strip().lstrip("$ `"))
-        if m and m.group(1).startswith("vdi2770"):
-            found.append(m.group(1))
+    # Anywhere on the page, quoted or not, mid-sentence or in a block. The
+    # first version anchored on end-of-line and missed
+    # `pip install "vdi2770[validate]"` -- which is written inside a sentence,
+    # in quotes, and is the only documented form that yields a tool able to
+    # check a schema. A list that quietly omits the interesting command is
+    # worse than no list.
+    found = re.findall(r"""pip install (?:-U )?["']?(vdi2770[A-Za-z0-9_.\[\]-]*)["']?""", page)
     return sorted(set(found))
 
 
@@ -504,14 +540,15 @@ def case_12_the_window(env: Env, wheels: str) -> str:
             said.append(f"`pip install -U {spec}` failed outright: "
                         f"{done.stderr.strip().splitlines()[-1][:120]}")
             continue
+        refused = False
         for path, wanted in VERDICTS:
             code, out = env.command("check", str(ROOT / path))
             if code == 3:
                 expect(MARKER in out, (
                     f"after `pip install -U {spec}`, the tool exited 3 without "
                     f"saying which kind of 3 it was: {out[:200]}"))
-                said.append(f"{spec}: refuses by name")
-                break
+                refused = True
+                continue
             expect("Traceback" not in out, (
                 f"after `pip install -U {spec}`, `check {path}` died: {out[:300]}"))
             expect(code == wanted, (
@@ -519,6 +556,8 @@ def case_12_the_window(env: Env, wheels: str) -> str:
                 f"and this container is a {'clean' if wanted == 0 else 'failing'} "
                 f"one. A wrong verdict is the one outcome this window may not "
                 f"produce."))
+        if refused:
+            said.append(f"{spec}: refuses by name")
         else:
             # And it says which release those verdicts came from. This is where
             # the window is actually safe, and not for the reason it looks:
@@ -537,6 +576,16 @@ def case_12_the_window(env: Env, wheels: str) -> str:
                 f"the versions installed are {sorted(have)}. A report naming a "
                 f"release nobody has is the one thing worse than an old one."))
             said.append(f"{spec}: judges correctly as {version.strip()}")
+    # At least one documented command has to leave a tool that judges. A window
+    # in which every one of them refuses is a window in which the documentation
+    # is wrong, and the first version of this case accepted it: the refusal arm
+    # broke out of the container loop before anything else was asked, so a
+    # build that exited 3 on every input -- which a version-comparison bug can
+    # produce -- was recorded as `refuses by name` and passed.
+    expect(any("judges correctly" in s for s in said), (
+        f"every documented install left a tool that refuses: {said}. One of "
+        f"them has to work, or the page is telling people to do something that "
+        f"does not."))
     return "; ".join(said)
 
 

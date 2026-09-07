@@ -29,13 +29,15 @@ def prose(page):
 
 
 def installs(page):
-    """Every `pip install` the page gives, in the order it gives them."""
-    found = []
-    for line in page.read_text(encoding="utf-8").splitlines():
-        m = re.search(r"pip install (?:-U )?[\"']?([A-Za-z0-9_.\[\]-]+)[\"']?", line)
-        if m and m.group(1).startswith("vdi2770"):
-            found.append(m.group(1))
-    return found
+    """Every `pip install` the page gives.
+
+    `finditer` over the whole page, not one match per line: a line can carry two
+    commands, and the flag has two spellings. The first version took `--upgrade`
+    for the package name and dropped that command entirely.
+    """
+    return re.findall(
+        r"""pip install (?:-U |--upgrade )?["']?(vdi2770[A-Za-z0-9_.\[\]-]*)["']?""",
+        page.read_text(encoding="utf-8"))
 
 
 def test_both_pages_name_the_same_installs():
@@ -45,6 +47,9 @@ def test_both_pages_name_the_same_installs():
     the other reader is not, about one upgrade.
     """
     front, alias = set(installs(FRONT)), set(installs(ALIAS))
+    # Non-empty first: two pages that give no commands at all are equal, and
+    # this assertion passed on them.
+    assert front, "the front page gives no install command"
     assert front == alias, (
         f"the front page gives {sorted(front)} and the old name's page gives "
         f"{sorted(alias)}; one upgrade, two sets of instructions")
@@ -61,7 +66,10 @@ def test_the_upgrade_command_is_the_same_command_on_both():
         text = prose(page)
         assert "pip install -U vdi2770-validate" in text, (
             f"{page.name} does not name the upgrade command")
-        assert "ordinary" in text, (
+        # The clause, not the word. `ordinary` appears on the front page 116
+        # lines earlier, about the archive format — so rewriting the upgrade
+        # sentence entirely left this green while its message claimed otherwise.
+        assert "is the upgrade, and it is now an ordinary" in text, (
             f"{page.name} names the upgrade and does not say what it is now")
 
 
@@ -72,15 +80,14 @@ def test_neither_page_says_the_trap_is_gone():
     pages have to say so."""
     for page in (FRONT, ALIAS):
         text = prose(page)
-        for forbidden in ("no longer possible", "cannot happen", "trap is gone",
-                          "impossible to break", "nothing can go wrong"):
-            assert forbidden not in text.lower(), (
-                f"{page.name} claims {forbidden!r}; what went away is the "
-                f"overlap this project made, and the half-upgrade is still a "
-                f"half-upgrade")
-        assert "half" in text.lower(), (
+        # A blacklist cannot bound what a page might claim -- "no longer any
+        # way" and "cannot recur" walk straight past the one that used to be
+        # here, and a review wrote a passing sentence to prove it. What is
+        # asked instead is that the caveat is present and says what it says.
+        assert "takes half the upgrade still has old rules in it" in text, (
             f"{page.name} does not tell the reader what a half-taken upgrade "
-            f"leaves them with")
+            f"leaves them with. `half` alone is not that sentence: it appears "
+            f"in `half-moved`, about the pin this release removed.")
 
 
 def test_both_pages_carry_the_refusal_and_what_it_is_not():

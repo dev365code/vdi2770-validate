@@ -944,7 +944,9 @@ def test_every_case_the_harness_runs_asks_that_question(monkeypatch):
     function untouched: run no cases at all, keep the function and stop calling
     it, or move the lie into `Env.command` so the function is fed a lie it
     cannot see. The first two are structural and checked here."""
+    import ast
     import inspect
+    import textwrap
 
     harness = _harness(monkeypatch)
     assert len(harness.CASES) >= 11, (
@@ -965,6 +967,19 @@ def test_every_case_the_harness_runs_asks_that_question(monkeypatch):
     #: hatch: `both_halves_run` asks whether *the pair* works, and these are the
     #: rows where there is no pair to ask about — a case here has to say what it
     #: asks instead, and it still has to assert something about running the tool.
+    #: Every row, by name. A count lets one be deleted for free.
+    EVERY_CASE = (
+        "case_1_clean", "case_2_upgrade_from_0_6_0", "case_3_the_pin_is_exact",
+        "case_4_the_release_being_made",
+        "case_5_the_new_world_installs_the_old_name",
+        "case_6_both_names_at_once",
+        "case_7_removing_the_old_name_leaves_the_tool",
+        "case_8_the_reader_alone_declines_by_name",
+        "case_9_the_extra_runs_without_the_alias",
+        "case_10_the_alias_brings_the_extra",
+        "case_11_an_old_reader_under_new_rules_refuses",
+        "case_12_the_window",
+    )
     ASKS_SOMETHING_ELSE = {
         "case_7_removing_the_old_name_leaves_the_tool":
             "the alias and its command are gone by design; what has to survive "
@@ -984,19 +999,49 @@ def test_every_case_the_harness_runs_asks_that_question(monkeypatch):
             "it runs every documented install and then judges both containers "
             "after each, accepting a named refusal and nothing else",
     }
+    # The names, not the count. `>= 11` with twelve cases meant any one row
+    # could be deleted for free.
+    assert {c.__name__ for c in harness.CASES} == set(EVERY_CASE), (
+        f"the case table is {sorted(c.__name__ for c in harness.CASES)} and "
+        f"this gate names {sorted(EVERY_CASE)}. A row added without a line here "
+        f"is a row nobody decided to add; a row removed is one nobody decided "
+        f"to remove.")
+
     for name, why in ASKS_SOMETHING_ELSE.items():
         assert len(why) > 40, f"{name} is exempted without a real reason"
         assert any(c.__name__ == name for c in harness.CASES), (
             f"{name} is named here and is not a case any more")
+    def called(case):
+        """The functions this case actually calls.
+
+        Parsed, not searched. `inspect.getsource` includes the docstring and the
+        comments, so a case whose docstring reads *"both_halves_run is
+        deliberately not called here"* satisfied a substring test — and an
+        exempt case that ran the interpreter and asserted nothing satisfied the
+        other one.
+        """
+        tree = ast.parse(textwrap.dedent(inspect.getsource(case)))
+        names = set()
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+            f = node.func
+            names.add(f.id if isinstance(f, ast.Name)
+                      else f"{getattr(f.value, 'id', '')}.{f.attr}"
+                      if isinstance(f, ast.Attribute) else "")
+        return names
+
     for case in harness.CASES:
-        body = inspect.getsource(case)
+        names = called(case)
         if case.__name__ in ASKS_SOMETHING_ELSE:
-            assert "env.command(" in body or "run(env.python" in body, (
-                f"{case.__name__} is exempted from `both_halves_run` and never "
-                f"runs the tool at all, so it reports success having done "
+            assert "expect" in names, (
+                f"{case.__name__} is exempted from `both_halves_run` and "
+                f"asserts nothing at all, so it reports success having done "
                 f"nothing — which is what the exemption is not for")
+            assert {"env.command", "run"} & names, (
+                f"{case.__name__} is exempted and never runs the tool")
             continue
-        assert "both_halves_run" in body, (
+        assert "both_halves_run" in names, (
             f"{case.__name__} never asks whether the tool works")
 
 

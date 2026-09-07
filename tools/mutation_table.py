@@ -1366,8 +1366,8 @@ PLATFORM_ROWS = [
 
     ('gates/an-import-name-is-a-claim-on-a-directory',
      'tools/check_paths_are_disjoint.py',
-     '                owned.add(f"import {top[:-3] if top.endswith(\'.py\') else top}")',
-     '                pass',
+     '    return {f"import {head}"} if rest == "__init__.py" else set()',
+     '    return set()',
      ['tests/test_no_two_distributions_claim_one_path.py::test_two_distributions_that_ship_one_import_name_are_caught'],
      'two distributions shipping different files under one top-level directory would pass, and uninstalling either takes the directory the other is importing from'),
 

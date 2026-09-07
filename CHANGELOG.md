@@ -2,6 +2,55 @@
 
 ## Unreleased
 
+**Asking a module a question ran the command line.** `spec_from_loader` asks a
+loader that defines `is_package` whether a name is one, and the alias's loader
+answered by importing — so `importlib.util.find_spec("vdi2770_validate.__main__")`
+executed a module whose last statement is `sys.exit(run())`. `pydoc`, a debugger,
+anything that introspects, would have run the validator against its own argv and
+taken the process with it. The finder resolves without executing now, yields to
+the files that really live beside it, and returns nothing for a name that does
+not exist — so a missing submodule is reported under the name that was asked
+for.
+
+**The version guard called a correct engine too old.** Reading every digit out of
+a version string takes the `1` in `post1` for another release component: measured,
+`0.8.0` was "older than" `0.8.0.post1`, `0.8.0rc1`, `0.8.0.dev0`, `0.8.0+ds1`,
+and `1.0` was older than `1.0.0` — five ways at once, in a guard whose comment
+said it stopped at the first marker. It compares the release segment only, and
+returns nothing on anything it cannot read: a reader whose `__version__` is a
+tuple made the guard itself raise, through a console script where an exception is
+a traceback and an exit of 1.
+
+And in that refusal, `python -m` exited 1 rather than 3. A module made at run
+time has no `__spec__`, `runpy` reads one, and the `ValueError` becomes an
+`ImportError` — so the door that was supposed to say *this installation does not
+agree with itself* said *this container has findings* instead. The alias ships a
+real `__main__.py`; only `entry` is fabricated.
+
+**The path gate could not see the file that went first.** A wheel installs
+`{dist}-{ver}.data/scripts/x` as `bin/x`, and recorded verbatim two
+distributions installing one `vdi2770-validate` that way claim two different
+strings. `.data/purelib/…` had the same shape for import names. Both are
+compared where they land now. Distribution names are normalised, because
+setuptools has written the dist-info directory both ways and comparing them as
+written makes one distribution look like two — a red release for a reason that
+has nothing to do with the release. And a top-level name is claimed only by a
+directory with an `__init__.py`: PEP 420 lets two distributions share a
+namespace on purpose, and the gate would have blocked exactly that.
+
+**Three of this project's own gates were theatre.** The version check's record
+comparison — half of what its docstring says it verifies — had no test at all:
+every case stubbed it out, and deleting the whole block left sixteen green. The
+two-pages gate asked for the words `half` and `ordinary`, both of which appear
+elsewhere on the front page, so the caveat paragraph it exists to protect could
+be deleted with the suite green; it asks for the sentences now, and the
+forbidden-phrase blacklist is gone, since a review wrote a passing sentence to
+show what a blacklist is worth. And the upgrade harness's exemption table
+matched source text, so a case whose docstring said *"both_halves_run is
+deliberately not called here"* satisfied it, and an exempt case that ran the
+interpreter and asserted nothing passed; the cases are parsed now, and the table
+names every row rather than counting them.
+
 **The validator lives in `vdi2770` now, and `vdi2770-validate` is the old import
 name kept working.**
 

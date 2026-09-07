@@ -40,6 +40,7 @@ from __future__ import annotations
 import configparser
 import io
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -99,14 +100,34 @@ def claims(wheel: Path) -> tuple:
         info = next((n for n in names if n.endswith(".dist-info/METADATA")), None)
         if info is None:
             raise SystemExit(f"{wheel.name}: no .dist-info/METADATA")
-        distribution = info.split("/")[0].rsplit("-", 2)[0]
+        distribution = _normalised(info.split("/")[0].rsplit("-", 2)[0])
         for name in names:
             if name.endswith("/"):
                 continue
-            owned.add(f"path {name}")
             top = name.split("/")[0]
-            if not top.endswith(".dist-info") and not top.endswith(".data"):
-                owned.add(f"import {top[:-3] if top.endswith('.py') else top}")
+            if top.endswith(".dist-info"):
+                owned.add(f"path {name}")
+                continue
+            if top.endswith(".data"):
+                # A wheel installs `{dist}-{ver}.data/scripts/x` as `bin/x` and
+                # `{dist}-{ver}.data/purelib/y` as `y` in site-packages. Recorded
+                # verbatim, two distributions installing one `bin/vdi2770-validate`
+                # that way claim two different strings and collide anyway -- and
+                # a console script is the file that went first the last time an
+                # installation here was destroyed. What is compared is where the
+                # thing lands, not where it sits in the archive.
+                rest = name.split("/", 2)[2] if name.count("/") >= 2 else ""
+                where = name.split("/")[1] if name.count("/") >= 1 else ""
+                if not rest:
+                    continue
+                if where == "scripts":
+                    owned.add(f"command {rest}")
+                else:
+                    owned.add(f"path {rest}")
+                    owned |= _import_name(rest)
+                continue
+            owned.add(f"path {name}")
+            owned |= _import_name(name)
         entry = next((n for n in names if n.endswith(".dist-info/entry_points.txt")), None)
         if entry is not None:
             # Parsed. `console_scripts` is a section and a name is an option in
@@ -120,6 +141,33 @@ def claims(wheel: Path) -> tuple:
                     for command in parser.options(section):
                         owned.add(f"command {command}")
     return distribution, owned
+
+
+def _normalised(name: str) -> str:
+    """PEP 503, so two spellings of one distribution are one distribution.
+
+    A dist-info directory is written `vdi2770_validate-…` by current setuptools
+    and `vdi2770-validate-…` by older ones. Compared as written, the built alias
+    and the published alias read as two distributions and every path they share
+    -- which is all of them -- is a collision, reddening every release. The
+    other way round, two genuinely different names that normalise alike would be
+    skipped in silence.
+    """
+    return re.sub(r"[-_.]+", "-", name).lower()
+
+
+def _import_name(path: str) -> set:
+    """The top-level name an installed file occupies, if it is one.
+
+    Only a directory with an `__init__.py` claims its name: PEP 420 lets two
+    distributions share a namespace package on purpose, and pip removes only the
+    files it recorded, so reporting that as a collision would block the very
+    layout this project is moving to.
+    """
+    head, _, rest = path.partition("/")
+    if not rest:
+        return {f"import {head[:-3]}"} if head.endswith(".py") else set()
+    return {f"import {head}"} if rest == "__init__.py" else set()
 
 
 def overlaps(wheels: list) -> list:
