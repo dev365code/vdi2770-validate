@@ -210,20 +210,20 @@ timeline
 
 ## One install, two layers
 
-`pip install vdi2770-validate` brings both halves and there is nothing else to do.
-They are two distributions on purpose.
+```bash
+pip install vdi2770-validate
+```
 
-The reader lives in [`vdi2770`](https://pypi.org/project/vdi2770/), which has no
-dependencies of its own: it opens a container, refuses what it should refuse, and
-hands back a typed model with a line number on every node. It decides nothing, and
-it imports nothing — no dependency of the rule set is reachable from it, which a
-test asserts rather than promises.
+brings all of it, and there is nothing else to do. That command is also what
+anybody already using this tool types, and it goes on meaning what it meant.
 
-The rule set is that library plus an opinion. The split is not cosmetic — a test
-fails if the reader can so much as import the rules — and it exists because a rule
-set *is* an opinion. If your customer's supplement disagrees with ours, or you want
-the parsed model for something other than a verdict, take the reader and leave the
-opinion behind:
+The layering is real and it is inside one package now. `vdi2770` opens a
+container, refuses what it should refuse, and hands back a typed model with a
+line number on every node — it decides nothing, it names no rule, and a test
+fails if one of those modules so much as mentions a rule id. `vdi2770.validate`
+is that model plus an opinion, and a rule set *is* an opinion: if your
+customer's supplement disagrees with ours, or you want the parsed model for
+something other than a verdict, take the readers and leave the opinion behind.
 
 ```bash
 pip install vdi2770
@@ -236,18 +236,47 @@ container = read_container_file("corpus/examples/container/documentcontainer.zip
 print(container.kind, len(container.members))
 ```
 
-They are one distribution now. `vdi2770` carries the readers and the validator;
-`vdi2770-validate` is the old import name kept working, two lines that make it
-the same object as `vdi2770.validate`, and it asks for
-`vdi2770[validate]>=0.8.0.dev0`.
+That install has no dependencies, which is a property worth keeping rather than
+an accident: the schema check is the one part that needs a parser, and it is an
+extra. `pip install "vdi2770[validate]"` adds it. A machine that installs the
+readers alone and then asks for a schema check is told so by name — the report
+carries `X0` and says in its own summary that one of those errors is this tool
+declining to look, not a verdict on the container.
 
-That is a range, and this project spent a release learning why ranges are a
-standing way to be wrong: `~=0.3.0` let `pip` install a reader without the fix a
-release existed for, so the correction never reached the people it was written
-for. An exact pin made a mismatched pair unreachable. What changed is that there
-is no pair — the alias carries no logic a reader version could disagree with, so
-what it needs is an engine at least as new as it claims to be, and the extra
-that lets the schema check run.
+### What changed in 0.8, and what it means for an installation you already have
+
+The readers and the rules used to be two distributions that had to match, and
+`vdi2770-validate` named the reader with an exact pin so the pair could not be
+half-moved. They are one distribution now. `vdi2770-validate` is the old import
+name kept working: two lines that make it the same object as `vdi2770.validate`,
+asking for `vdi2770[validate]>=0.8.0.dev0` — its own version as the floor, so
+installing it can never leave you an engine older than the one it stands for.
+
+**`pip install -U vdi2770-validate` is the upgrade, and it is now an ordinary
+one.** On an installation of 0.7 that same command used to leave a tool that
+could not run: the two distributions shared file paths, so installing one wrote
+files the other's record still listed, and removing either took them away. The
+new arrangement has no shared paths — a gate compares the built wheels against
+the ones already published to say so — and the upgrade ends with everything at
+the new version.
+
+What has not gone away, because saying so would be untrue: an installation that
+takes only half the upgrade is still an installation with old rules in it. If
+you move the engine forward and leave the old `vdi2770-validate` behind, that
+older package keeps its own command and goes on judging with its own rules —
+honestly, under its own version number, which is what its reports say. And if
+the halves that are loaded disagree about which release they are, the tool
+refuses to judge rather than sign a verdict it cannot account for: exit 3, on a
+line beginning `vdi2770-validate: INSTALLATION`. That is not a verdict on any
+container — it is this tool saying it cannot account for itself, and it belongs
+in a bug report against this project rather than against a supplier's
+delivery.
+
+Everything written against the old name goes on working — `import
+vdi2770_validate`, `from vdi2770_validate.cli import main`, `python -m
+vdi2770_validate` and the command itself. One thing cannot be carried across: a
+pickle written through the new module path names `vdi2770.validate.…`, and code
+that only has the old release cannot read it.
 
 ## The classification table, and a disagreement
 

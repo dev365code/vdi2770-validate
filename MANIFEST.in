@@ -7,7 +7,7 @@
 # and the tests would run against whatever happened to be installed nearby.
 # That is the borrowed green result this repository publishes two sdists to
 # avoid.
-include LICENSE NOTICE CHANGELOG.md CONTRIBUTING.md SECURITY.md
+include LICENSE NOTICE CHANGELOG.md CONTRIBUTING.md SECURITY.md README-vdi2770-validate.md
 # `prune`, explicitly. Setuptools adds a default set of its own on top of what
 # is named here, and `tests/` is in it — the sdist carried seventy-three test
 # files for a distribution containing none of the code they test, which the

@@ -5,8 +5,12 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "vdi2770-validate"
 version = "0.8.0.dev0"
-description = "Offline conformance checker for VDI 2770 containers — every finding comes with a remedy"
-readme = "README.md"
+# What this distribution is, rather than what it brings. It brings the whole
+# tool -- that is the point of it -- but a page describing a conformance checker
+# for a package containing two lines of alias is the kind of near-truth this
+# project spends its time removing.
+description = "The old import name for vdi2770.validate — installs the whole tool"
+readme = "README-vdi2770-validate.md"
 requires-python = ">=3.9"
 license = { text = "Apache-2.0" }
 authors = [{ name = "Wooyong Lee" }]

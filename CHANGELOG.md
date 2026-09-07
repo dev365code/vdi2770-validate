@@ -708,7 +708,22 @@ working and goes on saying it is old: the report is stamped with a version that
 is installed. So the case asserts that too, because a report naming a release
 nobody has is the one thing worse than an old one.
 
-- **`make standalone`** runs each of the 81 test files on its own.
+**The old name has its own page now.** `vdi2770-validate` rendered the front
+page of a tool it does not contain — a conformance checker's documentation for a
+distribution holding two lines of alias, which is the near-truth this project
+spends its time removing. Its page says what it is, that the command still means
+what it meant, what changed in 0.8, and what has *not* gone away.
+
+Both pages carry one upgrade, so a gate compares them: the same set of install
+commands, the same upgrade command described the same way, exit 3 named together
+with what it is not, the pickle that cannot be carried across, and no sentence
+claiming the failure is impossible now. What went away is the overlap this
+project created; an installation that takes half the upgrade still has old rules
+in it, and both pages have to say so. The comparison is over prose rather than
+lines, because what a page says does not depend on where it wraps — the first
+version of these assertions failed on pages that said the right thing.
+
+- **`make standalone`** runs each of the 82 test files on its own.
 - The mutation harness carries 157 rows, each naming the pytest selection or the
   tool that has to go red. Of the rows added this cycle, seven are about the front page: a
   picture the page no longer points at, a sentence in the terminal shot the tool
