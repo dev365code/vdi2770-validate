@@ -6,11 +6,34 @@ on:
   pull_request:
 
 jobs:
+  # One Windows row beside the three Linux ones, on the interpreter in the
+  # middle of the supported range.
+  #
+  # Not for breadth. The gate that decides whether an import was declared reads
+  # where a module actually loads from, and Windows keeps the extension modules
+  # in `<base_prefix>\DLLs` -- a *sibling* of `Lib` rather than a child, so
+  # `unicodedata` is not under the directory `sysconfig` calls `stdlib`. No
+  # runner here could have shown that: on this project's own interpreters
+  # `lib-dynload` sits under it. A sister project's Windows row found it, and
+  # the repair had to be taken on trust.
+  #
+  # And this release moves console scripts and entry points, which is the part
+  # of packaging that differs most between platforms: a script is a shim
+  # executable there and a shebang file here, and `pip` writes both from the
+  # same `entry_points.txt`.
   check:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
+      # `fail-fast` off: one platform failing while the other is still running
+      # tells you less than both answers do, and the question here is often
+      # which of the two is wrong.
+      fail-fast: false
       matrix:
+        os: [ubuntu-latest]
         python-version: ["3.9", "3.12", "3.13"]
+        include:
+          - os: windows-latest
+            python-version: "3.12"
     steps:
       - uses: actions/checkout@v4
         with:

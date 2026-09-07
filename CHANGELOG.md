@@ -479,6 +479,13 @@ the missing symbol, which is loud and unambiguous; that door is documented
 rather than guarded, because a library cannot be given an entry point it did not
 call.
 
+- CI grew a Windows row. The gate that decides whether an import was declared
+  reads where a module loads from, and the shape that breaks it there —
+  extension modules in a sibling of the stdlib directory rather than a child —
+  is one no runner here could show, so the repair for it had been taken on
+  trust. This release also moves console scripts and entry points, which is the
+  part of packaging that differs most between platforms.
+
 - **`make standalone`** runs each of the 79 test files on its own.
 - The mutation harness carries 151 rows, each naming the pytest selection or the
   tool that has to go red. Of the rows added this cycle, seven are about the front page: a
