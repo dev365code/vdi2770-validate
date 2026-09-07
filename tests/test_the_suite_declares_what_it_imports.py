@@ -116,6 +116,32 @@ def only_install_directories(candidates, stdlib):
 
 _SITE = _installed_into()
 
+#: What the interpreter itself says is the standard library, whether or not this
+#: platform ships it. Asked only about names that do not resolve here.
+_SAYS_STDLIB = frozenset(getattr(sys, "stdlib_module_names", ()))
+
+#: And the ones that differ by platform, named because 3.9 has no such list to
+#: ask. `fcntl` is the standard library and does not exist on Windows; `winreg`
+#: is the standard library and does not exist here. Neither is a package
+#: anybody could declare, and a gate that reports them is asking for a false
+#: entry in a manifest.
+_PLATFORM_STDLIB = frozenset({
+    "fcntl", "termios", "tty", "pty", "pwd", "grp", "crypt", "posix", "nis",
+    "spwd", "resource", "syslog", "readline", "curses", "ossaudiodev",
+    "msvcrt", "winreg", "winsound", "msilib", "_winapi",
+})
+
+
+def is_standard_library(name, known=None):
+    """Whether a name that will not resolve here is the standard library anyway.
+
+    A module can be the standard library and absent: `fcntl` on Windows,
+    `winreg` on everything else. Reporting one as undeclared asks for a
+    manifest entry that cannot exist -- the same shape as demanding `pip` be
+    declared, and the reason this is asked before anything is called missing.
+    """
+    return name in (_SAYS_STDLIB if known is None else known) or name in _PLATFORM_STDLIB
+
 #: And the last resort, for a layout none of the above names. A directory
 #: called this is where installers put things, wherever it happens to sit.
 _INSTALLED_DIRS = ("site-packages", "dist-packages")
@@ -292,7 +318,8 @@ def whose(name, directories, root=ROOT):
     except (ImportError, ValueError):
         spec = None
     if spec is None:
-        return "unresolved", None
+        # Not here, which is not the same as nowhere.
+        return ("stdlib" if is_standard_library(name) else "unresolved"), None
     if spec.origin in (None, "built-in", "frozen"):
         return "stdlib", None
     origin = Path(spec.origin).resolve()
@@ -547,3 +574,22 @@ def test_paths_are_compared_without_regard_to_case():
     root = Path("/opt/Py/Lib")
     same = Path(os.path.normcase("/opt/Py/Lib")) / "json"
     assert _within(same, root) or os.path.normcase("A") == "A"
+
+
+def test_a_module_this_platform_lacks_can_still_be_the_standard_library():
+    """`fcntl` is the standard library and is not on Windows; `winreg` is the
+    standard library and is not here. `runner.py` imports the first inside the
+    branch that uses it, and the Windows row reported it as a package nobody
+    declared — a manifest entry that cannot exist, which is the same shape as
+    demanding `pip` be declared.
+
+    Asked of names rather than of this interpreter, so the case holds on the
+    platform that has each of them and on the one that does not. `known` is
+    empty in the first two so they can only pass through the platform table,
+    and holds one name in the last so it can only pass through the list the
+    interpreter offers.
+    """
+    assert is_standard_library("fcntl", known=frozenset())
+    assert is_standard_library("winreg", known=frozenset())
+    assert is_standard_library("json", known=frozenset({"json"}))
+    assert not is_standard_library("no_such_module_zzz", known=frozenset())

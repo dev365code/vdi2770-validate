@@ -1380,6 +1380,20 @@ PLATFORM_ROWS = [
 
 ]
 
+ABSENT_STDLIB_ROWS = [
+    ('gates/a-module-this-platform-lacks-is-still-the-standard-library',
+     'tests/test_the_suite_declares_what_it_imports.py',
+     '    return name in (_SAYS_STDLIB if known is None else known) or name in _PLATFORM_STDLIB',
+     '    return name in (_SAYS_STDLIB if known is None else known)',
+     ['tests/test_the_suite_declares_what_it_imports.py::test_a_module_this_platform_lacks_can_still_be_the_standard_library'],
+     'fcntl is the standard library and is not on Windows; reporting it '
+     'as undeclared asks for a manifest entry that cannot exist, and the '
+     'interpreter that could be asked for the full list is 3.10 and later'),
+
+]
+
+TABLE += ABSENT_STDLIB_ROWS
+
 TABLE += PLATFORM_ROWS
 
 TABLE += BOOT_ROWS

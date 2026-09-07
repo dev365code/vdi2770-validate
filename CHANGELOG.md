@@ -574,8 +574,19 @@ wording.
   swallowed with `continue-on-error`, which would be the same job reporting
   success either way. Widening it is its own piece of work.
 
+A module can be the standard library and absent. `fcntl` is both on Windows —
+`runner.py` imports it inside the branch that uses it — and `winreg` is both
+here. The gate resolved every name against this interpreter, so a name it could
+not find was reported as a package nobody declared: a manifest entry that cannot
+exist, which is the same shape as demanding `pip` be declared. It asks the
+interpreter's own list of standard-library names first, and where there is no
+such list — 3.9 has none — it consults a named table of the modules that differ
+by platform. That question is asked of a name rather than of this machine, so
+the case holds on the platform that has each of them and on the one that does
+not.
+
 - **`make standalone`** runs each of the 81 test files on its own.
-- The mutation harness carries 156 rows, each naming the pytest selection or the
+- The mutation harness carries 157 rows, each naming the pytest selection or the
   tool that has to go red. Of the rows added this cycle, seven are about the front page: a
   picture the page no longer points at, a sentence in the terminal shot the tool
   never printed, an elision that stands for the wrong findings, a quoted pin the
