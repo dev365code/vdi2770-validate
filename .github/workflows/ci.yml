@@ -59,7 +59,22 @@ jobs:
       - name: Build fixtures
         run: python tools/make_fixtures.py
       - name: Test
+        if: runner.os != 'Windows'
         run: python -m pytest
+      # The Windows row runs the part of the suite it was added for: where a
+      # module loads from, what a distribution claims, and whether the two
+      # halves of an installation agree. The rest of the suite is not
+      # Windows-clean yet and the failures are the suite's rather than the
+      # tool's -- `os.mkfifo`, `/dev/stdin`, a fixture path over the length
+      # limit, and four assertions on one operating system's wording for a
+      # missing file. Named here rather than swallowed: this job says what it
+      # covers, and widening it is its own piece of work.
+      - name: Test what differs by platform
+        if: runner.os == 'Windows'
+        run: python -m pytest tests/test_the_suite_declares_what_it_imports.py
+          tests/test_no_two_distributions_claim_one_path.py
+          tests/test_the_two_halves_have_to_agree.py
+          tests/test_the_two_halves_carry_one_version.py
       - name: Corpus is unchanged
         run: python tools/vendor_corpus.py --check
       - name: Firing coverage

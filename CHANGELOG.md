@@ -565,6 +565,15 @@ system's sentence for a missing file; what it is about is that the reason
 survives at all, so it asks for the path and a reason rather than for that
 wording.
 
+- The Windows row runs the part of the suite it was added for — where a module
+  loads from, what a distribution claims, and whether the two halves of an
+  installation agree. The rest of the suite is not Windows-clean, and the
+  failures are the suite's rather than the tool's: `os.mkfifo`, `/dev/stdin`, a
+  fixture path over the length limit, and assertions on one operating system's
+  wording for a missing file. That is named in the workflow rather than
+  swallowed with `continue-on-error`, which would be the same job reporting
+  success either way. Widening it is its own piece of work.
+
 - **`make standalone`** runs each of the 81 test files on its own.
 - The mutation harness carries 156 rows, each naming the pytest selection or the
   tool that has to go red. Of the rows added this cycle, seven are about the front page: a
