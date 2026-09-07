@@ -248,8 +248,31 @@ The container that took the record is the new `M12` fixture — a
 `DocumentRelationship` is two more attributes — which is exactly why the divisor
 is counted out of the containers instead of read back out of this paragraph.
 
-- **`make standalone`** runs each of the 77 test files on its own.
-- The mutation harness carries 128 rows, each naming the pytest selection or the
+**Every import this repository makes is now declared.** A gate written to read
+the release workflow imports a YAML parser. The parser was installed on the
+machine that wrote it and named in no manifest, so `make check` was green here
+and the run that counts came back red on all three interpreters: the two tests
+holding the publishing order could not import before they could assert anything.
+`packaging` was the same shape and had not gone off yet — two release tools
+import it at module level and a test imports them, so it runs on every push,
+green the whole time because the runner image happens to carry it. It would have
+gone red on the day that image changed, in the gate that keeps the reader from
+being published after the rules that pin it. Both are declared now.
+
+The gate that would have caught it reads every top-level name imported anywhere
+here: shipped code as well as tests and tools, and imports inside functions as
+well as at the top of a file, since the one that turned CI red was inside a test
+function and a suite run on a machine that has the package never mentions it.
+Each name has to be the standard library, something this repository builds, or a
+distribution some manifest asks for by name. Which of the three it is comes from
+where the module actually loads from rather than from a list of names —
+`sys.stdlib_module_names` arrived in 3.10 and this project supports 3.9, where it
+would filter nothing and say so to nobody — and the distribution a third-party
+import belongs to is read from the installed file records, because `import yaml`
+comes from `PyYAML` and no amount of string manipulation gets there.
+
+- **`make standalone`** runs each of the 78 test files on its own.
+- The mutation harness carries 129 rows, each naming the pytest selection or the
   tool that has to go red. Of the rows added this cycle, seven are about the front page: a
   picture the page no longer points at, a sentence in the terminal shot the tool
   never printed, an elision that stands for the wrong findings, a quoted pin the

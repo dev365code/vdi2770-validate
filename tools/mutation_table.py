@@ -1135,6 +1135,19 @@ UPGRADE_ROWS = [
      "would have said so is still starting"),
 ]
 
+DECLARED_ROWS = [
+    ("gates/an-import-nobody-declared-is-caught-here-not-in-ci",
+     "pyproject.toml",
+     'dev = ["packaging==26.3", "pytest==8.3.4", "PyYAML==6.0.3", "ruff==0.16.3"]',
+     'dev = ["packaging==26.3", "pytest==8.3.4", "ruff==0.16.3"]',
+     ["tests/test_the_suite_declares_what_it_imports.py"],
+     "a package the suite imports would be declared nowhere, which is green on "
+     "the machine that happens to have it and red on every machine that does "
+     "not -- and this project has already spent a red main on exactly that"),
+]
+
+TABLE += DECLARED_ROWS
+
 TABLE += UPGRADE_ROWS
 
 TABLE += STREAM_ROWS
