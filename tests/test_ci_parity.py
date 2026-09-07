@@ -947,7 +947,7 @@ def test_every_case_the_harness_runs_asks_that_question(monkeypatch):
     import inspect
 
     harness = _harness(monkeypatch)
-    assert len(harness.CASES) >= 4, (
+    assert len(harness.CASES) >= 11, (
         f"the harness runs {len(harness.CASES)} cases; it reports success "
         f"having done nothing")
     # And the one that installs what is about to be published is among them.
@@ -961,8 +961,41 @@ def test_every_case_the_harness_runs_asks_that_question(monkeypatch):
         harness.name_of(c) for c in harness.cases_to_run()], (
         "without a directory of wheels there is nothing to install; skipping it "
         "belongs in the caller, not inside a case that then reports success")
+    #: Cases that ask a different question, each with the reason. Not an escape
+    #: hatch: `both_halves_run` asks whether *the pair* works, and these are the
+    #: rows where there is no pair to ask about — a case here has to say what it
+    #: asks instead, and it still has to assert something about running the tool.
+    ASKS_SOMETHING_ELSE = {
+        "case_7_removing_the_old_name_leaves_the_tool":
+            "the alias and its command are gone by design; what has to survive "
+            "is the engine, and it runs `python -m vdi2770.validate` to say so",
+        "case_8_the_reader_alone_declines_by_name":
+            "there is no command to run — the reader ships none — so it calls "
+            "the library and asks for `X0`, which is the tool declining rather "
+            "than a verdict",
+        "case_9_the_extra_runs_without_the_alias":
+            "the alias is deliberately absent; it runs `python -m "
+            "vdi2770.validate` over both corpus containers instead",
+        "case_11_an_old_reader_under_new_rules_refuses":
+            "the tool must refuse rather than work, so asking whether it works "
+            "would be asking for the wrong answer; it asserts exit 3, the "
+            "marker, and no traceback",
+        "case_12_the_window":
+            "it runs every documented install and then judges both containers "
+            "after each, accepting a named refusal and nothing else",
+    }
+    for name, why in ASKS_SOMETHING_ELSE.items():
+        assert len(why) > 40, f"{name} is exempted without a real reason"
+        assert any(c.__name__ == name for c in harness.CASES), (
+            f"{name} is named here and is not a case any more")
     for case in harness.CASES:
         body = inspect.getsource(case)
+        if case.__name__ in ASKS_SOMETHING_ELSE:
+            assert "env.command(" in body or "run(env.python" in body, (
+                f"{case.__name__} is exempted from `both_halves_run` and never "
+                f"runs the tool at all, so it reports success having done "
+                f"nothing — which is what the exemption is not for")
+            continue
         assert "both_halves_run" in body, (
             f"{case.__name__} never asks whether the tool works")
 

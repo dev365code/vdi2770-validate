@@ -37,6 +37,12 @@ ROOT = Path(__file__).resolve().parent.parent
 #: number written here.
 COMMAND = "vdi2770-validate"
 
+#: What a refusal to judge begins with. Spelled here rather than
+#: imported: this file runs against installed copies of the tool, and
+#: importing the tool it is testing would ask this interpreter what the
+#: other one should have said.
+MARKER = "vdi2770-validate: INSTALLATION"
+
 
 #: Everything here starts a fresh interpreter to find out what an install can
 #: do, and the parent's `PYTHONPATH` would let this tree answer for it -- the
@@ -282,13 +288,279 @@ def case_4_the_release_being_made(env: Env, wheels: str) -> str:
             f"{after['vdi2770-validate']}+{after['vdi2770']}; pip check: {env.check()}")
 
 
+def _from_the_wheels(env: Env, wheels: str, *spec):
+    """Install from the built wheels and nowhere else.
+
+    `--pre`, because the ordinary state of this tree is a `.devN` and pip will
+    not select one otherwise. `--no-index`, because `--find-links` is additive
+    and "the release being made" could otherwise be satisfied by what is already
+    published.
+
+    The parser first, from the index, because `--no-index` cuts off the ordinary
+    dependency along with the published copies of what is being tested. It is
+    the same wheel a user's `pip install` would fetch, and fetching it here
+    keeps the two names under test coming from one place only.
+    """
+    if any("[validate]" in s or s.startswith("vdi2770-validate") for s in spec):
+        env.install("xmlschema==4.2.0")
+    return env.install("--pre", "--no-index", "--find-links", wheels, *spec)
+
+
+def case_5_the_new_world_installs_the_old_name(env: Env, wheels: str) -> str:
+    """Nothing here has ever seen the old arrangement, and somebody types the
+    old name.
+
+    The row this case replaces did not exist while the two distributions
+    carried code that had to match, and it is the one that would have caught
+    the failure: an old name that resolves to something older drags the engine
+    back with it. What has to be true is that the reader's version does not go
+    down.
+    """
+    done = _from_the_wheels(env, wheels, "vdi2770")
+    expect(done.returncode == 0, f"the reader would not install:\n{done.stderr}")
+    before = env.versions()
+    done = _from_the_wheels(env, wheels, "vdi2770-validate")
+    expect(done.returncode == 0, f"the old name would not install:\n{done.stderr}")
+    after = env.versions()
+    expect(after["vdi2770"] == before["vdi2770"], (
+        f"installing the old name moved the reader from {before['vdi2770']} to "
+        f"{after['vdi2770']}. An old engine signing verdicts is what this whole "
+        f"arrangement exists to make unreachable."))
+    both_halves_run(env, "the new world, then the old name")
+    return f"reader stayed at {after['vdi2770']}; pip check: {env.check()}"
+
+
+def case_6_both_names_at_once(env: Env, wheels: str) -> str:
+    """The same question with the resolver given both names in one command,
+    where backtracking has somewhere to go."""
+    done = _from_the_wheels(env, wheels, "vdi2770")
+    expect(done.returncode == 0, f"the reader would not install:\n{done.stderr}")
+    before = env.versions()
+    done = _from_the_wheels(env, wheels, "vdi2770-validate", "vdi2770")
+    expect(done.returncode == 0, f"the pair would not install:\n{done.stderr}")
+    after = env.versions()
+    expect(after["vdi2770"] == before["vdi2770"], (
+        f"asking for both moved the reader from {before['vdi2770']} to "
+        f"{after['vdi2770']}"))
+    both_halves_run(env, "both names in one command")
+    return f"reader stayed at {after['vdi2770']}; pip check: {env.check()}"
+
+
+def case_7_removing_the_old_name_leaves_the_tool(env: Env, wheels: str) -> str:
+    """Uninstalling the alias must not take the tool with it.
+
+    This is the failure the whole arrangement is built around, asked directly:
+    two distributions that share a path do not conflict when installed and
+    conflict when either is removed. The alias owns `vdi2770_validate/` and
+    nothing else, so removing it leaves the engine untouched — and the way to
+    know is to run the tool afterwards rather than to read a record.
+    """
+    done = _from_the_wheels(env, wheels, "vdi2770-validate")
+    expect(done.returncode == 0, f"the install failed:\n{done.stderr}")
+    done = run(env.pip, "uninstall", "-y", "vdi2770-validate")
+    expect(done.returncode == 0, f"the uninstall failed:\n{done.stderr}")
+    left = env.versions()
+    expect("vdi2770" in left, "removing the alias took the reader with it")
+    # The command goes with it -- that script belongs to the alias, and pip
+    # removing what it installed is the correct behaviour rather than the
+    # failure. What must survive is the engine, and the way to know is to run
+    # it: the whole point of this arrangement is that removing one distribution
+    # cannot reach into the other.
+    for name in ("vdi2770", "vdi2770.validate"):
+        code, said = env.imports(name)
+        expect(code == 0, f"{name} no longer imports after the alias was removed: {said}")
+    done = run(env.python, "-m", "vdi2770.validate", "check",
+               str(ROOT / VERDICTS[1][0]))
+    expect(done.returncode == VERDICTS[1][1], (
+        f"the engine no longer judges after the alias was removed: exit "
+        f"{done.returncode}\n{done.stderr[-400:]}"))
+    return f"alias gone, reader {left['vdi2770']} still judges; pip check: {env.check()}"
+
+
+def case_8_the_reader_alone_declines_by_name(env: Env, wheels: str) -> str:
+    """`pip install vdi2770` and then ask for a schema check.
+
+    The reader is published as a library with no dependencies, and the schema
+    parser is an extra — so a machine that installs the reader alone and reaches
+    for a schema check has done nothing wrong and must not be handed a
+    traceback. What it gets is `X0`, which the report itself calls this tool
+    declining to look rather than a verdict on the container.
+    """
+    done = _from_the_wheels(env, wheels, "vdi2770")
+    expect(done.returncode == 0, f"the reader would not install:\n{done.stderr}")
+    installed = env.versions()
+    expect("xmlschema" not in installed, (
+        f"`pip install vdi2770` brought {installed.get('xmlschema')} with it; the "
+        f"page for that distribution says it has no dependencies"))
+    done = run(env.python, "-c",
+               "import sys, json;"
+               "from vdi2770.validate.runner import check_file;"
+               "r = check_file(sys.argv[1]);"
+               "print(json.dumps([f.rule.id for f in r.findings]))",
+               str(ROOT / "corpus" / "examples" / "container" / "documentcontainer.zip"))
+    expect(done.returncode == 0, (
+        f"a reader-only install raised instead of reporting:\n{done.stderr[-800:]}"))
+    expect("X0" in done.stdout, (
+        f"the schema check without its parser reported {done.stdout.strip()}; "
+        f"`X0` is how this tool says it declined to look"))
+    return f"reader {installed['vdi2770']} alone, schema check reports X0"
+
+
+def case_9_the_extra_runs_without_the_alias(env: Env, wheels: str) -> str:
+    """`pip install vdi2770[validate]` — the whole tool, under its own name."""
+    done = _from_the_wheels(env, wheels, "vdi2770[validate]")
+    expect(done.returncode == 0, f"the extra would not install:\n{done.stderr}")
+    installed = env.versions()
+    expect("xmlschema" in installed, "the extra did not bring the parser")
+    expect("vdi2770-validate" not in installed, (
+        "the extra pulled the alias in; the point of it is that the tool is one "
+        "distribution"))
+    for path, wanted in VERDICTS:
+        done = run(env.python, "-m", "vdi2770.validate", "check", str(ROOT / path))
+        expect(done.returncode == wanted, (
+            f"`python -m vdi2770.validate check {path}` exited "
+            f"{done.returncode}, wanted {wanted}"))
+    return f"vdi2770[validate] {installed['vdi2770']} judges both ways, no alias"
+
+
+def case_10_the_alias_brings_the_extra(env: Env, wheels: str) -> str:
+    """And the old name gets you all of it, which is what makes it an upgrade
+    path rather than a tombstone."""
+    done = _from_the_wheels(env, wheels, "vdi2770-validate")
+    expect(done.returncode == 0, f"the alias would not install:\n{done.stderr}")
+    installed = env.versions()
+    expect("xmlschema" in installed, (
+        "the alias did not bring the parser, so the schema check would report "
+        "X0 on a machine that typed the documented command"))
+    both_halves_run(env, "the old name brings the whole tool")
+    return (f"alias {installed['vdi2770-validate']} + reader {installed['vdi2770']} "
+            f"+ parser {installed['xmlschema']}")
+
+
+def case_11_an_old_reader_under_new_rules_refuses(env: Env, wheels: str) -> str:
+    """The state the version check exists for, end to end.
+
+    An engine older than the rules cannot even be imported by them — `model`
+    reaches for names the old reader does not export — so the command used to
+    die at import with a traceback and `rc=1`, which is this tool's code for *a
+    container has findings*. The refusal has to come first and say what it is.
+    """
+    done = env.install("vdi2770==0.4.0")
+    expect(done.returncode == 0, f"the old reader would not install:\n{done.stderr}")
+    done = _from_the_wheels(env, wheels, "--no-deps", "vdi2770-validate")
+    expect(done.returncode == 0, f"the alias would not install:\n{done.stderr}")
+    # `--no-deps` on the alias leaves the old reader in place, which is the
+    # state; installed normally the resolver would fix it, and there would be
+    # nothing here to see.
+    code, said = env.command("--version")
+    expect(code == 3, (
+        f"`{COMMAND} --version` gave {code} on a split installation, and 3 is "
+        f"the code that says this tool refused to judge. {said[:200]}"))
+    expect(MARKER in said, (
+        f"the refusal does not begin `{MARKER}`, so a log cannot tell it from a "
+        f"container that failed: {said[:200]}"))
+    expect("Traceback" not in said, f"it died instead of refusing: {said[:400]}")
+    return "an engine older than the rules is refused, not tracebacked"
+
+
+#: Every `pip install` the documentation gives. Read from the page rather than
+#: repeated here: a command that appears on the front door and not in this list
+#: is one nobody tested, and the list going stale is the ordinary way that
+#: happens.
+def documented_installs():
+    import re
+    page = (ROOT / "README.md").read_text(encoding="utf-8")
+    found = []
+    for line in page.splitlines():
+        m = re.search(r"pip install ([A-Za-z0-9_.\[\]-]+)\s*$", line.strip().lstrip("$ `"))
+        if m and m.group(1).startswith("vdi2770"):
+            found.append(m.group(1))
+    return sorted(set(found))
+
+
+def case_12_the_window(env: Env, wheels: str) -> str:
+    """The minutes between publishing the engine and publishing the alias.
+
+    The order is forced: the alias asks for `vdi2770[validate]` at its own
+    version, so it cannot resolve until the engine is on the index. Between the
+    two uploads the index serves a new engine and an old alias, and this asks
+    what the documented commands do in that gap.
+
+    The bar is not "harmless". A machine that already had 0.7 has the old alias
+    -- which was real code with rules of its own -- and moving the engine
+    forward under it is exactly the state the version check exists for. What
+    has to be true is that every documented command leaves either a tool that
+    runs or a refusal that says so: never a wrong verdict, and never a
+    traceback.
+
+    Simulated by giving pip the built engine and letting the alias come from
+    the index, which is the window as a resolver sees it.
+    """
+    env.install("vdi2770-validate==0.7.0")          # the machine as it was
+    said = []
+    for spec in documented_installs():
+        done = env.install("--pre", "--find-links", wheels, "-U", spec)
+        if done.returncode:
+            said.append(f"`pip install -U {spec}` failed outright: "
+                        f"{done.stderr.strip().splitlines()[-1][:120]}")
+            continue
+        for path, wanted in VERDICTS:
+            code, out = env.command("check", str(ROOT / path))
+            if code == 3:
+                expect(MARKER in out, (
+                    f"after `pip install -U {spec}`, the tool exited 3 without "
+                    f"saying which kind of 3 it was: {out[:200]}"))
+                said.append(f"{spec}: refuses by name")
+                break
+            expect("Traceback" not in out, (
+                f"after `pip install -U {spec}`, `check {path}` died: {out[:300]}"))
+            expect(code == wanted, (
+                f"after `pip install -U {spec}`, `check {path}` exited {code} "
+                f"and this container is a {'clean' if wanted == 0 else 'failing'} "
+                f"one. A wrong verdict is the one outcome this window may not "
+                f"produce."))
+        else:
+            # And it says which release those verdicts came from. This is where
+            # the window is actually safe, and not for the reason it looks:
+            # `pip install -U vdi2770` moves the engine and leaves the 0.7 alias
+            # -- which was real code with its own command and its own rules --
+            # in place, with a conflict warning and an exit of 0. The 0.8 check
+            # cannot fire there, because the code that runs is 0.7's and has no
+            # such check. What saves it is that the old tool goes on working and
+            # goes on saying it is old: the report is stamped with a version
+            # that is installed, so the verdicts are old rather than wrong.
+            code, version = env.command("--version")
+            expect(code == 0, f"after `pip install -U {spec}`, --version gave {code}")
+            have = set(env.versions().values())
+            expect(version.strip() in have, (
+                f"after `pip install -U {spec}` the tool reports {version!r} and "
+                f"the versions installed are {sorted(have)}. A report naming a "
+                f"release nobody has is the one thing worse than an old one."))
+            said.append(f"{spec}: judges correctly as {version.strip()}")
+    return "; ".join(said)
+
+
 #: Every case, in the order they run. `case_4` takes the directory of wheels
 #: as well, so it is held here partially applied at call time rather than
 #: listed apart -- kept out of this list, it was the one case no structural
 #: test covered, and deleting its verdict left the suite green. It is also the
 #: only case that installs the release being published.
 CASES = [case_1_clean, case_2_upgrade_from_0_6_0, case_3_the_pin_is_exact,
-         case_4_the_release_being_made]
+         case_4_the_release_being_made,
+         case_5_the_new_world_installs_the_old_name,
+         case_6_both_names_at_once,
+         case_7_removing_the_old_name_leaves_the_tool,
+         case_8_the_reader_alone_declines_by_name,
+         case_9_the_extra_runs_without_the_alias,
+         case_10_the_alias_brings_the_extra,
+         case_11_an_old_reader_under_new_rules_refuses,
+         case_12_the_window]
+
+#: The cases that need the artefacts being built rather than a name on an
+#: index. Everything about the merged shape is one of these: 0.8 is not
+#: published, so a case that asks the index for it is asking about a state
+#: nobody is in yet.
+NEEDS_WHEELS = frozenset(CASES[3:])
 
 
 def cases_to_run(wheels=None, only=None):
@@ -301,7 +573,7 @@ def cases_to_run(wheels=None, only=None):
     import functools
     chosen = []
     for case in ([CASES[only - 1]] if only else CASES):
-        if case is case_4_the_release_being_made:
+        if case in NEEDS_WHEELS:
             if not wheels:
                 continue
             case = functools.partial(case, wheels=wheels)

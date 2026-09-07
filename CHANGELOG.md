@@ -667,6 +667,47 @@ not.
   on a runner, which has no cache to answer from. A gate that is green because
   it did not look is the thing this repository spends its time removing.
 
+**The upgrade matrix runs twelve paths, and one of them is the release
+itself.** The four that existed asked about the index as it already stands.
+The eight added here need the wheels being built, because 0.8 is not published
+and a case that asks the index for it is asking about a state nobody is in yet.
+
+Row 4 is the one-line summary of this release: the command that used to destroy
+an installation — `pip install -U vdi2770-validate` over a 0.7.0 pair — is now
+the ordinary path, and ends with both halves at the new version and `pip check`
+silent. Rows 5 and 6 are the tripwire: on a machine that has only ever seen 0.8,
+installing the old name must not drag the engine backwards. Row 7 asks the
+original failure directly — remove one distribution and the other must still
+judge — and it runs the tool to find out rather than reading a record. Rows 8,
+9 and 10 are the extra in its three shapes: the reader alone reports `X0` and
+brings no parser, `vdi2770[validate]` judges both ways with no alias present,
+and the old name brings all of it.
+
+Row 11 is the state the version check exists for, and building it found a third
+place where a guard leaned on the thing it guards. The alias imports the engine
+— that is what an alias is — so an engine too old to have `vdi2770.validate`
+made the import fail before anything could report it, and pip's generated
+console script turned that into a traceback and an exit of 1: this tool's code
+for *a container has findings*, about a container nobody looked at. The alias
+now supplies the one thing that script reaches for, and that thing says what is
+wrong and returns 3. Its floor comes from its own installed metadata, so the
+version still lives in one place.
+
+**Row 12 is the window** — the minutes between publishing the engine and
+publishing the alias, which cannot be closed because the alias cannot resolve
+until the engine is on the index. It runs every `pip install` the front page
+gives, reads from the page rather than repeating it, and requires each to leave
+a tool that judges both corpus containers correctly or refuses by name. Never a
+traceback, never a wrong verdict.
+
+It passes, and not for the reason it looks. `pip install -U vdi2770` in that gap
+moves the engine and leaves the 0.7 alias in place — with a conflict warning and
+an exit of 0 — and the 0.8 check cannot fire there, because the code that runs
+is 0.7's and has no such check. What makes it safe is that the old tool goes on
+working and goes on saying it is old: the report is stamped with a version that
+is installed. So the case asserts that too, because a report naming a release
+nobody has is the one thing worse than an old one.
+
 - **`make standalone`** runs each of the 81 test files on its own.
 - The mutation harness carries 157 rows, each naming the pytest selection or the
   tool that has to go red. Of the rows added this cycle, seven are about the front page: a

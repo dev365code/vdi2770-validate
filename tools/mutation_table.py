@@ -1221,8 +1221,8 @@ UPGRADE_BODY_ROWS = [
 
     ('gates/the-release-being-made-is-one-of-the-cases',
      'tools/check_upgrade_paths.py',
-     'CASES = [case_1_clean, case_2_upgrade_from_0_6_0, case_3_the_pin_is_exact,\n         case_4_the_release_being_made]',
-     'CASES = [case_1_clean, case_2_upgrade_from_0_6_0, case_3_the_pin_is_exact]',
+     '         case_4_the_release_being_made,\n',
+     '',
      ['tests/test_ci_parity.py::test_every_case_the_harness_runs_asks_that_question'],
      'the case that installs the wheels about to be published would be outside every structural check again, which is how deleting its verdict left the suite green in the case standing closest to the publish'),
 
