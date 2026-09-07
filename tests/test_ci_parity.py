@@ -843,6 +843,11 @@ class Install:
     def __init__(self, **broken):
         self.broken = broken
 
+    def imports(self, name):
+        if self.broken.get("imports") == name:
+            return 1, f"ModuleNotFoundError: No module named {name!r}"
+        return 0, ""
+
     def versions(self):
         return {"vdi2770": self.version,
                 "vdi2770-validate": self.broken.get("metadata", self.version)}
@@ -852,7 +857,9 @@ class Install:
 
     def command(self, *args):
         if self.broken.get("no_entry_point"):
-            return None, "not installed"
+            # The version it would have printed, so the missing command is the
+            # only thing wrong with this one.
+            return None, self.version
         if args and args[0] == "--version":
             if self.broken.get("version_exits_nonzero"):
                 # The right version, and a non-zero exit. One axis at a time:
@@ -863,8 +870,13 @@ class Install:
             if self.broken.get("version_prints_nothing"):
                 return 0, "   "
             return 0, self.broken.get("says_version", self.version)
-        # `check <container>`: 0 for the clean one, 1 for the failing one.
-        clean = args[-1].endswith("documentcontainer.zip")
+        # `check <container>`: whatever the tool's own table says about the
+        # container it was handed. Read from there rather than spelled again
+        # here -- a second copy of a corpus filename turns this red when the
+        # corpus is rearranged, which is not what it guards.
+        import check_upgrade_paths as gate
+        clean = any(args[-1].endswith(path) and code == 0
+                    for path, code in gate.VERDICTS)
         if self.broken.get("always_passes"):
             return 0, "0 error(s)"
         if self.broken.get("always_fails"):
@@ -893,7 +905,11 @@ def test_the_upgrade_harness_judges_by_running_the_command(monkeypatch):
             ({"version_prints_nothing": True}, "a command that prints nothing"),
             ({"says_version": "0.7.0"}, "a build reporting a version it is not"),
             ({"always_passes": True}, "a build that exits 0 on every input"),
-            ({"always_fails": True}, "a build that fails a clean container")):
+            ({"always_fails": True}, "a build that fails a clean container"),
+            ({"imports": "vdi2770_validate"}, "an install whose library is gone"),
+            ({"metadata": ""}, "a distribution that is no longer registered"),
+            ({"says_version": "0.8.0.post1"},
+             "a build whose version is not the installed one but contains it")):
         try:
             harness.both_halves_run(Install(**broken), why)
         except AssertionError:
@@ -911,9 +927,20 @@ def test_every_case_the_harness_runs_asks_that_question(monkeypatch):
     import inspect
 
     harness = _harness(monkeypatch)
-    assert len(harness.CASES) >= 3, (
+    assert len(harness.CASES) >= 4, (
         f"the harness runs {len(harness.CASES)} cases; it reports success "
         f"having done nothing")
+    # And the one that installs what is about to be published is among them.
+    # Held apart from the list, it was the only case no structural test saw:
+    # deleting its verdict left the suite green, in the case that stands
+    # closest to the publish.
+    chosen = [harness.name_of(c) for c in harness.cases_to_run(wheels="dist")]
+    assert "case_4_the_release_being_made" in chosen, (
+        f"the release being made is never installed; the gate runs {chosen}")
+    assert "case_4_the_release_being_made" not in [
+        harness.name_of(c) for c in harness.cases_to_run()], (
+        "without a directory of wheels there is nothing to install; skipping it "
+        "belongs in the caller, not inside a case that then reports success")
     for case in harness.CASES:
         body = inspect.getsource(case)
         assert "both_halves_run" in body, (

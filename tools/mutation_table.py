@@ -1204,6 +1204,32 @@ LOCATION_ROWS = [
 
 ]
 
+UPGRADE_BODY_ROWS = [
+    ('gates/an-install-whose-library-is-gone-is-not-a-tool-that-runs',
+     'tools/check_upgrade_paths.py',
+     '    for name in ("vdi2770", "vdi2770_validate"):\n        code, said = env.imports(name)\n        expect(code == 0, f"{why}: import {name} failed\\n{said}")',
+     '    pass',
+     ['tests/test_ci_parity.py::test_the_upgrade_harness_judges_by_running_the_command'],
+     'an install with metadata and a console script and no library behind them would be called a tool that runs -- and this assertion was already unbreakable before it went through the environment, because the harness replaced the function it used for every case at once'),
+
+    ('gates/a-version-is-compared-as-a-whole-word',
+     'tools/check_upgrade_paths.py',
+     '    expect(installed in said.split(), (',
+     '    expect(installed in said, (',
+     ['tests/test_ci_parity.py::test_the_upgrade_harness_judges_by_running_the_command'],
+     '0.8.0 is a substring of 0.8.0.post1, so a build reporting a version it is not would pass the check written to catch exactly that'),
+
+    ('gates/the-release-being-made-is-one-of-the-cases',
+     'tools/check_upgrade_paths.py',
+     'CASES = [case_1_clean, case_2_upgrade_from_0_6_0, case_3_the_pin_is_exact,\n         case_4_the_release_being_made]',
+     'CASES = [case_1_clean, case_2_upgrade_from_0_6_0, case_3_the_pin_is_exact]',
+     ['tests/test_ci_parity.py::test_every_case_the_harness_runs_asks_that_question'],
+     'the case that installs the wheels about to be published would be outside every structural check again, which is how deleting its verdict left the suite green in the case standing closest to the publish'),
+
+]
+
+TABLE += UPGRADE_BODY_ROWS
+
 TABLE += LOCATION_ROWS
 
 TABLE += GUARDED_ROWS

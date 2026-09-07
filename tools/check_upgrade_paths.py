@@ -72,6 +72,17 @@ class Env:
         done = run(self.pip, "check")
         return (done.stdout + done.stderr).strip() or "(silent)"
 
+    def imports(self, name):
+        """Whether a fresh interpreter in this environment can import it.
+
+        A method on the environment rather than a call to `run` beside the
+        other assertions: the harness that proves this gate can fail replaces
+        `run` wholesale, so an assertion phrased through it is one no test can
+        break -- deleting these lines left every gate test green.
+        """
+        done = run(self.python, "-c", f"import {name}")
+        return done.returncode, (done.stdout + done.stderr).strip()
+
     def command(self, *args):
         exe = self.root / "bin" / COMMAND
         if not exe.exists():
@@ -111,17 +122,19 @@ def both_halves_run(env: Env, why: str) -> None:
     the last thing that runs before a release is published.
     """
     for name in ("vdi2770", "vdi2770_validate"):
-        done = run(env.python, "-c", f"import {name}")
-        expect(done.returncode == 0, f"{why}: import {name} failed\n{done.stderr}")
+        code, said = env.imports(name)
+        expect(code == 0, f"{why}: import {name} failed\n{said}")
 
     code, said = env.command("--version")
     expect(code == 0, f"{why}: `{COMMAND} --version` gave {code}: {said}")
     installed = env.versions().get("vdi2770-validate")
     expect(installed, f"{why}: nothing named vdi2770-validate is installed")
-    expect(installed in said, (
+    expect(installed in said.split(), (
         f"{why}: `{COMMAND} --version` says {said!r} and what is installed is "
         f"{installed}. A build that reports a version it is not is a build "
-        f"whose reports name an engine nobody has."))
+        f"whose reports name an engine nobody has. Compared as a whole word: "
+        f"{installed} is a substring of {installed}.post1, and a build "
+        f"reporting that passed the check written to catch it."))
 
     for path, wanted in VERDICTS:
         target = str(ROOT / path)
@@ -237,7 +250,31 @@ def case_4_the_release_being_made(env: Env, wheels: str) -> str:
             f"{after['vdi2770-validate']}+{after['vdi2770']}; pip check: {env.check()}")
 
 
-CASES = [case_1_clean, case_2_upgrade_from_0_6_0, case_3_the_pin_is_exact]
+#: Every case, in the order they run. `case_4` takes the directory of wheels
+#: as well, so it is held here partially applied at call time rather than
+#: listed apart -- kept out of this list, it was the one case no structural
+#: test covered, and deleting its verdict left the suite green. It is also the
+#: only case that installs the release being published.
+CASES = [case_1_clean, case_2_upgrade_from_0_6_0, case_3_the_pin_is_exact,
+         case_4_the_release_being_made]
+
+
+def cases_to_run(wheels=None, only=None):
+    """The cases this invocation runs.
+
+    `case_4` needs a directory of wheels and is skipped without one -- but
+    skipped loudly, in the caller, never by returning early from inside a case
+    that then reports success.
+    """
+    import functools
+    chosen = []
+    for case in ([CASES[only - 1]] if only else CASES):
+        if case is case_4_the_release_being_made:
+            if not wheels:
+                continue
+            case = functools.partial(case, wheels=wheels)
+        chosen.append(case)
+    return chosen
 
 
 def name_of(case) -> str:
@@ -250,11 +287,7 @@ def main() -> int:
     ap.add_argument("--from", dest="wheels", metavar="DIR",
                     help="also upgrade to the wheels in DIR — the release being made")
     args = ap.parse_args()
-    chosen = ([CASES[args.case - 1]] if args.case else list(CASES))
-    if args.wheels and not args.case:
-        import functools
-        chosen.append(functools.partial(case_4_the_release_being_made,
-                                        wheels=args.wheels))
+    chosen = cases_to_run(wheels=args.wheels, only=args.case)
 
     failed = []
     for n, case in enumerate(chosen, start=args.case or 1):

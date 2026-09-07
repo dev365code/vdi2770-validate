@@ -337,8 +337,35 @@ So the question is asked of a path rather than of this machine —
 `<stdlib>/site-packages/somepkg` against `<stdlib>/json`, one component apart —
 and that pair is what the harness mutates.
 
+**The gate before the publish now asks its own questions in a way that can
+fail.** Three of its assertions were not load-bearing.
+
+The import check was unbreakable. It went through the module-level `run`, and
+the harness that proves this gate can fail replaces that function for every case
+at once — so deleting the whole loop left every test green. An install carrying
+metadata and a console script with no library behind them would have been called
+a tool that runs. It goes through the environment now, like every other
+assertion here, and the stub can break that one thing on its own.
+
+`--version` was compared as a substring, so a build reporting `0.8.0.post1` with
+`0.8.0` installed passed the check written to catch a build reporting a version
+it is not. A whole word now.
+
+And `case_4` — the case that installs the wheels about to be published, the one
+standing closest to the publish — was held apart from the case table, so no
+structural test saw it: deleting its verdict left the suite green. It is in the
+table, and skipping it when there is no directory of wheels happens in the
+caller rather than inside a case that then reports success.
+
+Two smaller things in the stub that models a broken install. `no_entry_point`
+returned the wrong exit code *and* the wrong output, so either assertion could
+be deleted and it still failed on the other; it is wrong about one thing now.
+And which container the stub calls clean came from a filename spelled a second
+time here, which turns this red when the corpus is rearranged — it reads the
+gate's own table.
+
 - **`make standalone`** runs each of the 78 test files on its own.
-- The mutation harness carries 134 rows, each naming the pytest selection or the
+- The mutation harness carries 137 rows, each naming the pytest selection or the
   tool that has to go red. Of the rows added this cycle, seven are about the front page: a
   picture the page no longer points at, a sentence in the terminal shot the tool
   never printed, an elision that stands for the wrong findings, a quoted pin the
