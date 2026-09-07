@@ -54,7 +54,7 @@ dev = ["packaging==26.3", "pytest==8.3.4", "PyYAML==6.0.3", "ruff==0.16.3",
 # One command, and deliberately not also `vdi2770`: that is the *other*
 # distribution's name, and a `vdi2770` command shipped from here would make
 # `pip install vdi2770` produce something that imports and has nothing to run.
-vdi2770-validate = "vdi2770_validate.cli:_run"
+vdi2770-validate = "vdi2770_validate.entry:run"
 
 [tool.setuptools]
 # The wheel bundles VDI's schema and a table derived from an IDTA publication,

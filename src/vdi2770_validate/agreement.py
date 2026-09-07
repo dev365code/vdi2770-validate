@@ -192,6 +192,23 @@ def disagreement() -> Optional[str]:
     return _ANSWER[0]
 
 
+def refuse_early() -> Optional[int]:
+    """An exit code to stop on, or None to carry on. For the entry points only.
+
+    The same question as `refuse_if_disagreeing`, answered before there is
+    anything to raise into: this runs ahead of the imports that would fail, so
+    it reports rather than raises and hands the code straight back to the door
+    it was called from. `disagreement()` is computed once, so the check further
+    in costs nothing after this.
+    """
+    said = disagreement()
+    if said is None:
+        return None
+    import sys
+    print(f"{MARKER}: {said}", file=sys.stderr)
+    return 3
+
+
 def refuse_if_disagreeing() -> None:
     """Raise rather than judge.
 

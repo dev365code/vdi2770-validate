@@ -1325,6 +1325,25 @@ AGREEMENT_ROWS = [
 
 ]
 
+BOOT_ROWS = [
+    ('agreement/the-check-runs-before-what-it-guards',
+     'src/vdi2770_validate/entry.py',
+     '    from .agreement import refuse_early\n    early = refuse_early()\n    if early is not None:\n        return early\n    # Only now. Everything below this line can need the reader.\n    from .cli import _run\n    return _run(argv)',
+     '    from .cli import _run\n    from .agreement import refuse_early\n    early = refuse_early()\n    if early is not None:\n        return early\n    return _run(argv)',
+     ['tests/test_the_two_halves_have_to_agree.py::test_the_check_runs_before_anything_that_needs_the_reader'],
+     "the command would die at import in the state the check exists to catch -- `cli` reaches the reader's public surface through `report` and `model`, and that surface is what is missing -- so the answer would be a traceback and `rc=1`, this tool's code for a container that has findings"),
+
+    ('agreement/the-single-file-build-goes-through-the-same-door',
+     'tools/build_zipapp.py',
+     'from vdi2770_validate.entry import run  # noqa: E402 - after the path is arranged\n\nsys.exit(run())',
+     'from vdi2770_validate.cli import _run  # noqa: E402 - after the path is arranged\n\nsys.exit(_run())',
+     ['tests/test_the_two_halves_have_to_agree.py::test_every_door_this_project_ships_is_the_same_door'],
+     'the single-file build would skip the check the other two doors take, which is how one door got the console handling and the other kept the crash'),
+
+]
+
+TABLE += BOOT_ROWS
+
 TABLE += AGREEMENT_ROWS
 
 TABLE += MANIFEST_ROWS

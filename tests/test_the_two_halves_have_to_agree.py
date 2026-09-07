@@ -225,3 +225,79 @@ def test_a_caller_who_never_touches_the_command_still_goes_through_it(monkeypatc
     monkeypatch.setattr(runner, "refuse_if_disagreeing", refuse)
     with pytest.raises(agreement.InstallationDisagrees):
         runner.check_bytes(b"not a zip", "x.zip")
+
+
+def test_the_check_runs_before_anything_that_needs_the_reader(monkeypatch, capsys):
+    """The guard cannot depend on what it guards.
+
+    `cli` imports `report`, which imports `model`, which imports `NS`,
+    `UnsafeXml` and `XmlTooLarge` from `vdi2770.xmlread`. The state this check
+    exists to catch is the state where that surface is not there, so on a pair
+    built from the index today — `vdi2770-validate==0.6.0`, which resolves
+    reader 0.4.0 by range, with the rules moved on top — the command died at
+    import with `rc=1` and a traceback. `1` is this tool's code for *a container
+    has findings*: the confusion the check was written to prevent, one step
+    before the check could run, saying something false about somebody's
+    container on the way past.
+
+    Proved by making that import fail here, rather than by reading the entry
+    module for the order of two lines.
+    """
+    import builtins
+
+    from vdi2770_validate import entry
+
+    monkeypatch.setattr(agreement, "_disagreement",
+                        lambda: "the reader is 0.4.0 and the rules are 0.8.0")
+    real = builtins.__import__
+
+    def explode(name, *args, **kw):
+        if name == "cli" or name.endswith(".cli"):
+            raise ImportError("cannot import name 'XmlTooLarge' from 'vdi2770.xmlread'")
+        return real(name, *args, **kw)
+
+    monkeypatch.setattr(builtins, "__import__", explode)
+    code = entry.run([])
+    out, err = capsys.readouterr()
+    assert code == 3, f"the door answered {code}"
+    assert out == "", f"something was printed on the way out: {out[:120]}"
+    assert err.startswith(agreement.MARKER)
+    assert "Traceback" not in err
+
+
+def test_a_working_installation_still_reaches_the_command(monkeypatch):
+    """The other half of that pair: the door has to open when nothing is wrong,
+    or the test above passes on a tool that never runs at all."""
+    from vdi2770_validate import cli, entry
+
+    monkeypatch.setattr(agreement, "_disagreement", lambda: None)
+    monkeypatch.setattr(cli, "_run", lambda argv=None: 77)
+    assert entry.run([]) == 77
+
+
+def test_every_door_this_project_ships_is_the_same_door():
+    """Three ways in, and the check is worth what the least-guarded one does.
+
+    The console script's target is declared in `pyproject.toml`, `python -m`
+    goes through `__main__.py`, and the single-file build carries a `__main__`
+    written by `tools/build_zipapp.py`. All three have to name the module that
+    asks the question first. This project has already shipped two entry points
+    where one got a fix and the other kept the crash.
+    """
+    import re
+
+    from conftest import ROOT
+
+    manifest = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    declared = re.search(r'^vdi2770-validate = "([^"]+)"', manifest, re.M)
+    assert declared, "the manifest declares no command"
+    module, _, function = declared.group(1).partition(":")
+    assert module == "vdi2770_validate.entry" and function == "run", (
+        f"the console script starts at {declared.group(1)}, which is not the "
+        f"door that checks the installation before importing the reader")
+
+    for door in ("src/vdi2770_validate/__main__.py", "tools/build_zipapp.py"):
+        text = (ROOT / door).read_text(encoding="utf-8")
+        assert "from .entry import run" in text or "from vdi2770_validate.entry import run" in text, (
+            f"{door} does not start at {module}:{function}; it can run the tool "
+            f"without the check the other doors take")

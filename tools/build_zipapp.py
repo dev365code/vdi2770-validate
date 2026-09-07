@@ -157,9 +157,9 @@ if zipfile.is_zipfile(_archive):
         _z.extractall(_room, [n for n in _z.namelist() if n.startswith("xmlschema/")])
     sys.path.insert(0, _room)
 
-from vdi2770_validate.cli import _run  # noqa: E402 - after the path is arranged
+from vdi2770_validate.entry import run  # noqa: E402 - after the path is arranged
 
-sys.exit(_run())
+sys.exit(run())
 '''
 
 

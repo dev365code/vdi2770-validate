@@ -452,8 +452,35 @@ nothing noticed. `report.py` used to say `rules.json` "cannot be swapped without
 changing the install"; that was false, and `docs/scope.md` now records what
 `toolVersion` can and cannot be read as.
 
+And the check runs before anything that could stop it running. `cli` imports
+`report`, which imports `model`, which imports `NS`, `UnsafeXml` and
+`XmlTooLarge` from `vdi2770.xmlread` — so the command's own import chain leans
+on the reader's public surface, and the state this check exists to catch is
+exactly the state where that surface is not there. On a pair built from the
+index today, the answer was a traceback and `rc=1`:
+
+    pip install "vdi2770-validate==0.6.0"    # resolves reader 0.4.0 by range
+    pip install --no-deps .                  # the rules move, the reader does not
+    vdi2770-validate --version
+    ImportError: cannot import name 'XmlTooLarge' from 'vdi2770.xmlread'
+
+`1` is this tool's code for *a container has findings*. The confusion the check
+was written to prevent happened one step before the check could run, and said
+something false about somebody's container on the way past. A guard that depends
+on what it guards is not a guard.
+
+All three doors — the console script, `python -m vdi2770_validate`, and the
+single-file build — now start at one module that reads two version strings and
+nothing else, and stops there with exit 3 if they disagree. Measured on that
+same pair: exit 3, no output on stdout, one line on stderr beginning
+`vdi2770-validate: INSTALLATION`, no traceback. A caller who writes `import
+vdi2770_validate` and reaches for the rules still gets the `ImportError` naming
+the missing symbol, which is loud and unambiguous; that door is documented
+rather than guarded, because a library cannot be given an entry point it did not
+call.
+
 - **`make standalone`** runs each of the 79 test files on its own.
-- The mutation harness carries 149 rows, each naming the pytest selection or the
+- The mutation harness carries 151 rows, each naming the pytest selection or the
   tool that has to go red. Of the rows added this cycle, seven are about the front page: a
   picture the page no longer points at, a sentence in the terminal shot the tool
   never printed, an elision that stands for the wrong findings, a quoted pin the
