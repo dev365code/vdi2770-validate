@@ -59,9 +59,17 @@ def provenance() -> Dict:
     documents can be version-checked and some cannot is worse for a consumer
     than one where none can.
 
-    The rules are not versioned separately: `rules.json` ships inside the wheel
-    and cannot be swapped without changing the install, so `toolVersion` is also
-    the answer to "which rules judged this".
+    The rules are not versioned separately: `rules.json` ships beside the code
+    in the same distribution, so `toolVersion` names the release these rules
+    came out of.
+
+    It does not prove the rules are that release's. The sentence here used to
+    say `rules.json` "cannot be swapped without changing the install", and that
+    is false: a copy of this package earlier on `sys.path` answers ahead of the
+    installed one, data and all, with the install untouched and its metadata
+    still correct. It was tried, and nothing noticed. `docs/divergences.md`
+    records the limit. What the tool does check is narrower and is stated where
+    it is done -- see `agreement.py`.
     """
     return {
         "schemaVersion": SCHEMA_VERSION,

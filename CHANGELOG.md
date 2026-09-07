@@ -406,8 +406,54 @@ uninstalling either deletes the file the other is still using — the failure th
 gate is entirely about, one directory over, where an import-name comparison
 cannot see it.
 
-- **`make standalone`** runs each of the 78 test files on its own.
-- The mutation harness carries 142 rows, each naming the pytest selection or the
+**The tool asks whether its two halves say the same number, and refuses to
+judge when they do not.** The reader and the rules ship under one tag and carry
+one version; `pip install -U vdi2770` on top of an existing install leaves a
+pair that does not, and both commands still run, and every gate outside the tool
+reports the install as healthy. `pip install vdi2770-validate==0.6.0` still
+produces such a pair from the index today, because that release pinned the
+reader by range: pip resolves it with reader 0.4.0, and an old engine signs
+conformance verdicts with every instrument reading normal. Destruction is loud;
+this is the quiet one.
+
+So the last line is inside the tool. Before a report is built — and therefore
+for `import vdi2770_validate` as much as for the command — the two loaded halves
+have to agree, and an install record sitting in the same directory as the loaded
+code has to agree with them. It raises rather than exiting, because a library
+has no business tearing down somebody else's process, and the command turns that
+into exit **3**: not a verdict on any container, on a line beginning
+`vdi2770-validate: INSTALLATION` so a log can tell the two apart. No report is
+written on the way out — a machine-readable document stamped `toolVersion` by an
+install that cannot account for itself is the thing this exists to prevent.
+`--version` goes through it too: in a split install that number is true about
+the package it came from and false about the tool that would run, which is the
+one answer a person must not be handed on its own.
+
+**Records are read where the code is, or not at all.** That is the whole shape,
+and it was arrived at by refusing six working installations first: the
+single-file build on any machine that had also pip-installed the reader — the
+artifact sold to people with no route to an index, handed a `pip install` as the
+remedy; a `--target` layer over a base image, where two intact copies exist and
+the layer wins; a source checkout carrying a stale `.egg-info`, which is this
+repository on any day somebody moves a version literal before reinstalling; a
+coherent process whose environment changed in another window; and an `rc1`
+spelled with a hyphen. A build artifact is told from an install record by
+carrying `PKG-INFO` rather than `METADATA`. The answer is computed once per
+process — not a saving but a correction, since the loaded version freezes at
+import and re-reading the metadata bought only that fifth refusal.
+
+**What it does not do**, said plainly because the alternative is a false claim.
+It says nothing about age: `vdi2770-validate==0.7.0` builds a coherent 0.7.0
+pair whose report honestly says `toolVersion: 0.7.0`, and giving somebody the
+version they asked for is not a fault. And a copy of the rules package earlier
+on `sys.path` carrying the *same* version replaces every rule, data included,
+with the install untouched and its metadata still correct — it was tried, and
+nothing noticed. `report.py` used to say `rules.json` "cannot be swapped without
+changing the install"; that was false, and `docs/scope.md` now records what
+`toolVersion` can and cannot be read as.
+
+- **`make standalone`** runs each of the 79 test files on its own.
+- The mutation harness carries 149 rows, each naming the pytest selection or the
   tool that has to go red. Of the rows added this cycle, seven are about the front page: a
   picture the page no longer points at, a sentence in the terminal shot the tool
   never printed, an elision that stands for the wrong findings, a quoted pin the

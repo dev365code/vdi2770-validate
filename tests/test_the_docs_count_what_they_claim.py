@@ -395,8 +395,8 @@ def test_no_document_cites_a_file_that_is_not_here():
     # section is history and out of scope by design -- but the number moving for
     # that reason is worth writing down, because it will move again at every
     # release and "the count dropped" must not become a thing anyone waves past.
-    assert seen == 18, (
-        f"{seen} citations found, not 18. If you added or removed one, say so here; "
+    assert seen == 19, (
+        f"{seen} citations found, not 19. If you added or removed one, say so here; "
         f"if you did not, six of them just stopped being checked.")
 
 

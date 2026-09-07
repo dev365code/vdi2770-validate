@@ -134,6 +134,23 @@ level. A figure counted over this tool's own machinery would have the opposite
 sign; a file that is not a ZIP calls for one check, that check runs and answers
 no, and the worst input this tool ever sees would score full marks.
 
+`toolVersion` names the release these rules came out of, and that is the whole
+of what it can be read as. It is not proof that the rules *are* that release's:
+a copy of this package earlier on `sys.path` answers ahead of the installed one,
+data and all, with the install untouched and its metadata still correct. That
+was tried, and nothing noticed — an earlier version of this project said in the
+code that `rules.json` "cannot be swapped without changing the install", which
+was false.
+
+What the tool does ask before it judges is narrower, and is stated as what it
+is. The two halves of the installation — the reader and the rules — ship under
+one tag and carry one number, so they have to say the same version, and any
+install record sitting in the same directory as the loaded code has to agree
+with it. A disagreement means one of them is not the one the other was tested
+with, and the tool refuses to judge rather than sign a verdict it cannot account
+for; that refusal is exit 3, and it is not a verdict on any container. A copy at
+the *same* version is invisible to it, and no version number could see that one.
+
 `--json` carries the same numbers under `read`, with a `complete` flag that is
 deliberately more than the integers beside it: it is false when anything was
 declined, so a container whose metadata this tool would not model does not read

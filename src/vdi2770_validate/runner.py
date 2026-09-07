@@ -17,6 +17,7 @@ from vdi2770.domain import build
 from vdi2770.zipread import Kind
 
 from . import xsdvalidate
+from .agreement import refuse_if_disagreeing
 from .catalog import rule
 from .model import MAIN_XML, METADATA_XML, NS, Finding, Location, Report
 from .names import folder_path
@@ -151,6 +152,14 @@ def _facts_for(raw: bytes, accepted, read_pdf):
 
 
 def check_bytes(data: bytes, name: str) -> Report:
+    # Before anything is judged, and here rather than only in the command: the
+    # front page sells `import vdi2770_validate` as a way to use this, and a
+    # caller coming through that door would otherwise get verdicts from an
+    # installation nothing had questioned. `check_file` goes through here, so
+    # one call covers both. It raises rather than exiting -- a library has no
+    # business tearing down somebody else's process -- and the answer is
+    # computed once per process, so this costs nothing after the first report.
+    refuse_if_disagreeing()
     report = Report(target=name)
     # The reader's contract is that it records a `Defect` rather than raising,
     # and its own suite holds it to that. It is also a separately versioned

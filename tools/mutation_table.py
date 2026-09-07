@@ -1273,6 +1273,60 @@ MANIFEST_ROWS = [
 
 ]
 
+AGREEMENT_ROWS = [
+    ('agreement/a-record-somewhere-else-is-not-this-installation',
+     'src/vdi2770_validate/agreement.py',
+     '            if base != here or dist.read_text("METADATA") is None:\n                continue',
+     '            if False:\n                continue',
+     ['tests/test_the_two_halves_have_to_agree.py::test_a_record_somewhere_else_on_the_path_is_not_this_installations'],
+     'the single-file build would be refused on any machine that had also installed the reader, and a layered install over a base image with it -- the artifact sold to people with no route to an index, handed a `pip install` as the remedy'),
+
+    ('agreement/a-build-artifact-is-not-an-install-record',
+     'src/vdi2770_validate/agreement.py',
+     '            if base != here or dist.read_text("METADATA") is None:',
+     '            if base != here:',
+     ['tests/test_the_two_halves_have_to_agree.py::test_a_build_artifact_beside_the_code_is_not_an_install_record'],
+     'a stale `.egg-info` in a source checkout -- which this repository has, and the Makefile already says lingers -- would refuse every verdict inside `make test`'),
+
+    ('agreement/the-answer-is-computed-once',
+     'src/vdi2770_validate/agreement.py',
+     '    if not _ANSWER:\n        _ANSWER.append(_disagreement())\n    return _ANSWER[0]',
+     '    return _disagreement()',
+     ['tests/test_the_two_halves_have_to_agree.py::test_it_is_computed_once'],
+     'a coherent, correct, still-running process would start refusing every verdict because somebody upgraded the environment in another window -- the loaded version cannot change, so re-reading buys only that'),
+
+    ('agreement/two-spellings-of-one-version-are-one-version',
+     'src/vdi2770_validate/agreement.py',
+     '    if folded(reader) != folded(ruleset):',
+     '    if reader != ruleset:',
+     ['tests/test_the_two_halves_have_to_agree.py::test_the_same_release_spelled_two_ways_is_one_release'],
+     '`0.8.0-rc1` is what a hand-edited literal writes and `0.8.0rc1` is what the build backend records, so a working install would be refused over punctuation'),
+
+    ('agreement/the-refusal-is-not-a-verdict-on-a-container',
+     'src/vdi2770_validate/cli.py',
+     '        except InstallationDisagrees:',
+     '        except InstallationDisagrees if False else RuntimeError:',
+     ['tests/test_the_two_halves_have_to_agree.py::test_the_refusal_reaches_the_command_as_three_and_writes_no_report'],
+     'the refusal would be caught as `cannot read it`, counted against the container, and written into the JSON as a document stamped `toolVersion` by the install that had just said it could not account for itself'),
+
+    ('agreement/the-version-is-not-answered-by-half-an-installation',
+     'src/vdi2770_validate/cli.py',
+     '    p.add_argument("--version", action=_Version, nargs=0, help="show the version")',
+     '    p.add_argument("--version", action="version", version=VERSION)',
+     ['tests/test_the_two_halves_have_to_agree.py::test_the_version_is_not_answered_by_half_an_installation'],
+     '`--version` would print the rules half during parsing, before anything could ask -- true about the package it came from and false about the tool that would run'),
+
+    ('agreement/a-library-caller-goes-through-it-too',
+     'src/vdi2770_validate/runner.py',
+     '    refuse_if_disagreeing()\n    report = Report(target=name)',
+     '    report = Report(target=name)',
+     ['tests/test_the_two_halves_have_to_agree.py::test_a_caller_who_never_touches_the_command_still_goes_through_it'],
+     'the front page sells `import vdi2770_validate` as a way to use this, and that caller would get verdicts from an installation nothing had asked about'),
+
+]
+
+TABLE += AGREEMENT_ROWS
+
 TABLE += MANIFEST_ROWS
 
 TABLE += WINDOWS_ROWS

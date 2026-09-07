@@ -7,7 +7,10 @@ a verdict on every container it was given, not a traceback about the first one.
 Exit codes: 0 no error, which is not the same as nothing wrong -- a warning
 does not move the number unless `--fail-on warning` says it should, so a
 container can come back 0 with findings in the report; 1 at least one finding at
-the chosen severity, or an unreadable path; 2 nothing could be read at all. A run whose reader goes away -- `| head` -- ends by
+the chosen severity, or an unreadable path; 2 nothing could be read at all; 3
+this tool refused to judge, which is not a verdict on any container -- its two
+halves disagree about which release they are, and the line it prints begins
+`vdi2770-validate: INSTALLATION` so a log can tell the two apart. A run whose reader goes away -- `| head` -- ends by
 `SIGPIPE` where the platform has one and 141 where it does not, because it did
 not finish: any of 0, 1 or 2 would be a claim about containers nobody looked at.
 """
@@ -22,6 +25,7 @@ import sys
 
 from . import __version__ as VERSION  # one place, not three
 from . import report as rendering
+from .agreement import MARKER, InstallationDisagrees, refuse_if_disagreeing
 from .catalog import document_classes, rules
 from .model import Severity
 from .runner import check_file
@@ -38,6 +42,13 @@ def _cmd_check(args) -> int:
     for path in args.paths:
         try:
             rep = check_file(path)
+        except InstallationDisagrees:
+            # Not this file's fault, and not a verdict on it. Swallowed by the
+            # handler below, it became `cannot read it`, an exit of 2 or 1 that
+            # a CI log cannot tell from a failing container, and -- worst -- a
+            # machine-readable document stamped `toolVersion` by the very
+            # install that had just said it could not account for itself.
+            raise
         except Exception as e:              # noqa: BLE001
             # One bad path must not stop the rest: a CI job sweeping a supplier
             # drop folder would silently skip everything after the first dud.
@@ -139,11 +150,27 @@ def _cmd_classes(_args) -> int:
     return 0
 
 
+class _Version(argparse.Action):
+    """`--version`, asked of an installation that has to agree with itself.
+
+    Not `action="version"`: that prints during parsing, before any check could
+    run, and the number it prints is the rules half alone. In a split install
+    that is the one number a person must not be handed on its own -- it is
+    true about the package it came from and false about the tool that would
+    run.
+    """
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        refuse_if_disagreeing()
+        print(VERSION)
+        parser.exit(0)
+
+
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(
         prog="vdi2770-validate",
         description="Check a VDI 2770 container, offline. Every finding comes with a remedy.")
-    p.add_argument("--version", action="version", version=VERSION)
+    p.add_argument("--version", action=_Version, nargs=0, help="show the version")
     sub = p.add_subparsers(dest="cmd", required=True)
 
     c = sub.add_parser("check", help="check one or more containers")
@@ -161,8 +188,15 @@ def main(argv=None) -> int:
     k = sub.add_parser("classes", help="list the VDI 2770 document classes as this tool knows them")
     k.set_defaults(func=_cmd_classes)
 
-    args = p.parse_args(argv)
-    return args.func(args)
+    try:
+        args = p.parse_args(argv)
+        return args.func(args)
+    except InstallationDisagrees as e:
+        # One place, so every surface that can state an identity -- `check`,
+        # `rules`, `classes`, `--version` -- ends the same way, and no report
+        # is written on the way out.
+        print(f"{MARKER}: {e}", file=sys.stderr)
+        return 3
 
 
 def _json_this_console_can_carry(payload) -> str:
