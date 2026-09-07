@@ -3,6 +3,12 @@
 # error as a check that reads a path outside the repository: "the gate exists"
 # and "the gate runs" differ only in someone else's environment.
 include LICENSE NOTICE THIRD_PARTY.md CHANGELOG.md CONTRIBUTING.md SECURITY.md Makefile
+# The root `conftest.py` too. It carries the rule that names a case after what
+# its parameters are rather than after what they contain, and it is at the root
+# because that is the only place a hook reaches both suites. Left out, the
+# unpacked sdist ran without it and two gates went red -- which is the sdist
+# gate saying exactly what it exists to say.
+include conftest.py
 recursive-include tests *.py *.json
 recursive-include tools *.py *.java *.md
 recursive-include corpus *

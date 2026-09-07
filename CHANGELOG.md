@@ -486,8 +486,60 @@ call.
   trust. This release also moves console scripts and entry points, which is the
   part of packaging that differs most between platforms.
 
-- **`make standalone`** runs each of the 79 test files on its own.
-- The mutation harness carries 151 rows, each naming the pytest selection or the
+**The Windows row found something in its first run, and not in the gate it was
+added for.** Cases here were handed whole PDFs through
+`pytest.mark.parametrize`, so pytest named them after the documents — ids of
+12,000, 66,000 and 70,000 characters. pytest puts the current id in
+`PYTEST_CURRENT_TEST`, Windows refuses an environment variable over 32767
+characters, and those cases passed and then failed in teardown with a
+`ValueError` out of `os.environ`. Unreadable in a log everywhere; fatal on one
+platform, on a suite that had been green for weeks.
+
+The rule is in one place: a root `conftest.py` names a `bytes` parameter by how
+much of it there was. Putting `ids=` on the three decorators that have the
+problem would have fixed those three and none of the ones written next week, and
+every one of them already had a readable name in another parameter — what was
+missing was a rule saying a document is not one.
+
+The gate collects every test id the suite would run and refuses one longer than
+200 characters. Its first version asked `pytest --collect-only -q`, which prints
+a count per file rather than the ids, so it collected nothing and passed on
+everything; the mutation harness said so. It runs a collection plugin now, and
+refuses outright if that returns no ids at all — because the ids are made by
+pytest out of the parameters, and no reading of the source can produce them.
+
+Two more shapes of the assumption that a directory tells you what a module is.
+Windows offers `sys.prefix` itself as a site directory, and the standard library
+sits under it — so with installs checked first, every module the interpreter
+ships came back as a package nobody declared. The rule that follows is one
+sentence: **a directory that contains the standard library cannot tell an
+install from what the interpreter shipped, so it is not an install directory.**
+And every path comparison folds case, because `C:\Python\Lib` and
+`c:\python\lib` are one directory there, and a comparison that says otherwise
+reports a *declared* dependency as undeclared, which reads as an entirely
+different bug.
+
+**And a gate that compares artifacts rather than manifests.** pip uninstalls by
+the record it wrote at install time, so two distributions that ever write one
+path do not conflict when installed — the second overwrites — and conflict when
+either is removed, silently, with `pip check` green and the tool no longer
+running. The new gate builds both wheels, fetches the two already on the index,
+and requires every pair of *different* distributions to claim no path, no
+command and no import name in common. Two versions of one distribution may
+share everything: that is pip replacing its own files, and a gate that forbids
+it fails every release.
+
+Not the RECORD alone. A wheel's RECORD has no `bin/` entries at all — pip
+synthesises the console scripts at install time from `entry_points.txt` — so a
+comparison of recorded paths is blind to exactly the files that vanished first
+the last time an installation here was destroyed. Commands are read by parsing
+that file, because a name is an option in a section and not a substring of the
+text. Outside `make check`, which is offline: the other half of the comparison
+is what the index already serves, and a check that only reads this working tree
+compares two files nobody is installing.
+
+- **`make standalone`** runs each of the 81 test files on its own.
+- The mutation harness carries 156 rows, each naming the pytest selection or the
   tool that has to go red. Of the rows added this cycle, seven are about the front page: a
   picture the page no longer points at, a sentence in the terminal shot the tool
   never printed, an elision that stands for the wrong findings, a quoted pin the

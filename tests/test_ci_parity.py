@@ -23,6 +23,11 @@ OUTSIDE_CHECK = {
                           "the `oracle` workflow, and the divergence counts exclude "
                           "it meanwhile; it stops being acceptable the moment those "
                           "counts are published, which is what a release does",
+    "paths-disjoint": "the other half of the comparison is the wheels already on "
+                      "the index, and `make check` is offline. A gate that only "
+                      "reads this working tree compares two files nobody is "
+                      "installing — the destruction happens between a release and "
+                      "the one before it. CI runs it on every push",
     "zipapp": "it fetches the dependency it bundles, and `make check` is offline "
               "— which is the property this tool sells, so the gate that proves "
               "it must not be the thing that breaks it. CI runs it on every "
@@ -152,6 +157,11 @@ def test_ci_runs_nothing_the_gate_does_not():
     #: because they answer different questions, and a target can be in the first
     #: without belonging in the second — `mutations` and `standalone` are.
     CI_ONLY = {
+        "python tools/check_paths_are_disjoint.py":
+            "the wheels already on the index are the other half of the "
+            "comparison, and `make check` is offline. Two distributions that "
+            "come to claim one path do it between one release and the next, "
+            "which is a state no reading of this tree can see.",
         "python tools/build_zipapp.py --check":
             "it fetches the dependency it bundles, and `make check` is offline "
             "-- the property this tool sells. CI has the network, and a build "
@@ -160,7 +170,7 @@ def test_ci_runs_nothing_the_gate_does_not():
     # The `check` recipes, plus the targets named above — a CI step matching one
     # of those is recognised because somebody wrote down why it is there.
     recipes = [c.replace("$(PYTHON)", "python").strip()
-               for c in recipe_commands(include={"zipapp"})]
+               for c in recipe_commands(include={"zipapp", "paths-disjoint"})]
     for command, reason in CI_ONLY.items():
         assert reason and command in recipes, (
             f"{command!r} is named as CI-only and the Makefile does not run it")

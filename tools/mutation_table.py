@@ -1342,6 +1342,46 @@ BOOT_ROWS = [
 
 ]
 
+PLATFORM_ROWS = [
+    ('gates/a-test-is-not-named-after-its-own-input',
+     'conftest.py',
+     '    if isinstance(val, (bytes, bytearray)):\n        return f"{argname}<{len(val)}B>"',
+     '    if False:\n        return None',
+     ['tests/test_a_test_name_is_a_name.py'],
+     'a case handed a whole document is named after it, which is unreadable in a log everywhere and fatal on Windows -- pytest puts the id in PYTEST_CURRENT_TEST and the platform refuses an environment variable over 32767 characters, so the case passes and then fails in teardown'),
+
+    ('gates/a-directory-that-holds-the-stdlib-is-not-an-install-directory',
+     'tests/test_the_suite_declares_what_it_imports.py',
+     '    return {d for d in candidates if not _within(stdlib, d)}',
+     '    return set(candidates)',
+     ['tests/test_the_suite_declares_what_it_imports.py::test_a_directory_that_contains_the_stdlib_is_not_an_install_directory'],
+     'Windows offers `sys.prefix` itself as a site directory and the standard library is under it, so with installs checked first every module the interpreter ships would be reported as a package nobody declared'),
+
+    ('gates/a-command-is-a-claim-on-a-file-in-bin',
+     'tools/check_paths_are_disjoint.py',
+     '                        owned.add(f"command {command}")',
+     '                        pass',
+     ['tests/test_no_two_distributions_claim_one_path.py::test_two_distributions_that_install_one_command_are_caught'],
+     'a wheel RECORD has no bin/ entries at all -- pip synthesises the console scripts at install time -- so comparing recorded paths alone is blind to the files that vanished first the last time an install here was destroyed'),
+
+    ('gates/an-import-name-is-a-claim-on-a-directory',
+     'tools/check_paths_are_disjoint.py',
+     '                owned.add(f"import {top[:-3] if top.endswith(\'.py\') else top}")',
+     '                pass',
+     ['tests/test_no_two_distributions_claim_one_path.py::test_two_distributions_that_ship_one_import_name_are_caught'],
+     'two distributions shipping different files under one top-level directory would pass, and uninstalling either takes the directory the other is importing from'),
+
+    ('gates/two-versions-of-one-distribution-may-share-their-paths',
+     'tools/check_paths_are_disjoint.py',
+     '            if name_a == name_b:',
+     '            if False:',
+     ['tests/test_no_two_distributions_claim_one_path.py::test_two_versions_of_one_distribution_may_share_everything'],
+     'pip replacing its own files is the normal case, and a gate that forbids it fails every release this project makes'),
+
+]
+
+TABLE += PLATFORM_ROWS
+
 TABLE += BOOT_ROWS
 
 TABLE += AGREEMENT_ROWS

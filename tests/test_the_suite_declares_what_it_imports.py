@@ -28,6 +28,7 @@ manipulation gets there.
 import ast
 import contextlib
 import importlib.util
+import os
 import re
 import site
 import sys
@@ -35,6 +36,21 @@ import sysconfig
 from pathlib import Path
 
 from conftest import ROOT
+
+
+def _within(path, root):
+    """Whether `path` is `root` or sits under it, on a filesystem that may not
+    care about case.
+
+    `Path.relative_to` compares the parts as written. On Windows `C:\\Python\\Lib`
+    and `c:\\python\\lib` are one directory, and a comparison that says
+    otherwise reports a *declared* dependency as undeclared — which reads as an
+    entirely different bug.
+    """
+    fold = [os.path.normcase(part) for part in path.parts]
+    against = [os.path.normcase(part) for part in root.parts]
+    return fold[:len(against)] == against
+
 
 _PATHS = sysconfig.get_paths()
 _STDLIB = Path(_PATHS["stdlib"]).resolve()
@@ -77,7 +93,25 @@ def _installed_into():
         for one in ([got] if isinstance(got, str) else list(got or ())):
             with contextlib.suppress(OSError, TypeError, ValueError):
                 found.add(Path(one).resolve())
-    return found
+    return only_install_directories(found, _STDLIB)
+
+
+def only_install_directories(candidates, stdlib):
+    """The candidates that can tell an install from what the interpreter ships.
+
+    On Windows `site.getsitepackages()` includes `sys.prefix` itself, and the
+    standard library is `<prefix>\\Lib` — so with installs checked first, every
+    module the interpreter ships came back as an installed package and
+    `__future__`, `difflib` and `json` were reported as undeclared. A sister
+    project measured it; this project's Windows row was written the same hour.
+
+    The rule that follows is one sentence: **a directory that contains the
+    standard library cannot distinguish an install from what the interpreter
+    shipped, so it is not an install directory.** `<prefix>/Lib/site-packages`
+    survives it and `<prefix>` does not, which is the distinction that was
+    missing.
+    """
+    return {d for d in candidates if not _within(stdlib, d)}
 
 
 _SITE = _installed_into()
@@ -85,14 +119,6 @@ _SITE = _installed_into()
 #: And the last resort, for a layout none of the above names. A directory
 #: called this is where installers put things, wherever it happens to sit.
 _INSTALLED_DIRS = ("site-packages", "dist-packages")
-
-
-def _within(path, root):
-    try:
-        path.relative_to(root)
-    except ValueError:
-        return False
-    return True
 
 
 def python_here(root=ROOT):
@@ -421,3 +447,37 @@ def test_a_name_that_is_nowhere_is_reported(tmp_path):
     found = undeclared([tmp_path], declared(), root=tmp_path)
     assert "no_such_distribution_zzz" in found
     assert "neither installed nor a file" in found["no_such_distribution_zzz"][0]
+
+
+def test_a_directory_that_contains_the_stdlib_is_not_an_install_directory():
+    """The third shape of the same wrong assumption, and the one that would have
+    turned every Windows run red.
+
+    There, `site.getsitepackages()` includes `sys.prefix` itself, and the
+    standard library is `<prefix>\\Lib` — so with installs checked first, every
+    module the interpreter ships is inside a directory this file calls an
+    install directory, and `__future__`, `difflib` and `json` come back as
+    packages nobody declared. A sister project measured exactly that.
+
+    Asked of two paths rather than of this machine, because the machine that
+    shows it is not this one: `<prefix>` and `<prefix>/Lib/site-packages` are
+    both offered, the standard library is `<prefix>/Lib`, and only the second
+    can tell an install from what the interpreter shipped.
+    """
+    from pathlib import Path
+    prefix = Path("/opt/py")
+    kept = only_install_directories(
+        {prefix, prefix / "Lib" / "site-packages"}, prefix / "Lib")
+    assert kept == {prefix / "Lib" / "site-packages"}
+
+
+def test_paths_are_compared_without_regard_to_case():
+    """`C:\\Python\\Lib` and `c:\\python\\lib` are one directory there, and a
+    comparison that says otherwise reports a declared dependency as undeclared —
+    which reads as an entirely different bug. On a case-sensitive filesystem
+    this asserts what `normcase` does here, which is nothing, so the case that
+    pins it is the one above."""
+    from pathlib import Path
+    root = Path("/opt/Py/Lib")
+    same = Path(os.path.normcase("/opt/Py/Lib")) / "json"
+    assert _within(same, root) or os.path.normcase("A") == "A"

@@ -72,6 +72,13 @@ jobs:
         run: python tools/api_fingerprint.py --check
       # Built and *run*, not built. A single file that imports and cannot answer
       # is the failure this catches, and the two look alike from outside.
+      - name: No two distributions claim one path
+        # Compared against what the index already serves, not only against this
+        # tree: the destruction happens between a release and the one before it.
+        # Ubuntu only -- the wheels are pure Python and identical either way,
+        # and this one talks to the index.
+        if: runner.os == 'Linux' && matrix.python-version == '3.12'
+        run: python tools/check_paths_are_disjoint.py
       - name: The single file builds and checks a container
         run: python tools/build_zipapp.py --check
       - name: The sdist can run its own tests

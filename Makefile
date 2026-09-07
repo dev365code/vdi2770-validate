@@ -6,7 +6,7 @@ RUFF_VERSION   := 0.16.3
 PYTEST_VERSION := 8.3.4
 XMLSCHEMA_VERSION := 4.2.0
 
-.PHONY: upgrade-paths zipapp check lint test fixtures corpus coverage-check rules-doc oracle-half sdist-runs-its-own-tests wheel-installs-and-runs reader-api-matches-its-version mutations standalone clean oracle-fully-swept
+.PHONY: paths-disjoint upgrade-paths zipapp check lint test fixtures corpus coverage-check rules-doc oracle-half sdist-runs-its-own-tests wheel-installs-and-runs reader-api-matches-its-version mutations standalone clean oracle-fully-swept
 
 check: lint fixtures test corpus coverage-check rules-doc oracle-half reader-api-matches-its-version sdist-runs-its-own-tests wheel-installs-and-runs
 
@@ -37,6 +37,13 @@ rules-doc:
 # while docs/divergences.md goes on counting from it.
 oracle-half:
 	$(PYTHON) tools/capture_oracle.py --check-ours
+
+# Deliberately not in `check`: the other half of the comparison is the wheels
+# already on the index, and `check` is offline. A gate that only ever reads this
+# working tree compares two files nobody is installing -- the destruction
+# happens between a release and the one before it.
+paths-disjoint:
+	$(PYTHON) tools/check_paths_are_disjoint.py
 
 # Deliberately not in `check`: needs the network and a clean interpreter per
 # case, and it answers a question `check` cannot ask -- what happens to an
