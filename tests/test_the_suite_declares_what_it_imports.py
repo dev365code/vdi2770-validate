@@ -189,6 +189,65 @@ def _guarded_imports(tree):
     return guarded
 
 
+#: Modules this repository runs as `python -m <name>` and does not import. The
+#: gate below reads import statements, so a dependency invoked as a subprocess
+#: is invisible to it — which is how `build` went undeclared until one CI
+#: runner image turned out not to carry it. Named here, with the reason, so
+#: adding another is a decision somebody writes down.
+RUN_AS_MODULES = {
+    "pip": "always present wherever this project can be installed at all, and "
+           "declaring it would put something false in a manifest other gates "
+           "read as truth",
+    "venv": "the standard library",
+}
+
+
+def modules_run_under(directories):
+    """Names passed to an interpreter as `-m`, which are dependencies too.
+
+    Read off the argument lists rather than the imports: `python -m build` needs
+    `build` installed exactly as much as `import build` would, and the gate that
+    reads import statements cannot see it.
+
+    Only when the interpreter is the thing being run. `-m` is a flag for a great
+    many programs — `git commit -q -m "x"` is in this repository three times —
+    and reading every `-m` as a module name reports `x` as a package nobody
+    declared, which is a false positive of exactly the kind that gets answered
+    by writing something untrue in a manifest.
+    """
+    names = {}
+    for directory in directories:
+        for source in sorted(directory.rglob("*.py")):
+            tree = ast.parse(source.read_text(encoding="utf-8"), str(source))
+            for node in ast.walk(tree):
+                if not isinstance(node, (ast.List, ast.Tuple)) or not node.elts:
+                    continue
+                if not _is_an_interpreter(node.elts[0]):
+                    continue
+                parts = node.elts
+                for first, second in zip(parts, parts[1:]):
+                    if (isinstance(first, ast.Constant) and first.value == "-m"
+                            and isinstance(second, ast.Constant)
+                            and isinstance(second.value, str)):
+                        names.setdefault(second.value.split(".")[0], set()).add(source)
+    return {name: files for name, files in names.items() if name not in RUN_AS_MODULES}
+
+
+def _is_an_interpreter(node):
+    """Whether the first argument names a Python to run.
+
+    `sys.executable`, `self.python`, `env.python` — an attribute called
+    `executable` or `python` — or a literal with `python` in it.
+    """
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return "python" in node.value.lower()
+    if isinstance(node, ast.Attribute):
+        return node.attr in ("executable", "python")
+    if isinstance(node, ast.Call):                      # str(root / ... / "python")
+        return True
+    return isinstance(node, ast.Name) and node.id in ("python", "interpreter")
+
+
 def imports_under(directories):
     """Top-level names imported anywhere in those trees, and where from.
 
@@ -328,7 +387,14 @@ def declared(root=ROOT):
 def undeclared(directories, asked, root=ROOT):
     """Name -> (what is wrong, the files that import it)."""
     wrong = {}
-    for name, files in imports_under(directories).items():
+    # `wanted`, not `asked`: the declared set arrives as `asked`, and a local of
+    # that name here silently turned every membership test into a question about
+    # the wrong dictionary — `PyYAML` was reported as undeclared while it sat in
+    # the manifest, and `pytest` stopped being reported when it should have been.
+    wanted = dict(imports_under(directories))
+    for name, files in modules_run_under(directories).items():
+        wanted.setdefault(name, set()).update(files)
+    for name, files in wanted.items():
         kind, origin = whose(name, directories, root)
         if kind == "unresolved":
             wrong[name] = ("is imported but is neither installed nor a file in this repository", files)

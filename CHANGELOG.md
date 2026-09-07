@@ -538,6 +538,33 @@ text. Outside `make check`, which is offline: the other half of the comparison
 is what the index already serves, and a check that only reads this working tree
 compares two files nobody is installing.
 
+- The upgrade case that starts from a mismatched pair no longer depends on one
+  number existing on an index this project does not control. It tries the
+  releases whose rules named the reader by range, in order, and uses the first
+  that arrives mismatched — and if none can be installed it says which were
+  tried and why, rather than returning early and reporting success. A release
+  blocked by the disappearance of one version is a release blocked for a reason
+  that has nothing to do with it.
+
+**A dependency run as a module is a dependency.** `python -m build` needs
+`build` installed exactly as much as `import build` would, and the gate that
+reads import statements cannot see it — so `build` went undeclared, and it took
+a CI runner image that happened not to carry it to say so. The gate reads
+argument lists now as well as imports, but only lists that start with an
+interpreter: `-m` is a flag for a great many programs, and `git commit -q -m
+"x"` appears here three times. Two modules are named as exempt with the reason —
+`pip`, which is present wherever this project can be installed at all, and
+`venv`, which is the standard library. Declaring either would put something
+false in a manifest other gates read as truth.
+
+Two more things the Windows row found, both ours. The upgrade harness spelled
+its virtual environment's executables as `bin/…`, which is `Scripts\…` there —
+an assumption that travelled unstated until one test built a real directory.
+And a test asserted on `No such file or directory`, which is one operating
+system's sentence for a missing file; what it is about is that the reason
+survives at all, so it asks for the path and a reason rather than for that
+wording.
+
 - **`make standalone`** runs each of the 81 test files on its own.
 - The mutation harness carries 156 rows, each naming the pytest selection or the
   tool that has to go red. Of the rows added this cycle, seven are about the front page: a

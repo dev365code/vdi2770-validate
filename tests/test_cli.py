@@ -166,7 +166,14 @@ def test_a_missing_file_still_says_what_the_os_said(capsys, monkeypatch):
     """
     code = main(["check", "definitely-not-here.zip"])
     assert code == 2
-    assert "No such file or directory" in capsys.readouterr().err
+    said = capsys.readouterr().err
+    # The reason comes from the operating system: `No such file or directory`
+    # here, `The system cannot find the file specified` on Windows. What this
+    # test is about is that the reason survives at all -- the crash it was
+    # written for printed a repr instead -- so it asks for the path and for a
+    # sentence after it, not for one platform's wording.
+    assert "definitely-not-here.zip: cannot read it" in said
+    assert said.strip().endswith((".", "specified", "directory")) or len(said.split("—")[-1].strip()) > 8
 
 
 def test_the_listing_cap_does_not_soften_the_exit_code(capsys, tmp_path):

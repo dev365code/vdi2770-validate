@@ -46,6 +46,13 @@ _CLEAN = {k: v for k, v in os.environ.items()
           if not k.startswith(("PYTHON", "PIP_"))} | {"PYTHONDONTWRITEBYTECODE": "1"}
 
 
+#: Where a virtual environment keeps its executables. `bin` everywhere except
+#: Windows, which uses `Scripts` -- and this file spells the path itself rather
+#: than asking the environment, so the assumption travelled unstated until a
+#: Windows row ran the one test that builds a real directory.
+SCRIPTS = "Scripts" if os.name == "nt" else "bin"
+
+
 def run(*args, **kw):
     kw.setdefault("env", _CLEAN)
     return subprocess.run(args, capture_output=True, text=True, **kw)
@@ -57,8 +64,8 @@ class Env:
     def __init__(self, root: Path):
         self.root = root
         run(sys.executable, "-m", "venv", str(root), check=False)
-        self.pip = str(root / "bin" / "pip")
-        self.python = str(root / "bin" / "python")
+        self.pip = str(root / SCRIPTS / "pip")
+        self.python = str(root / SCRIPTS / "python")
         run(self.pip, "install", "-q", "--upgrade", "pip")
 
     def install(self, *spec):
@@ -84,7 +91,7 @@ class Env:
         return done.returncode, (done.stdout + done.stderr).strip()
 
     def command(self, *args):
-        exe = self.root / "bin" / COMMAND
+        exe = self.root / SCRIPTS / COMMAND
         if not exe.exists():
             return None, f"{COMMAND} is not installed at all"
         done = run(str(exe), *args)
@@ -94,6 +101,15 @@ class Env:
 def expect(condition, said: str):
     if not condition:
         raise AssertionError(said)
+
+
+#: The releases whose rules named the reader by *range* rather than exactly.
+#: One of these has to be installable for the case below to have a mismatch to
+#: upgrade out of. Several, because a version can be yanked or deleted, and a
+#: release blocked by the disappearance of one number on an index this project
+#: does not control is a release blocked for a reason that has nothing to do
+#: with it -- which is what the hard-coded `0.6.0` here did.
+RANGE_ERA = ("0.6.0", "0.5.1", "0.5.0", "0.4.0")
 
 
 #: Two containers that ship here, and what this tool has to say about them. A
@@ -164,7 +180,23 @@ def case_2_upgrade_from_0_6_0(env: Env) -> str:
     genuinely mismatched -- reader 0.4.0 under rules 0.6.0 -- and the question
     is whether one `-U` leaves a working tool rather than a half-moved one.
     """
-    env.install("vdi2770-validate==0.6.0")
+    tried = []
+    for spec in RANGE_ERA:
+        done = env.install(f"vdi2770-validate=={spec}")
+        if done.returncode:
+            tried.append(f"{spec}: the index would not serve it")
+            continue
+        before = env.versions()
+        if before.get("vdi2770") and before["vdi2770"] != before["vdi2770-validate"]:
+            break
+        tried.append(f"{spec}: arrived with a matching pair, so there is no "
+                     f"mismatch here to upgrade out of")
+    else:
+        # Never a silent skip. A case that returns early and reports success is
+        # the shape this whole file exists to refuse.
+        expect(False, "no release from the range era could be installed, so the "
+                      "upgrade this case is about cannot be started: "
+                      + "; ".join(tried))
     before = env.versions()
     # Older, not `== "0.4.0"`. The exact number is a fact about an index this
     # repository does not control: a `vdi2770 0.4.1` upload satisfies `~=0.4.0`
