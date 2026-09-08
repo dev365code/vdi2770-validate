@@ -110,3 +110,30 @@ def test_both_pages_admit_the_thing_that_cannot_be_carried():
         assert "pickle" in text.lower(), (
             f"{page.name} does not mention the one thing the old name cannot "
             f"carry across")
+
+
+def test_a_page_that_names_the_extra_says_how_to_run_it():
+    """`pip install "vdi2770[validate]"` installs no command at all.
+
+    Measured on a clean environment: the whole tool arrives and the scripts
+    directory holds the parser's three and nothing of ours. The console script
+    is declared by the alias distribution, which this install deliberately does
+    not pull in — and that is the right owner, because it is the owner that
+    does not change across the upgrade. If the engine declared the command
+    instead, then upgrading from 0.7 would have pip writing that file from one
+    distribution while removing it from another's record, and which one goes
+    last decides whether the command survives. That is the failure this release
+    exists to remove.
+
+    So the price is that this install has one door, `python -m
+    vdi2770.validate`, and a page that gives the install without naming it
+    hands the reader a tool they cannot start.
+    """
+    for page in (FRONT, ALIAS):
+        if "vdi2770[validate]" not in installs(page):
+            continue
+        assert "python -m vdi2770.validate" in prose(page), (
+            f"{page.name} tells the reader to install `vdi2770[validate]` and "
+            f"never says how to run it. That install carries no command — the "
+            f"console script belongs to the other distribution — so the reader "
+            f"is left with a tool and no way to start it.")

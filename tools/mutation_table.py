@@ -1380,6 +1380,58 @@ PLATFORM_ROWS = [
 
 ]
 
+PAGES_ROWS = [
+    ('pages/the-install-with-no-command-says-how-to-run-it',
+     'README.md',
+     'python -m vdi2770.validate check YOUR-CONTAINER.zip',
+     'vdi2770-validate check YOUR-CONTAINER.zip',
+     ['tests/test_the_two_pages_say_one_thing.py::'
+      'test_a_page_that_names_the_extra_says_how_to_run_it'],
+     'the page tells the reader to install the extra and then gives them a '
+     'command that install does not carry -- measured on a clean environment, '
+     'the scripts directory holds the parser\'s three and nothing of ours'),
+
+    ('pages/the-old-name-page-says-how-to-run-the-extra',
+     'README-vdi2770-validate.md',
+     'run that one as `python -m vdi2770.validate check YOUR-CONTAINER.zip`',
+     'run that one from the command line',
+     ['tests/test_the_two_pages_say_one_thing.py::'
+      'test_a_page_that_names_the_extra_says_how_to_run_it'],
+     'one page tells the reader how to start the tool and the other does not, '
+     'about one install'),
+
+    ('pages/the-half-taken-upgrade-caveat-is-on-the-old-name-page',
+     'README-vdi2770-validate.md',
+     'An installation that takes half the upgrade still has old rules in it.',
+     'An installation that takes half the upgrade is fine.',
+     ['tests/test_the_two_pages_say_one_thing.py::'
+      'test_neither_page_says_the_trap_is_gone'],
+     'the sentence this gate exists to protect could be deleted with the suite '
+     'green, because the gate was looking for a word that appears elsewhere on '
+     'the page'),
+
+
+    ('gates/the-harness-sees-the-command-windows-installed',
+     'tools/check_upgrade_paths.py',
+     '    for suffix in ("", ".exe", ".bat", ".cmd"):',
+     '    for suffix in ("",):',
+     ['tests/test_the_harness_finds_what_pip_installed.py::'
+      'test_the_windows_executable_is_the_command'],
+     'the harness answers "not installed at all" about a Windows installation '
+     'that has the command, and it has an assertion that an install carries no '
+     'command -- absence that is right for the wrong reason'),
+
+    ('gates/a-near-name-is-not-the-command',
+     'tools/check_upgrade_paths.py',
+     '    for suffix in ("", ".exe", ".bat", ".cmd"):',
+     '    for suffix in ("", ".exe", ".bat", ".cmd", "-script.py"):',
+     ['tests/test_the_harness_finds_what_pip_installed.py::'
+      'test_a_name_that_merely_starts_the_same_is_not_the_command'],
+     'setuptools writes `<name>-script.py` beside the executable, and counting '
+     'it as the command makes an install look like it has one'),
+
+]
+
 ABSENT_STDLIB_ROWS = [
     ('gates/a-module-this-platform-lacks-is-still-the-standard-library',
      'tests/test_the_suite_declares_what_it_imports.py',
@@ -1417,6 +1469,8 @@ TABLE += DECLARED_ROWS
 TABLE += UPGRADE_ROWS
 
 TABLE += STREAM_ROWS
+
+TABLE += PAGES_ROWS
 
 TABLE += BASIS_ROWS
 

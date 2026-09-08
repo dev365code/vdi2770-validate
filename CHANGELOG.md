@@ -2,6 +2,35 @@
 
 ## Unreleased
 
+**One documented install had no way to run what it installs.** Measured on a
+clean environment: `pip install "vdi2770[validate]"` brings the whole tool and
+writes no command — the scripts directory holds the parser's three and nothing
+of ours. The console script is declared by the `vdi2770-validate` distribution,
+which that install deliberately does not pull in. Both pages recommended the
+install and neither named `python -m vdi2770.validate`, so a reader who
+followed the line was left holding a tool with no way to start it. Both pages
+say it now, and the harness asserts the absence the sentence depends on, so the
+sentence cannot quietly stop being true.
+
+The command stays where it is rather than moving to the engine, and the reason
+is the upgrade. Whichever distribution declares a console script, pip writes
+that file when it is installed and deletes it when its record is removed — so
+an owner that changes between releases makes the survival of the command
+depend on which of two steps runs last. That is the failure this release
+exists to remove, so the owner does not change and the price is that one
+install has a single door.
+
+**And the harness could not see a command Windows had installed.** It asked
+whether `Scripts/vdi2770-validate` exists, and on Windows that file is
+`vdi2770-validate.exe`. `CreateProcess` appends the extension when running a
+path, which is why `pip` and `python` were fine — the mistake could only show
+up in the one place that asks a question instead of running something, and
+there it answers *not installed at all* about an installation that has it. The
+assertion added above is an assertion of absence, so on Windows it would have
+passed for the wrong reason. The lookup is a function now, fixed against
+synthetic directories, and it declines the near-names setuptools writes beside
+the real one.
+
 **Asking a module a question ran the command line.** `spec_from_loader` asks a
 loader that defines `is_package` whether a name is one, and the alias's loader
 answered by importing — so `importlib.util.find_spec("vdi2770_validate.__main__")`
@@ -772,8 +801,8 @@ in it, and both pages have to say so. The comparison is over prose rather than
 lines, because what a page says does not depend on where it wraps — the first
 version of these assertions failed on pages that said the right thing.
 
-- **`make standalone`** runs each of the 82 test files on its own.
-- The mutation harness carries 157 rows, each naming the pytest selection or the
+- **`make standalone`** runs each of the 83 test files on its own.
+- The mutation harness carries 162 rows, each naming the pytest selection or the
   tool that has to go red. Of the rows added this cycle, seven are about the front page: a
   picture the page no longer points at, a sentence in the terminal shot the tool
   never printed, an elision that stands for the wrong findings, a quoted pin the

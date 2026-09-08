@@ -64,6 +64,29 @@ def run(*args, **kw):
     return subprocess.run(args, capture_output=True, text=True, **kw)
 
 
+def installed_command(directory: Path, command: str):
+    """The file pip wrote for a console script, or `None`.
+
+    Windows gets `vdi2770-validate.exe`, and asking whether
+    `Scripts/vdi2770-validate` exists there answers no. `CreateProcess` appends
+    the extension when running it, which is why `pip` and `python` in this class
+    work unqualified -- so the mistake shows up only in the one place that asks
+    a question instead of running something, and it answers "not installed at
+    all" about an installation that has it. This gate has never run on Windows
+    until now, and an assertion of absence that is right for the wrong reason is
+    the shape this project keeps finding.
+
+    Extensions rather than a glob: `vdi2770-validate.exe` is the command and
+    `vdi2770-validate-script.py` beside it is not, and neither is a name that
+    merely starts the same way.
+    """
+    for suffix in ("", ".exe", ".bat", ".cmd"):
+        here = directory / (command + suffix)
+        if here.exists():
+            return here
+    return None
+
+
 class Env:
     """One throwaway interpreter, with the pip that people have."""
 
@@ -97,8 +120,8 @@ class Env:
         return done.returncode, (done.stdout + done.stderr).strip()
 
     def command(self, *args):
-        exe = self.root / SCRIPTS / COMMAND
-        if not exe.exists():
+        exe = installed_command(self.root / SCRIPTS, COMMAND)
+        if exe is None:
             return None, f"{COMMAND} is not installed at all"
         done = run(str(exe), *args)
         return done.returncode, (done.stdout + done.stderr).strip()
@@ -424,6 +447,16 @@ def case_9_the_extra_runs_without_the_alias(env: Env, wheels: str) -> str:
     expect("vdi2770-validate" not in installed, (
         "the extra pulled the alias in; the point of it is that the tool is one "
         "distribution"))
+    # And therefore no command: the console script is declared by the alias.
+    # Both pages say so and tell the reader to run this install as a module,
+    # so if a command ever does appear here those sentences have gone stale --
+    # which is the only reason this asserts an absence.
+    code, said = env.command("--version")
+    expect(code is None, (
+        f"`vdi2770[validate]` installed a `{COMMAND}` command. That is not "
+        f"wrong in itself, but both public pages tell the reader this install "
+        f"has no command and to use `python -m vdi2770.validate`; they now say "
+        f"something untrue. It answered: {said[:200]}"))
     for path, wanted in VERDICTS:
         done = run(env.python, "-m", "vdi2770.validate", "check", str(ROOT / path))
         expect(done.returncode == wanted, (

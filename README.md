@@ -238,8 +238,25 @@ print(container.kind, len(container.members))
 
 That install has no dependencies, which is a property worth keeping rather than
 an accident: the schema check is the one part that needs a parser, and it is an
-extra. `pip install "vdi2770[validate]"` adds it. A machine that installs the
-readers alone and then asks for a schema check is told so by name — the report
+extra. `pip install "vdi2770[validate]"` adds it.
+
+That install carries no command — the `vdi2770-validate` executable belongs to
+the distribution of that name, and this one deliberately does not pull it in.
+Run it as a module:
+
+```bash
+python -m vdi2770.validate check YOUR-CONTAINER.zip
+```
+
+The command comes with `pip install vdi2770-validate`, and it is the same code
+either way. The reason the command lives there rather than here is the upgrade:
+whichever distribution owns that file, pip writes it when that distribution is
+installed and deletes it when that distribution's record is removed, so an
+owner that changes between releases means an upgrade in which the order of two
+steps decides whether the command survives. This owner does not change.
+
+A machine that installs the readers alone and then asks for a schema check is
+told so by name — the report
 carries `X0` and says in its own summary that one of those errors is this tool
 declining to look, not a verdict on the container.
 

@@ -61,7 +61,11 @@ pip install vdi2770
 
 opens a container, refuses what it should refuse, and hands back a typed model
 with a line number on every node. It decides nothing and has no dependencies.
-`pip install "vdi2770[validate]"` adds the schema parser and the rules.
+`pip install "vdi2770[validate]"` adds the schema parser and the rules — but no
+command: run that one as `python -m vdi2770.validate check YOUR-CONTAINER.zip`.
+The `vdi2770-validate` executable is installed by the distribution of that name,
+which is this one, and it stays there so that no upgrade has two distributions
+taking turns owning the same file.
 
 Apache-2.0. Source, issues and the full documentation:
 <https://github.com/dev365code/vdi2770-validate>.
