@@ -1457,6 +1457,45 @@ PAGES_ROWS = [
      'a run of cases 11 and 13 would report them as 1 and 2, so a failing '
      'platform step names a case nobody can select'),
 
+
+    ('release/ci-must-have-judged-this-commit',
+     '.github/workflows/release.yml',
+     '        run: python tools/check_ci_judged_this_commit.py --commit "$GITHUB_SHA"',
+     '        run: true',
+     ['tests/test_a_release_asks_whether_ci_judged_this_commit.py::'
+      'test_the_gate_is_wired_into_the_release_before_anything_is_published'],
+     'the gate would exist as a file and never run, which is the shape this '
+     'repository keeps finding -- and by the time the reader is published there '
+     'is nothing left to refuse'),
+
+    ('release/a-cancelled-run-is-not-a-pass',
+     'tools/check_ci_judged_this_commit.py',
+     '    if any(r.get("status") == "completed" and r.get("conclusion") == "success"',
+     '    if any(r.get("status") == "completed"',
+     ['tests/test_a_release_asks_whether_ci_judged_this_commit.py::'
+      'test_a_cancelled_run_is_not_a_judgement'],
+     'a cancelled run is a commit nobody judged and it renders grey rather than '
+     'red, so it is the one that gets past a person and has to be stopped by a '
+     'machine'),
+
+    ('release/an-answer-about-another-commit-is-not-an-answer',
+     'tools/check_ci_judged_this_commit.py',
+     '    mine = [r for r in runs if (r.get("headSha") or "") == commit]',
+     '    mine = list(runs)',
+     ['tests/test_a_release_asks_whether_ci_judged_this_commit.py::'
+      'test_a_run_on_another_commit_does_not_count'],
+     'the `--commit` filter is applied by a server, and a filter quietly '
+     "ignored lets yesterday's green authorise today's publish"),
+
+    ('release/no-answer-is-not-a-pass',
+     'tools/check_ci_judged_this_commit.py',
+     '    if runs is None:',
+     '    if False:',
+     ['tests/test_a_release_asks_whether_ci_judged_this_commit.py::'
+      'test_gh_failing_is_a_refusal_not_a_pass'],
+     'a missing `gh`, a token without `actions: read` or a rate limit would '
+     'each turn into a pass, which makes every outage an authorisation'),
+
 ]
 
 ABSENT_STDLIB_ROWS = [

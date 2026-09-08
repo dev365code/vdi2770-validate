@@ -24,6 +24,13 @@ jobs:
   # has been published, which is the only moment a refusal is still free.
   build-reader:
     runs-on: ubuntu-latest
+    permissions:
+      # Only to ask whether CI judged this commit. The default token can read
+      # the repository; run history is a separate scope, and without it the gate
+      # below refuses rather than passing -- which is the behaviour that makes
+      # granting it a decision rather than a formality.
+      actions: read
+      contents: read
     steps:
       # `fetch-depth: 0` is load-bearing: three release-time assertions read
       # the tag history, and without it they take their degraded branch or
@@ -47,6 +54,16 @@ jobs:
       # missed were the three newest -- including the one that stops the reader
       # shipping a moved API under an old version, which is a release concern
       # before it is anything else.
+      # `make check` below is one interpreter on one Linux runner. The matrix
+      # that answers for three Pythons and for Windows runs on push, and until
+      # now nothing connected the two: a tag could be pushed at a moment when
+      # the branch run never finished, was cancelled, or failed. A cancelled run
+      # is the case worth naming -- not a failure and not a pass, a commit
+      # nobody judged, rendered as a grey dot rather than a red one.
+      - name: CI must have judged this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python tools/check_ci_judged_this_commit.py --commit "$GITHUB_SHA"
       - name: The gate must pass on the tagged tree
         run: make check
       # And the sweep must be complete. `make check` reads our half of it; this

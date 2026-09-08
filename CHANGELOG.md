@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+**A tag could authorise a publish on a commit nothing had judged.** The
+release workflow runs the whole gate on the tagged tree, and that is one
+interpreter on one Linux runner; the four-row matrix — three Pythons and
+Windows — runs on push, and nothing connected the two. A tag pushed while the
+branch run was unfinished, cancelled, or failed would have been published
+without anyone noticing. Cancelled is the case worth naming: not a failure and
+not a pass, a commit nobody judged, rendered as a grey dot rather than a red
+one. The release now asks GitHub whether this commit has a completed run that
+passed, before it builds anything and before anything at all is on the index —
+the only moment a refusal is still free. Not knowing is a refusal too: a
+missing `gh`, a token without `actions: read`, a rate limit, each one leaves the
+question unanswered, and unanswered must not authorise an upload. A re-run
+counts, because that is how a commit legitimately goes from red to green.
+
 **The suite had never asked whether the file pip writes starts.** Every
 upgrade case reached the tool through the console script and never through
 `python -m vdi2770_validate` in a state where it works — only in the refusal,
@@ -821,8 +835,8 @@ in it, and both pages have to say so. The comparison is over prose rather than
 lines, because what a page says does not depend on where it wraps — the first
 version of these assertions failed on pages that said the right thing.
 
-- **`make standalone`** runs each of the 83 test files on its own.
-- The mutation harness carries 165 rows, each naming the pytest selection or the
+- **`make standalone`** runs each of the 84 test files on its own.
+- The mutation harness carries 169 rows, each naming the pytest selection or the
   tool that has to go red. Of the rows added this cycle, seven are about the front page: a
   picture the page no longer points at, a sentence in the terminal shot the tool
   never printed, an elision that stands for the wrong findings, a quoted pin the
