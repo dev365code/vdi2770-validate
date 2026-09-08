@@ -75,6 +75,21 @@ jobs:
           tests/test_no_two_distributions_claim_one_path.py
           tests/test_the_two_halves_have_to_agree.py
           tests/test_the_two_halves_carry_one_version.py
+      # The question no reading of a tree can answer: does the file pip wrote
+      # start, on the machine it wrote it on. This release moves where the tool
+      # is installed from and which distribution owns the executable, and this
+      # suite had never run on Windows -- where that file is `vdi2770-validate.exe`
+      # and this harness used to answer "not installed at all" about it. Case 13
+      # is every door on a working install; case 11 is the refusal, which has to
+      # be exit 3 and not the exit 1 that means a container has findings.
+      - name: The wheels install and run on this platform
+        if: runner.os == 'Windows'
+        run: |
+          python -m pip install build
+          python -m build --wheel --outdir dist .
+          python -m build --wheel --outdir dist packages/vdi2770
+          python tools/check_upgrade_paths.py --case 11 --case 13 --from dist
+
       - name: Corpus is unchanged
         if: runner.os != 'Windows'
         run: python tools/vendor_corpus.py --check

@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+**The suite had never asked whether the file pip writes starts.** Every
+upgrade case reached the tool through the console script and never through
+`python -m vdi2770_validate` in a state where it works — only in the refusal,
+where it was returning 1 until a review asked. And none of it had ever run on
+Windows, where the console script is `vdi2770-validate.exe` and this harness's
+own lookup called it absent. A case now installs the built wheels and enters
+every door: the executable, found by name in the scripts directory and reported
+with that directory's contents when it is missing, and both module paths, on
+whichever machine is running. CI runs it on Windows together with the refusal
+case, so the two states this release invented are exercised on the platform
+that has never seen either.
+
+Two things that gate found in itself. Asking for a case that needs the built
+wheels without providing them printed *0 upgrade path(s) end in a tool that
+runs* and exited 0 — so a platform step whose build produced nothing, or whose
+directory name was wrong, would report that the tool runs there while starting
+no interpreter at all. It exits 2 and says which case it could not run. And a
+selection of cases 11 and 13 reported them as 1 and 2, which is a failure
+pointing at a case nobody can ask for.
+
 **One documented install had no way to run what it installs.** Measured on a
 clean environment: `pip install "vdi2770[validate]"` brings the whole tool and
 writes no command — the scripts directory holds the parser's three and nothing
@@ -802,7 +822,7 @@ lines, because what a page says does not depend on where it wraps — the first
 version of these assertions failed on pages that said the right thing.
 
 - **`make standalone`** runs each of the 83 test files on its own.
-- The mutation harness carries 162 rows, each naming the pytest selection or the
+- The mutation harness carries 165 rows, each naming the pytest selection or the
   tool that has to go red. Of the rows added this cycle, seven are about the front page: a
   picture the page no longer points at, a sentence in the terminal shot the tool
   never printed, an elision that stands for the wrong findings, a quoted pin the

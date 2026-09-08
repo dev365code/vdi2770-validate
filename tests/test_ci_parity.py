@@ -23,6 +23,16 @@ OUTSIDE_CHECK = {
                           "the `oracle` workflow, and the divergence counts exclude "
                           "it meanwhile; it stops being acceptable the moment those "
                           "counts are published, which is what a release does",
+    "wheels": "it builds, and building is not judging. It exists so that the "
+              "target below it has something to install, and so that `dist` is "
+              "cleared first -- `--find-links` over a directory holding an "
+              "earlier build resolves to whichever version sorts highest, which "
+              "checks an artifact nobody made in this run",
+    "installed-runs": "it builds both wheels, which needs the network, and it "
+                      "asks the question no reading of a tree can answer: "
+                      "whether the file pip *wrote* starts on the machine it "
+                      "wrote it on. CI runs it on Windows, where that file is "
+                      "spelled `.exe` and this harness used to call it absent",
     "paths-disjoint": "the other half of the comparison is the wheels already on "
                       "the index, and `make check` is offline. A gate that only "
                       "reads this working tree compares two files nobody is "
@@ -172,6 +182,13 @@ def test_ci_runs_nothing_the_gate_does_not():
             "comparison, and `make check` is offline. Two distributions that "
             "come to claim one path do it between one release and the next, "
             "which is a state no reading of this tree can see.",
+        "python tools/check_upgrade_paths.py --case 11 --case 13 --from dist":
+            "it installs the built wheels and runs what pip wrote, and the "
+            "platform is half the question -- `make check` answers it on "
+            "whatever machine a contributor has, and the machine this project "
+            "had never run on is the one where the console script is spelled "
+            "`.exe`. Wheels are built in the step, so it cannot go in an "
+            "offline gate.",
         "python tools/build_zipapp.py --check":
             "it fetches the dependency it bundles, and `make check` is offline "
             "-- the property this tool sells. CI has the network, and a build "
@@ -180,7 +197,8 @@ def test_ci_runs_nothing_the_gate_does_not():
     # The `check` recipes, plus the targets named above — a CI step matching one
     # of those is recognised because somebody wrote down why it is there.
     recipes = [c.replace("$(PYTHON)", "python").strip()
-               for c in recipe_commands(include={"zipapp", "paths-disjoint"})]
+               for c in recipe_commands(include={"zipapp", "paths-disjoint",
+                                                 "wheels", "installed-runs"})]
     for command, reason in CI_ONLY.items():
         assert reason and command in recipes, (
             f"{command!r} is named as CI-only and the Makefile does not run it")
@@ -979,6 +997,7 @@ def test_every_case_the_harness_runs_asks_that_question(monkeypatch):
         "case_10_the_alias_brings_the_extra",
         "case_11_an_old_reader_under_new_rules_refuses",
         "case_12_the_window",
+        "case_13_every_door_on_a_working_install",
     )
     ASKS_SOMETHING_ELSE = {
         "case_7_removing_the_old_name_leaves_the_tool":
@@ -1286,3 +1305,59 @@ def test_nothing_publishes_before_the_check_that_guards_it():
                 f"condition on a publish is how the publish outlives the gate "
                 f"that failed; the trigger is where a release decides whether "
                 f"to happen.")
+
+
+def test_a_selection_that_runs_nothing_is_not_a_pass(monkeypatch, capsys):
+    """`--case 13` without `--from` printed "0 upgrade path(s) end in a tool
+    that runs" and exited 0.
+
+    Every case past the third needs the wheels being built, and a selection
+    naming one without them is skipped — deliberately, so that the local run
+    is not a build. But the skip and the success were the same exit code, so a
+    CI step whose build silently produced nothing, or whose directory name was
+    wrong, would report that the platform runs the tool while having started no
+    interpreter at all. This project has shipped that exact gate once: a test-id
+    check that collected nothing and passed on everything.
+    """
+    import sys as _sys
+
+    _sys.path.insert(0, str(ROOT / "tools"))
+    import check_upgrade_paths as harness
+
+    monkeypatch.setattr(_sys, "argv", ["check_upgrade_paths.py", "--case", "13"])
+    code = harness.main()
+    said = capsys.readouterr()
+    assert code != 0, "asking for a case that cannot run reported success"
+    assert "13" in (said.out + said.err), (
+        f"and did not name the case it could not run: {said.out + said.err}")
+
+
+def test_the_harness_numbers_a_selected_case_by_its_own_number(monkeypatch, capsys):
+    """`--case 11 --case 13` has to report 11 and 13.
+
+    The numbers are how a person selects a case and how a failing CI step is
+    read, and counting the chosen ones from 1 renames them to 1 and 2 — a
+    platform failure pointing at a case nobody can ask for. It is also silent:
+    every line still says `ok`.
+    """
+    import sys as _sys
+
+    _sys.path.insert(0, str(ROOT / "tools"))
+    import check_upgrade_paths as harness
+
+    seen = []
+    monkeypatch.setattr(harness, "CASES",
+                        [lambda env, n=n: seen.append(n) or f"case {n}"
+                         for n in range(1, 14)])
+    monkeypatch.setattr(harness, "NEEDS_WHEELS", frozenset())
+    monkeypatch.setattr(harness, "Env", lambda root: None)
+    monkeypatch.setattr(harness, "name_of", lambda case: "a-case")
+    monkeypatch.setattr(_sys, "argv",
+                        ["check_upgrade_paths.py", "--case", "11", "--case", "13"])
+    assert harness.main() == 0
+    printed = capsys.readouterr().out
+    assert seen == [11, 13], f"ran {seen}, not the cases asked for"
+    for wanted in ("  ok    11 ", "  ok    13 "):
+        assert wanted in printed, (
+            f"the report does not number the case by what was asked for; it "
+            f"said:\n{printed}")

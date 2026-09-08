@@ -1430,6 +1430,33 @@ PAGES_ROWS = [
      'setuptools writes `<name>-script.py` beside the executable, and counting '
      'it as the command makes an install look like it has one'),
 
+
+    ('gates/every-door-on-a-working-install-is-one-of-the-cases',
+     'tools/check_upgrade_paths.py',
+     '         case_13_every_door_on_a_working_install]',
+     '         case_12_the_window]',
+     ['tests/test_ci_parity.py::test_every_case_the_harness_runs_asks_that_question'],
+     'the only case that asks whether the file pip wrote starts -- and the only '
+     'one CI runs on Windows -- would be outside the harness while the workflow '
+     'still named its number'),
+
+    ('gates/a-selection-that-runs-nothing-is-not-a-pass',
+     'tools/check_upgrade_paths.py',
+     '    if not chosen:',
+     '    if False:',
+     ['tests/test_ci_parity.py::test_a_selection_that_runs_nothing_is_not_a_pass'],
+     'a platform step whose build produced nothing would print "0 upgrade '
+     'path(s) end in a tool that runs" and exit 0 -- the same shape as the '
+     'test-id gate this project shipped that collected nothing and passed'),
+
+    ('gates/a-case-is-numbered-by-what-was-asked-for',
+     'tools/check_upgrade_paths.py',
+     '    for n, case in zip(numbers, chosen):',
+     '    for n, case in enumerate(chosen, start=1):',
+     ['tests/test_ci_parity.py::test_the_harness_numbers_a_selected_case_by_its_own_number'],
+     'a run of cases 11 and 13 would report them as 1 and 2, so a failing '
+     'platform step names a case nobody can select'),
+
 ]
 
 ABSENT_STDLIB_ROWS = [

@@ -6,7 +6,7 @@ RUFF_VERSION   := 0.16.3
 PYTEST_VERSION := 8.3.4
 XMLSCHEMA_VERSION := 4.2.0
 
-.PHONY: paths-disjoint upgrade-paths zipapp check lint test fixtures corpus coverage-check rules-doc oracle-half sdist-runs-its-own-tests wheel-installs-and-runs reader-api-matches-its-version mutations standalone clean oracle-fully-swept
+.PHONY: paths-disjoint upgrade-paths wheels installed-runs zipapp check lint test fixtures corpus coverage-check rules-doc oracle-half sdist-runs-its-own-tests wheel-installs-and-runs reader-api-matches-its-version mutations standalone clean oracle-fully-swept
 
 check: lint fixtures test corpus coverage-check rules-doc oracle-half reader-api-matches-its-version sdist-runs-its-own-tests wheel-installs-and-runs
 
@@ -57,6 +57,25 @@ paths-disjoint:
 # `pip check`, which reports a destroyed install as fine.
 upgrade-paths:
 	$(PYTHON) tools/check_upgrade_paths.py
+
+# Deliberately not in `check`: it builds both wheels, which needs the network
+# for the build backend and is not what a contributor's edit-run loop should
+# do. It is the question no reading of a tree can answer -- whether the file
+# pip *wrote* starts on the machine it wrote it on. This release moves where
+# the tool is installed from and which distribution owns the executable, and
+# the suite had never run on Windows, where that file is spelled `.exe` and
+# this harness used to call it absent.
+#
+# `dist` is cleared first: `--find-links` over a directory holding a previous
+# build resolves to whichever version sorts highest, which is a check on an
+# artifact nobody made in this run.
+wheels:
+	rm -rf dist
+	$(PYTHON) -m build --wheel --outdir dist .
+	$(PYTHON) -m build --wheel --outdir dist packages/vdi2770
+
+installed-runs: wheels
+	$(PYTHON) tools/check_upgrade_paths.py --case 11 --case 13 --from dist
 
 # Deliberately not in `check`: it copies the tree, rebuilds the fixtures and runs
 # pytest once per row, which is minutes rather than seconds. It answers the

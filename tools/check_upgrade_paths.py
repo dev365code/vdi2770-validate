@@ -622,6 +622,58 @@ def case_12_the_window(env: Env, wheels: str) -> str:
     return "; ".join(said)
 
 
+def case_13_every_door_on_a_working_install(env: Env, wheels: str) -> str:
+    """Three ways in, on whatever machine this is running on.
+
+    The other cases ask what an upgrade *leaves*, and they ask it through the
+    console script. This one asks whether the thing pip actually wrote starts —
+    and it asks on the platform, which is the half of the question a matrix
+    that has only ever run on Linux cannot answer. The release this belongs to
+    moves where the code is installed from and which distribution owns the
+    executable, so "the file is there and it runs" stops being a formality.
+
+    The file first, by name and in its directory, rather than inferred from an
+    exit code: an install with no command and an install whose command exits
+    non-zero are different failures, and a case that cannot tell them apart
+    reports the wrong one. Windows writes `vdi2770-validate.exe`, which is the
+    spelling that made this harness answer *not installed at all* about an
+    installation that had it.
+
+    Then both module doors. `python -m vdi2770_validate` is what code written
+    against the old name runs, and until a review asked, nothing had run it in
+    a state where it works — only in the refusal, where it was returning 1.
+    """
+    done = _from_the_wheels(env, wheels, COMMAND)
+    expect(done.returncode == 0, f"the alias would not install:\n{done.stderr}")
+    both_halves_run(env, "a plain install of the old name")
+
+    # The file itself, by name and in its directory. `both_halves_run` reaches
+    # the command through a lookup that answers `None` for an absent one, and
+    # an install with no command then fails the same way as an install whose
+    # command exits wrong -- two different repairs behind one message. On
+    # Windows the file is `vdi2770-validate.exe`, which is the spelling that
+    # made this harness say *not installed at all* about an installation that
+    # had it.
+    here = env.root / SCRIPTS
+    exe = installed_command(here, COMMAND)
+    expect(exe is not None, (
+        f"pip installed no {COMMAND} in {here}. It holds: "
+        f"{sorted(f.name for f in here.iterdir())}"))
+
+    # And the two module doors, in the state where they are supposed to work.
+    # Nothing ran `python -m vdi2770_validate` outside the refusal until a
+    # review asked, and there it was returning 1.
+    for path, wanted in VERDICTS:
+        for door in ("vdi2770_validate", "vdi2770.validate"):
+            done = run(env.python, "-m", door, "check", str(ROOT / path))
+            said = (done.stdout + done.stderr).strip()
+            expect(done.returncode == wanted, (
+                f"`python -m {door} check {path}` exited {done.returncode} and "
+                f"this container is a {'clean' if wanted == 0 else 'failing'} "
+                f"one: {said[:300]}"))
+    return f"{exe.name if exe else '(no command)'} and two module doors, both verdicts"
+
+
 #: Every case, in the order they run. `case_4` takes the directory of wheels
 #: as well, so it is held here partially applied at call time rather than
 #: listed apart -- kept out of this list, it was the one case no structural
@@ -636,7 +688,8 @@ CASES = [case_1_clean, case_2_upgrade_from_0_6_0, case_3_the_pin_is_exact,
          case_9_the_extra_runs_without_the_alias,
          case_10_the_alias_brings_the_extra,
          case_11_an_old_reader_under_new_rules_refuses,
-         case_12_the_window]
+         case_12_the_window,
+         case_13_every_door_on_a_working_install]
 
 #: The cases that need the artefacts being built rather than a name on an
 #: index. Everything about the merged shape is one of these: 0.8 is not
@@ -654,7 +707,7 @@ def cases_to_run(wheels=None, only=None):
     """
     import functools
     chosen = []
-    for case in ([CASES[only - 1]] if only else CASES):
+    for case in ([CASES[n - 1] for n in only] if only else CASES):
         if case in NEEDS_WHEELS:
             if not wheels:
                 continue
@@ -669,14 +722,31 @@ def name_of(case) -> str:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--case", type=int, help="run one case by its number")
+    # Repeatable. One flag taking one number meant that asking for two cases
+    # took two interpreters' worth of setup and two builds, and the platform
+    # step that needs exactly two of them is the reason this exists.
+    ap.add_argument("--case", type=int, action="append", metavar="N",
+                    help="run this case by its number; repeat for several")
     ap.add_argument("--from", dest="wheels", metavar="DIR",
                     help="also upgrade to the wheels in DIR — the release being made")
     args = ap.parse_args()
     chosen = cases_to_run(wheels=args.wheels, only=args.case)
 
     failed = []
-    for n, case in enumerate(chosen, start=args.case or 1):
+    numbers = args.case or list(range(1, len(CASES) + 1))
+    # A selection that runs nothing is a broken invocation, not a pass. Every
+    # case past the third needs the wheels being built and is skipped without
+    # `--from` -- deliberately, so a local run is not a build -- but the skip
+    # and the success printed the same thing and exited the same way. A CI step
+    # whose build produced nothing, or whose directory name was wrong, would
+    # then report that this platform runs the tool while starting no
+    # interpreter at all.
+    if not chosen:
+        asked = ", ".join(str(n) for n in numbers)
+        print(f"case {asked} needs the wheels being built and no --from was "
+              f"given, so nothing ran. That is not a pass.", file=sys.stderr)
+        return 2
+    for n, case in zip(numbers, chosen):
         with tempfile.TemporaryDirectory() as tmp:
             env = Env(Path(tmp) / "venv")
             try:
