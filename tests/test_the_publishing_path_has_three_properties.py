@@ -266,3 +266,30 @@ def test_the_wheels_a_push_builds_are_the_wheels_a_tag_builds():
     assert set(makefile) == set(release), (
         f"`make wheels` builds {makefile} and the release builds {release}; a "
         f"contributor's rehearsal is of something else")
+
+
+def test_the_release_builds_the_single_file_it_hands_out():
+    """The front page points at `releases/latest/download/vdi2770.pyz`.
+
+    That URL resolves against whichever release is newest, so a release without
+    that asset does not merely lack a file — it breaks a link on the front page
+    the moment it is created. And the release workflow did not build it: for
+    0.8.0 the file was produced by hand, which is the arrangement that works
+    until the day somebody forgets, and nothing would have said so.
+
+    Asserted here rather than trusted, and asserted about the workflow rather
+    than about a release, because a release is a thing that has already
+    happened by the time anybody could read it.
+    """
+    import re
+
+    body = RELEASE.read_text(encoding="utf-8")
+    page = (ROOT / "README.md").read_text(encoding="utf-8")
+    if "releases/latest/download/vdi2770.pyz" not in page:
+        return                       # the page stopped promising it
+    assert "build_zipapp.py" in body, (
+        "the front page points at `vdi2770.pyz` in the latest release and the "
+        "release workflow does not build one, so creating a release breaks "
+        "that link")
+    assert re.search(r"vdi2770\.pyz", body), (
+        "the workflow builds the single file and does not name it as an asset")

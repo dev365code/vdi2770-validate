@@ -290,6 +290,25 @@ jobs:
       # that simulates it.
       - name: An install somebody already has must survive this release
         run: python tools/check_upgrade_paths.py --from dist
+      # The single file, built here rather than by hand. The front page points
+      # at `releases/latest/download/vdi2770.pyz`, and that URL resolves against
+      # whichever release is newest -- so a release without it does not merely
+      # lack an asset, it breaks a link on the front page the moment it exists.
+      # For 0.8.0 somebody built it and remembered to attach it. That is the
+      # arrangement that works until the day nobody does.
+      #
+      # Here rather than in a publishing job: this one already has the tree and
+      # the network, and a job holding a token that publishes should run as
+      # little as it can. The builder refuses on its own if the bundle names the
+      # machine that made it.
+      - name: Build the single file
+        run: |
+          python tools/build_zipapp.py --check -o pyz/vdi2770.pyz
+          (cd pyz && sha256sum vdi2770.pyz | tee SHA256SUMS)
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
+        with:
+          name: dist-single-file
+          path: pyz/
 
   # The only thing between the two uploads. It holds the workflow's floor --
   # `contents: read`, nothing else -- and no environment. (It said "no token",
