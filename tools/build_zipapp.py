@@ -131,7 +131,17 @@ def stage(into: Path) -> None:
                    # than behind a helper: the gate that checks for this reads
                    # the line, and a function call is not a line it can read.
                    env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"})
-    for junk in list(into.glob("*.dist-info")) + list(into.glob("__pycache__")):
+    # `bin/` too. `pip install --target` writes the console scripts a
+    # dependency declares, and the first line of each is the absolute path of
+    # the interpreter that installed them -- so the bundle carries the build
+    # machine's filesystem layout, and two machines building this file produce
+    # different bytes for a reason that has nothing to do with the code.
+    # Measured: two builds of one commit differed in exactly those three
+    # entries and agreed on the other two hundred and three. A zipapp cannot
+    # run them either -- they are files in an archive, not executables on a
+    # PATH -- so nothing is lost by leaving them out.
+    for junk in (list(into.glob("*.dist-info")) + list(into.glob("__pycache__"))
+                 + [into / "bin", into / "Scripts"]):
         shutil.rmtree(junk, ignore_errors=True)
     (into / "__main__.py").write_text(ENTRY, encoding="utf-8")
 
@@ -189,6 +199,44 @@ def create_archive(source: Path, target: Path) -> None:
     target.chmod(0o755)
 
 
+def nothing_names_this_machine(pyz: Path) -> int:
+    """The bundle says nothing about where it was built.
+
+    Two things, and the second is why the first matters. No entry under `bin/`
+    or `Scripts/`, because those are pip's console scripts and their shebang is
+    an absolute path. And no entry containing the directory this build ran in,
+    because that is the general form: a bundle that names a filesystem is a
+    bundle two machines cannot produce alike, and it publishes whoever built it.
+
+    Checked on the artifact rather than on the staging directory. A staging
+    step that stops removing something is exactly the change this has to
+    notice, and the artifact is the only place that cannot be argued with.
+    """
+    said = []
+    with zipfile.ZipFile(pyz) as z:
+        for name in z.namelist():
+            if name.startswith(("bin/", "Scripts/")):
+                said.append(f"{name} is a console script pip wrote; its first "
+                            f"line is the path of the interpreter that "
+                            f"installed it, and a zipapp cannot run it anyway")
+        here = str(ROOT).encode()
+        home = str(Path.home()).encode()
+        for name in z.namelist():
+            body = z.read(name)
+            for needle, what in ((here, "the directory this was built in"),
+                                 (home, "the home directory of whoever built it")):
+                if needle in body:
+                    said.append(f"{name} contains {what}")
+                    break
+    for line in said:
+        print(f"  {line}", file=sys.stderr)
+    if said:
+        print(f"\n{len(said)} thing(s) in the bundle name this machine.",
+              file=sys.stderr)
+        return 1
+    return 0
+
+
 def smoke_test(pyz: Path) -> int:
     """Run it. Not import it — a file that imports and cannot answer is the
     failure this exists to catch, and the two are easy to confuse."""
@@ -221,6 +269,11 @@ def main() -> int:
     digest = hashlib.sha256(target.read_bytes()).hexdigest()
     print(f"{target} ({target.stat().st_size:,} bytes)")
     print(f"sha256 {digest}")
+    # Always, not only under `--check`: this is a property of the file that is
+    # about to be published, and the run that builds a release asset is exactly
+    # the run that would skip the checking.
+    if nothing_names_this_machine(target):
+        return 1
     return smoke_test(target) if args.check else 0
 
 

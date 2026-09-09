@@ -25,6 +25,16 @@ on.
 
 The rest of this section is the detail, ordered newest first.
 
+**The single file no longer names the machine that built it.** `pip install
+--target` writes the console scripts a dependency declares, and the first line
+of each is the absolute path of the interpreter that installed them, so the
+bundle carried a filesystem layout. Two builds of one commit differed in exactly
+those three entries and agreed on the other two hundred and three. A zipapp
+cannot run them — they are files in an archive, not executables on a PATH — so
+they are left out, and the builder checks its own output before anybody can
+publish it: nothing under `bin/`, and no entry containing the directory it was
+built in or the home directory of whoever built it.
+
 **The engine's licence notice said it carried nothing, and it carries VDI's
 schema.** The XML schema and the IDTA class table shipped inside
 `vdi2770-validate` until this release, and its notice accounted for them while
