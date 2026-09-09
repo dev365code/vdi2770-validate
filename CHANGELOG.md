@@ -25,6 +25,18 @@ on.
 
 The rest of this section is the detail, ordered newest first.
 
+**Publishing this release made two of its own checks stale, and they said
+so.** The upgrade matrix asks the index what somebody already has, and two rows
+were written when the newest published release was 0.7.0. One asserted that the
+installed alias names the engine with an exact pin — the shape this release
+retires — and the other built its "before" state with a bare `pip install`,
+which stopped being the older release the moment the newer one existed. Both
+now name what they mean: the requirement has to floor the engine at the alias's
+own version or higher, and the installation to upgrade from is the newest
+published release older than the one in this tree, asked of the index rather
+than written down. Only the rows that consult the index went red, which is why
+they consult it.
+
 **The single file no longer names the machine that built it.** `pip install
 --target` writes the console scripts a dependency declares, and the first line
 of each is the absolute path of the interpreter that installed them, so the
