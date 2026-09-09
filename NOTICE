@@ -8,44 +8,22 @@ Licensed under the Apache License, Version 2.0.
 Third-party material bundled with this project
 --------------------------------------------------------------------------
 
-1. VDI 2770 XML schema — packages/vdi2770/src/vdi2770/validate/data/VDI2770_Schema_2019-08-23.xsd
+None is in this wheel. `vdi2770-validate` is two lines of alias: it installs
+`vdi2770[validate]` and makes the old import name resolve to it, and the only
+files it ships are its own source, this notice and the licence beside it.
 
-   Published free of charge by VDI (Verein Deutscher Ingenieure) on the
-   VDI 2770 guideline programme page. Redistributed verbatim, unmodified.
-   Retrieved 2026-08-21 from
-   https://www.vdi.de/fileadmin/pages/vdi_de/redakteure/richtlinien/dateien/vdi2770/VDI_2770_1_de_Deklaration_des_XML-Schemas_-_Declaration_of_the_XML_model.xsd
-   The download page states no licence or terms of use. The file is treated
-   as VDI's work and is redistributed unchanged. See docs/licensing.md.
+The material this repository carries is in the engine distribution, and is
+accounted for in its NOTICE and in THIRD_PARTY.md, which is the same file in
+both:
 
-2. VDI 2770 document class table — packages/vdi2770/src/vdi2770/validate/data/document-classes.json
+  * VDI's XML schema and the IDTA document class table ship inside `vdi2770`,
+    under `vdi2770/validate/data/`.
+  * The reference implementation's corpus (`corpus/examples/`) and its message
+    list (`tests/data/oracle-messages.json`) are test material and are in
+    neither wheel; they are in this repository and in its sdist.
 
-   Table 1 of IDTA 02004 "Handover Documentation", Version 2.0.1 (November 2025),
-   Industrial Digital Twin Association e.V., published in
-   github.com/admin-shell-io/submodel-templates under CC BY 4.0.
-   Modified: the twelve rows were extracted and reformatted as JSON.
-   https://creativecommons.org/licenses/by/4.0/
-
-3. Reference message catalogue — tests/data/oracle-messages.json
-
-   The English validation messages of the same reference implementation,
-   reproduced so the licensing gate in tests/test_catalogue.py can check that no
-   remedy text in this project was copied from them. Test data only; nothing in
-   the shipped package reads it.
-   MIT License, Copyright (C) 2021 Johannes Schmidt.
-
-4. Conformance corpus — corpus/
-
-   Copied from github.com/DigitalDataChainConsortium/vdi2770 (examples/),
-   MIT License, Copyright (C) 2021 Johannes Schmidt. See corpus/NOTICE.
-
-5. Differential oracle evidence — docs/oracle-sweep.json
-
-   What the same reference implementation reported for each container in the
-   corpus, recorded as message codes only. Derived from MIT-licensed software,
-   Copyright (C) 2021 Johannes Schmidt. Repository material: it is in this
-   repository's source distribution and in neither wheel — `check_wheel.py`
-   fails the build if anything outside the package directory ships. A test
-   asserts it holds identifiers and no message text.
+The two distributions are released together under one version, so the notices
+that apply to a machine holding both are that pair read side by side.
 
 The text of the VDI 2770 guideline itself (VDI 2770 Blatt 1:2020-04) is sold
 by DIN Media and is NOT included, quoted, or paraphrased anywhere in this

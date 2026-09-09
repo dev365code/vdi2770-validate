@@ -15,8 +15,10 @@ whether we changed it.
 | Everything else | this project | Apache-2.0 | n/a |
 | `xmlschema` (runtime dependency, not bundled) | [sissaschool/xmlschema](https://github.com/sissaschool/xmlschema) | MIT | No |
 
-The corpus and the message list are **test material** and are not in the wheel —
-`pyproject.toml` ships only `src/vdi2770_validate`. The MIT-derived English and
+The corpus and the message list are **test material** and are in neither wheel.
+The schema and the class table are in the engine's wheel, under
+`vdi2770/validate/data/`; they were in the rules' wheel until 0.8.0 merged the
+two distributions. The MIT-derived English and
 German class names inside `document-classes.json` **are** in the wheel, which is
 why that row names two licences.
 

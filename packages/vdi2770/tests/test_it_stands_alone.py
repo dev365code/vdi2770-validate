@@ -108,18 +108,31 @@ def test_the_notice_travels_with_this_package_too():
     `license-files` named only that.
 
     One distribution now, and the attribution still belongs with the code: this
-    package's NOTICE says what its own half bundles (nothing), which the
-    validator's list cannot say for it. Whether the distribution *packages* this
-    file is a claim about the distribution, so it is asserted in the
-    repository's own suite -- this one only reaches inside the package."""
+    package's NOTICE says what *this* wheel carries, which the validator's list
+    cannot say for it. Whether the distribution *packages* this file is a claim
+    about the distribution, so it is asserted in the repository's own suite --
+    this one only reaches inside the package.
+
+    It said "None." until 0.8.0, and that was true while the schema and the
+    table shipped in the other distribution. The merge moved them here and the
+    sentence stayed, so the notice inside this wheel denied carrying material
+    that was sitting two directories away from it. The docstrings around this
+    assertion had already been updated to say the files had moved; the assertion
+    had not, which is how a suite goes on agreeing with a sentence nobody
+    believes any more.
+    """
     notice = HERE / "NOTICE"
     assert notice.exists(), "this package has no NOTICE"
     text = notice.read_text(encoding="utf-8")
     assert text.startswith("vdi2770\n"), "the NOTICE names the wrong package"
     assert "Apache License" in text
-    assert "None." in text, (
-        "this package bundles nothing third-party; the NOTICE should say so "
-        "rather than repeating the validator's list")
+    for carried in (SRC / "vdi2770" / "validate" / "data").glob("*"):
+        if carried.name in ("rules.json",) or carried.is_dir():
+            continue
+        assert carried.name in text, (
+            f"this package ships {carried.name} and its NOTICE does not name "
+            f"it. The notice travels inside the wheel; a wheel whose notice is "
+            f"silent about what it carries makes a statement, and it is wrong.")
 
 
 

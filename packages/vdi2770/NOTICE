@@ -8,15 +8,33 @@ Licensed under the Apache License, Version 2.0.
 Third-party material bundled with this package
 --------------------------------------------------------------------------
 
-None. This package contains no schema, no table, no corpus and no vendored
-text of any kind — it is a reader with no dependencies, and the only files it
-ships besides its own source are this notice and the licence beside it.
+Two files, both under `vdi2770/validate/data/` in the wheel:
 
-The material the sibling distribution `vdi2770-validate` bundles — VDI's XML
-schema, the IDTA document class table, the reference implementation's corpus —
-is accounted for in that distribution's own NOTICE and THIRD_PARTY.md, and none
-of it is here. The two are released together under one version, so the notices
-that apply to a machine holding both are that pair read side by side.
+1. VDI 2770 XML schema — vdi2770/validate/data/VDI2770_Schema_2019-08-23.xsd
+
+   Published free of charge by VDI (Verein Deutscher Ingenieure) on the
+   VDI 2770 guideline programme page. Redistributed verbatim, unmodified.
+   Retrieved 2026-08-21 from
+   https://www.vdi.de/fileadmin/pages/vdi_de/redakteure/richtlinien/dateien/vdi2770/VDI_2770_1_de_Deklaration_des_XML-Schemas_-_Declaration_of_the_XML_model.xsd
+   The download page states no licence or terms of use and reserves VDI's
+   rights. The file is treated as VDI's work and is redistributed unchanged.
+   See THIRD_PARTY.md beside this file.
+
+2. VDI 2770 document class table — vdi2770/validate/data/document-classes.json
+
+   Table 1 of IDTA 02004 "Handover Documentation" v2.0.1, CC BY 4.0
+   © Industrial Digital Twin Association, extracted and reformatted as JSON;
+   the `ddcReference` names beside them are MIT © 2021 Johannes Schmidt.
+   See THIRD_PARTY.md.
+
+Nothing else here is anybody else's: no corpus, no message list, no vendored
+text. Those are test material and are in neither wheel.
+
+Until 0.8.0 these two files shipped in `vdi2770-validate` and this notice said
+this package carried none. They moved when the two distributions became one;
+the sentence did not, and for one release this file was wrong about the
+artifact it travels in. A gate now opens each wheel and asks whether its own
+notice names what it carries.
 
 The text of the VDI 2770 guideline itself (VDI 2770 Blatt 1:2020-04) is sold by
 DIN Media and is NOT included, quoted, or paraphrased anywhere in this project.

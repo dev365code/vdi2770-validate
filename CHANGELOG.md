@@ -25,6 +25,32 @@ on.
 
 The rest of this section is the detail, ordered newest first.
 
+**The engine's licence notice said it carried nothing, and it carries VDI's
+schema.** The XML schema and the IDTA class table shipped inside
+`vdi2770-validate` until this release, and its notice accounted for them while
+the engine's said *"Third-party material bundled with this package: None. This
+package contains no schema, no table, no corpus and no vendored text of any
+kind."* That was true, and then the merge moved both files into the engine and
+neither notice moved with them. The engine's wheel would have gone to the index
+carrying material redistributed under a reservation of rights, beside a
+statement that it carried none — inside the artifact, where nothing can be taken
+back.
+
+Both notices now describe the wheel they travel in, and a gate opens each wheel
+and asks whether its own notice names what it carries. That is the other
+direction from the check already there: one asks whether the licence files are
+present, this asks whether they are true. The question has to be put from the
+artifact towards the paperwork, because a notice that mentions nothing has no
+citations to check and the existing gate had nothing to look at.
+
+**And published prose no longer says when the work happened.** How long
+something took, or on which day it happened, is not a property of the code, and
+it ships in every sdist. A sweep by hand missed that class three times — once to
+a phrase split across a line break, once to a file list that left out the test
+files, which are prose too, and once inside the commit message written to remove
+one. It is a gate now: every tracked text file, read with its line breaks taken
+out.
+
 **The licence notice named two bundled files at the paths they used to
 have.** `NOTICE` ships inside both wheels and says, for each third-party file
 it carries, where that file came from and what may be done with it. The schema
@@ -972,7 +998,7 @@ in it, and both pages have to say so. The comparison is over prose rather than
 lines, because what a page says does not depend on where it wraps — the first
 version of these assertions failed on pages that said the right thing.
 
-- **`make standalone`** runs each of the 86 test files on its own.
+- **`make standalone`** runs each of the 87 test files on its own.
 - The mutation harness names, for every claim this project makes about a gate,
   the pytest selection or the tool that has to go red when the claim is broken.
   Several of its rows are about the front page: a

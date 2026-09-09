@@ -271,6 +271,64 @@ def smoke(wheels: list) -> list:
     return found
 
 
+#: Files a wheel carries that are somebody else's work. Extensions rather than a
+#: list of names: the point is to notice a *new* one arriving without its
+#: paperwork, and a list of names cannot do that.
+NOT_OURS = (".xsd", ".json", ".xml", ".csv")
+
+#: Ours, and named so that a data file this project wrote is not demanded of a
+#: notice that has nothing to say about it.
+OUR_OWN = ("rules.json",)
+
+
+def the_notice_knows_what_the_wheel_carries(wheel: Path) -> list:
+    """Every third-party file in the wheel is accounted for in its own NOTICE.
+
+    The other direction from the check above it. That one asks whether the
+    licence files are present; this asks whether they are *true*, which is a
+    different question and the one that was wrong.
+
+    Measured on the merge: the schema and the class table moved from the alias's
+    wheel into the engine's, and the notices did not move with them. So the
+    engine's wheel carried VDI's schema -- redistributed under a reservation of
+    rights -- beside a NOTICE reading *"Third-party material bundled with this
+    package: None. This package contains no schema, no table, no corpus and no
+    vendored text of any kind."* Both halves of that were false, and the file
+    saying it ships inside the artifact, where it cannot be taken back.
+
+    Nothing saw it. The gate that checks a document does not cite a missing file
+    reads citations, and a notice that cites nothing has none to check. The
+    question has to be asked from the artifact towards the paperwork.
+    """
+    said = []
+    with zipfile.ZipFile(wheel) as z:
+        names = [n for n in z.namelist()
+                 if not n.split("/")[0].endswith(".dist-info")]
+        notice = next((n for n in z.namelist() if n.endswith("/NOTICE")), None)
+        if notice is None:
+            return [f"{wheel.name} carries no NOTICE"]
+        body = z.read(notice).decode("utf-8", "replace")
+    carried = [n for n in names
+               if n.endswith(NOT_OURS) and not n.endswith(OUR_OWN)]
+    for one in carried:
+        base = one.rsplit("/", 1)[-1]
+        if base not in body:
+            said.append(
+                f"{wheel.name} ships {one}, which is not this project's work, "
+                f"and its NOTICE does not name it. A licence notice that is "
+                f"silent about what the artifact carries is worse than no "
+                f"notice: it is a statement, and it is wrong.")
+    # And the reverse sentence, which is the one that was actually there: a
+    # notice claiming the wheel carries nothing, in a wheel that carries
+    # something. Checked as words rather than inferred, because "None." is what
+    # a person writes and what a person then forgets to revisit.
+    if carried and re.search(r"bundled with this package\s*-+\s*None", body):
+        said.append(
+            f"{wheel.name} says it bundles no third-party material and ships "
+            f"{len(carried)}: {', '.join(sorted(carried))}")
+    return said
+
+
 def main() -> int:
     problems, built = [], []
     with tempfile.TemporaryDirectory() as out:
@@ -291,6 +349,7 @@ def main() -> int:
                               + [project / "build"]):
                     shutil.rmtree(stale, ignore_errors=True)
             found = check(project, roots, notices, wheel, names)
+            found += the_notice_knows_what_the_wheel_carries(wheel)
             problems += found
             built.append(wheel)
             # Only when it does. Printing the good news unconditionally after a

@@ -31,9 +31,9 @@ def test_the_notices_travel_with_the_wheel():
     `THIRD_PARTY.md` carries the MIT and CC BY texts for the bundled schema and
     the table derived from an IDTA publication — and those ship with `vdi2770`
     now, so the notice for them is asserted against that manifest rather than
-    this one. A distribution that bundles nothing of anybody else's does not
-    need to carry a third party's terms, and saying it does would make the
-    obligation look like decoration.
+    this one. This distribution bundles nothing of anybody else's -- it is two
+    lines of alias -- so it does not need to carry a third party's terms, and
+    saying it does would make the obligation look like decoration.
     """
     files = license_files()
     for wanted in ("LICENSE", "NOTICE"):
@@ -43,9 +43,9 @@ def test_the_notices_travel_with_the_wheel():
 
 def test_the_reader_packages_its_own_notice():
     """The reader is its own distribution and its own wheel, and its NOTICE says
-    something the root one cannot: that this package bundles nothing of anybody
-    else's. It has to be declared in the reader's own manifest, because that is
-    the only one its wheel is built from."""
+    something the root one cannot: what *that* wheel carries. It has to be
+    declared in the reader's own manifest, because that is the only one its
+    wheel is built from."""
     reader = ROOT / "packages" / "vdi2770" / "pyproject.toml"
     # And `THIRD_PARTY.md`, because the schema and the IDTA-derived table moved
     # into this distribution with the validator that reads them.

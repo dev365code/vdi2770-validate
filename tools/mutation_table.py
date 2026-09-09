@@ -1441,14 +1441,38 @@ PUBLISHING_PATH_ROWS = [
 
     ('gates/the-licence-notice-is-checked-like-any-other-document',
      'NOTICE',
-     'packages/vdi2770/src/vdi2770/validate/data/VDI2770_Schema_2019-08-23.xsd',
-     'src/vdi2770_validate/data/VDI2770_Schema_2019-08-23.xsd',
+     'tests/data/oracle-messages.json',
+     'tests/data/oracle-messages-that-moved.json',
      ['tests/test_the_docs_count_what_they_claim.py::'
       'test_no_document_cites_a_file_that_is_not_here'],
-     'NOTICE ships inside both wheels and names, for each bundled third-party '
-     'file, where it came from -- and it named two of them at the paths they '
-     'had before the merge, because it is not a `.md` and no gate read it'),
+     'NOTICE ships inside both wheels and names files by path -- and it named '
+     'two of them at the paths they had before the merge, because it is not a '
+     '`.md` and no gate read it. It writes them without backticks, so the '
+     'pattern that reads the documents walked past them as well'),
 
+
+    ('release/the-notice-knows-what-the-wheel-carries',
+     'packages/vdi2770/NOTICE',
+     'Two files, both under `vdi2770/validate/data/` in the wheel:',
+     'None. This package contains no schema, no table, no corpus and no vendored text of any kind.',
+     ['tools/check_wheel.py'],
+     "the engine's wheel carries VDI's schema, redistributed under a "
+     'reservation of rights, and its own licence notice said it carried no '
+     'third-party material at all -- inside the artifact, where it cannot be '
+     'taken back'),
+
+    ('release/the-prose-sweep-reads-something',
+     'tests/test_public_prose_says_what_not_when.py',
+     '    for name in _names():',
+     '    for name in []:',
+     ['tests/test_public_prose_says_what_not_when.py::'
+      'test_the_sweep_actually_reads_something'],
+     'a sweep whose file list comes back empty passes every assertion above it, '
+     'which is the gate this project has already shipped once -- one that '
+     'collected nothing and reported success on everything. Aimed at the list '
+     'rather than at the git call, because emptying the git branch only sends '
+     'it down the filesystem walk, which fills the list back up: the first '
+     'version of this row survived'),
 ]
 
 PAGES_ROWS = [

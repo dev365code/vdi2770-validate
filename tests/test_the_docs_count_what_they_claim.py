@@ -429,9 +429,13 @@ def test_no_document_cites_a_file_that_is_not_here():
     # listed -- and NOTICE, which ships inside both wheels as the licence
     # notice, was naming two bundled files at the paths they had before the
     # merge. Sixteen citations were being made and none of them checked.
-    assert seen == 35, (
-        f"{seen} citations found, not 19. If you added or removed one, say so here; "
-        f"if you did not, six of them just stopped being checked.")
+    # 35 to 31 when the two notices were made true about the wheels they travel
+    # in: the root one stopped listing files it does not carry, and the engine's
+    # names its two by the path they have *inside the wheel*, which is not a
+    # repository path and is not this pattern's business.
+    assert seen == 31, (
+        f"{seen} citations found, not 31. If you added or removed one, say so "
+        f"here; if you did not, some of them just stopped being checked.")
 
 
 def test_the_changelog_counts_the_rules_that_fire_because_we_declined():
@@ -517,8 +521,8 @@ def test_the_changelog_counts_the_trailer_shapes_it_claims_are_pinned():
 def test_contributing_is_right_about_who_signed_off():
     """`CONTRIBUTING.md` said every commit carries a `Signed-off-by` line.
 
-    Thirty-two do not. The practice was in place, lapsed for one afternoon, and
-    resumed the next day — and nothing noticed, because `.github/dco.yml` checks
+    Thirty-two do not. The practice was in place, lapsed for a run of commits,
+    and resumed — and nothing noticed, because `.github/dco.yml` checks
     pull requests and every one of those commits arrived by a direct push. A
     public file stating something about this repository that `git log` refutes
     is the defect this suite exists for.
