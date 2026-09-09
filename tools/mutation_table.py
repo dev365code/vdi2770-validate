@@ -1512,6 +1512,17 @@ PUBLISHING_PATH_ROWS = [
      'leave the release half-finished, which is the state this ordering exists '
      'to avoid'),
 
+    ('docs/the-provenance-table-counts-the-catalogue',
+     'tools/rules_doc.py',
+     '        cells = [str(sum(1 for r in here if r.obligation.value == k)) for k in kinds]',
+     '        cells = [str(sum(1 for r in catalogue if r.obligation.value == k)) for k in kinds]',
+     ['tools/rules_doc.py --check'],
+     'every layer would show the catalogue-wide count instead of its own, and '
+     'a table that says the same thing on every row says nothing. Named against '
+     'the generator rather than against the page: the page is committed, so a '
+     'mutation of the generator leaves it correct and the tests that read it '
+     'green -- the first version of this row survived exactly that way'),
+
 ]
 
 PAGES_ROWS = [

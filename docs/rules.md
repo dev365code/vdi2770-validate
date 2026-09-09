@@ -16,6 +16,18 @@ tool, because both are errors on purpose and severity cannot carry the differenc
 
 41 rules.
 
+Where each layer stands:
+
+| layer | `schema` | `table` | `container` | `reference` | `ours` | total |
+|---|---|---|---|---|---|---|
+| `container` | 0 | 0 | 3 | 3 | 7 | 13 |
+| `files` | 0 | 0 | 0 | 4 | 0 | 4 |
+| `metadata` | 0 | 2 | 0 | 7 | 3 | 12 |
+| `pdf` | 0 | 0 | 0 | 1 | 4 | 5 |
+| `schema` | 1 | 0 | 1 | 0 | 4 | 6 |
+| `tool` | 0 | 0 | 0 | 0 | 1 | 1 |
+| **total** | **1** | **2** | **4** | **15** | **19** | **41** |
+
 ## container
 
 ### `Z1` — The file is not a readable ZIP archive

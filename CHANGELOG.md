@@ -25,6 +25,14 @@ on.
 
 The rest of this section is the detail, ordered newest first.
 
+**The rule page shows where each layer stands.** It already said how many
+rules hold each `obligation`; it did not say how those fall across the layers,
+which is the shape of the answer somebody wants when they ask what a judgement
+rests on. The container layer is ZIP and XML mechanics, the files layer is
+entirely the reference implementation's, and the pdf layer is almost all our own.
+The table is generated from the catalogue and its every cell is compared against
+it, because a table of counts written by hand is right on the day it is written.
+
 **Two things about the tag check were asserted by their presence rather than
 by their meaning.** Replacing `${GITHUB_REF_NAME#v}` with a number written in
 the workflow left every test of it green — a release comparing every future tag
@@ -1043,7 +1051,7 @@ in it, and both pages have to say so. The comparison is over prose rather than
 lines, because what a page says does not depend on where it wraps — the first
 version of these assertions failed on pages that said the right thing.
 
-- **`make standalone`** runs each of the 87 test files on its own.
+- **`make standalone`** runs each of the 88 test files on its own.
 - The mutation harness names, for every claim this project makes about a gate,
   the pytest selection or the tool that has to go red when the claim is broken.
   Several of its rows are about the front page: a

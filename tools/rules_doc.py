@@ -67,6 +67,27 @@ def page() -> str:
         out.append(f"- **`{kind.value}`** ({len(held)}) — {meaning}")
     out += ["", f"{len(catalogue)} rules.", ""]
 
+    # And how those fall across the layers, which is the shape of the answer
+    # somebody wants when they ask what this tool's judgements rest on: the
+    # container layer is ZIP and XML mechanics, the files layer is entirely the
+    # reference implementation's, and the pdf layer is almost all our own. The
+    # counts come from the catalogue rather than from a sentence, because a
+    # table of numbers written by hand is right on the day it is written.
+    kinds = [k.value for k in BASIS]
+    out += [
+        "Where each layer stands:",
+        "",
+        "| layer | " + " | ".join(f"`{k}`" for k in kinds) + " | total |",
+        "|---" * (len(kinds) + 2) + "|",
+    ]
+    for layer in sorted({r.layer for r in catalogue}):
+        here = [r for r in catalogue if r.layer == layer]
+        cells = [str(sum(1 for r in here if r.obligation.value == k)) for k in kinds]
+        out.append(f"| `{layer}` | " + " | ".join(cells) + f" | {len(here)} |")
+    totals = [str(sum(1 for r in catalogue if r.obligation.value == k)) for k in kinds]
+    out += ["| **total** | " + " | ".join(f"**{n}**" for n in totals)
+            + f" | **{len(catalogue)}** |", ""]
+
     for layer in sorted({r.layer for r in catalogue}):
         out += [f"## {layer}", ""]
         for r in (x for x in catalogue if x.layer == layer):
