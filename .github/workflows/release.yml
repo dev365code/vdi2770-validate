@@ -340,12 +340,20 @@ jobs:
       # and refuses at the end rather than guessing, because an alias published
       # against an engine that is not there cannot be fixed under this version
       # number.
+      # The waits grow. A hundred seconds was not enough on the release this
+      # step was written for: the JSON view listed the engine and the file
+      # index had not caught up, and the job failed with the alias unpublished.
+      # Waiting is cheap and a half-finished release is not, so the patience is
+      # bounded but generous, and the numbers live here rather than in prose.
       - name: The engine this floors on must be on the index
         run: |
-          for attempt in 1 2 3 4 5; do
+          # One invocation, and the first wait is zero. Written the other way --
+          # a loop plus a last attempt after it -- the command appears twice,
+          # and killing one of them leaves the other: the row that proves this
+          # step still runs the gate survived exactly that way.
+          for wait in 0 20 30 45 60 90 120; do
+            [ "$wait" -gt 0 ] && { echo "not yet; waiting ${wait}s"; sleep "$wait"; }
             if python tools/check_release_order.py; then exit 0; fi
-            echo "the index does not serve it yet (attempt $attempt of 5); waiting"
-            sleep 20
           done
           echo "the engine this floors on never appeared on the index"
           exit 1
@@ -355,14 +363,62 @@ jobs:
       - name: And a machine can actually install it
         run: |
           version="${GITHUB_REF_NAME#v}"
-          for attempt in 1 2 3 4 5; do
+          for wait in 0 20 30 45 60 90 120; do
+            [ "$wait" -gt 0 ] && { echo "not yet; waiting ${wait}s"; sleep "$wait"; }
             if python -m pip download --no-deps --only-binary :all: \
                  --dest /tmp/probe "vdi2770==$version"; then exit 0; fi
-            echo "not installable yet (attempt $attempt of 5); waiting"
-            sleep 20
           done
           echo "vdi2770 $version is listed and cannot be installed"
           exit 1
+
+  # After both are on the index, ask the whole matrix again -- this time about
+  # the world as it now is.
+  #
+  # The rows that consult the index are correct until the publish and can be
+  # wrong after it: one of them asserted the shape of requirement this release
+  # retired, and another built its "before" state with a bare `pip install`,
+  # which stops naming the older release the moment a newer one exists. Both
+  # went stale on publication, and the first thing that noticed was the next
+  # push to `main` -- a red badge on a repository whose release had just
+  # succeeded.
+  #
+  # The matrix that runs before the publish cannot see this: it asks about an
+  # index that does not yet hold this release. This job publishes nothing and
+  # holds no token; it can only report, and a failure here is a repair to make
+  # rather than a release to take back.
+  the-index-as-it-now-is:
+    needs: publish-rules
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip build
+          python -m pip install -e packages/vdi2770
+          python -m pip install -e ".[dev]"
+      # PyPI's file index can trail its JSON view, and the job before this one
+      # waited for the engine rather than the alias. Ask for the alias the way
+      # a person would, and give it the same bounded patience.
+      - name: Both halves are installable
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          for wait in 0 20 30 45 60 90 120; do
+            [ "$wait" -gt 0 ] && { echo "not yet; waiting ${wait}s"; sleep "$wait"; }
+            if python -m pip download --no-deps --only-binary :all: \
+                 --dest /tmp/both "vdi2770==$version" \
+                 "vdi2770-validate==$version"; then exit 0; fi
+          done
+          echo "the release is on the index and cannot both be installed"
+          exit 1
+      - name: The matrix, against the index this release just changed
+        run: |
+          rm -rf dist
+          python -m build packages/vdi2770 --outdir dist/
+          python -m build --outdir dist/
+          python tools/check_upgrade_paths.py --from dist
 
   publish-rules:
     needs: [reader-is-on-the-index, upgrade-gate]

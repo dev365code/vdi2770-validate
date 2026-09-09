@@ -313,6 +313,15 @@ def test_each_build_asks_the_index_about_the_distribution_it_actually_builds():
         built = built_by(block)
         if not asked and not built:
             continue
+        # Only builds whose output leaves the job. The pairing exists because
+        # an unchecked version could reach the index, and a job that builds
+        # wheels to feed a gate and uploads nothing cannot put a number
+        # anywhere: the check it would be paired with has already run on the
+        # artifacts that will actually be published. Read from `upload-artifact`
+        # rather than from the job's name, so renaming a job does not move this
+        # test's subject.
+        if built and not asked and "upload-artifact" not in block:
+            continue
         assert len(asked) == 1 and len(built) == 1, (
             f"{name} asks the index about {asked} and builds {built}. A job "
             f"that does one without the other leaves the pairing to whoever "

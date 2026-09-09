@@ -293,3 +293,43 @@ def test_the_release_builds_the_single_file_it_hands_out():
         "that link")
     assert re.search(r"vdi2770\.pyz", body), (
         "the workflow builds the single file and does not name it as an asset")
+
+
+def test_the_release_asks_the_index_about_itself_after_publishing():
+    """The rows that consult the index go stale the moment a release lands.
+
+    Two of them did, an hour after 0.8.0: one asserted the shape of requirement
+    the release had just retired, and the other built its "before" state with a
+    bare `pip install`, which stopped naming the older release the moment a
+    newer one existed. Both were correct until the publish and wrong after it,
+    and the first thing that noticed was the next push to `main` — a red badge
+    on a repository whose release had just succeeded.
+
+    The matrix that runs before the publish cannot see this: it asks about an
+    index that does not yet hold this release. So the same matrix runs once
+    more at the end, against the index as it now stands, in a job that publishes
+    nothing and can only report.
+    """
+    doc = workflow(RELEASE)
+    after = [name for name, job in doc["jobs"].items()
+             if any("check_upgrade_paths.py" in (s.get("run") or "")
+                    for s in job.get("steps", []))
+             and publishers(doc) & set(upstream(doc["jobs"], name))]
+    assert after, (
+        "nothing runs the upgrade matrix after the release is on the index, so "
+        "a row that goes stale on publication is first seen by whoever pushes "
+        "next")
+    for name in after:
+        assert name not in publishers(doc), (
+            f"{name} both publishes and re-checks; a job that reports should "
+            f"not be one that uploads")
+
+
+def upstream(jobs, name, seen=None):
+    seen = seen if seen is not None else set()
+    needs = jobs[name].get("needs") or []
+    for up in ([needs] if isinstance(needs, str) else needs):
+        if up not in seen:
+            seen.add(up)
+            upstream(jobs, up, seen)
+    return seen
