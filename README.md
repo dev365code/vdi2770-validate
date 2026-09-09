@@ -260,13 +260,49 @@ told so by name — the report
 carries `X0` and says in its own summary that one of those errors is this tool
 declining to look, not a verdict on the container.
 
+### What is stable here, and what is not
+
+**This is 0.x, and the packaging can still move.** This release is the example:
+the validator used to be its own distribution and now lives inside the reader,
+with the old name kept working as an alias. That changed how the tool is
+installed and which distribution owns the executable, and it went out under a
+minor version.
+
+What has not moved, and what a build script can rely on:
+
+- **The verdicts.** A rule that fires today fires tomorrow on the same
+  container, and a rule's severity does not change quietly: every one of the
+  41 is recorded against the reference implementation, and the divergences are
+  published rather than reconciled.
+- **The exit codes.** `0` no error, `1` at least one finding at the chosen
+  severity or an unreadable path, `2` nothing could be read at all, `3` this
+  tool refused to judge because its two halves disagree about which release
+  they are. `3` is not a verdict on any container.
+- **The command line.** `vdi2770-validate check <container>` and its options.
+  There is one console script, and two module doors that run the same code:
+  `python -m vdi2770_validate` for anything written against the old name, and
+  `python -m vdi2770.validate`, which is how a `pip install "vdi2770[validate]"`
+  is run because that install carries no command.
+- **The report.** The JSON a run writes, and the `schemaVersion` inside it.
+- **The old import name.** `import vdi2770_validate` resolves to the same
+  objects as `vdi2770.validate` rather than to copies of them.
+
+What is not stable: which distribution ships which file, the wheel layout, and
+the module paths under `vdi2770.validate`. A pickle written through the new
+path names the new modules, and no aliasing carries that across.
+
+Releases come in batches rather than one per fix. Three things are published as
+soon as they are ready — a security fix, a wrong verdict (a conforming package
+refused, or a non-conforming one passed), and following a change in the
+standard. Everything else waits for the next batch.
+
 ### What changed in 0.8, and what it means for an installation you already have
 
 The readers and the rules used to be two distributions that had to match, and
 `vdi2770-validate` named the reader with an exact pin so the pair could not be
 half-moved. They are one distribution now. `vdi2770-validate` is the old import
 name kept working: two lines that make it the same object as `vdi2770.validate`,
-asking for `vdi2770[validate]>=0.8.0.dev0` — its own version as the floor, so
+asking for `vdi2770[validate]>=0.8.0` — its own version as the floor, so
 installing it can never leave you an engine older than the one it stands for.
 
 **`pip install -U vdi2770-validate` is the upgrade, and it is now an ordinary

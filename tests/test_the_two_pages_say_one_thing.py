@@ -132,7 +132,13 @@ def test_a_page_that_names_the_extra_says_how_to_run_it():
     for page in (FRONT, ALIAS):
         if "vdi2770[validate]" not in installs(page):
             continue
-        assert "python -m vdi2770.validate" in prose(page), (
+        # The command, with something to run it on. The bare module path also
+        # appears where the page lists what is stable, so asking for it alone
+        # was satisfied by a sentence a hundred lines away -- measured: deleting
+        # the instruction next to the install left this green. A page that
+        # names the door in a list of guarantees has still not told anybody how
+        # to open it.
+        assert "python -m vdi2770.validate check" in prose(page), (
             f"{page.name} tells the reader to install `vdi2770[validate]` and "
             f"never says how to run it. That install carries no command — the "
             f"console script belongs to the other distribution — so the reader "

@@ -1,19 +1,46 @@
 # Changelog
 
-## Unreleased
+## 0.8.0 — 2026-09-09
 
-**The release chain is now rehearsed on every push, and the rehearsal
-includes the part that broke.** A gate exercised for the first time by the event
-it guards is not a gate: the wheel-download defect above had been red since the
-merge and could only fail on a tag. So the build-and-check half of the release
-runs on `main` and on every pull request — the same jobs in the same order,
-handing each other the same named artifacts — and stops before anything talks
-to an index. The artifact handover is the point rather than a detail, because
-that is precisely where the defect lived; a rehearsal that built both wheels in
-one job would have been green through all of it. The order gate is exercised
-both ways there too, against a tag made for the purpose: it has to pass when
-this release is tagged and refuse when it is not, because a refusal nobody has
-seen is a refusal nobody has.
+**One distribution now, and the old name still works.** The validator used to
+be `vdi2770-validate`, a distribution of its own that pinned the reader
+exactly; it lives in `vdi2770` now, and `vdi2770-validate` is two lines that
+make the old import name the same object as the new one. If you install it, you
+get the whole tool, as you always did.
+
+**`pip install -U vdi2770-validate` is the upgrade, and it is now an ordinary
+one.** On an installation of 0.7 that same command used to leave a tool that
+could not run, because the two distributions shared file paths. They share none
+now.
+
+**If the two halves that are loaded disagree about which release they are, the
+tool refuses to judge** rather than sign a verdict it cannot account for: exit
+3, on a line beginning `vdi2770-validate: INSTALLATION`. That is not a verdict
+on any container.
+
+Two verdicts changed. A delivery whose main document refers to documents it
+does not carry now fails, and a PDF scan that stopped after 257 streams now
+reaches the 512 it advertises. Every finding also says what its judgement rests
+on.
+
+The rest of this section is the detail, ordered newest first.
+
+**The question the release asks of its own wheels is now asked on every
+push.** A gate exercised for the first time by the event it guards is not a
+gate: the wheel-download defect below had been red since the merge and could
+only fail on a tag. CI builds both distributions the way the release builds
+them and runs the whole upgrade matrix against them, so the twelve paths and
+the platform case answer on every commit rather than on a tag.
+
+Two things that could not move there. The artifact handover between the release
+jobs — which is where the defect actually lived, a job asking for one of the two
+names it needed — is asserted by reading the workflow instead: every name a job
+downloads has to be made by a job it waits for, and the job that installs and
+upgrades has to receive both distributions and both checksum records, named
+rather than counted. And the three commands that build these wheels, in the
+release, in CI and in the Makefile, are now one command; they had drifted, and
+the parity gate waves `python -m build` through as setup, so nothing compared
+them.
 
 Three smaller things in the same pass. Three jobs carried no `permissions:`
 block, so they took whatever the repository's default happened to be — measured
@@ -151,7 +178,7 @@ for.
 
 **The version guard called a correct engine too old.** Reading every digit out of
 a version string takes the `1` in `post1` for another release component: measured,
-`0.8.0` was "older than" `0.8.0.post1`, `0.8.0rc1`, `0.8.0.dev0`, `0.8.0+ds1`,
+`0.8.0` was "older than" `0.8.0.post1`, `0.8.0rc1`, `0.8.0`, `0.8.0+ds1`,
 and `1.0` was older than `1.0.0` — five ways at once, in a guard whose comment
 said it stopped at the first marker. It compares the release segment only, and
 returns nothing on anything it cannot read: a reader whose `__version__` is a
@@ -285,7 +312,7 @@ it could have said anything. The gallery of what the tool catches names rule ids
 and the word each one prints, both checked against the catalogue and against the
 renderer's own label table rather than against a second copy of it.
 
-The version is `0.8.0.dev0` on both halves and the pin moved with it, which is
+The version is `0.8.0` on both halves and the pin moved with it, which is
 what this project does between releases — 0.7.0 is cut and published, and work
 above it is not 0.7.0. The front page quotes that pin in the paragraph explaining
 why it is exact, and that quotation is now held to `pyproject.toml`: it is the

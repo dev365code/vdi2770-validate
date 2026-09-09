@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "vdi2770-validate"
-version = "0.8.0.dev0"
+version = "0.8.0"
 # What this distribution is, rather than what it brings. It brings the whole
 # tool -- that is the point of it -- but a page describing a conformance checker
 # for a package containing two lines of alias is the kind of near-truth this
@@ -37,7 +37,7 @@ classifiers = [
 # this ships is a two-line alias: there is no version of it that can
 # disagree with a version of the engine. The exact pin existed to stop the
 # pair being half-moved, and after the merge there is no pair to move.
-dependencies = ["vdi2770[validate]>=0.8.0.dev0"]
+dependencies = ["vdi2770[validate]>=0.8.0"]
 
 [project.urls]
 Homepage = "https://github.com/dev365code/vdi2770-validate"
@@ -104,4 +104,9 @@ testpaths = ["tests", "packages/vdi2770/tests"]
 # `packages/vdi2770/tests` too: `nodisk.py` lives with the package whose
 # promise it guards, and both suites import the one copy.
 pythonpath = ["src", "packages/vdi2770/src", "packages/vdi2770/tests"]
-addopts = "-q"
+# `-rs`: a skipped test is a gate that did not run, and a bare count says
+# nothing about which one. Two of the skips here are the version gates,
+# which have nothing to compare until the release is tagged and do run in
+# the release workflow -- but that is a sentence somebody has to be able to
+# check, and they cannot check it against "3 skipped".
+addopts = "-q -rs"
