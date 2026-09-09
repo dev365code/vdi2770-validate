@@ -377,6 +377,12 @@ def test_no_document_cites_a_file_that_is_not_here():
 
     docs = ["README.md", "CONTRIBUTING.md", "SECURITY.md", "packages/vdi2770/README.md"]
     docs += [str(p.relative_to(ROOT)) for p in sorted((ROOT / "docs").glob("*.md"))]
+    # And the files that ship inside both wheels as the licence notice. NOTICE
+    # names, for each third-party file, where it came from and what may be done
+    # with it -- and it named two of them at the paths they had before the
+    # merge, so a legal notice inside a published wheel pointed at files that
+    # are not there. It was outside every gate because it is not a `.md`.
+    docs += ["NOTICE", "THIRD_PARTY.md"]
 
     texts = {d: (ROOT / d).read_text(encoding="utf-8") for d in docs if (ROOT / d).exists()}
     texts["CHANGELOG.md (newest section)"] = newest_changelog_section()
@@ -384,8 +390,22 @@ def test_no_document_cites_a_file_that_is_not_here():
     pattern = re.compile(
         r"`((?:tests|tools|src|packages|docs|corpus)/[\w./-]+\.(?:py|json|md|xsd|java))"
         r"(?:::(\w+))?`")
+    # NOTICE is plain text and writes its paths bare, so the backtick pattern
+    # walked straight past both of the ones that had moved. Anchored to a known
+    # top-level directory and not preceded by a `/`, which is what keeps the
+    # retrieval URLs in that same file from matching.
+    bare = re.compile(
+        r"(?<![/\w.-])((?:tests|tools|src|packages|docs|corpus)/[\w./-]+"
+        r"\.(?:py|json|md|xsd|java))")
+
     seen = 0
     for doc, prose in texts.items():
+        for path in bare.findall(prose) if doc in ("NOTICE",) else []:
+            seen += 1
+            assert (ROOT / path).exists(), (
+                f"{doc} cites {path}, which is not in this repository. This "
+                f"file ships inside both wheels as the licence notice, so a "
+                f"path that has moved is a legal notice pointing at nothing.")
         for path, func in pattern.findall(prose):
             seen += 1
             f = ROOT / path
@@ -403,7 +423,13 @@ def test_no_document_cites_a_file_that_is_not_here():
     # section is history and out of scope by design -- but the number moving for
     # that reason is worth writing down, because it will move again at every
     # release and "the count dropped" must not become a thing anyone waves past.
-    assert seen == 19, (
+    #
+    # 19 to 35 when NOTICE and THIRD_PARTY.md came into scope. They were outside
+    # every gate because one is not a `.md` and the other was simply never
+    # listed -- and NOTICE, which ships inside both wheels as the licence
+    # notice, was naming two bundled files at the paths they had before the
+    # merge. Sixteen citations were being made and none of them checked.
+    assert seen == 35, (
         f"{seen} citations found, not 19. If you added or removed one, say so here; "
         f"if you did not, six of them just stopped being checked.")
 

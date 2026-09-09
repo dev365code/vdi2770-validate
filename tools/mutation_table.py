@@ -17,7 +17,7 @@ Here it is a table, and the harness checks itself as hard as it checks the code:
   * **the bytecode has to be the new bytecode.** Restoring a file to its previous
     *size* leaves a `.pyc` that CPython still considers valid — source mtime is
     stored at one-second resolution — so a mutation can look like it survived
-    when it never loaded. Twice in one day. Every apply and every restore clears
+    when it never loaded. Every apply and every restore clears
     `__pycache__` and touches the file.
   * **the tests have to exist.** A selection that collects nothing exits 5, not
     1, and that is a broken row rather than a killed mutant.
@@ -1437,6 +1437,17 @@ PUBLISHING_PATH_ROWS = [
      'too, so what every push checks and what a tag publishes stop being the '
      'same artifacts -- and the parity gate waves `python -m build` through as '
      'setup, so nothing else compares those lines'),
+
+
+    ('gates/the-licence-notice-is-checked-like-any-other-document',
+     'NOTICE',
+     'packages/vdi2770/src/vdi2770/validate/data/VDI2770_Schema_2019-08-23.xsd',
+     'src/vdi2770_validate/data/VDI2770_Schema_2019-08-23.xsd',
+     ['tests/test_the_docs_count_what_they_claim.py::'
+      'test_no_document_cites_a_file_that_is_not_here'],
+     'NOTICE ships inside both wheels and names, for each bundled third-party '
+     'file, where it came from -- and it named two of them at the paths they '
+     'had before the merge, because it is not a `.md` and no gate read it'),
 
 ]
 

@@ -25,6 +25,15 @@ on.
 
 The rest of this section is the detail, ordered newest first.
 
+**The licence notice named two bundled files at the paths they used to
+have.** `NOTICE` ships inside both wheels and says, for each third-party file
+it carries, where that file came from and what may be done with it. The schema
+and the class table moved when the two distributions became one, and the notice
+did not follow — so a legal notice inside a published wheel pointed at nothing.
+It was outside every gate: the check that no document cites a missing file
+reads `.md` files, and `NOTICE` is not one. It reads it now, and `THIRD_PARTY.md`
+with it, which brings sixteen previously unchecked citations into scope.
+
 **The step that compares the tag to the version could not run.** Both
 publishing jobs read the version by importing the package, in an environment
 holding `build` and `packaging` and nothing else. That worked while the alias
@@ -899,7 +908,7 @@ not.
 - And the Windows row now does what the comment beside it says. The previous
   commit narrowed the test step and left seven others running there, so the
   workflow described a scope it did not have — which is the shape of claim this
-  cycle has spent its time removing.
+  project spends its time removing.
 
 - `make lint` runs with `--no-cache`, in the Makefile and in CI both. ruff keys
   its cache on file contents and settings, and a tree where files had moved kept

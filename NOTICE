@@ -8,7 +8,7 @@ Licensed under the Apache License, Version 2.0.
 Third-party material bundled with this project
 --------------------------------------------------------------------------
 
-1. VDI 2770 XML schema — src/vdi2770_validate/data/VDI2770_Schema_2019-08-23.xsd
+1. VDI 2770 XML schema — packages/vdi2770/src/vdi2770/validate/data/VDI2770_Schema_2019-08-23.xsd
 
    Published free of charge by VDI (Verein Deutscher Ingenieure) on the
    VDI 2770 guideline programme page. Redistributed verbatim, unmodified.
@@ -17,7 +17,7 @@ Third-party material bundled with this project
    The download page states no licence or terms of use. The file is treated
    as VDI's work and is redistributed unchanged. See docs/licensing.md.
 
-2. VDI 2770 document class table — src/vdi2770_validate/data/document-classes.json
+2. VDI 2770 document class table — packages/vdi2770/src/vdi2770/validate/data/document-classes.json
 
    Table 1 of IDTA 02004 "Handover Documentation", Version 2.0.1 (November 2025),
    Industrial Digital Twin Association e.V., published in
