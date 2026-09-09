@@ -95,3 +95,63 @@ def test_both_publishing_jobs_run_it():
     assert sorted(asked) == [".", "packages/vdi2770"], (
         f"the release checks the tag for {asked}; there are two distributions "
         f"and each has to be checked against its own manifest")
+
+
+def test_the_tag_it_checks_is_the_tag_that_fired_the_workflow():
+    """Not a number written in the file.
+
+    Measured: replacing `${GITHUB_REF_NAME#v}` with `0.8.0` left every test
+    here green, and a release workflow that compares every future tag against
+    0.8.0 checks nothing — it agrees with itself. The tag has to come from the
+    ref that started the run, and the `v` has to come off, because the tags are
+    `v0.8.0` and the manifests say `0.8.0`.
+    """
+    import re
+
+    body = (ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
+    given = re.findall(r"check_tag_is_the_version\.py --tag (\S+)", body)
+    assert given, "nothing runs the tag check"
+    for one in given:
+        assert one == '"${GITHUB_REF_NAME#v}"', (
+            f"the tag check is given {one}, which is not the tag this run was "
+            f"started by. A workflow that compares every tag against a number "
+            f"in its own text agrees with itself.")
+
+
+def test_the_check_runs_before_every_upload():
+    """Both calls stand upstream of both publishers.
+
+    Measured: moving one of them into a job that runs *after* the first upload
+    left every test here green. By then the engine is on the index and the only
+    thing a refusal can do is leave the release half-finished, which is the
+    state this whole ordering exists to avoid.
+    """
+    import yaml
+
+    doc = yaml.safe_load((ROOT / ".github" / "workflows" / "release.yml")
+                         .read_text(encoding="utf-8"))
+    jobs = doc["jobs"]
+
+    def upstream(name, seen=None):
+        seen = seen if seen is not None else set()
+        needs = jobs[name].get("needs") or []
+        for up in ([needs] if isinstance(needs, str) else needs):
+            if up not in seen:
+                seen.add(up)
+                upstream(up, seen)
+        return seen
+
+    checks = {name for name, job in jobs.items()
+              if any("check_tag_is_the_version.py" in (s.get("run") or "")
+                     for s in job.get("steps", []))}
+    publishers = {name for name, job in jobs.items()
+                  if any("pypi-publish" in str(s.get("uses", ""))
+                         for s in job.get("steps", []))}
+    assert len(checks) == 2 and publishers, (checks, publishers)
+    for who in publishers:
+        before = upstream(who)
+        missing = checks - before
+        assert not missing, (
+            f"{who} uploads without waiting for {sorted(missing)}. Once the "
+            f"first upload has happened a refusal cannot undo it; it can only "
+            f"leave the release half-finished.")

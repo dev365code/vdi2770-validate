@@ -1473,6 +1473,45 @@ PUBLISHING_PATH_ROWS = [
      'rather than at the git call, because emptying the git branch only sends '
      'it down the filesystem walk, which fills the list back up: the first '
      'version of this row survived'),
+    ('release/the-release-builds-the-file-the-page-points-at',
+     '.github/workflows/release.yml',
+     '      - name: Build the single file',
+     '      - name: Build the single file (skipped)\n        if: false',
+     ['tests/test_the_publishing_path_has_three_properties.py::'
+      'test_the_release_builds_the_single_file_it_hands_out'],
+     'the front page points at `releases/latest/download/vdi2770.pyz`, which '
+     'resolves against whichever release is newest -- so a release without that '
+     'asset breaks a link on the front page the moment it exists'),
+
+    ('release/the-index-is-asked-again-after-the-release',
+     '.github/workflows/release.yml',
+     '  the-index-as-it-now-is:\n    needs: publish-rules',
+     '  the-index-as-it-now-is:\n    if: false\n    needs: publish-rules',
+     ['tests/test_the_publishing_path_has_three_properties.py::'
+      'test_the_release_asks_the_index_about_itself_after_publishing'],
+     'a row that consults the index is correct until the publish and can be '
+     'wrong after it, and without this the first thing to notice is whoever '
+     'pushes next -- a red badge on a repository whose release just succeeded'),
+
+    ('release/the-tag-comes-from-the-run-not-from-the-file',
+     '.github/workflows/release.yml',
+     'run: python tools/check_tag_is_the_version.py --tag "${GITHUB_REF_NAME#v}" --project .',
+     'run: python tools/check_tag_is_the_version.py --tag 0.8.0 --project .',
+     ['tests/test_the_tag_is_the_version_it_publishes.py::'
+      'test_the_tag_it_checks_is_the_tag_that_fired_the_workflow'],
+     'a release comparing every future tag against a number written in its own '
+     'text agrees with itself; measured, every test of it stayed green'),
+
+    ('release/the-tag-check-stands-before-every-upload',
+     '.github/workflows/release.yml',
+     '      - name: The tag must be the version\n        run: python tools/check_tag_is_the_version.py --tag "${GITHUB_REF_NAME#v}" --project packages/vdi2770\n      - name: Build\n',
+     '      - name: Build\n',
+     ['tests/test_the_tag_is_the_version_it_publishes.py::'
+      'test_the_check_runs_before_every_upload'],
+     'once the first upload has happened a refusal cannot undo it and can only '
+     'leave the release half-finished, which is the state this ordering exists '
+     'to avoid'),
+
 ]
 
 PAGES_ROWS = [

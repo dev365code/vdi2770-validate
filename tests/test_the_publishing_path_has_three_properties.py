@@ -41,6 +41,18 @@ def publishers(doc):
                    for step in job.get("steps", []))}
 
 
+def switched_off(thing) -> bool:
+    """A job or a step that will never run.
+
+    `if: false` leaves everything where it is -- the name, the command, the
+    whole block -- and stops it happening. A test that reads the file for a
+    step's presence cannot tell the difference, and two mutation rows written to
+    prove these checks bite survived by doing exactly that.
+    """
+    said = str(thing.get("if", "")).strip().lower()
+    return said in ("false", "${{ false }}", "0", "off")
+
+
 def test_only_the_publishers_can_publish():
     """`id-token: write` is what mints a Trusted Publishing token. Exactly the
     two jobs whose last step is an upload have it, and they have nothing else:
@@ -287,10 +299,18 @@ def test_the_release_builds_the_single_file_it_hands_out():
     page = (ROOT / "README.md").read_text(encoding="utf-8")
     if "releases/latest/download/vdi2770.pyz" not in page:
         return                       # the page stopped promising it
-    assert "build_zipapp.py" in body, (
+    doc = workflow(RELEASE)
+    builds = [(name, step) for name, job in doc["jobs"].items()
+              for step in job.get("steps", [])
+              if "build_zipapp.py" in (step.get("run") or "")]
+    assert builds, (
         "the front page points at `vdi2770.pyz` in the latest release and the "
         "release workflow does not build one, so creating a release breaks "
         "that link")
+    for name, step in builds:
+        assert not switched_off(step) and not switched_off(doc["jobs"][name]), (
+            f"{name} builds the single file behind an `if:` that is never "
+            f"true, so the release would still hand out no such asset")
     assert re.search(r"vdi2770\.pyz", body), (
         "the workflow builds the single file and does not name it as an asset")
 
@@ -315,6 +335,7 @@ def test_the_release_asks_the_index_about_itself_after_publishing():
              if any("check_upgrade_paths.py" in (s.get("run") or "")
                     for s in job.get("steps", []))
              and publishers(doc) & set(upstream(doc["jobs"], name))]
+    after = [n for n in after if not switched_off(doc["jobs"][n])]
     assert after, (
         "nothing runs the upgrade matrix after the release is on the index, so "
         "a row that goes stale on publication is first seen by whoever pushes "

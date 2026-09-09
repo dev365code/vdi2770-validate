@@ -37,7 +37,7 @@ makes about a gate, breaks the thing that gate protects, and checks the gate
 notices — including one row that must *survive*, because a harness that
 reports red for a change that does not matter is reporting red for
 everything. Run it when you add or change a gate. `tools/mutation_table.py`
-with no arguments lists the table; it holds 179 rows, each naming the pytest
+with no arguments lists the table; it holds 183 rows, each naming the pytest
 selection or the tool that has to go red.
 
 `make standalone` runs each of the 87 test files on its own. A suite is a shared
