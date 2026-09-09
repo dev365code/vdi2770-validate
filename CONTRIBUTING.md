@@ -7,7 +7,7 @@ Sign your commits — `git commit -s`. That is a
 rights; you keep the copyright in what you write.
 
 32 commits here do not carry the line. The practice was in place,
-lapsed for one afternoon, and resumed the next day; nothing caught it, because
+lapsed for a run of commits, and resumed; nothing caught it, because
 the check that exists for this reads pull requests and every one of those
 commits arrived by a direct push. The trailers were not added afterwards — a
 certificate of origin signed on somebody's behalf, later, certifies nothing. A

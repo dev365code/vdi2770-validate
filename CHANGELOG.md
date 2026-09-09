@@ -2156,8 +2156,8 @@ have a class of its own.
   every result in the run would have been about a different reader than the
   commit's.
   `CONTRIBUTING.md` said every commit carries a `Signed-off-by` line. 32 do not
-  — the practice was in place, lapsed for one afternoon, and resumed the next
-  day, and the check that exists for it reads pull requests while every one of
+  — the practice was in place, lapsed for a run of commits, and resumed, and
+  the check that exists for it reads pull requests while every one of
   those commits arrived by a direct push. The trailers were not added
   afterwards, because a certificate of origin signed on somebody's behalf later
   certifies nothing; the sentence says what happened, and a test holds the lapse
@@ -2316,7 +2316,7 @@ they found, not a summary written after the fact.
   reads to where the dictionary closes.
 - **`Z13` called a root-level file a folder.** `./VDI2770_Metadata.xml` **is** at
   the root; some writers spell it that way. `Z9` learned to skip a `.` segment
-  this cycle and the reader grew a `path-prefixed` near-miss kind for it — this
+  here and the reader grew a `path-prefixed` near-miss kind for it — this
   was the third place and it was missed, so a conforming container got an error
   saying this tool had not looked inside something it had read.
 - **`XmlTooLarge` could not be caught by name.** Raised at the reader's boundary
