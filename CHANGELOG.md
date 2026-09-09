@@ -25,6 +25,33 @@ on.
 
 The rest of this section is the detail, ordered newest first.
 
+**The step that compares the tag to the version could not run.** Both
+publishing jobs read the version by importing the package, in an environment
+holding `build` and `packaging` and nothing else. That worked while the alias
+was a package of its own; after the merge its `__init__` imports the engine,
+which is not installed there, so the import raised, the shell substitution
+produced the empty string, and the step failed with *tag 0.8.0 != package* — on
+every tag, before anything could be published.
+
+Nothing had run it. CI does not execute that snippet, the test that asserts the
+step exists compares the text of the line, and the mutation row only replaces
+the line with `true`. It is a script now, it reads the manifest instead of
+importing anything, and a test runs it in an interpreter started with `-I` —
+no site-packages, no environment — because that is stricter than the job it has
+to work in.
+
+Three sentences said the rules pin the reader exactly, which stopped being true
+when the two became one distribution: on the engine's own page, in
+CONTRIBUTING, and in the engine's module docstring. The first of those is the
+long description PyPI renders, so it would have gone out saying the pair is
+pinned when the requirement is a floor.
+
+And the front page overstated the rule coverage. Thirty-nine of the 41 fire on
+a container and are compared against the reference implementation; the other
+two say this tool could not run a check, which no container can cause. The exit
+codes are stated more carefully too: `2` also covers a command line this tool
+rejected, and `141` is a closed pipe.
+
 **The question the release asks of its own wheels is now asked on every
 push.** A gate exercised for the first time by the event it guards is not a
 gate: the wheel-download defect below had been red since the merge and could
@@ -120,7 +147,7 @@ to the person trying to find out why a release just stopped.
 **The suite had never asked whether the file pip writes starts.** Every
 upgrade case reached the tool through the console script and never through
 `python -m vdi2770_validate` in a state where it works — only in the refusal,
-where it was returning 1 until a review asked. And none of it had ever run on
+where it was returning 1 and nothing had asked. And none of it had ever run on
 Windows, where the console script is `vdi2770-validate.exe` and this harness's
 own lookup called it absent. A case now installs the built wheels and enters
 every door: the executable, found by name in the scripts directory and reported
@@ -208,8 +235,8 @@ every case stubbed it out, and deleting the whole block left sixteen green. The
 two-pages gate asked for the words `half` and `ordinary`, both of which appear
 elsewhere on the front page, so the caveat paragraph it exists to protect could
 be deleted with the suite green; it asks for the sentences now, and the
-forbidden-phrase blacklist is gone, since a review wrote a passing sentence to
-show what a blacklist is worth. And the upgrade harness's exemption table
+forbidden-phrase blacklist is gone: a sentence that passes such a list and
+still sells the guarantee is easy to write, so the list was worth nothing. And the upgrade harness's exemption table
 matched source text, so a case whose docstring said *"both_halves_run is
 deliberately not called here"* satisfied it, and an exempt case that ran the
 interpreter and asserted nothing passed; the cases are parsed now, and the table
@@ -936,9 +963,10 @@ in it, and both pages have to say so. The comparison is over prose rather than
 lines, because what a page says does not depend on where it wraps — the first
 version of these assertions failed on pages that said the right thing.
 
-- **`make standalone`** runs each of the 85 test files on its own.
-- The mutation harness carries 176 rows, each naming the pytest selection or the
-  tool that has to go red. Of the rows added this cycle, seven are about the front page: a
+- **`make standalone`** runs each of the 86 test files on its own.
+- The mutation harness names, for every claim this project makes about a gate,
+  the pytest selection or the tool that has to go red when the claim is broken.
+  Several of its rows are about the front page: a
   picture the page no longer points at, a sentence in the terminal shot the tool
   never printed, an elision that stands for the wrong findings, a quoted pin the
   project does not declare, a badge counting something other than the catalogue,

@@ -509,11 +509,8 @@ TABLE = [
 
     ("gates/a-tag-that-is-not-the-version-stops-the-release",
      ".github/workflows/release.yml",
-     '          pkg=$(python -c "import sys; sys.path.insert(0,\'src\'); import '
-     'vdi2770_validate as v; print(v.__version__)")\n'
-     '          test "$tag" = "$pkg" || { echo "tag $tag != package $pkg"; exit 1; }',
-     '          pkg=$(python -c "import sys; sys.path.insert(0,\'src\'); import '
-     'vdi2770_validate as v; print(v.__version__)")\n          true',
+     '        run: python tools/check_tag_is_the_version.py --tag "${GITHUB_REF_NAME#v}" --project .',
+     '        run: true',
      ["tests/test_two_packages_publish_separately.py"],
      "the test asserted the shell variable was created, not that it was "
      "compared: a tag saying 0.2.0 could publish a tree saying 0.1.9, and the "
@@ -521,11 +518,8 @@ TABLE = [
 
     ("gates/a-tag-that-is-not-the-readers-version-stops-it-too",
      ".github/workflows/release.yml",
-     '          pkg=$(python -c "import sys; sys.path.insert(0,\'packages/vdi2770/src\'); '
-     'import vdi2770 as v; print(v.__version__)")\n'
-     '          test "$tag" = "$pkg" || { echo "tag $tag != package $pkg"; exit 1; }',
-     '          pkg=$(python -c "import sys; sys.path.insert(0,\'packages/vdi2770/src\'); '
-     'import vdi2770 as v; print(v.__version__)")\n          true',
+     '        run: python tools/check_tag_is_the_version.py --tag "${GITHUB_REF_NAME#v}" --project packages/vdi2770',
+     '        run: true',
      ["tests/test_two_packages_publish_separately.py"],
      "one tag drives both distributions, and either half left on an older "
      "number is a pair that was never built"),

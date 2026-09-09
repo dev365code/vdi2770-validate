@@ -271,13 +271,17 @@ minor version.
 What has not moved, and what a build script can rely on:
 
 - **The verdicts.** A rule that fires today fires tomorrow on the same
-  container, and a rule's severity does not change quietly: every one of the
-  41 is recorded against the reference implementation, and the divergences are
-  published rather than reconciled.
+  container, and a rule's severity does not change quietly. Thirty-nine of the
+  41 fire on a container in the corpus and are compared against the reference
+  implementation, with the divergences published rather than reconciled; the
+  other two — `X0` and `X5` — say that this tool could not run a check, which no
+  container can cause, and they are exercised by breaking the installation and
+  by making each step raise.
 - **The exit codes.** `0` no error, `1` at least one finding at the chosen
-  severity or an unreadable path, `2` nothing could be read at all, `3` this
-  tool refused to judge because its two halves disagree about which release
-  they are. `3` is not a verdict on any container.
+  severity or an unreadable path, `2` nothing could be read at all — including
+  a command line this tool rejected, since neither read anything — `3` this tool
+  refused to judge because its two halves disagree about which release they are,
+  and `141` a closed pipe. `3` is not a verdict on any container.
 - **The command line.** `vdi2770-validate check <container>` and its options.
   There is one console script, and two module doors that run the same code:
   `python -m vdi2770_validate` for anything written against the old name, and

@@ -159,23 +159,18 @@ def test_each_publisher_checks_that_the_tag_is_the_version_it_publishes():
     tag says one release and the wheels are two.
     """
     body = RELEASE.read_text(encoding="utf-8")
-    assert body.count('tag="${GITHUB_REF_NAME#v}"') == 2, (
-        "one of the two distributions is published without comparing the tag to "
-        "the version in the tree")
-    compares = re.findall(r'test\s+"\$tag"\s*=\s*"\$pkg"[^\n]*', body)
-    assert len(compares) == 2, f"the tag is built and never compared: {compares}"
-    for compare in compares:
-        assert "exit 1" in compare, (
-            f"the tag is compared to the version and nothing stops on a "
-            f"mismatch: {compare!r}")
-    # And each half's version has to come from that half. Reading the same
-    # source twice compares the tag against one number and calls it two, which
-    # is precisely the mismatch this exists to catch.
-    reads = re.findall(r"^\s*pkg=\$\((.*)\)\s*$", body, re.M)
-    assert len(reads) == 2, f"the two versions are not read from anywhere: {reads}"
-    assert reads[0] != reads[1], (
-        f"both jobs read the version the same way ({reads[0]!r}), so one of "
-        f"them is comparing the tag against the other distribution's number")
+    # A script now, not a shell snippet. It was a snippet that read the version
+    # by importing the package, in a job with almost nothing installed, and the
+    # import started raising when the alias began importing the engine -- so the
+    # step failed on every tag and nothing had ever run it. This asserted the
+    # *text* of those lines, which is why it went on passing.
+    asked = re.findall(
+        r"check_tag_is_the_version\.py --tag \S+ --project (\S+)", body)
+    assert sorted(asked) == [".", "packages/vdi2770"], (
+        f"the release checks the tag for {asked}. Both distributions ship under "
+        f"one tag, and each has to be compared against its own manifest: "
+        f"reading one twice compares the tag against one number and calls it "
+        f"two, which is the mismatch this exists to catch.")
 
 
 def test_a_publishing_workflow_refuses_a_version_the_index_already_has():

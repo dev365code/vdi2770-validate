@@ -38,10 +38,13 @@ question about VDI 2770, and the answer depends on which supplement your custome
 sent you. This library tells you what is in the file and where it is written; the
 opinion is yours to supply.
 
-If you want an opinion supplied for you, [`vdi2770-validate`](https://pypi.org/project/vdi2770-validate/)
-is this library plus a rule set, as a command-line tool. It names this package
-exactly rather than by range, so the pair you install is the pair that was
-tested together.
+If you want an opinion supplied for you, the rules live here too, behind an
+extra: `pip install "vdi2770[validate]"` adds the schema parser and the rule
+set, and you run it as `python -m vdi2770.validate check YOUR-CONTAINER.zip`
+(that install carries no command). [`vdi2770-validate`](https://pypi.org/project/vdi2770-validate/)
+is the older name for the same thing and installs the `vdi2770-validate`
+command; it asks for this package at its own version or newer, so it can never
+leave you an engine older than the release it stands for.
 
 ## Three properties, each tested rather than promised
 

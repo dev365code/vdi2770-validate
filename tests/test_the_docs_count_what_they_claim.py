@@ -345,9 +345,15 @@ def test_the_changelog_counts_the_mutation_rows_it_describes():
     # `[a-z-]+` could not match a count past twenty-nine, where `spelled` starts
     # returning digits — so at thirty rows this gate reported "the sentence has
     # been reworded" and no wording could satisfy it.
-    _, m = latest_changelog_claim(
-        r"([a-z0-9-]+) rows, each\s*\n?\s*naming the pytest selection")
-    assert m, "the CHANGELOG sentence this test pins has been reworded"
+    # Read from CONTRIBUTING rather than the CHANGELOG. A release note is for
+    # people outside this repository, and how many rows a harness holds is not
+    # something they can act on; it moved to the page that tells a contributor
+    # to run the harness. The number stays checked because it is still written
+    # down somewhere, and `tools/mutation_table.py` prints it on demand -- so
+    # this is a number a reader can verify, not one they have to trust.
+    m = re.search(r"it holds ([a-z0-9-]+) rows, each naming the pytest",
+                  (ROOT / "CONTRIBUTING.md").read_text(encoding="utf-8"))
+    assert m, "the CONTRIBUTING sentence this test pins has been reworded"
     said = m.group(1)
     expected = spelled(len(TABLE))
     assert said == expected, (

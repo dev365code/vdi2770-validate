@@ -104,11 +104,14 @@ jobs:
       # the index to accept a filename it already holds. Ask first.
       - name: The index must not already have this version
         run: python tools/check_version_is_new.py --package vdi2770 --version "${GITHUB_REF_NAME#v}"
+      # A script, and one that imports nothing. This was a line that read the
+      # version by importing the package, in a job that installs `build` and
+      # `packaging` and nothing else -- and after the merge the alias's
+      # `__init__` imports the engine, so the import raised, the substitution
+      # produced the empty string, and every tag failed with *tag != package*.
+      # Nothing had ever run it.
       - name: The tag must be the version
-        run: |
-          tag="${GITHUB_REF_NAME#v}"
-          pkg=$(python -c "import sys; sys.path.insert(0,'packages/vdi2770/src'); import vdi2770 as v; print(v.__version__)")
-          test "$tag" = "$pkg" || { echo "tag $tag != package $pkg"; exit 1; }
+        run: python tools/check_tag_is_the_version.py --tag "${GITHUB_REF_NAME#v}" --project packages/vdi2770
       - name: Build
         run: python -m build packages/vdi2770 --outdir dist/
       # Recorded outside `dist/`. The publish action uploads everything it
@@ -193,10 +196,7 @@ jobs:
       - name: The index must not already have this version
         run: python tools/check_version_is_new.py --package vdi2770-validate --version "${GITHUB_REF_NAME#v}"
       - name: The tag must be the version
-        run: |
-          tag="${GITHUB_REF_NAME#v}"
-          pkg=$(python -c "import sys; sys.path.insert(0,'src'); import vdi2770_validate as v; print(v.__version__)")
-          test "$tag" = "$pkg" || { echo "tag $tag != package $pkg"; exit 1; }
+        run: python tools/check_tag_is_the_version.py --tag "${GITHUB_REF_NAME#v}" --project .
       - name: Build
         run: python -m build --outdir dist/
       # Recorded outside `dist/`. The publish action uploads everything it

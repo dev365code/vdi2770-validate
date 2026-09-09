@@ -25,8 +25,9 @@ promised:
 
 It has **no dependencies**, and it decides nothing. Whether a container is
 *correct* is a question about VDI 2770, and this library does not answer it;
-it tells you what is in the file and where. If you want the verdict too, see
-`vdi2770-validate`, which is this library plus a rule set.
+it tells you what is in the file and where. The verdict is an extra rather than
+another distribution: `pip install "vdi2770[validate]"` brings the schema parser
+and the rules, and `vdi2770.validate` is where they live.
 
 Unofficial. Not affiliated with VDI, the Digital Data Chain Consortium, or
 IDTA. VDI 2770 is a guideline published by VDI; this is an independent
