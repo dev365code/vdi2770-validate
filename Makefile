@@ -6,7 +6,7 @@ RUFF_VERSION   := 0.16.3
 PYTEST_VERSION := 8.3.4
 XMLSCHEMA_VERSION := 4.2.0
 
-.PHONY: paths-disjoint upgrade-paths wheels installed-runs zipapp check lint test fixtures corpus coverage-check rules-doc oracle-half sdist-runs-its-own-tests wheel-installs-and-runs reader-api-matches-its-version mutations standalone clean oracle-fully-swept
+.PHONY: paths-disjoint upgrade-paths wheels installed-runs upgrade-paths-from-wheels zipapp check lint test fixtures corpus coverage-check rules-doc oracle-half sdist-runs-its-own-tests wheel-installs-and-runs reader-api-matches-its-version mutations standalone clean oracle-fully-swept
 
 check: lint fixtures test corpus coverage-check rules-doc oracle-half reader-api-matches-its-version sdist-runs-its-own-tests wheel-installs-and-runs
 
@@ -69,13 +69,26 @@ upgrade-paths:
 # `dist` is cleared first: `--find-links` over a directory holding a previous
 # build resolves to whichever version sorts highest, which is a check on an
 # artifact nobody made in this run.
+#
+# The two commands are the release's two commands, character for character, and
+# a test says so. They used to differ -- `--wheel` here, sdist and wheel there --
+# so what a push built and what a tag built were not the same artifacts, and the
+# rehearsal was of something else. Nothing bound them; the parity gate waves
+# `python -m build` through as setup.
 wheels:
 	rm -rf dist
-	$(PYTHON) -m build --wheel --outdir dist .
-	$(PYTHON) -m build --wheel --outdir dist packages/vdi2770
+	$(PYTHON) -m build packages/vdi2770 --outdir dist/
+	$(PYTHON) -m build --outdir dist/
 
 installed-runs: wheels
 	$(PYTHON) tools/check_upgrade_paths.py --case 11 --case 13 --from dist
+
+# The whole matrix against the wheels this tree builds, which is what the
+# release runs and what no push ran. The release's copy of this was red from the
+# merge until it was found by reading: it downloaded one of the two wheels it
+# needs, and a gate first exercised by the event it guards is not a gate.
+upgrade-paths-from-wheels: wheels
+	$(PYTHON) tools/check_upgrade_paths.py --from dist
 
 # Deliberately not in `check`: it copies the tree, rebuilds the fixtures and runs
 # pytest once per row, which is minutes rather than seconds. It answers the

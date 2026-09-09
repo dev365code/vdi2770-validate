@@ -18,7 +18,12 @@ tool is documented.
 Two lines. They make `vdi2770_validate` the same object as `vdi2770.validate`,
 so the old name resolves to the code rather than to a copy of it: submodules,
 deep submodules, `python -m vdi2770_validate` and the console script all keep
-working, and a module imported through the old path still carries the old name.
+working, and what you get back is the module itself rather than a second copy
+of it — `vdi2770_validate.model.Severity is vdi2770.validate.model.Severity`.
+
+It answers to the new name, though. A module imported through the old path
+reports `__name__` as `vdi2770.validate.…`, so that is what a traceback, a log
+line and a pickle will say.
 
 It asks for `vdi2770[validate]>=0.8.0.dev0` — its own version as the floor, so
 installing it can never leave you an engine older than the one it stands for.

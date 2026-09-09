@@ -153,3 +153,19 @@ def test_the_gate_is_wired_into_the_release_before_anything_is_published():
     asked = first_job.index("check_ci_judged_this_commit.py")
     gate = first_job.index("run: make check")
     assert asked < gate, "the release runs the whole gate before asking whether it needs to"
+
+
+def test_an_abbreviated_commit_is_named_as_the_reason(tmp_path):
+    """GitHub's `--commit` filter matches the full forty characters.
+
+    Measured against the real API: the short SHA a person copies out of `git
+    log` returns nothing at all, and this gate then says the commit has not
+    been judged — about a commit that has. The refusal is the safe direction
+    and the wrong sentence, and this is the tool somebody reaches for when a
+    release has just been refused. In the workflow it is `$GITHUB_SHA`, which
+    is full, so nothing here is load-bearing for a release; it is load-bearing
+    for the person trying to find out why one stopped.
+    """
+    code, said = ask(tmp_path, [], sha="b0db7e3")
+    assert code != 0
+    assert "40" in said and "b0db7e3" in said, said

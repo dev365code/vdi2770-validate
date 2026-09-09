@@ -176,14 +176,31 @@ def test_a_checkout_with_no_tags_at_all_is_refused(tmp_path):
     assert "no `v*` tags" in done.stderr, done.stderr
 
 
-def test_a_pin_that_is_a_range_is_refused(tmp_path):
-    """A range is what this release stopped using. `>=0.7` is satisfied by
-    0.7.0 and by every later reader, so the pair that ships is whatever the
-    index happens to hold at install time rather than the pair that was tested;
-    there is no single version for this gate to check the order of."""
-    done = run(tree_with(tmp_path, ["v0.7.0"], pin="vdi2770>=0.7"), "--offline")
+def test_a_floor_below_this_release_is_refused(tmp_path):
+    """The property, after the merge changed the shape of the requirement.
+
+    This gate used to demand an exact `==`, because the reader and the rules
+    were two distributions carrying code that had to match and a range let the
+    index decide which pair a user got. There is no pair now: the alias is two
+    lines, and what it must never do is resolve to an engine *older than the
+    release it stands for*. So a floor is allowed and a floor below this
+    release is not.
+
+    The old assertion outlived the reason for it, and it kept passing while the
+    gate could not read this repository's own manifest at all.
+    """
+    done = run(tree_with(tmp_path, ["v0.7.0"], pin="vdi2770>=0.6"), "--offline")
     assert done.returncode != 0, done.stdout + done.stderr
-    assert "not pinned exactly" in done.stderr, done.stderr
+    assert "floor" in done.stderr, done.stderr
+
+
+def test_a_floor_at_this_release_is_accepted(tmp_path):
+    """And the spelling of it does not matter: `>=0.7` and `0.7.0` are one
+    release under PEP 440, and refusing that pair would be refusing a spelling
+    rather than a state."""
+    done = run(tree_with(tmp_path, ["v0.7.0"], pin="vdi2770[validate]>=0.7"),
+               "--offline")
+    assert done.returncode == 0, done.stdout + done.stderr
 
 
 def test_a_pin_with_no_version_at_all_is_refused(tmp_path):
@@ -191,7 +208,7 @@ def test_a_pin_with_no_version_at_all_is_refused(tmp_path):
     the one this release exists to replace."""
     done = run(tree_with(tmp_path, ["v0.7.0"], pin="vdi2770"), "--offline")
     assert done.returncode != 0, done.stdout + done.stderr
-    assert "not pinned exactly" in done.stderr, done.stderr
+    assert "lets a resolver choose" in done.stderr, done.stderr
 
 
 def test_an_index_answer_without_releases_is_not_an_empty_index():
@@ -244,3 +261,68 @@ def test_a_version_is_compared_the_way_the_index_spells_it():
     assert index.holds({"0.7.0rc1"}, "0.7.0-rc1"), "a pre-release slipped past"
     assert index.holds({"0.7.0"}, "0.7.0")
     assert not index.holds({"0.7.0"}, "0.7.1")
+
+
+# --- The manifest this repository actually has -------------------------------
+#
+# Everything above builds a throwaway tree and rewrites the dependency into
+# `vdi2770==0.7.0`: no extra, an exact pin, the shape from before the merge.
+# So every case here ran against a manifest this repository no longer has, and
+# the one it does have was read by nothing. It declares
+# `vdi2770[validate]>=<version>`, and both halves of that -- the bracket and
+# the operator -- are what the gate could not read.
+
+def test_the_gate_can_read_this_repositorys_own_manifest():
+    """Not a fixture. The file that ships.
+
+    `^dependencies = \\[(.*?)\\]` stops at the `]` inside `vdi2770[validate]`,
+    which leaves `'"vdi2770[validate'` and no requirements at all -- so the gate
+    exited 1 with *this release no longer depends on vdi2770* about a manifest
+    whose first dependency is that name. It stands between the engine's publish
+    and the alias's, so the failure lands with half a release on the index and
+    a version number that does not come back.
+    """
+    import sys as _sys
+
+    _sys.path.insert(0, str(ROOT / "tools"))
+    import check_release_order as gate
+
+    assert gate.pinned_reader() == gate.version_being_released(), (
+        "the gate cannot read the floor out of the manifest that ships")
+
+
+def test_a_floor_at_this_release_is_what_the_merge_left():
+    """`>=` rather than `==`, because after the merge the alias is two lines.
+
+    The exact pin existed to stop a pair of code distributions being half-moved.
+    There is no pair now. What must still be true is that installing the alias
+    can never leave an engine older than the release it stands for, and a floor
+    at its own version says exactly that.
+    """
+    import sys as _sys
+
+    _sys.path.insert(0, str(ROOT / "tools"))
+    import check_release_order as gate
+
+    assert gate.floor_of('vdi2770[validate]>=0.8.0') == "0.8.0"
+    assert gate.floor_of('vdi2770==0.8.0') == "0.8.0"
+
+
+def test_a_requirement_that_lets_pip_choose_an_older_engine_is_refused():
+    """The property, stated as the set of things that break it.
+
+    A bare name, a range with a ceiling, a compatible-release operator, an
+    exclusion: each one lets a resolver pick an engine this release was never
+    run against, which is the state the version check exists to refuse at run
+    time and the release should never create.
+    """
+    import sys as _sys
+
+    _sys.path.insert(0, str(ROOT / "tools"))
+    import check_release_order as gate
+
+    for bad in ('vdi2770[validate]', 'vdi2770[validate]>0.8.0',
+                'vdi2770[validate]~=0.8.0', 'vdi2770[validate]!=0.7.0',
+                'vdi2770[validate]<=0.9.0', 'vdi2770[validate]>=0.8.0,<0.9',
+                'vdi2770[validate]==0.8.*'):
+        assert gate.floor_of(bad) is None, f"{bad} was accepted as a floor"

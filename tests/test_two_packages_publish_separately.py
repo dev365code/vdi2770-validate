@@ -115,18 +115,33 @@ def test_the_rules_cannot_be_published_before_the_reader_they_pin():
     `tools/check_release_order.py` refuses that at run time; this asserts the
     workflow does not even offer it the chance.
 
-    Which publisher is which is read from what its chain of jobs actually does,
-    not from what the jobs are called: a rename would otherwise move this test's
-    subject without failing it.
+    Which publisher is which is read from what it actually uploads, not from
+    what the jobs are called: a rename would otherwise move this test's subject
+    without failing it.
+
+    Read from the artifact the job downloads, because that is the thing it hands
+    to PyPI. It used to be read from any mention of the distribution's name
+    anywhere in the job's transitively-upstream blocks, and that stopped
+    separating them the moment the two publishers came to share an upstream job
+    -- which they now do, because the gate that installs both wheels runs before
+    either upload. Both publishers then classified as the rules and this failed
+    while the property it protects was intact. A test that goes red for the
+    wrong reason is worth as little as one that stays green for the wrong one.
     """
     all_jobs = jobs(RELEASE)
     pubs = publishers(RELEASE)
 
-    def chain(job):
-        return "".join(all_jobs[j] for j in upstream(all_jobs, job))
+    def downloads(job):
+        return set(re.findall(r"^\s*name:\s*(dist-[\w-]+)\s*$",
+                              all_jobs[job], re.M))
 
-    rules = [n for n in pubs if "--package vdi2770-validate " in chain(n)]
-    reader = [n for n in pubs if n not in rules]
+    rules = [n for n in pubs if "dist-rules" in downloads(n)]
+    reader = [n for n in pubs if "dist-reader" in downloads(n)]
+    assert not (set(rules) & set(reader)), (
+        f"a publishing job hands PyPI both distributions: "
+        f"{sorted(set(rules) & set(reader))}. Two trusted publishers exist so "
+        f"that neither can publish as the other, and a job holding both "
+        f"artifacts is that separation undone.")
     assert len(rules) == 1 and len(reader) == 1, (
         f"cannot tell the two publishers apart by what they publish: "
         f"rules={rules}, reader={reader}")
@@ -257,6 +272,37 @@ def test_every_workflow_that_reads_the_tag_history_fetches_it():
             f"something that reads the tag history")
 
 
+def built_by(block):
+    """What each `python -m build` in this job builds, as its positional argument.
+
+    Read a line at a time and tokenised, not matched across the block. `\\s+`
+    crosses a newline, so a comment on the next line supplied the "argument":
+    adding one below the rules' build made this read `python -m build #` and
+    report that the job builds the reader instead. A test that goes red for the
+    wrong reason teaches whoever hits it to stop believing it -- which is worth
+    about as much as one that stays green for the wrong reason.
+
+    Flags and their values are dropped, so `--outdir dist/` is not mistaken for
+    a project to build.
+    """
+    made = []
+    for line in block.splitlines():
+        if "python -m build" not in line:
+            continue
+        rest = line.split("python -m build", 1)[1].split("#", 1)[0].split()
+        positional, skip = [], False
+        for word in rest:
+            if skip:
+                skip = False
+                continue
+            if word.startswith("-"):
+                skip = "=" not in word
+                continue
+            positional.append(word)
+        made.append(positional[0] if positional else "")
+    return made
+
+
 def test_each_build_asks_the_index_about_the_distribution_it_actually_builds():
     """The question and the upload are separate steps, and nothing tied them
     together.
@@ -269,7 +315,7 @@ def test_each_build_asks_the_index_about_the_distribution_it_actually_builds():
     """
     for name, block in jobs(RELEASE).items():
         asked = re.findall(r"check_version_is_new\.py --package (\S+)", block)
-        built = re.findall(r"python -m build(?:\s+(?!-)(\S+))?", block)
+        built = built_by(block)
         if not asked and not built:
             continue
         assert len(asked) == 1 and len(built) == 1, (
@@ -284,3 +330,45 @@ def test_each_build_asks_the_index_about_the_distribution_it_actually_builds():
         assert built[0] == where[asked[0]], (
             f"{name} asks the index about {asked[0]} and then builds "
             f"{built[0] or 'the repository root'}, which is the other one")
+
+
+def test_no_job_that_publishes_builds_what_it_publishes():
+    """A publisher hands PyPI the artifact a build job made, and nothing else.
+
+    The property is that the wheels the gate installed and the wheels that reach
+    the index are the same bytes. A publishing job that ran `python -m build`
+    would produce its own, and every gate upstream would have been testing a
+    different file — silently, because the second build almost always succeeds.
+
+    Read as "does not build" rather than "hashes match", because a rebuild is
+    the only way the bytes can differ: GitHub's artifacts are immutable and
+    fetched by name.
+    """
+    all_jobs = jobs(RELEASE)
+    for name in publishers(RELEASE):
+        for job in upstream_of_publish(all_jobs, name):
+            assert "python -m build" not in all_jobs[job], (
+                f"{job} builds, and {name} publishes what comes out of it "
+                f"without a gate in between. The wheels that were tested and "
+                f"the wheels that reach the index would be different files.")
+
+
+def upstream_of_publish(all_jobs, publisher):
+    """The publisher itself, and any job between it and the last gate.
+
+    Not the whole chain: the build jobs are upstream of everything and are
+    supposed to build. What must not build is the publisher, or anything that
+    runs after the artifact has been tested.
+    """
+    after = set()
+    todo = [publisher]
+    while todo:
+        job = todo.pop()
+        if job in after:
+            continue
+        after.add(job)
+        for m in re.finditer(r"^\s*needs:\s*(.+)$", all_jobs.get(job, ""), re.M):
+            for up in re.findall(r"[\w-]+", m.group(1)):
+                if "upgrade-gate" not in up and "build" not in up:
+                    todo.append(up)
+    return after

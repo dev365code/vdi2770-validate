@@ -2,6 +2,76 @@
 
 ## Unreleased
 
+**The release chain is now rehearsed on every push, and the rehearsal
+includes the part that broke.** A gate exercised for the first time by the event
+it guards is not a gate: the wheel-download defect above had been red since the
+merge and could only fail on a tag. So the build-and-check half of the release
+runs on `main` and on every pull request — the same jobs in the same order,
+handing each other the same named artifacts — and stops before anything talks
+to an index. The artifact handover is the point rather than a detail, because
+that is precisely where the defect lived; a rehearsal that built both wheels in
+one job would have been green through all of it. The order gate is exercised
+both ways there too, against a tag made for the purpose: it has to pass when
+this release is tagged and refuse when it is not, because a refusal nobody has
+seen is a refusal nobody has.
+
+Three smaller things in the same pass. Three jobs carried no `permissions:`
+block, so they took whatever the repository's default happened to be — measured
+as `read` here, but a default is a setting somebody can change without touching
+this file, and a comment in it claimed one of those jobs held no token at all,
+which is not a state a job can be in. The floor is written down now. The
+publishing action was pinned to `release/v1`, a moving reference, and it is the
+one piece of code in those jobs that is not ours and runs while they hold a
+token that can publish; it is pinned to a commit. And the checksum verification
+could pass on an empty list: `sha256sum -c` over a file with no entries exits 0
+on at least one implementation, so the entries are counted before they are
+checked, and the number of files in the directory has to match the number
+recorded — otherwise something no build job made could be handed to PyPI.
+
+**Two defects in the release path, either of which would have stopped a tag
+half-published.** Neither is in the tool; both are in the machinery that puts
+it on an index, and both stand *after* the engine is uploaded — where a refusal
+costs a version number that does not come back.
+
+The gate that checks the release order could not read this project's own
+manifest. It found the dependency list with `^dependencies = \[(.*?)\]`, and a
+requirement carries its extras in brackets: `"vdi2770[validate]>=…"` closes that
+pattern before the list ends. Measured, it returned `'"vdi2770[validate'` and no
+requirements at all, so the gate exited 1 saying *this release no longer depends
+on vdi2770* — about a manifest whose first dependency is that name. Nothing
+noticed because every test of it rewrites the dependency into `vdi2770==0.7.0`
+first: no extra, exact pin, the shape from before the merge. The manifest that
+ships was read by nothing. It is scanned with the quoting rules applied now, and
+a test reads the real file.
+
+The same gate still demanded an exact `==`, which the merge retired. The exact
+pin existed to stop two code distributions being half-moved; the alias is two
+lines and there is no pair to hold together. What must remain true is that
+installing it can never leave an engine older than the release it stands for, so
+the requirement is a floor at its own version — and the gate now reads the floor,
+refuses anything that lets a resolver go below it, and compares as versions
+rather than as text, because `>=0.7` and `0.7.0` are one release.
+
+And the job that runs the upgrade matrix downloaded only the alias's wheel.
+Every case from the fourth onward installs with `--no-index --find-links` and
+asks for the engine — directly, or as the alias's own dependency — so pip could
+not resolve, and the gate standing between the two uploads was red on any tag.
+Locally it passes, because `make` builds both wheels into one directory: it
+could only fail where nobody had run it.
+
+**The interval between the two uploads is now the floor rather than the work.**
+Building the alias never needed the engine on an index — `python -m build` does
+not resolve runtime dependencies — so that build, its version checks and the
+whole upgrade matrix have moved ahead of the first upload, where they protect
+both publishes instead of the second. The interval cannot be zero: the alias
+requires the engine, so it is bounded below by the time PyPI takes to serve the
+first upload. What stands in it now is one job that holds no token and no
+environment, waiting for the engine to be listed and then downloading it to
+prove a machine can actually install it — because *listed* and *installable* are
+not the same claim. The two publishers keep their separate environments; PyPI
+keys a trusted publisher on the environment, and one job doing both uploads
+would be that separation undone.
+
 **A tag could authorise a publish on a commit nothing had judged.** The
 release workflow runs the whole gate on the tagged tree, and that is one
 interpreter on one Linux runner; the four-row matrix — three Pythons and
@@ -14,7 +84,11 @@ passed, before it builds anything and before anything at all is on the index —
 the only moment a refusal is still free. Not knowing is a refusal too: a
 missing `gh`, a token without `actions: read`, a rate limit, each one leaves the
 question unanswered, and unanswered must not authorise an upload. A re-run
-counts, because that is how a commit legitimately goes from red to green.
+counts, because that is how a commit legitimately goes from red to green. And
+an abbreviated commit is named as the reason rather than reported as an unjudged
+one: GitHub matches a commit by all forty characters, so the short SHA a person
+copies out of `git log` returns nothing — a safe direction and the wrong sentence,
+to the person trying to find out why a release just stopped.
 
 **The suite had never asked whether the file pip writes starts.** Every
 upgrade case reached the tool through the console script and never through
@@ -835,8 +909,8 @@ in it, and both pages have to say so. The comparison is over prose rather than
 lines, because what a page says does not depend on where it wraps — the first
 version of these assertions failed on pages that said the right thing.
 
-- **`make standalone`** runs each of the 84 test files on its own.
-- The mutation harness carries 169 rows, each naming the pytest selection or the
+- **`make standalone`** runs each of the 85 test files on its own.
+- The mutation harness carries 176 rows, each naming the pytest selection or the
   tool that has to go red. Of the rows added this cycle, seven are about the front page: a
   picture the page no longer points at, a sentence in the terminal shot the tool
   never printed, an elision that stands for the wrong findings, a quoted pin the

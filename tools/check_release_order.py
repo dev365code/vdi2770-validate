@@ -36,6 +36,7 @@ import subprocess
 import sys
 
 from packaging.requirements import Requirement
+from packaging.version import Version
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import check_version_is_new  # noqa: E402
@@ -70,22 +71,93 @@ def pinned_reader() -> str:
     declared above it and starts with the same characters, so a pattern that
     merely looks for the reader's name finds the distribution's own name first.
     """
-    deps = re.search(r"^dependencies = \[(.*?)\]", _manifest(), re.M | re.S)
-    if deps is None:
-        raise SystemExit("pyproject.toml declares no dependencies list")
-    pin = next((Requirement(m) for m in re.findall(r'"([^"]+)"', deps.group(1))
-                if Requirement(m).name == READER), None)
+    stated = _declared_dependencies(_manifest())
+    pin = next((r for r in stated if r.name == READER), None)
     if pin is None:
         raise SystemExit(f"this release no longer depends on {READER}, which is "
-                         f"the half of it that does the reading")
-    wanted = [s.version for s in pin.specifier if s.operator == "=="]
-    if len(list(pin.specifier)) != 1 or len(wanted) != 1 or wanted[0].endswith(".*"):
+                         f"the half of it that does the reading. It declares "
+                         f"{[str(r) for r in stated]}")
+    floor = floor_of(str(pin))
+    if floor is None:
         raise SystemExit(
-            f"the reader is asked for as `{pin}`, which is not pinned exactly. "
-            f"Anything else lets pip choose a reader this release was never run "
-            f"against, and leaves this gate no single version to check the "
-            f"order of.")
-    return wanted[0]
+            f"the reader is asked for as `{pin}`, which lets a resolver choose "
+            f"an engine this release was never run against. One `==` or one "
+            f"`>=`, and nothing else: a bare name, a ceiling, a compatible "
+            f"release or an exclusion each leave pip free to install something "
+            f"older than the release this stands for, which is the state the "
+            f"version check refuses at run time and a release should never "
+            f"create.")
+    return floor
+
+
+def floor_of(requirement: str):
+    """The version below which this requirement cannot go, or `None`.
+
+    Before the merge the rules named the reader with an exact `==`, because the
+    two carried code that had to match. The alias is two lines now and there is
+    no pair to hold together, so the requirement is a floor at its own version:
+    installing it can never leave an engine older than the release it stands
+    for. `==` still says that, more strongly, so both are read the same way.
+
+    Everything else is refused, and each for the same reason: `>` excludes the
+    release being made, a ceiling or a compatible-release operator lets a
+    resolver walk down to an engine nobody ran this against, an exclusion says
+    nothing about the bottom, and a wildcard is not a version.
+    """
+    try:
+        parsed = Requirement(requirement)
+    except Exception:                            # noqa: BLE001 - any malformed spelling
+        return None
+    only = list(parsed.specifier)
+    if len(only) != 1 or only[0].operator not in ("==", ">="):
+        return None
+    if only[0].version.endswith(".*"):
+        return None
+    return only[0].version
+
+
+def _declared_dependencies(text: str):
+    r"""The `[project] dependencies` array, as requirements.
+
+    Not `\[(.*?)\]`. A requirement carries its extras in brackets, so
+    `"vdi2770[validate]>=0.8.0"` puts a `]` inside the array before the array
+    ends -- measured, that pattern returned `'"vdi2770[validate'` and no
+    requirements at all, and this gate then refused every release with *this
+    release no longer depends on vdi2770*, about a manifest whose first
+    dependency is that name. It stands between the engine's publish and the
+    alias's, so the refusal would have landed with half a release on the index
+    under a version number that does not come back.
+
+    Nothing noticed because every test here rewrites the dependency into
+    `vdi2770==0.7.0` first -- no extra, exact pin, the shape from before the
+    merge -- so the manifest that ships was read by nothing.
+
+    Scanned with the quoting rules applied rather than parsed as TOML: the
+    release job installs `packaging` and not a TOML reader, and `tomllib` is
+    3.11 and later while this gate is also run by a suite that answers on 3.9.
+    """
+    start = re.search(r"^dependencies = \[", text, re.M)
+    if start is None:
+        raise SystemExit("pyproject.toml declares no dependencies list")
+    found, quote, current = [], None, []
+    for ch in text[start.end():]:
+        if quote:
+            if ch == quote:
+                found.append("".join(current))
+                quote, current = None, []
+            else:
+                current.append(ch)
+        elif ch in "\"\'":
+            quote = ch
+        elif ch == "]":
+            break
+    made = []
+    for one in found:
+        try:
+            made.append(Requirement(one))
+        except Exception:                        # noqa: BLE001 - not a requirement
+            continue
+    return made
 
 
 def main(argv=None) -> int:
@@ -97,9 +169,15 @@ def main(argv=None) -> int:
     # Offline, free, and it answers a question the index cannot: whichever way
     # the two numbers differ, the pair named by the tag is not the pair the
     # wheel installs, and every version PyPI holds could be healthy.
-    if pinned != version:
-        print(f"the rules pin {READER}=={pinned} and this repository publishes "
-              f"{version}. One tag names one pair; these are two.", file=sys.stderr)
+    # Compared as versions, not as text. `>=0.7` and `0.7.0` are one release
+    # under PEP 440, and refusing that pair would be refusing a spelling. What
+    # must not pass is a floor at a *different* release: below this one, the
+    # alias could resolve to an engine older than the release it stands for.
+    if Version(pinned) != Version(version):
+        print(f"the rules floor {READER} at {pinned} and this repository "
+              f"publishes {version}. One tag names one pair; these are two, and "
+              f"a floor below this release lets the alias resolve to an engine "
+              f"older than the release it stands for.", file=sys.stderr)
         return 1
     got = subprocess.run(["git", "tag", "--list", "v*"],
                          cwd=ROOT, capture_output=True, text=True)
@@ -114,7 +192,7 @@ def main(argv=None) -> int:
               file=sys.stderr)
         return 1
     if f"v{version}" not in tags:
-        print(f"the rules pin {READER}=={pinned} and v{version} is not tagged. "
+        print(f"the rules floor {READER} at {pinned} and v{version} is not tagged. "
               f"The reader goes first: published this way, "
               f"`pip install {RULES}` cannot resolve, and the version "
               f"number cannot be reused to fix it.", file=sys.stderr)

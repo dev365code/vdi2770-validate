@@ -28,6 +28,14 @@ OUTSIDE_CHECK = {
               "cleared first -- `--find-links` over a directory holding an "
               "earlier build resolves to whichever version sorts highest, which "
               "checks an artifact nobody made in this run",
+    "upgrade-paths-from-wheels": "it builds both wheels, which needs the "
+                                 "network, and `make check` is offline. It is "
+                                 "the question the release asks of the wheels it "
+                                 "is about to publish, and the release's copy of "
+                                 "it was red from the merge onward because that "
+                                 "job downloaded one of the two wheels the "
+                                 "matrix needs. CI runs it on every push, so it "
+                                 "is not first exercised by the event it guards",
     "installed-runs": "it builds both wheels, which needs the network, and it "
                       "asks the question no reading of a tree can answer: "
                       "whether the file pip *wrote* starts on the machine it "
@@ -182,6 +190,11 @@ def test_ci_runs_nothing_the_gate_does_not():
             "comparison, and `make check` is offline. Two distributions that "
             "come to claim one path do it between one release and the next, "
             "which is a state no reading of this tree can see.",
+        "python tools/check_upgrade_paths.py --from dist":
+            "the release runs this against the wheels it is about to publish "
+            "and nothing ran it on a push, so the copy in the release workflow "
+            "was red from the merge onward and could only fail on a tag. It "
+            "builds both wheels, so it cannot go in an offline gate.",
         "python tools/check_upgrade_paths.py --case 11 --case 13 --from dist":
             "it installs the built wheels and runs what pip wrote, and the "
             "platform is half the question -- `make check` answers it on "
@@ -198,7 +211,8 @@ def test_ci_runs_nothing_the_gate_does_not():
     # of those is recognised because somebody wrote down why it is there.
     recipes = [c.replace("$(PYTHON)", "python").strip()
                for c in recipe_commands(include={"zipapp", "paths-disjoint",
-                                                 "wheels", "installed-runs"})]
+                                                 "wheels", "installed-runs",
+                                                 "upgrade-paths-from-wheels"})]
     for command, reason in CI_ONLY.items():
         assert reason and command in recipes, (
             f"{command!r} is named as CI-only and the Makefile does not run it")
@@ -1081,17 +1095,17 @@ def test_the_env_the_harness_builds_reports_a_missing_command(tmp_path,
 #: Not an escape hatch: a job here is one where the ordering makes the gate
 #: impossible, and the entry has to say why. Anything else that can publish has
 #: to wait.
-UNGUARDABLE = {
-    "publish-reader": "the gate installs both halves and upgrades to them, so "
-                      "it cannot run until both wheels exist -- and the rules "
-                      "are not built until the reader is on the index, which is "
-                      "what `check_release_order.py` is for. The reader is "
-                      "therefore already published by the time there is "
-                      "anything to test. What this costs is bounded: the "
-                      "reader has no console script and no dependency of its "
-                      "own, so the failures this gate exists for reach a user "
-                      "through the rules, which it does guard.",
-}
+#: Empty, and that is the point of leaving it here.
+#:
+#: `publish-reader` used to be in it: the gate needs both wheels, the rules were
+#: not built until the reader was on the index, and so the reader was already
+#: published by the time there was anything to test. Every clause of that was
+#: true and the conclusion was avoidable -- building the rules never needed the
+#: reader on an index, because `python -m build` does not resolve runtime
+#: dependencies. Moving that build ahead of the first upload put both wheels in
+#: front of the gate, and the exemption stopped being true. It is deleted rather
+#: than reworded, because an exemption that has become false is a gate removed.
+UNGUARDABLE = {}
 
 
 def _yaml(path):

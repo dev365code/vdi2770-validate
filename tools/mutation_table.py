@@ -378,22 +378,33 @@ TABLE = [
      "older reader version out of the `v*` namespace answers about a "
      "different distribution"),
 
-    ("gates/a-pin-that-is-not-this-release-is-refused",
+    ("gates/a-floor-that-is-not-this-release-is-refused",
      "tools/check_release_order.py",
-     "    if pinned != version:",
+     "    if Version(pinned) != Version(version):",
      "    if False:",
      ["tests/test_the_release_order_is_enforced.py"],
-     "a pin naming any version but this one means the tag and the wheel "
-     "disagree about which pair went out -- ahead of it resolves to nothing, "
-     "behind it resolves to the wrong reader, and no index can report either"),
+     "a floor below this release lets the alias resolve to an engine older "
+     "than the release it stands for, and a floor above it resolves to "
+     "nothing at all -- neither state can be reported by any index"),
 
-    ("gates/the-reader-is-pinned-exactly-or-not-at-all",
+    ("gates/the-engine-is-floored-at-this-release-or-not-at-all",
      "tools/check_release_order.py",
-     "    if len(list(pin.specifier)) != 1 or len(wanted) != 1 or wanted[0].endswith(\".*\"):",
+     "    if len(only) != 1 or only[0].operator not in (\"==\", \">=\"):",
      "    if False:",
-     ["tests/test_the_release_order_is_enforced.py"],
-     "a range let pip install a reader this release was never run against, and "
-     "leaves the order gate no single version to check"),
+     ["tests/test_the_release_order_is_enforced.py::"
+      "test_a_requirement_that_lets_pip_choose_an_older_engine_is_refused"],
+     "a bare name, a ceiling, a compatible release or an exclusion each let a "
+     "resolver install an engine this release was never run against"),
+
+    ("gates/the-dependency-array-ends-where-the-array-ends",
+     "tools/check_release_order.py",
+     '    start = re.search(r"^dependencies = \\[", text, re.M)',
+     '    start = re.search(r"^dependencies = X", text, re.M)',
+     ["tests/test_the_release_order_is_enforced.py::"
+      "test_the_gate_can_read_this_repositorys_own_manifest"],
+     "the pattern that read this list stopped at the `]` inside "
+     "`vdi2770[validate]`, so the gate refused every release with `this release no longer depends on vdi2770` -- standing between the two publishes, "
+     "where a refusal lands with half a release on the index"),
 
     ("gates/the-two-distributions-cannot-claim-one-import-name",
      "pyproject.toml",
@@ -540,9 +551,9 @@ TABLE = [
     ("gates/a-release-checkout-can-see-its-tags",
      ".github/workflows/release.yml",
      "      # skip \u2014 in the one workflow that authorises a publish.\n"
-     "      - uses: actions/checkout@v4\n        with: { fetch-depth: 0 }",
+     "      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0\n        with: { fetch-depth: 0 }",
      "      # skip \u2014 in the one workflow that authorises a publish.\n"
-     "      - uses: actions/checkout@v4\n        with: { fetch-depth: 1 }",
+     "      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0\n        with: { fetch-depth: 1 }",
      ["tests/test_two_packages_publish_separately.py"],
      "without the tags the assertions comparing this tree against a release tag "
      "skip rather than fail, in the one workflow that authorises a publish"),
@@ -550,9 +561,9 @@ TABLE = [
     ("gates/the-rules-checkout-can-see-them-too",
      ".github/workflows/release.yml",
      "      # and a default checkout is `--depth 1 --no-tags`.\n"
-     "      - uses: actions/checkout@v4\n        with: { fetch-depth: 0 }",
+     "      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0\n        with: { fetch-depth: 0 }",
      "      # and a default checkout is `--depth 1 --no-tags`.\n"
-     "      - uses: actions/checkout@v4\n        with: { fetch-depth: 1 }",
+     "      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0\n        with: { fetch-depth: 1 }",
      ["tests/test_two_packages_publish_separately.py"],
      "the order gate reads the tag history, and a gate that cannot see fails "
      "closed here -- which stops the release rather than breaking it, but stops "
@@ -1126,8 +1137,8 @@ UPGRADE_ROWS = [
 
     ("gates/the-release-gate-runs-before-the-publish-it-guards",
      ".github/workflows/release.yml",
-     "    needs: [build-rules, upgrade-gate]",
-     "    needs: build-rules",
+     "    needs: [reader-is-on-the-index, upgrade-gate]",
+     "    needs: reader-is-on-the-index",
      ["tests/test_ci_parity.py::"
       "test_nothing_publishes_before_the_check_that_guards_it"],
      "the upgrade check would run beside the publish instead of before it, so "
@@ -1380,6 +1391,61 @@ PLATFORM_ROWS = [
 
 ]
 
+PUBLISHING_PATH_ROWS = [
+    ('release/the-workflow-states-its-own-permission-floor',
+     '.github/workflows/release.yml',
+     'permissions:\n  contents: read\n',
+     '',
+     ['tests/test_the_publishing_path_has_three_properties.py::'
+      'test_the_release_states_its_own_floor'],
+     'three jobs would go back to taking whatever the repository default is -- '
+     'a setting nobody reading this file can see, in jobs that install from an '
+     'index and run a build backend'),
+
+    ('release/the-publish-action-is-pinned-to-a-commit',
+     '.github/workflows/release.yml',
+     '          name: sums-rules\n          path: sums/\n      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2\n        with:\n          name: dist-rules\n          path: dist/\n\n  # The last thing before the name people type gets a new version behind it.\n  # It installs what is on the index today and then upgrades to the wheel that\n  # is about to replace it, and the verdict is that the command still runs --\n  # `pip check` calls a destroyed install healthy, so it is recorded and not\n  # believed. This cannot protect the reader\'s publish, which has already\n  # happened by the time both wheels exist; it protects the one people install\n  # by name, which is where every upgrade failure here has been.\n  upgrade-gate:\n    needs: [build-reader, build-rules]\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0\n      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0\n        with:\n          python-version: "3.12"\n      # Both wheels, into one directory. It downloaded only the rules, and every\n      # case from the fourth onward installs with `--no-index --find-links` and\n      # asks for the engine -- directly, or as the alias\'s own dependency. The\n      # engine\'s wheel was not there, so pip could not resolve and the gate\n      # standing between the two publishes was red on any tag. Nothing noticed:\n      # locally `make` builds both into one directory, so it only failed where\n      # no one had run it.\n      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4.3.0\n        with:\n          name: dist-reader\n          path: dist/\n      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4.3.0\n        with:\n          name: dist-rules\n          path: dist/\n      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4.3.0\n        with:\n          name: sums-reader\n          path: sums-reader/\n      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4.3.0\n        with:\n          name: sums-rules\n          path: sums-rules/\n      - name: These are the bytes the build jobs made\n        run: |\n          cat sums-reader/SHA256SUMS sums-rules/SHA256SUMS > /tmp/SHA256SUMS\n          # Counted before it is checked. `sha256sum -c` over a list with no\n          # entries is a check that agrees with everything -- measured, exit 0 --\n          # and whether it happens to refuse depends on which coreutils is\n          # installed. A gate must not rest on that.\n          n="$(wc -l < /tmp/SHA256SUMS)"\n          test "$n" -ge 4 || { echo "only $n files recorded for two builds"; exit 1; }\n          (cd dist && sha256sum -c /tmp/SHA256SUMS)\n          test "$(ls dist | wc -l)" -eq "$n" || {\n            echo "dist/ holds $(ls dist | wc -l) files and $n were recorded; "\n            echo "something is here that no build job made"\n            exit 1; }\n      - name: Both wheels are here, or the gate is checking half a release\n        run: |\n          ls -l dist/\n          test -n "$(ls dist/vdi2770-*.whl 2>/dev/null)" || {\n            echo "no engine wheel in dist/; every case that installs would fail"\n            exit 1; }\n          test -n "$(ls dist/vdi2770_validate-*.whl 2>/dev/null)" || {\n            echo "no alias wheel in dist/"; exit 1; }\n      # Before either publish, so it protects both. The first three cases\n      # install from the live index with no `--find-links`, which before this\n      # ran against an index already holding the new engine. It no longer does,\n      # and that is the right way round: if a new engine broke an old alias, the\n      # remedy is to publish the matched pair, not to withhold it and leave\n      # everyone in the mixed state. The window itself is measured by the case\n      # that simulates it.\n      - name: An install somebody already has must survive this release\n        run: python tools/check_upgrade_paths.py --from dist\n\n  # The only thing between the two uploads. It holds the workflow\'s floor --\n  # `contents: read`, nothing else -- and no environment. (It said "no token",\n  # which is not a thing a job can have: absent a `permissions:` block it takes\n  # whatever the repository\'s default is, and that is a setting, not a fact\n  # about this file.) Two reasons it is its own job rather than a step inside the\n  # publisher. A job that publishes should be download-and-upload and nothing\n  # else, so that re-running it after a failure is one click and repeats no\n  # decision -- which is the whole of the recovery path when the engine is on\n  # the index and the alias is not. And a `pip install` from PyPI, a `git`\n  # subprocess and a script from the tagged tree do not belong in the job that\n  # holds `id-token: write` for a distribution.\n  reader-is-on-the-index:\n    needs: publish-reader\n    runs-on: ubuntu-latest\n    steps:\n      # `fetch-depth: 0`: the gate asks the tag history whether this release is\n      # tagged, and a default checkout is `--depth 1 --no-tags`.\n      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0\n        with: { fetch-depth: 0 }\n      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0\n        with:\n          python-version: "3.12"\n      - name: Install\n        run: python -m pip install --upgrade pip packaging\n      # `needs: publish-reader` proves the upload step ran. It does not prove\n      # the index serves the file, and the alias is unresolvable until it does.\n      # PyPI\'s JSON view can trail the upload, so this is given a few tries --\n      # and refuses at the end rather than guessing, because an alias published\n      # against an engine that is not there cannot be fixed under this version\n      # number.\n      - name: The engine this floors on must be on the index\n        run: |\n          for attempt in 1 2 3 4 5; do\n            if python tools/check_release_order.py; then exit 0; fi\n            echo "the index does not serve it yet (attempt $attempt of 5); waiting"\n            sleep 20\n          done\n          echo "the engine this floors on never appeared on the index"\n          exit 1\n      # And "the JSON view lists it" is not "a machine can install it". This is\n      # the state the alias actually requires, so it is the one that is asked\n      # for before the alias goes out.\n      - name: And a machine can actually install it\n        run: |\n          version="${GITHUB_REF_NAME#v}"\n          for attempt in 1 2 3 4 5; do\n            if python -m pip download --no-deps --only-binary :all: \\\n                 --dest /tmp/probe "vdi2770==$version"; then exit 0; fi\n            echo "not installable yet (attempt $attempt of 5); waiting"\n            sleep 20\n          done\n          echo "vdi2770 $version is listed and cannot be installed"\n          exit 1\n\n  publish-rules:\n    needs: [reader-is-on-the-index, upgrade-gate]\n    runs-on: ubuntu-latest\n    # Not the reader\'s environment. The environment is half of what PyPI keys\n    # the publisher on, so sharing it would let either job publish as the other\n    # package.\n    environment: pypi-vdi2770-validate\n    permissions:\n      id-token: write\n    steps:\n      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4.3.0\n        with:\n          name: dist-rules\n          path: dist/\n      # The bytes, not the name. An artifact is immutable and fetched by\n      # name, so this cannot fail without something having gone very wrong --\n      # which is the point: it is the line that turns "the gate tested these\n      # wheels" from an argument about the job graph into a checked fact, and\n      # it is what an independent verifier compares against afterwards.\n      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4.3.0\n        with:\n          name: sums-rules\n          path: sums/\n      - name: These are the bytes that were built and tested\n        run: |\n          cat sums/SHA256SUMS\n          # Counted first: `sha256sum -c` over an empty list exits 0 on at\n          # least one coreutils, and this is the last thing that runs before an\n          # upload that cannot be taken back.\n          n="$(wc -l < sums/SHA256SUMS)"\n          test "$n" -ge 2 || { echo "only $n files recorded"; exit 1; }\n          (cd dist && sha256sum -c ../sums/SHA256SUMS)\n          test "$(ls dist | wc -l)" -eq "$n" || {\n            echo "dist/ holds $(ls dist | wc -l) files and $n were recorded; "\n            echo "PyPI would receive something no build job made"\n            exit 1; }\n      # Pinned to a commit, not to `release/v1`. This is the one thing in this\n      # job that is not ours, and it runs while the job holds `id-token: write`\n      # for a real distribution: a moving ref means whatever that ref points at\n      # on the day can mint a publishing token. v1.14.2.\n      - uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33  # v1.14.2',
+     '          name: sums-rules\n          path: sums/\n      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2\n        with:\n          name: dist-rules\n          path: dist/\n\n  # The last thing before the name people type gets a new version behind it.\n  # It installs what is on the index today and then upgrades to the wheel that\n  # is about to replace it, and the verdict is that the command still runs --\n  # `pip check` calls a destroyed install healthy, so it is recorded and not\n  # believed. This cannot protect the reader\'s publish, which has already\n  # happened by the time both wheels exist; it protects the one people install\n  # by name, which is where every upgrade failure here has been.\n  upgrade-gate:\n    needs: [build-reader, build-rules]\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0\n      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0\n        with:\n          python-version: "3.12"\n      # Both wheels, into one directory. It downloaded only the rules, and every\n      # case from the fourth onward installs with `--no-index --find-links` and\n      # asks for the engine -- directly, or as the alias\'s own dependency. The\n      # engine\'s wheel was not there, so pip could not resolve and the gate\n      # standing between the two publishes was red on any tag. Nothing noticed:\n      # locally `make` builds both into one directory, so it only failed where\n      # no one had run it.\n      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4.3.0\n        with:\n          name: dist-reader\n          path: dist/\n      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4.3.0\n        with:\n          name: dist-rules\n          path: dist/\n      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4.3.0\n        with:\n          name: sums-reader\n          path: sums-reader/\n      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4.3.0\n        with:\n          name: sums-rules\n          path: sums-rules/\n      - name: These are the bytes the build jobs made\n        run: |\n          cat sums-reader/SHA256SUMS sums-rules/SHA256SUMS > /tmp/SHA256SUMS\n          # Counted before it is checked. `sha256sum -c` over a list with no\n          # entries is a check that agrees with everything -- measured, exit 0 --\n          # and whether it happens to refuse depends on which coreutils is\n          # installed. A gate must not rest on that.\n          n="$(wc -l < /tmp/SHA256SUMS)"\n          test "$n" -ge 4 || { echo "only $n files recorded for two builds"; exit 1; }\n          (cd dist && sha256sum -c /tmp/SHA256SUMS)\n          test "$(ls dist | wc -l)" -eq "$n" || {\n            echo "dist/ holds $(ls dist | wc -l) files and $n were recorded; "\n            echo "something is here that no build job made"\n            exit 1; }\n      - name: Both wheels are here, or the gate is checking half a release\n        run: |\n          ls -l dist/\n          test -n "$(ls dist/vdi2770-*.whl 2>/dev/null)" || {\n            echo "no engine wheel in dist/; every case that installs would fail"\n            exit 1; }\n          test -n "$(ls dist/vdi2770_validate-*.whl 2>/dev/null)" || {\n            echo "no alias wheel in dist/"; exit 1; }\n      # Before either publish, so it protects both. The first three cases\n      # install from the live index with no `--find-links`, which before this\n      # ran against an index already holding the new engine. It no longer does,\n      # and that is the right way round: if a new engine broke an old alias, the\n      # remedy is to publish the matched pair, not to withhold it and leave\n      # everyone in the mixed state. The window itself is measured by the case\n      # that simulates it.\n      - name: An install somebody already has must survive this release\n        run: python tools/check_upgrade_paths.py --from dist\n\n  # The only thing between the two uploads. It holds the workflow\'s floor --\n  # `contents: read`, nothing else -- and no environment. (It said "no token",\n  # which is not a thing a job can have: absent a `permissions:` block it takes\n  # whatever the repository\'s default is, and that is a setting, not a fact\n  # about this file.) Two reasons it is its own job rather than a step inside the\n  # publisher. A job that publishes should be download-and-upload and nothing\n  # else, so that re-running it after a failure is one click and repeats no\n  # decision -- which is the whole of the recovery path when the engine is on\n  # the index and the alias is not. And a `pip install` from PyPI, a `git`\n  # subprocess and a script from the tagged tree do not belong in the job that\n  # holds `id-token: write` for a distribution.\n  reader-is-on-the-index:\n    needs: publish-reader\n    runs-on: ubuntu-latest\n    steps:\n      # `fetch-depth: 0`: the gate asks the tag history whether this release is\n      # tagged, and a default checkout is `--depth 1 --no-tags`.\n      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0\n        with: { fetch-depth: 0 }\n      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0\n        with:\n          python-version: "3.12"\n      - name: Install\n        run: python -m pip install --upgrade pip packaging\n      # `needs: publish-reader` proves the upload step ran. It does not prove\n      # the index serves the file, and the alias is unresolvable until it does.\n      # PyPI\'s JSON view can trail the upload, so this is given a few tries --\n      # and refuses at the end rather than guessing, because an alias published\n      # against an engine that is not there cannot be fixed under this version\n      # number.\n      - name: The engine this floors on must be on the index\n        run: |\n          for attempt in 1 2 3 4 5; do\n            if python tools/check_release_order.py; then exit 0; fi\n            echo "the index does not serve it yet (attempt $attempt of 5); waiting"\n            sleep 20\n          done\n          echo "the engine this floors on never appeared on the index"\n          exit 1\n      # And "the JSON view lists it" is not "a machine can install it". This is\n      # the state the alias actually requires, so it is the one that is asked\n      # for before the alias goes out.\n      - name: And a machine can actually install it\n        run: |\n          version="${GITHUB_REF_NAME#v}"\n          for attempt in 1 2 3 4 5; do\n            if python -m pip download --no-deps --only-binary :all: \\\n                 --dest /tmp/probe "vdi2770==$version"; then exit 0; fi\n            echo "not installable yet (attempt $attempt of 5); waiting"\n            sleep 20\n          done\n          echo "vdi2770 $version is listed and cannot be installed"\n          exit 1\n\n  publish-rules:\n    needs: [reader-is-on-the-index, upgrade-gate]\n    runs-on: ubuntu-latest\n    # Not the reader\'s environment. The environment is half of what PyPI keys\n    # the publisher on, so sharing it would let either job publish as the other\n    # package.\n    environment: pypi-vdi2770-validate\n    permissions:\n      id-token: write\n    steps:\n      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4.3.0\n        with:\n          name: dist-rules\n          path: dist/\n      # The bytes, not the name. An artifact is immutable and fetched by\n      # name, so this cannot fail without something having gone very wrong --\n      # which is the point: it is the line that turns "the gate tested these\n      # wheels" from an argument about the job graph into a checked fact, and\n      # it is what an independent verifier compares against afterwards.\n      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4.3.0\n        with:\n          name: sums-rules\n          path: sums/\n      - name: These are the bytes that were built and tested\n        run: |\n          cat sums/SHA256SUMS\n          # Counted first: `sha256sum -c` over an empty list exits 0 on at\n          # least one coreutils, and this is the last thing that runs before an\n          # upload that cannot be taken back.\n          n="$(wc -l < sums/SHA256SUMS)"\n          test "$n" -ge 2 || { echo "only $n files recorded"; exit 1; }\n          (cd dist && sha256sum -c ../sums/SHA256SUMS)\n          test "$(ls dist | wc -l)" -eq "$n" || {\n            echo "dist/ holds $(ls dist | wc -l) files and $n were recorded; "\n            echo "PyPI would receive something no build job made"\n            exit 1; }\n      # Pinned to a commit, not to `release/v1`. This is the one thing in this\n      # job that is not ours, and it runs while the job holds `id-token: write`\n      # for a real distribution: a moving ref means whatever that ref points at\n      # on the day can mint a publishing token. v1.14.2.\n      - uses: pypa/gh-action-pypi-publish@release/v1',
+     ['tests/test_the_publishing_path_has_three_properties.py::'
+      'test_every_action_is_pinned_to_a_commit'],
+     'the one piece of code in that job which is not ours would run from a '
+     'moving reference while the job holds a token that can publish as a real '
+     'distribution'),
+
+    ('release/the-gate-receives-both-distributions',
+     '.github/workflows/release.yml',
+     '      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4.3.0\n        with:\n          name: dist-reader\n          path: dist/\n      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4.3.0\n        with:\n          name: dist-rules\n          path: dist/\n      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4.3.0\n        with:\n          name: sums-reader',
+     '      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4.3.0\n        with:\n          name: dist-rules\n          path: dist/\n      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4.3.0\n        with:\n          name: sums-reader',
+     ['tests/test_the_publishing_path_has_three_properties.py::'
+      'test_the_gate_receives_both_distributions_and_both_records'],
+     'the exact defect: the job that installs and upgrades gets one of the two '
+     'wheels it needs, every case that installs fails to resolve, and the gate '
+     'between the two uploads is red on any tag while green on every machine'),
+
+    ('release/a-publisher-does-not-check-out-the-tree',
+     '.github/workflows/release.yml',
+     '    environment: pypi-vdi2770-validate\n    permissions:\n      id-token: write\n    steps:\n      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4.3.0',
+     '    environment: pypi-vdi2770-validate\n    permissions:\n      id-token: write\n    steps:\n      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0\n      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4.3.0',
+     ['tests/test_the_publishing_path_has_three_properties.py::'
+      'test_a_publisher_downloads_and_uploads_and_does_nothing_else'],
+     'code from the tagged tree would run in the job that holds a publishing '
+     'token, and re-running the publisher after a half-finished release would '
+     'stop being the one thing that repeats no decision'),
+
+
+    ('release/a-push-builds-what-a-tag-builds',
+     '.github/workflows/ci.yml',
+     '          python -m build packages/vdi2770 --outdir dist/\n          python -m build --outdir dist/\n          python tools/check_upgrade_paths.py --from dist',
+     '          python -m build --wheel --outdir dist .\n          python -m build --wheel --outdir dist packages/vdi2770\n          python tools/check_upgrade_paths.py --from dist',
+     ['tests/test_the_publishing_path_has_three_properties.py::'
+      'test_the_wheels_a_push_builds_are_the_wheels_a_tag_builds'],
+     'the rehearsal would build wheels only while the release builds an sdist '
+     'too, so what every push checks and what a tag publishes stop being the '
+     'same artifacts -- and the parity gate waves `python -m build` through as '
+     'setup, so nothing else compares those lines'),
+
+]
+
 PAGES_ROWS = [
     ('pages/the-install-with-no-command-says-how-to-run-it',
      'README.md',
@@ -1496,6 +1562,17 @@ PAGES_ROWS = [
      'a missing `gh`, a token without `actions: read` or a rate limit would '
      'each turn into a pass, which makes every outage an authorisation'),
 
+
+    ('release/an-abbreviated-commit-is-named-as-the-reason',
+     'tools/check_ci_judged_this_commit.py',
+     '        if not others and len(commit) != 40:',
+     '        if False:',
+     ['tests/test_a_release_asks_whether_ci_judged_this_commit.py::'
+      'test_an_abbreviated_commit_is_named_as_the_reason'],
+     'the short SHA a person copies out of `git log` returns nothing from '
+     'GitHub, and this gate then reports that a judged commit was not judged -- '
+     'to the person trying to find out why a release stopped'),
+
 ]
 
 ABSENT_STDLIB_ROWS = [
@@ -1537,6 +1614,8 @@ TABLE += UPGRADE_ROWS
 TABLE += STREAM_ROWS
 
 TABLE += PAGES_ROWS
+
+TABLE += PUBLISHING_PATH_ROWS
 
 TABLE += BASIS_ROWS
 

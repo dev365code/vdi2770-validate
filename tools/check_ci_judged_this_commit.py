@@ -65,6 +65,15 @@ def verdict(commit: str, runs) -> str:
     mine = [r for r in runs if (r.get("headSha") or "") == commit]
     if not mine:
         others = sorted({(r.get("headSha") or "")[:7] for r in runs})
+        # An abbreviated SHA returns nothing: GitHub's filter matches the full
+        # forty characters. Measured. The refusal is the safe direction and the
+        # wrong sentence, and this is the tool somebody reaches for the moment a
+        # release stops -- so it says which of the two things happened.
+        if not others and len(commit) != 40:
+            return (f"{commit} is {len(commit)} characters and GitHub matches a "
+                    f"commit by all 40, so this asked about nothing. Pass the "
+                    f"full SHA -- in the workflow it is $GITHUB_SHA, which is "
+                    f"already full.")
         return (f"no completed CI run for {commit[:7]}"
                 + (f"; the runs returned were for {', '.join(others)}, which is "
                    f"not this commit" if others else

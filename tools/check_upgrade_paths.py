@@ -671,6 +671,25 @@ def case_13_every_door_on_a_working_install(env: Env, wheels: str) -> str:
                 f"`python -m {door} check {path}` exited {done.returncode} and "
                 f"this container is a {'clean' if wanted == 0 else 'failing'} "
                 f"one: {said[:300]}"))
+    # The two sentences the old name's page makes, measured on the install the
+    # page is about. It used to say a module imported through the old path
+    # "still carries the old name" -- and none of them do: the object is the
+    # same object, and it answers to the new name, which is what a traceback, a
+    # log line and a pickle will say. The claim was on a public page and had
+    # nothing behind it.
+    done = run(env.python, "-c",
+               "import vdi2770_validate.model as old, vdi2770.validate.model as new;"
+               "print(old.Severity is new.Severity, old.__name__)")
+    said = (done.stdout + done.stderr).strip()
+    expect(done.returncode == 0, f"the old name would not import: {said[:300]}")
+    expect(said.split()[0] == "True", (
+        f"`vdi2770_validate.model.Severity` is not the same object as "
+        f"`vdi2770.validate.model.Severity`, so the old name resolves to a copy: "
+        f"{said[:200]}"))
+    expect(said.split()[-1] == "vdi2770.validate.model", (
+        f"a module imported through the old path reports __name__ as "
+        f"{said.split()[-1]!r}; the page says it reports the new name, which is "
+        f"what a traceback and a pickle will show"))
     return f"{exe.name if exe else '(no command)'} and two module doors, both verdicts"
 
 
