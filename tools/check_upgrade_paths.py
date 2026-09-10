@@ -25,10 +25,14 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
+
+from packaging.requirements import Requirement
+from packaging.version import Version
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -36,6 +40,7 @@ ROOT = Path(__file__).resolve().parent.parent
 #: package rather than hard-coded, so a release cannot pass by agreeing with a
 #: number written here.
 COMMAND = "vdi2770-validate"
+RULES = "vdi2770-validate"
 
 #: What a refusal to judge begins with. Spelled here rather than
 #: imported: this file runs against installed copies of the tool, and
@@ -195,6 +200,52 @@ def both_halves_run(env: Env, why: str) -> None:
             f"answers the same way to everything answers nothing."))
 
 
+def _floor_of(requirement: str):
+    """The version this requirement cannot go below, or `None`.
+
+    The same question `tools/check_release_order.py` asks of the manifest, put
+    to the metadata of what is actually installed. One `==` or one `>=`;
+    anything else -- a bare name, a ceiling, a compatible release -- lets a
+    resolver walk down to an engine nobody ran this against.
+    """
+    try:
+        only = list(Requirement(requirement).specifier)
+    except Exception:                            # noqa: BLE001 - any spelling
+        return None
+    if len(only) != 1 or only[0].operator not in ("==", ">="):
+        return None
+    return None if only[0].version.endswith(".*") else only[0].version
+
+
+def _the_one_before():
+    """The newest published `vdi2770-validate` older than this tree's version.
+
+    Asked of the index, because "what somebody already has" is a fact about the
+    index and not about this repository. Falling back to a hard-coded number
+    would be the defect this file removed from `case_2`: a version yanked from
+    an index this project does not control would block a release for a reason
+    that has nothing to do with it.
+    """
+    sys.path.insert(0, str(ROOT / "tools"))
+    import check_version_is_new
+
+    ours = Version(_version_in_the_tree())
+    older = sorted((Version(v) for v in check_version_is_new.published(RULES)
+                    if Version(v) < ours), reverse=True)
+    if not older:
+        raise AssertionError(
+            f"the index has no {RULES} older than {ours}, so there is no "
+            f"installation for this case to upgrade from")
+    return str(older[0])
+
+
+def _version_in_the_tree() -> str:
+    found = re.search(r'^version = "([^"]+)"',
+                      (ROOT / "pyproject.toml").read_text(encoding="utf-8"), re.M)
+    if found is None:
+        raise AssertionError("pyproject.toml declares no version")
+    return found.group(1)
+
 def case_1_clean(env: Env) -> str:
     """Nothing installed, one command. What a first-time reader does."""
     env.install("vdi2770-validate")
@@ -250,14 +301,19 @@ def case_2_upgrade_from_0_6_0(env: Env) -> str:
             f"{after['vdi2770-validate']}+{after['vdi2770']}; pip check: {env.check()}")
 
 
-def case_3_the_pin_is_exact(env: Env) -> str:
+def case_3_the_engine_cannot_be_older_than_the_alias(env: Env) -> str:
     """What the installed metadata asks for, not what the repository declares.
 
-    An exact pin is what makes the pair impossible to half-move: there is no
-    version of one that can be paired with a different version of the other, so
-    a release cannot arrive half-applied. Checked against the index rather than
-    against `pyproject.toml` because what a release shipped and what this tree
-    declares are different questions and only the first reaches anybody.
+    Until 0.8.0 this was an exact pin, and an exact pin is what made the pair
+    impossible to half-move. There is no pair now -- the alias is two lines and
+    the rules live in the engine -- so the requirement is a floor at the alias's
+    own version, which says the same thing that still needs saying: installing
+    it can never leave an engine older than the release it stands for.
+
+    Checked against the index rather than against `pyproject.toml` because what
+    a release shipped and what this tree declares are different questions and
+    only the first reaches anybody. This case went red the day 0.8.0 was
+    published, which is the point of asking the index.
 
     It is *not* checked here that a mixed install is refused, because it is
     not: pip prints its conflict line and exits 0. `pip check` goes red, which
@@ -272,9 +328,14 @@ def case_3_the_pin_is_exact(env: Env) -> str:
                " if r.startswith('vdi2770')][0])")
     expect(done.returncode == 0, f"could not read the installed metadata: {done.stderr}")
     asked = done.stdout.strip()
-    expect(asked == f"vdi2770=={have['vdi2770']}",
-           f"the installed rules ask for {asked!r}, not an exact pin on "
-           f"{have['vdi2770']}")
+    floor = _floor_of(asked)
+    expect(floor is not None,
+           f"the installed rules ask for {asked!r}, which lets a resolver "
+           f"choose an engine the release was never run against")
+    expect(Version(floor) >= Version(have["vdi2770-validate"]),
+           f"the installed rules floor the engine at {floor} while standing "
+           f"for {have['vdi2770-validate']}, so installing them can leave an "
+           f"engine older than the release they are")
     # This case installs a whole working pair on its way to reading one field,
     # so it asks the same question the others do. A case that installs and
     # never runs anything is a case that would not notice the install being
@@ -295,7 +356,13 @@ def case_4_the_release_being_made(env: Env, wheels: str) -> str:
     failures have been: a range that could not reach its own fix, and a
     distribution uninstalled out from under the one that replaced it.
     """
-    env.install("vdi2770-validate")
+    # The newest published release *older than the one being built*, named
+    # rather than inferred. `pip install vdi2770-validate` gives whatever the
+    # index holds, and the moment this release is published that is this
+    # release: the upgrade then moves nothing and this case fails saying the
+    # wheels are not newer than the index. It went red exactly that way an hour
+    # after 0.8.0 went out.
+    env.install(f"vdi2770-validate=={_the_one_before()}")
     before = env.versions()
     # `--pre`, because the ordinary state of this tree is a `.devN` and pip
     # will not select one otherwise: without it this case fails on every
@@ -698,7 +765,7 @@ def case_13_every_door_on_a_working_install(env: Env, wheels: str) -> str:
 #: listed apart -- kept out of this list, it was the one case no structural
 #: test covered, and deleting its verdict left the suite green. It is also the
 #: only case that installs the release being published.
-CASES = [case_1_clean, case_2_upgrade_from_0_6_0, case_3_the_pin_is_exact,
+CASES = [case_1_clean, case_2_upgrade_from_0_6_0, case_3_the_engine_cannot_be_older_than_the_alias,
          case_4_the_release_being_made,
          case_5_the_new_world_installs_the_old_name,
          case_6_both_names_at_once,

@@ -433,8 +433,11 @@ def test_no_document_cites_a_file_that_is_not_here():
     # in: the root one stopped listing files it does not carry, and the engine's
     # names its two by the path they have *inside the wheel*, which is not a
     # repository path and is not this pattern's business.
-    assert seen == 31, (
-        f"{seen} citations found, not 31. If you added or removed one, say so "
+    # 31 to 29 on the 0.8.x release branch: the newest section is now `0.8.1`,
+    # which cites no files (0.8.0's cited three), and SECURITY.md's amplification
+    # row gained one citation for the read it now covers.
+    assert seen == 29, (
+        f"{seen} citations found, not 29. If you added or removed one, say so "
         f"here; if you did not, some of them just stopped being checked.")
 
 

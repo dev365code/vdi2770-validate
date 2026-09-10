@@ -1001,7 +1001,7 @@ def test_every_case_the_harness_runs_asks_that_question(monkeypatch):
     #: asks instead, and it still has to assert something about running the tool.
     #: Every row, by name. A count lets one be deleted for free.
     EVERY_CASE = (
-        "case_1_clean", "case_2_upgrade_from_0_6_0", "case_3_the_pin_is_exact",
+        "case_1_clean", "case_2_upgrade_from_0_6_0", "case_3_the_engine_cannot_be_older_than_the_alias",
         "case_4_the_release_being_made",
         "case_5_the_new_world_installs_the_old_name",
         "case_6_both_names_at_once",

@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.8.1 — 2026-09-11
+
+Who should take this release: anyone on 0.8.0 or earlier who checks containers
+from sources they do not control.
+
+**A container member can no longer make the reader spend far more memory than
+the archive's own size.** A member is read a second time to hand it to a check
+-- a PDF to the PDF checks, the metadata to the model, a nested container to
+its own walk. Those reads asked for the whole member at once, and the ZIP
+library expands a member up to the per-member cap before it cuts the result to
+the size the member declares. A member that declared a kilobyte, carrying that
+kilobyte's checksum, while its stream expanded to far more cost the expanded
+size on that read -- a small archive could drive one read to hundreds of
+megabytes -- and the reader's decompression budget did not measure it. The
+library also expands a bzip2 or lzma member whole regardless of how the read is
+sized, so a member of a few hundred bytes could reach tens of megabytes.
+
+Each re-read now takes one-megabyte steps and stops at the size the member
+declares, which bounds the two methods this reader expands, stored and deflate.
+A member compressed with any other method is refused, naming the method -- a
+limit of this reader, not a verdict on the container. One thing remains, and is
+written down rather than hidden: the second read keeps no running total across
+members, so a container may still spend up to the per-member cap on each member
+it hands over, one at a time.
+
 ## 0.8.0 — 2026-09-09
 
 **One distribution now, and the old name still works.** The validator used to
