@@ -38,7 +38,7 @@ STEPS = [
 
 def exploding(*a, **k):
     raise Surprise("an input its author did not imagine")
-    yield                                    # noqa: unreachable — makes it a generator
+    yield                                    # never reached: it makes this a generator
 
 
 def partial(*a, **k):

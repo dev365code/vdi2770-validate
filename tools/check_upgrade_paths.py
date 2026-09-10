@@ -360,8 +360,8 @@ def case_4_the_release_being_made(env: Env, wheels: str) -> str:
     # rather than inferred. `pip install vdi2770-validate` gives whatever the
     # index holds, and the moment this release is published that is this
     # release: the upgrade then moves nothing and this case fails saying the
-    # wheels are not newer than the index. It went red exactly that way an hour
-    # after 0.8.0 went out.
+    # wheels are not newer than the index. It went red exactly that way once
+    # 0.8.0 was published.
     env.install(f"vdi2770-validate=={_the_one_before()}")
     before = env.versions()
     # `--pre`, because the ordinary state of this tree is a `.devN` and pip

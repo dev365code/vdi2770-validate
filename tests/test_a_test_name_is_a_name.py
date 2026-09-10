@@ -7,8 +7,8 @@ into `PYTEST_CURRENT_TEST`, and Windows refuses an environment variable over
 32767 characters, so every such case failed in teardown with a `ValueError` from
 `os.environ` — the test itself having passed.
 
-That was found the hour a Windows row was added to CI, on a suite that had run
-green for weeks. The parameters it caught were two PDFs; the rule is general, so
+That was found by the first Windows run in CI, on a suite that was green on
+Linux. The parameters it caught were two PDFs; the rule is general, so
 the gate is general.
 """
 import os

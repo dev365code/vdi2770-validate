@@ -7,8 +7,8 @@ PDFs, so their ids were 12,000, 66,000 and 70,000 characters of document.
 Unreadable in a log everywhere. Fatal on one platform: pytest writes the current
 id into `PYTEST_CURRENT_TEST`, and Windows refuses an environment variable over
 32767 characters, so those cases passed and then failed in teardown with a
-`ValueError` out of `os.environ`. A suite that had been green for weeks went red
-the hour a Windows row was added to CI.
+`ValueError` out of `os.environ`. A suite that was green on Linux went red on
+the first Windows run in CI.
 
 Fixed here rather than case by case. Every one of them already had a readable
 name in another parameter; what they lacked was a rule saying a document is not

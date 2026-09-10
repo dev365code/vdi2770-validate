@@ -103,7 +103,7 @@ def test_every_action_is_pinned_to_a_commit():
     because a bare forty characters tells a reader nothing about what they are
     upgrading from.
 
-    The pins are of the versions that were already in use, not of the newest
+    The pins were first taken at the versions already in use, not the newest
     releases: pinning and upgrading are two changes, and doing both in the
     commit before a release makes it impossible to say which one broke it.
     """
@@ -318,7 +318,7 @@ def test_the_release_builds_the_single_file_it_hands_out():
 def test_the_release_asks_the_index_about_itself_after_publishing():
     """The rows that consult the index go stale the moment a release lands.
 
-    Two of them did, an hour after 0.8.0: one asserted the shape of requirement
+    Two of them did when 0.8.0 was published: one asserted the shape of requirement
     the release had just retired, and the other built its "before" state with a
     bare `pip install`, which stopped naming the older release the moment a
     newer one existed. Both were correct until the publish and wrong after it,

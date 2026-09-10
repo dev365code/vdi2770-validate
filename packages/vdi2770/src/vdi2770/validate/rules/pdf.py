@@ -103,9 +103,8 @@ def check(container, document, facts_for) -> Iterator[Finding]:
             # whether or not the allowance is spent, so the budget took nothing
             # away from this file and counting it among the cut-short ones would
             # be a report saying it looked away from a file it read. The reader
-            # already only reports a cut search when it found nothing, but it is
-            # separately versioned and the pin admits releases nobody here has
-            # run, so this stays.
+            # already only reports a cut search when it found nothing, but that
+            # is the reader's rule to keep, and this one does not lean on it.
             stopped, facts = facts, facts.facts
             cut_short = facts.pdfa_claim is None
             # Only the read's allowance is somebody else's doing. The other two

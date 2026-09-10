@@ -162,9 +162,9 @@ def check_bytes(data: bytes, name: str) -> Report:
     refuse_if_disagreeing()
     report = Report(target=name)
     # The reader's contract is that it records a `Defect` rather than raising,
-    # and its own suite holds it to that. It is also a separately versioned
-    # package: the pin admits releases nobody in this repository has run, and a
-    # crash there is the failure `_into` exists to prevent — a traceback naming
+    # and its own suite holds it to that. It is also a layer that stands on its
+    # own -- a distribution of its own until 0.8.0 -- and a crash there is the
+    # failure `_into` exists to prevent — a traceback naming
     # internals, with the rest of the batch unchecked. `_into` guarded the rules
     # and `_step` guarded what feeds them; the two calls into the reader that can
     # fail sat outside both. `nfc` is left alone deliberately -- it is

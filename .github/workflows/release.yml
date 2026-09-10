@@ -40,6 +40,15 @@ on:
 # either repeats no decision. Neither can publish the engine a second time:
 # `publish-reader` is not downstream of them.
 #
+# One condition, since actions/checkout v6.0.2: a re-run checks out the commit
+# the run started on by way of its tag, and refuses when the tag now names a
+# different commit ("does not point to the expected commit"); a deleted tag
+# fails the fetch. `reader-is-on-the-index` and `the-index-as-it-now-is` check
+# out, and re-running the failed jobs runs them again. So a tag moved or deleted
+# after the run started goes back on that commit before the re-run. The push
+# that puts it back starts a run of its own, and `build-reader` stops that one
+# before it can publish anything: the engine is already on the index.
+#
 # If the alias cannot be published at all — the wheel is wrong rather than the
 # upload — then the engine at that number stands and the alias goes out at the
 # next one. The alias floors on the engine's version, so an alias 0.8.1 asking
@@ -184,8 +193,10 @@ jobs:
     needs: build-reader
     runs-on: ubuntu-latest
     steps:
-      # `fetch-depth: 0` still: the tag-is-version check below reads the tag,
-      # and a default checkout is `--depth 1 --no-tags`.
+      # `fetch-depth: 0` although nothing in this job reads the tags: the two
+      # tag checks below take the tag from the ref that started the run. The
+      # rule is per file -- `make check` in `build-reader` reads the tag history,
+      # and a default checkout fetches at most the one tag that started the run.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with: { fetch-depth: 0 }
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0

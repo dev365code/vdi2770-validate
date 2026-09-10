@@ -552,16 +552,16 @@ TABLE = [
      "without the tags the assertions comparing this tree against a release tag "
      "skip rather than fail, in the one workflow that authorises a publish"),
 
-    ("gates/the-rules-checkout-can-see-them-too",
+    ("gates/every-checkout-in-a-file-that-reads-tags-fetches-them",
      ".github/workflows/release.yml",
-     "      # and a default checkout is `--depth 1 --no-tags`.\n"
+     "      # and a default checkout fetches at most the one tag that started the run.\n"
      "      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1\n        with: { fetch-depth: 0 }",
-     "      # and a default checkout is `--depth 1 --no-tags`.\n"
+     "      # and a default checkout fetches at most the one tag that started the run.\n"
      "      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1\n        with: { fetch-depth: 1 }",
      ["tests/test_two_packages_publish_separately.py"],
-     "the order gate reads the tag history, and a gate that cannot see fails "
-     "closed here -- which stops the release rather than breaking it, but stops "
-     "it for a reason nobody wrote down"),
+     "nothing in this job reads the tags, but the rule is per file: a shallow "
+     "checkout in a workflow that does read them is the one-character change "
+     "the assertions comparing against a tag would skip over rather than fail"),
 
     ("gates/every-workflow-installs-the-reader-from-the-tree",
      ".github/workflows/oracle.yml",
@@ -1475,6 +1475,20 @@ PLATFORM_ROWS = [
      '| `container` | 0 | 0 | 3 | 3 | 7 | 14 |',
      ['tests/test_the_rules_page_shows_where_each_layer_stands.py::test_every_number_in_the_table_is_the_number_in_the_data'],
      'the totals were skipped as sums of the cells above them, so a generator that miscounted them, regenerated, read as a page that matched its catalogue'),
+
+    ('gates/a-crash-beside-the-rule-under-test-is-not-a-verdict',
+     'tests/test_rule_pairs.py',
+     '    assert "X5" not in ids, (',
+     '    assert ids != {"X5"}, (',
+     ['tests/test_rule_pairs.py::test_a_crash_is_not_read_as_a_verdict'],
+     "a crash in one layer leaves every other layer's rules in the set, and a guard that refused only a run with nothing but X5 in it passes the case this guard exists for"),
+
+    ('gates/the-fixture-cases-go-through-the-guard',
+     'tests/test_rule_pairs.py',
+     '    ids = fired(FIXTURES / name)',
+     '    ids = {f.rule.id for f in check_file(str(FIXTURES / name)).findings}',
+     ['tests/test_rule_pairs.py::test_a_crash_is_not_read_as_a_verdict'],
+     'the guard is only as good as the cases that go through it: a case reading the findings itself passes a helper that refuses and reads green over the crash'),
 
 ]
 

@@ -16,12 +16,13 @@ CLEAN = {"documentcontainer.zip": CLEAN_DOCUMENT, "documentationcontainer.zip": 
 
 
 def fired(path):
-    """Every rule that fired on `path`, or a refusal to answer if a check crashed.
+    """Every rule that fired on `path`, or a refusal to answer if a check
+    crashed and said so.
 
     X5 is this tool saying that a check of its own raised and did not finish. A
-    set with X5 in it still holds the rule a fixture was built for, so every
-    case below passed while some check it exercised was dying on it -- the pair
-    read green over a crash.
+    set with X5 in it still holds the rule a fixture was built for, so a case
+    below could pass while some check it exercised was dying on it -- the pair
+    reading green over a crash. A crash reported some other way is not seen here.
     """
     ids = {f.rule.id for f in check_file(str(path)).findings}
     assert "X5" not in ids, (
@@ -73,14 +74,28 @@ def test_every_rule_has_a_fixture_or_a_reason(monkeypatch):
 
 def test_a_crash_is_not_read_as_a_verdict(monkeypatch):
     """`fired` answers for every fixture in this file, and each case asks only
-    whether one rule is in the set. A crash elsewhere in the run does not take
-    that rule out of it, so nothing here would notice one unless `fired`
-    refuses to answer."""
+    whether one rule is in the set. A crash in one layer leaves every other
+    layer's rules in it: here the pdf checks raise under a fixture built for a
+    metadata rule, and that rule still fires beside X5.
+
+    The first version crashed the read of the whole container, which leaves X5
+    alone in the set -- a case most of the tests here already fail, and one a
+    guard refusing only a run that found nothing else would pass too.
+    """
     from vdi2770_validate import runner
 
     def explodes(*a, **kw):
         raise RuntimeError("a check fell over")
+        yield                     # never reached: it makes this a generator, as the checks are
 
-    monkeypatch.setattr(runner.zipread, "read", explodes)
-    with pytest.raises(AssertionError, match="X5"):
-        fired(CLEAN_DOCUMENT)
+    monkeypatch.setattr(runner.r_pdf, "check", explodes)
+    name = "m1-no-vdi-classification.zip"
+    ids = {f.rule.id for f in check_file(str(FIXTURES / name)).findings}
+    assert {"M1", "X5"} <= ids, f"the premise, the rule firing beside the crash: {sorted(ids)}"
+    with pytest.raises(AssertionError, match="a check crashed on it"):
+        fired(FIXTURES / name)
+    # And through the case itself. A guard that moved to where the cases call
+    # `fired` -- or a case that stopped calling it -- passes the helper above
+    # and lets this one read green over the crash.
+    with pytest.raises(AssertionError, match="a check crashed on it"):
+        test_fixture_fires_its_rule(name, MANIFEST[name])
