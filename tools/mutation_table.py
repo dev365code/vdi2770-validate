@@ -1518,6 +1518,41 @@ PLATFORM_ROWS = [
      ['tests/test_a_rule_that_crashes_does_not_kill_the_run.py::test_one_file_read_once_and_not_twice_leaves_the_others_checked'],
      'raised inside the PDF checks, one file that could not be read again ended the checks of every PDF after it, and their findings about the sender were lost'),
 
+    ('reader/a-second-read-costs-what-the-first-did',
+     'packages/vdi2770/src/vdi2770/zipread.py',
+     '                    chunk = fh.read(1 << 20)',
+     '                    chunk = fh.read(MAX_MEMBER_BYTES + 1)',
+     ['packages/vdi2770/tests/test_the_budget_covers_every_read.py::test_a_second_read_costs_what_the_first_did'],
+     'read(n) inflates up to n before cutting to the declared size, so asking for the whole cap let a member that declares a kilobyte cost hundreds of megabytes on the second read, outside every budget'),
+
+    ('reader/a-method-this-reader-does-not-inflate-is-refused',
+     'packages/vdi2770/src/vdi2770/zipread.py',
+     '        if method not in SUPPORTED_METHODS:',
+     '        if False:',
+     ['packages/vdi2770/tests/test_the_budget_covers_every_read.py::test_a_method_this_reader_does_not_inflate_is_refused'],
+     'the library decodes bzip2 and lzma whole before cutting to the declared size, so stepping cannot bound them; a member using such a method is refused, not decompressed'),
+
+    ('reader/the-second-read-refuses-the-method-too',
+     'packages/vdi2770/src/vdi2770/zipread.py',
+     '            if info.compress_type not in SUPPORTED_METHODS:',
+     '            if False:',
+     ['packages/vdi2770/tests/test_the_budget_covers_every_read.py::test_a_method_this_reader_does_not_inflate_is_refused'],
+     'member_reader is public, reachable without the sweep, so it refuses an uninflatable method itself rather than trust a caller to have refused it'),
+
+    ('reader/the-metadata-read-costs-what-the-first-did',
+     'packages/vdi2770/src/vdi2770/zipread.py',
+     '            c.metadata_bytes = _whole(zf, wanted)',
+     '            c.metadata_bytes = zf.read(wanted)',
+     ['packages/vdi2770/tests/test_the_budget_covers_every_read.py::test_the_metadata_read_costs_what_the_first_did'],
+     'the metadata is read a second time to build the model, and read(-1) inflates up to the whole cap before cutting -- the amplification, on a member every document container has'),
+
+    ('reader/a-nested-container-read-costs-what-the-first-did',
+     'packages/vdi2770/src/vdi2770/zipread.py',
+     '                inner = _whole(zf, m.name)',
+     '                inner = zf.read(m.name)',
+     ['packages/vdi2770/tests/test_the_budget_covers_every_read.py::test_a_nested_container_read_costs_what_the_first_did'],
+     'a nested container is read a second time so its members can be walked, with the same one-shot inflation'),
+
 ]
 
 PUBLISHING_PATH_ROWS = [

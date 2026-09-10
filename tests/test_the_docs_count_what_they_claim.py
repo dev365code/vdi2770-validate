@@ -436,8 +436,11 @@ def test_no_document_cites_a_file_that_is_not_here():
     # 31 to 28 when 0.8.0 was cut and work continued above it, the same way as
     # at 0.7.0: three of the 31 were cited by that release's own section, and
     # the newest section is a new one that does not repeat them.
-    assert seen == 28, (
-        f"{seen} citations found, not 28. If you added or removed one, say so "
+    # 28 to 29 when SECURITY.md's row on amplification after a member is
+    # accepted came to cover reading that member a second time, and named the
+    # test that holds it to that.
+    assert seen == 29, (
+        f"{seen} citations found, not 29. If you added or removed one, say so "
         f"here; if you did not, some of them just stopped being checked.")
 
 

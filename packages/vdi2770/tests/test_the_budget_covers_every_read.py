@@ -10,7 +10,12 @@ That leaves the cheapest possible attack: trip the budget with one small member
 so the sweep stops verifying, after which every remaining read is free.
 """
 import io
+import struct
+import tracemalloc
 import zipfile
+import zlib
+
+import pytest
 
 from vdi2770 import zipread
 
@@ -253,3 +258,80 @@ def test_a_stream_cut_short_before_the_answer_is_not_a_cut_short_search():
     assert cut_short is None, (
         f"the search found what it was looking for; there is nothing to say it "
         f"stopped short of: {cut_short!r}")
+
+
+def a_lying_member(inflates_to, method=zipfile.ZIP_DEFLATED, name="B.pdf"):
+    """One member that declares a kilobyte -- with the checksum of that
+    kilobyte -- and inflates to `inflates_to` bytes of zeros, under `method`."""
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", method) as z:
+        z.writestr(name, b"\0" * inflates_to)
+    data = bytearray(buf.getvalue())
+    crc = zlib.crc32(b"\0" * 1024)
+    struct.pack_into("<I", data, 14, crc)
+    struct.pack_into("<I", data, 22, 1024)
+    central = data.find(b"PK\x01\x02")
+    struct.pack_into("<I", data, central + 16, crc)
+    struct.pack_into("<I", data, central + 24, 1024)
+    return bytes(data)
+
+
+def peak_of(fn):
+    tracemalloc.start()
+    try:
+        tracemalloc.reset_peak()
+        out = fn()
+        return out, tracemalloc.get_traced_memory()[1]
+    finally:
+        tracemalloc.stop()
+
+
+def test_a_second_read_costs_what_the_first_did():
+    """The first read takes a member in megabyte steps and stops at its declared
+    size. The second asked for the whole cap in one call, and `read(n)` inflates
+    up to n before cutting to the declared size -- so a 64 KiB archive whose
+    member declares a kilobyte cost 128 MiB on the read that hands the member
+    over, measured, and no budget saw it."""
+    data = a_lying_member(64 * 1024 * 1024)
+    assert len(data) < 256 * 1024, "the premise, a small archive"
+    got, peak = peak_of(lambda: zipread.member_reader(data)("B.pdf"))
+    assert got == b"\0" * 1024, "the premise, the member read as it declares itself"
+    assert peak < 8 * 1024 * 1024, f"handing over one kilobyte cost {peak >> 20} MiB"
+
+
+@pytest.mark.parametrize("method,name", [
+    (zipfile.ZIP_BZIP2, "bzip2"),
+    (zipfile.ZIP_LZMA, "lzma"),
+])
+def test_a_method_this_reader_does_not_inflate_is_refused(method, name):
+    """CPython bounds only zlib per `read(n)`; a bzip2 or lzma member is decoded
+    whole before the result is cut to the size it declares, so a 200-byte member
+    could cost tens of megabytes on a read no budget here measures. This reader
+    refuses such a member -- naming the method -- rather than decompress it -- and before the
+    budget, because it is not a cost being measured."""
+    data = a_lying_member(64 * 1024 * 1024, method=method)
+    assert len(data) < 64 * 1024, "the premise, a small archive that inflates hugely"
+    c, peak = peak_of(lambda: zipread.read(data, "x.zip"))
+    assert "B.pdf" not in c.file_names, f"a {name} member was accepted: {list(c.file_names)}"
+    assert name in (c.rejected["B.pdf"].detail or ""), c.rejected["B.pdf"].detail
+    assert peak < 8 * 1024 * 1024, f"a refused {name} member still cost {peak >> 20} MiB"
+    _, second = peak_of(lambda: zipread.member_reader(data)("B.pdf"))
+    assert second < 8 * 1024 * 1024, f"the second read of a {name} member cost {second >> 20} MiB"
+
+
+def test_the_metadata_read_costs_what_the_first_did():
+    """The metadata is read a second time to build the model, and that read
+    asked for the whole member at once -- the same amplification as the PDF
+    read, on a member every document container has."""
+    data = a_lying_member(64 * 1024 * 1024, name="VDI2770_Metadata.xml")
+    c, peak = peak_of(lambda: zipread.read(data, "x.zip"))
+    assert c.metadata_bytes == b"\0" * 1024, "the premise, the metadata read as it declares itself"
+    assert peak < 8 * 1024 * 1024, f"reading the metadata cost {peak >> 20} MiB"
+
+
+def test_a_nested_container_read_costs_what_the_first_did():
+    """A nested container's bytes are read a second time so its members can be
+    walked; that read had the same amplification."""
+    data = a_lying_member(64 * 1024 * 1024, name="inner.zip")
+    _, peak = peak_of(lambda: zipread.read(data, "x.zip"))
+    assert peak < 8 * 1024 * 1024, f"reading the nested container cost {peak >> 20} MiB"

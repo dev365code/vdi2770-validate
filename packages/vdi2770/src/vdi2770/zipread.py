@@ -76,6 +76,16 @@ MAX_TOTAL_DECOMPRESSED = 4 * 1024 * 1024 * 1024   # inflated across one read()
 MAX_TOTAL_MEMBERS = 100_000
 MAX_TOTAL_METADATA_BYTES = 64 * 1024 * 1024       # held across one read()
 
+#: The two methods this reader accepts. Everything else is refused rather
+#: than handed to a decompressor: CPython bounds only zlib per `read(n)`, so
+#: a bzip2 or lzma member -- which `read` decodes whole before it cuts to the
+#: size the member declares -- would spend its real size no matter how small
+#: it claims to be, on a read no budget here measures. A stored member does
+#: not inflate, and a deflated one is bounded a megabyte at a time.
+SUPPORTED_METHODS = (zipfile.ZIP_STORED, zipfile.ZIP_DEFLATED)
+METHOD_NAMES = {zipfile.ZIP_STORED: "stored", zipfile.ZIP_DEFLATED: "deflate",
+                12: "bzip2", 14: "lzma", 93: "zstd"}
+
 
 class Kind(Enum):
     DOCUMENTATION = "documentation container"
@@ -166,6 +176,28 @@ class Container:
         yield self
         for c in self.children:
             yield from c.walk()
+
+
+def _whole(zf: zipfile.ZipFile, name: str) -> bytes:
+    """A member the sweep already accepted, read in the same megabyte steps.
+
+    `zf.read(name)` is `read(-1)`, which inflates up to its whole cap before
+    cutting to the declared size -- the amplification `read_one` was changed
+    to avoid, on the two reads that do not go through it: the metadata and a
+    nested container. A method that would not stop at a megabyte is refused
+    before it reaches here. The steps bound a member that lies about its size;
+    an honest large member is still held whole (its declared size, capped by
+    `MAX_MEMBER_BYTES` for a nested container and `MAX_TOTAL_METADATA_BYTES` for
+    the metadata), with a transient of about twice that at the final join.
+    """
+    parts = []
+    with zf.open(name) as fh:
+        while True:
+            chunk = fh.read(1 << 20)
+            if not chunk:
+                break
+            parts.append(chunk)
+    return b"".join(parts)
 
 
 def _refuse(c: Container, kind: str, where: Location, detail: str) -> Defect:
@@ -421,6 +453,7 @@ def read(data: bytes, path: str, depth: int = 0, _budget: Optional[_Budget] = No
                         f"the archive passed {MAX_TOTAL_BYTES} bytes before this member"))
             break
         members.append(Member(i.filename, i.file_size, i.compress_size, i.is_dir()))
+    method_of = {i.filename: i.compress_type for i in infos}
 
     # A member that is listed but cannot be decompressed -- a bad CRC from a
     # truncated transfer, a password on one file -- used to pass silently: the
@@ -431,6 +464,16 @@ def read(data: bytes, path: str, depth: int = 0, _budget: Optional[_Budget] = No
     for m in members:
         if m.is_dir:
             readable.append(m)
+            continue
+        method = method_of.get(m.name)
+        if method not in SUPPORTED_METHODS:
+            # Before the budget, because it is not a cost we are measuring: this
+            # reader does not inflate this method at all, and letting it reach a
+            # decompressor is the amplification the caps do not bound.
+            c.rejected[m.name] = _refuse(
+                c, "member-unreadable", c.where.child(member=m.name),
+                f"member compressed with {METHOD_NAMES.get(method, method)}; this "
+                f"reader accepts stored and deflate")
             continue
         if not exhausted and not budget.take_bytes(m.size):
             # Stop verifying rather than stop reading: the members are still
@@ -526,7 +569,7 @@ def read(data: bytes, path: str, depth: int = 0, _budget: Optional[_Budget] = No
                     f"this read has inflated {budget.decompressed} bytes and "
                     f"reading it would take that past {MAX_TOTAL_DECOMPRESSED}")
                 raise KeyError(wanted)
-            c.metadata_bytes = zf.read(wanted)
+            c.metadata_bytes = _whole(zf, wanted)
             c.metadata_name = wanted
         # zlib.error is an OSError subclass and was in none of these: a damaged
         # deflate stream took the whole container down with an exception naming
@@ -561,7 +604,7 @@ def read(data: bytes, path: str, depth: int = 0, _budget: Optional[_Budget] = No
                         "cannot say which one is meant and opened neither")
                 continue
             try:
-                inner = zf.read(m.name)
+                inner = _whole(zf, m.name)
             except Exception as e:               # noqa: BLE001 - see read()
                 # `_refuse`, not a bare defect. `rejected` is where a caller
                 # looks to ask whether a `.zip` went unopened, and this was the
@@ -635,11 +678,27 @@ def member_reader(data: bytes, allowed: Optional[Set[str]] = None):
             if counted.get(name) != 1:
                 return None
             info = archive.getinfo(name)
+            if info.compress_type not in SUPPORTED_METHODS:
+                return None            # not one this reader inflates; see the sweep
             if info.file_size > MAX_MEMBER_BYTES:
                 return None
+            # In steps, as the first read does. `read(n)` inflates up to n bytes
+            # before it cuts the result to the size the member declares, so one
+            # call for the whole cap made a member that declares a kilobyte and
+            # inflates to hundreds of megabytes cost all of them here -- outside
+            # every budget, on the second read of a member the first had
+            # accepted at a megabyte's cost.
+            parts, got = [], 0
             with archive.open(name) as fh:
-                payload = fh.read(MAX_MEMBER_BYTES + 1)
-            return None if len(payload) > MAX_MEMBER_BYTES else payload
+                while True:
+                    chunk = fh.read(1 << 20)
+                    if not chunk:
+                        break
+                    got += len(chunk)
+                    if got > MAX_MEMBER_BYTES:
+                        return None
+                    parts.append(chunk)
+            return b"".join(parts)
         except Exception:
             return None
 
