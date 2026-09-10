@@ -4,7 +4,7 @@
 The manifest gate compares what two manifests *say*. This compares what the
 artifacts *are*, and against what is already on the index — which is the
 comparison that matters, because the destruction happens between a release and
-the one before it, not between two files in one working tree.
+whatever an installation already has, not between two files in one working tree.
 
 **Why paths.** pip uninstalls a distribution by the record it wrote at install
 time: every path in that record is deleted. If two distributions ever write the
@@ -38,22 +38,48 @@ is a check on a state nobody is changing.
 from __future__ import annotations
 
 import configparser
+import hashlib
 import io
+import json
 import os
 import re
 import shutil
 import subprocess
 import sys
 import tempfile
+import time
+import urllib.parse
+import urllib.request
 import zipfile
 from pathlib import Path
+
+from packaging.utils import parse_sdist_filename, parse_wheel_filename
+from packaging.version import Version
 
 ROOT = Path(__file__).resolve().parent.parent
 PROJECTS = (ROOT, ROOT / "packages" / "vdi2770")
 
-#: The release already on the index. The comparison that matters is against
-#: what people already have, and this is the newest thing they can have.
-PUBLISHED = ("vdi2770==0.7.0", "vdi2770-validate==0.7.0")
+#: Both names, and every release the index serves under them.
+#:
+#: The comparison that matters is against what people already have, and what
+#: they have is anything that was ever published: an installation of 0.6 is
+#: upgraded by the same command as one of the newest release. This used to be a
+#: constant naming the newest release, and the next release left it comparing
+#: against the one before -- green, because nothing collided with that either.
+#: A number written here is right until the next upload, so the list is asked
+#: for instead.
+NAMES = ("vdi2770", "vdi2770-validate")
+
+#: The index in the form pip reads it (PEP 691). What matters is what
+#: `pip install` would fetch, and this is the page it fetches it from. It is
+#: pypi.org itself rather than whatever index pip is configured to use here:
+#: the question is what everybody else installs.
+SIMPLE = "https://pypi.org/simple/{name}/"
+
+#: Seconds to wait before each attempt at one request. This used to be two
+#: `pip download` calls, and pip tries a failed request again; twenty requests
+#: with no second try would turn one dropped connection into a red run.
+ATTEMPTS = (0, 2, 5)
 
 NO_BYTECODE = {**os.environ, "PYTHONDONTWRITEBYTECODE": "1"}
 
@@ -73,18 +99,113 @@ def _build(project: Path, out: Path) -> Path:
     return made[0]
 
 
-def _download(spec: str, out: Path) -> Path:
-    done = subprocess.run(
-        [sys.executable, "-m", "pip", "download", "--no-deps",
-         "--only-binary", ":all:", "--dest", str(out), spec],
-        env=NO_BYTECODE, capture_output=True, text=True)
-    if done.returncode:
-        print(done.stdout[-2000:], done.stderr[-2000:], file=sys.stderr)
-        raise SystemExit(f"could not fetch {spec}; this gate needs the index")
-    made = sorted(out.glob("*.whl"))
-    if len(made) != 1:
-        raise SystemExit(f"{spec}: expected one wheel, found {made}")
-    return made[0]
+def _ask(name: str, timeout: float = 15.0) -> dict:
+    """What the index says about `name`.
+
+    `no-cache` asks any cache on the way not to answer from what it stored
+    (RFC 9111 §5.2.1.4 -- a preference the client states, not a rule a cache
+    must follow). PyPI's own CDN does not follow it: measured, the same request
+    twice came back `x-cache: MISS, HIT, HIT` under `max-age=600`, and a query
+    string nobody else sends was answered from the cache too. So this can see
+    the index as it was up to ten minutes ago, unless the index clears that
+    cache when a file is uploaded -- which is not something this can observe.
+    """
+    request = urllib.request.Request(SIMPLE.format(name=name), headers={
+        "Accept": "application/vnd.pypi.simple.v1+json",
+        "Cache-Control": "no-cache",
+    })
+    try:
+        return json.loads(_read(request, timeout))
+    except Exception as e:                       # noqa: BLE001 - the network is the risk
+        raise SystemExit(f"could not ask the index about {name}: {e}. The "
+                         f"published wheels are half of this comparison, and "
+                         f"without them there is nothing to compare against") from e
+
+
+def _read(request, timeout: float) -> bytes:
+    """The body of one response, asked for again after a failure that may pass."""
+    for wait in ATTEMPTS:
+        time.sleep(wait)
+        try:
+            with urllib.request.urlopen(request, timeout=timeout) as r:
+                return r.read()
+        except Exception as e:                   # noqa: BLE001 - the network is the risk
+            failed = e
+    raise failed
+
+
+def wheels_in(name: str, answer) -> list:
+    """`(filename, url, sha256)` for every wheel the index lists under `name`.
+
+    Each refusal below is a way the comparison could come out smaller than what
+    is published without saying so -- and a comparison against nothing passes:
+
+      * an answer this cannot read, down to one entry of it;
+      * a file listed twice, where the second download would replace the
+        first and the first archive would never be read;
+      * a file without a digest, which could not be checked after download;
+      * a release with no wheel -- whether the index lists it under
+        `versions` (PEP 700) or only by its source archive. pip would build
+        that one, and what it installs is not something this can read out of
+        a wheel;
+      * no wheel at all.
+
+    A yanked release stays in. pip still installs it when it is pinned, and
+    whoever has it upgrades with the same command as everybody else.
+    """
+    if not isinstance(answer, dict) or not isinstance(answer.get("files"), list):
+        raise SystemExit(f"the index answered about {name} without a list of "
+                         f"files, so this cannot tell what is published")
+    found, versions, seen = [], set(), set()
+    try:
+        listed = {Version(v) for v in answer.get("versions", [])}
+        for entry in answer["files"]:
+            filename = entry["filename"]
+            if filename in seen:
+                raise SystemExit(f"the index lists {filename} twice. The second "
+                                 f"download would replace the first, and one of "
+                                 f"the two archives would never be read")
+            seen.add(filename)
+            if not filename.endswith(".whl"):
+                listed.add(parse_sdist_filename(filename)[1])
+                continue
+            digest = (entry.get("hashes") or {}).get("sha256")
+            if not digest:
+                raise SystemExit(f"the index lists {filename} without a sha256, "
+                                 f"and a download that cannot be checked is not "
+                                 f"compared")
+            versions.add(parse_wheel_filename(filename)[1])
+            found.append((filename, urllib.parse.urljoin(SIMPLE.format(name=name),
+                                                         entry["url"]), digest))
+    except (AttributeError, KeyError, TypeError, ValueError) as e:
+        raise SystemExit(f"the index answered about {name} in a shape this cannot "
+                         f"read ({e!r}), so it cannot tell what is published") from e
+    missing = sorted(listed - versions)
+    if missing:
+        raise SystemExit(f"the index lists {name} {', '.join(map(str, missing))} "
+                         f"with no wheel. pip would build it, and this gate reads "
+                         f"what a wheel installs -- it cannot say what that "
+                         f"release puts on a disk until the index has a wheel "
+                         f"for it")
+    if not found:
+        raise SystemExit(f"the index lists no wheel for {name}. A comparison "
+                         f"against nothing passes, so this refuses instead")
+    return found
+
+
+def _fetch(url: str, digest: str, dest: Path) -> Path:
+    """The file the index published, or a refusal naming why it is not."""
+    try:
+        data = _read(url, 60)
+    except Exception as e:                       # noqa: BLE001 - the network is the risk
+        raise SystemExit(f"could not fetch {dest.name}: {e}") from e
+    if hashlib.sha256(data).hexdigest() != digest:
+        raise SystemExit(f"{dest.name} is not the file the index published -- "
+                         f"its digest differs from the one the index gave. "
+                         f"Comparing it would answer a question about some other "
+                         f"archive")
+    dest.write_bytes(data)
+    return dest
 
 
 def claims(wheel: Path) -> tuple:
@@ -170,11 +291,20 @@ def _import_name(path: str) -> set:
     return {f"import {head}"} if rest == "__init__.py" else set()
 
 
-def overlaps(wheels: list) -> list:
+def overlaps(wheels: list, served: list = ()) -> list:
+    """Every pair of different distributions in which both claim one thing.
+
+    `wheels` are compared with each other and with every wheel in `served`.
+    Two wheels in `served` are not compared with each other: a collision
+    between two releases already on the index is a fact no tree can change,
+    and failing on it would fail every release that followed. What a release
+    does to what people already have is a pair with one of its own wheels in it.
+    """
     said = []
     read = [claims(w) + (w.name,) for w in wheels]
+    history = [claims(w) + (w.name,) for w in served]
     for i, (name_a, owned_a, file_a) in enumerate(read):
-        for name_b, owned_b, file_b in read[i + 1:]:
+        for name_b, owned_b, file_b in read[i + 1:] + history:
             if name_a == name_b:
                 # Two versions of one distribution. pip replaces its own files;
                 # requiring these to be disjoint would fail every release.
@@ -203,19 +333,29 @@ def main() -> int:
                 for stale in (list(project.glob("**/*.egg-info"))
                               + [project / "build"]):
                     shutil.rmtree(stale, ignore_errors=True)
-        for n, spec in enumerate(PUBLISHED):
-            here = out / f"index{n}"
+        served, summary = [], []
+        for name in NAMES:
+            here = out / f"index-{name}"
             here.mkdir()
-            wheels.append(_download(spec, here))
-        said = overlaps(wheels)
+            listed = wheels_in(name, _ask(name))
+            for filename, url, digest in listed:
+                served.append(_fetch(url, digest, here / filename))
+            span = sorted({parse_wheel_filename(f)[1] for f, _, _ in listed})
+            summary.append(f"{name} {span[0]}" + (f" to {span[-1]}" if len(span) > 1
+                                                  else "")
+                           + f", {len(listed)} wheel{'s' if len(listed) > 1 else ''}")
+        for line in overlaps(served):
+            print(f"  note, not counted: {line}", file=sys.stderr)
+        said = overlaps(wheels, served)
         for line in said:
             print(f"  {line}", file=sys.stderr)
         if said:
             print(f"\n{len(said)} pair(s) of distributions claim the same thing.",
                   file=sys.stderr)
             return 1
-        print(f"{len(wheels)} wheels, no two distributions claiming one path, "
-              f"command or import name")
+        print(f"{len(wheels) + len(served)} wheels -- {len(wheels)} built here and "
+              f"every one the index serves ({'; '.join(summary)}) -- no two "
+              f"distributions claiming one path, command or import name")
     return 0
 
 

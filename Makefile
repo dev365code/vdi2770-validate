@@ -47,7 +47,7 @@ oracle-half:
 # Deliberately not in `check`: the other half of the comparison is the wheels
 # already on the index, and `check` is offline. A gate that only ever reads this
 # working tree compares two files nobody is installing -- the destruction
-# happens between a release and the one before it.
+# happens between a release and whatever an installation already has.
 paths-disjoint:
 	$(PYTHON) tools/check_paths_are_disjoint.py
 

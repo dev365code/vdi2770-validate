@@ -14,12 +14,18 @@ Each wheel below differs from the passing case on exactly one axis — a shared
 path, a shared command, a shared import name — so no assertion is propped up by
 another.
 """
+import hashlib
+import io
 import sys
 import zipfile
 
+import pytest
+from packaging.utils import parse_wheel_filename
+
 sys.path.insert(0, "tools")
 
-from check_paths_are_disjoint import claims, overlaps  # noqa: E402
+import check_paths_are_disjoint as gate  # noqa: E402
+from check_paths_are_disjoint import claims, overlaps, wheels_in  # noqa: E402
 
 
 def wheel(tmp_path, distribution, version, files, scripts=(), info_name=None):
@@ -184,3 +190,244 @@ def test_a_gui_script_is_a_command_too(tmp_path):
                        f"[gui_scripts]\nsee-it = {target}\n")
     said = overlaps([made, other])
     assert said and "command see-it" in said[0]
+
+
+
+# What follows is the other half of the comparison: which published wheels the
+# gate is shown at all. None of it touches the network. The property under test
+# is what the gate does with an answer, and the index gives a different answer
+# after every release.
+#
+# Each `main()` case puts one collision in place, between one wheel this tree
+# builds and one served wheel of the other name, and the assertion asks for the
+# line that names both. A collision among the served wheels would satisfy a
+# looser assertion on its own -- the first version of these cases did exactly
+# that, and a gate that stopped looking at this tree's wheels stayed green.
+
+def answer(served):
+    """What the index says about one name when it serves these files."""
+    return {
+        "files": [{"filename": w.name, "url": w.as_uri(),
+                   "hashes": {"sha256": hashlib.sha256(w.read_bytes()).hexdigest()}}
+                  for w in served],
+        "versions": sorted({str(parse_wheel_filename(w.name)[1]) for w in served}),
+    }
+
+
+def run_the_gate(monkeypatch, tmp_path, built, served):
+    """`main()`, with its two builds and the index answered from here."""
+    projects = []
+    for n, _ in enumerate(built):
+        projects.append(tmp_path / f"project{n}")
+        projects[-1].mkdir()
+    monkeypatch.setattr(gate, "PROJECTS", tuple(projects))
+    monkeypatch.setattr(gate, "_build",
+                        lambda project, out: built[projects.index(project)])
+    monkeypatch.setattr(gate, "_ask",
+                        lambda name, timeout=15.0: answer(served.get(name, [])))
+    return gate.main()
+
+
+def places(tmp_path, *names):
+    made = [tmp_path / n for n in names]
+    for d in made:
+        d.mkdir()
+    return made
+
+
+def ours(where, engine=(), alias=()):
+    """The two wheels this tree builds, each with its own package and `extra`."""
+    return [wheel(where, "vdi2770-validate", "1.0",
+                  ["vdi2770_validate/__init__.py", *alias]),
+            wheel(where, "vdi2770", "1.0", ["vdi2770/__init__.py", *engine])]
+
+
+def named_together(err, one, other):
+    """Whether a single reported pair names both of these files."""
+    return any(one in line and other in line for line in err.splitlines())
+
+
+ALIAS_BUILT = "vdi2770_validate-1.0-py3-none-any.whl"
+ENGINE_BUILT = "vdi2770-1.0-py3-none-any.whl"
+
+
+def test_a_release_newer_than_anything_written_here_is_compared(
+        tmp_path, monkeypatch, capsys):
+    """This gate used to carry the newest release as a constant, and the next
+    release left it comparing against the one before -- green, because nothing
+    collided with that one either.
+
+    The collision here is between the alias this tree builds and a release of
+    the engine numbered past anything this repository could have written down.
+    A list kept in the file cannot see it; an answer from the index does.
+    """
+    built, old, new = places(tmp_path, "built", "old", "new")
+    served = {
+        "vdi2770": [wheel(old, "vdi2770", "0.1", ["vdi2770/__init__.py"]),
+                    wheel(new, "vdi2770", "9.9.9",
+                          ["vdi2770/__init__.py", "shared/thing.py"])],
+        "vdi2770-validate": [wheel(old, "vdi2770-validate", "0.1",
+                                   ["vdi2770_validate/__init__.py"])],
+    }
+    assert run_the_gate(monkeypatch, tmp_path,
+                        ours(built, alias=["shared/thing.py"]), served) == 1
+    assert named_together(capsys.readouterr().err, ALIAS_BUILT,
+                          "vdi2770-9.9.9-py3-none-any.whl")
+
+
+def test_a_collision_in_an_old_release_is_still_a_collision(
+        tmp_path, monkeypatch, capsys):
+    """Somebody who installed 0.1 upgrades with the same command as somebody
+    who installed the newest release. A gate that asks only about the newest
+    one has the old defect with a fresher number in it."""
+    built, old, new = places(tmp_path, "built", "old", "new")
+    served = {
+        "vdi2770": [wheel(old, "vdi2770", "0.1",
+                          ["vdi2770/__init__.py", "shared/thing.py"]),
+                    wheel(new, "vdi2770", "9.9.9", ["vdi2770/__init__.py"])],
+        "vdi2770-validate": [wheel(new, "vdi2770-validate", "9.9.9",
+                                   ["vdi2770_validate/__init__.py"])],
+    }
+    assert run_the_gate(monkeypatch, tmp_path,
+                        ours(built, alias=["shared/thing.py"]), served) == 1
+    assert named_together(capsys.readouterr().err, ALIAS_BUILT,
+                          "vdi2770-0.1-py3-none-any.whl")
+
+
+def test_every_name_the_index_serves_is_asked(tmp_path, monkeypatch, capsys):
+    """Both names have releases, and a collision can be with either. This one
+    is between the engine this tree builds and a release of the old name."""
+    built, old = places(tmp_path, "built", "old")
+    served = {
+        "vdi2770": [wheel(old, "vdi2770", "0.1", ["vdi2770/__init__.py"])],
+        "vdi2770-validate": [wheel(old, "vdi2770-validate", "0.1",
+                                   ["vdi2770_validate/__init__.py",
+                                    "shared/thing.py"])],
+    }
+    assert run_the_gate(monkeypatch, tmp_path,
+                        ours(built, engine=["shared/thing.py"]), served) == 1
+    assert named_together(capsys.readouterr().err, ENGINE_BUILT,
+                          "vdi2770_validate-0.1-py3-none-any.whl")
+
+
+def test_two_releases_already_published_are_not_this_releases_to_answer_for(
+        tmp_path, monkeypatch, capsys):
+    """A collision between two releases on the index is a fact no commit can
+    change. Failing on it would fail every release after it -- the one meant to
+    repair things included -- and yanking does not remove it from what people
+    have. It is reported, and it is not counted."""
+    built, old = places(tmp_path, "built", "old")
+    served = {
+        "vdi2770": [wheel(old, "vdi2770", "0.1",
+                          ["vdi2770/__init__.py", "shared/thing.py"])],
+        "vdi2770-validate": [wheel(old, "vdi2770-validate", "0.1",
+                                   ["vdi2770_validate/__init__.py",
+                                    "shared/thing.py"])],
+    }
+    assert run_the_gate(monkeypatch, tmp_path, ours(built), served) == 0
+    err = capsys.readouterr().err
+    assert "note, not counted" in err
+    assert named_together(err, "vdi2770-0.1-py3-none-any.whl",
+                          "vdi2770_validate-0.1-py3-none-any.whl")
+
+
+def test_an_index_that_lists_no_wheel_is_a_refusal():
+    """A comparison against nothing passes: every release of this name would
+    drop out of the comparison without a word."""
+    with pytest.raises(SystemExit) as refused:
+        wheels_in("vdi2770", {"files": [], "versions": []})
+    assert "lists no wheel for vdi2770" in str(refused.value)
+
+
+def test_a_release_the_index_lists_without_a_wheel_is_a_refusal(tmp_path):
+    """pip would build that release from its source, and what it puts on a disk
+    is not something this gate can read out of a wheel. Leaving it out would
+    make the comparison smaller without saying so."""
+    listed = answer([wheel(tmp_path, "vdi2770", "1.0", ["vdi2770/__init__.py"])])
+    listed["versions"].append("0.5")
+    with pytest.raises(SystemExit) as refused:
+        wheels_in("vdi2770", listed)
+    assert "vdi2770 0.5 with no wheel" in str(refused.value)
+
+
+def test_a_release_known_only_by_its_source_archive_is_a_refusal(tmp_path):
+    """`versions` is a later addition to the index format, and an answer without
+    it still names the release -- in the filename of its source archive."""
+    listed = answer([wheel(tmp_path, "vdi2770", "1.0", ["vdi2770/__init__.py"])])
+    del listed["versions"]
+    listed["files"].append({"filename": "vdi2770-0.5.tar.gz",
+                            "url": "https://example.invalid/vdi2770-0.5.tar.gz",
+                            "hashes": {"sha256": "0" * 64}})
+    with pytest.raises(SystemExit) as refused:
+        wheels_in("vdi2770", listed)
+    assert "vdi2770 0.5 with no wheel" in str(refused.value)
+
+
+def test_a_file_listed_twice_is_a_refusal(tmp_path):
+    """Both would be downloaded to one name, the second replacing the first,
+    and one of the two archives would never be read."""
+    listed = answer([wheel(tmp_path, "vdi2770", "1.0", ["vdi2770/__init__.py"])])
+    listed["files"].append(dict(listed["files"][0], hashes={"sha256": "1" * 64}))
+    with pytest.raises(SystemExit) as refused:
+        wheels_in("vdi2770", listed)
+    assert "lists vdi2770-1.0-py3-none-any.whl twice" in str(refused.value)
+
+
+@pytest.mark.parametrize("shape", [
+    {"files": ["not an entry"]},
+    {"files": [{"filename": None}]},
+    {"files": [{"filename": "vdi2770-1.0-py3-none-any.whl",
+                "hashes": {"sha256": "0" * 64}}]},
+    {"files": [{"filename": "not-a-wheel-name.whl",
+                "url": "https://example.invalid/x", "hashes": {"sha256": "0" * 64}}]},
+    {"files": [], "versions": "0.5"},
+], ids=["entry-not-a-mapping", "no-filename", "no-url", "bad-wheel-name",
+        "versions-not-a-list"])
+def test_an_answer_this_cannot_read_is_a_refusal_that_says_so(shape):
+    """Each of these used to end in a traceback. That still failed the gate,
+    but it said nothing about why, and a reader of the log had to work out
+    that the index had answered in a shape nobody expected."""
+    with pytest.raises(SystemExit) as refused:
+        wheels_in("vdi2770", shape)
+    assert "in a shape this cannot read" in str(refused.value)
+
+
+def test_a_yanked_release_is_still_compared(tmp_path):
+    """pip still installs a yanked release when it is pinned, and whoever has
+    it upgrades with the same command as everybody else."""
+    listed = answer([wheel(tmp_path, "vdi2770", "1.0", ["vdi2770/__init__.py"])])
+    listed["files"][0]["yanked"] = "withdrawn"
+    assert [f for f, _, _ in wheels_in("vdi2770", listed)] == [
+        "vdi2770-1.0-py3-none-any.whl"]
+
+
+def test_a_download_that_is_not_the_published_file_is_refused(tmp_path):
+    """Whatever arrives is compared only if it is the file the index gave a
+    digest for. Anything else answers a question about some other archive."""
+    made = wheel(tmp_path, "vdi2770", "1.0", ["vdi2770/__init__.py"])
+    with pytest.raises(SystemExit) as refused:
+        gate._fetch(made.as_uri(), "0" * 64, tmp_path / "fetched.whl")
+    assert "is not the file the index published" in str(refused.value)
+    assert not (tmp_path / "fetched.whl").exists()
+
+
+def test_the_index_is_asked_not_to_answer_from_a_cache(monkeypatch):
+    """The request says it wants the index rather than a copy somebody stored,
+    of the page pip reads, in the form pip reads it.
+
+    It is a request. PyPI's own CDN does not honour it -- measured, the same
+    request twice was answered from its cache -- and the tool says so where it
+    sends it. A cache on the way that does honour it cannot then hand back a
+    page from before an upload.
+    """
+    asked = []
+
+    def urlopen(request, timeout=None):
+        asked.append(request)
+        return io.BytesIO(b'{"files": []}')
+
+    monkeypatch.setattr(gate.urllib.request, "urlopen", urlopen)
+    gate._ask("vdi2770")
+    assert asked[0].full_url == "https://pypi.org/simple/vdi2770/"
+    assert asked[0].get_header("Cache-control") == "no-cache"
+    assert asked[0].get_header("Accept") == "application/vnd.pypi.simple.v1+json"

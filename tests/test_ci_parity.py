@@ -45,7 +45,8 @@ OUTSIDE_CHECK = {
                       "the index, and `make check` is offline. A gate that only "
                       "reads this working tree compares two files nobody is "
                       "installing — the destruction happens between a release and "
-                      "the one before it. CI runs it on every push",
+                      "whatever an installation already has. CI runs it on every "
+                      "push",
     "zipapp": "it fetches the dependency it bundles, and `make check` is offline "
               "— which is the property this tool sells, so the gate that proves "
               "it must not be the thing that breaks it. CI runs it on every "
@@ -188,8 +189,9 @@ def test_ci_runs_nothing_the_gate_does_not():
         "python tools/check_paths_are_disjoint.py":
             "the wheels already on the index are the other half of the "
             "comparison, and `make check` is offline. Two distributions that "
-            "come to claim one path do it between one release and the next, "
-            "which is a state no reading of this tree can see.",
+            "come to claim one path do it between a release and whatever an "
+            "installation already has, which is a state no reading of this "
+            "tree can see.",
         "python tools/check_upgrade_paths.py --from dist":
             "the release runs this against the wheels it is about to publish "
             "and nothing ran it on a push, so the copy in the release workflow "

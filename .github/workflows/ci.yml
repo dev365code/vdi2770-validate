@@ -109,7 +109,8 @@ jobs:
       # is the failure this catches, and the two look alike from outside.
       - name: No two distributions claim one path
         # Compared against what the index already serves, not only against this
-        # tree: the destruction happens between a release and the one before it.
+        # tree: the destruction happens between a release and whatever an
+        # installation already has.
         # Ubuntu only -- the wheels are pure Python and identical either way,
         # and this one talks to the index.
         if: runner.os == 'Linux' && matrix.python-version == '3.12'
