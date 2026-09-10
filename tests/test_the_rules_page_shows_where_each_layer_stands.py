@@ -42,17 +42,22 @@ def test_every_number_in_the_table_is_the_number_in_the_data():
     lines = body[start:body.index("\n\n", start)].splitlines()
     header = [c.strip(" `") for c in lines[0].strip("|").split("|")]
     assert header[0] == "layer", header
+    # The totals are cells too. The first version skipped the last row and the
+    # last column as "sums of the ones above", so a generator that miscounted
+    # them, regenerated, read as a page that matched its catalogue.
     for line in lines[2:]:
         cells = [c.strip(" `*") for c in line.strip("|").split("|")]
         layer = cells[0]
-        if layer.lower() == "total":
-            continue                 # the last row sums the ones above it
         for kind, said in zip(header[1:], cells[1:]):
-            if kind == "total":
-                continue
-            assert int(said) == tab[(layer, kind)], (
-                f"the page says {layer}/{kind} is {said}; the catalogue has "
-                f"{tab[(layer, kind)]}")
+            if layer.lower() == "total":
+                want = (sum(tab.values()) if kind == "total"
+                        else sum(n for (_, k), n in tab.items() if k == kind))
+            elif kind == "total":
+                want = sum(n for (lay, _), n in tab.items() if lay == layer)
+            else:
+                want = tab[(layer, kind)]
+            assert int(said) == want, (
+                f"the page says {layer}/{kind} is {said}; the catalogue has {want}")
 
 
 def test_the_totals_are_the_sum_of_the_rules():

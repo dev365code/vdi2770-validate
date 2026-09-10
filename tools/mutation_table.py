@@ -526,7 +526,7 @@ TABLE = [
 
     ("gates/the-pin-names-the-reader-that-was-built",
      "packages/vdi2770/pyproject.toml",
-     'version = "0.8.0"',
+     'version = "0.8.1.dev0"',
      'version = "0.7.1"',
      ["tools/check_wheel.py"],
      "the two manifests agree with each other and the artifacts do not: the "
@@ -974,7 +974,7 @@ FRONT_DOOR = [
 
     ("gates/the-page-quotes-the-requirement-the-project-declares",
      "README.md",
-     "`vdi2770[validate]>=0.8.0`",
+     "`vdi2770[validate]>=0.8.1.dev0`",
      "`vdi2770[validate]>=0.7.0`",
      ["tests/test_the_front_page_points_at_what_it_shows.py::"
       "test_the_requirement_the_page_quotes_is_the_one_the_project_declares"],
@@ -1468,6 +1468,13 @@ PLATFORM_ROWS = [
      '    assert True, (',
      ['tests/test_rule_pairs.py::test_a_crash_is_not_read_as_a_verdict'],
      'every fixture case asks only whether its rule is in the set, and a check crashing elsewhere in the run leaves that rule in it: the pair read green over a crash'),
+
+    ('docs/a-layer-total-is-checked-like-any-other-cell',
+     'docs/rules.md',
+     '| `container` | 0 | 0 | 3 | 3 | 7 | 13 |',
+     '| `container` | 0 | 0 | 3 | 3 | 7 | 14 |',
+     ['tests/test_the_rules_page_shows_where_each_layer_stands.py::test_every_number_in_the_table_is_the_number_in_the_data'],
+     'the totals were skipped as sums of the cells above them, so a generator that miscounted them, regenerated, read as a page that matched its catalogue'),
 
 ]
 

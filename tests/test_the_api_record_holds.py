@@ -64,7 +64,7 @@ def release_of(version: str) -> str:
     names -- *published* -- is not the one it built.
 
     The tool itself already draws this line: `_parts` keeps pre-release
-    suffixes out of the comparison because 0.8.0 and 0.8.0 differ in what
+    suffixes out of the comparison because 0.8.0.dev0 and 0.8.0 differ in what
     is installable, not in which surface they promise.
     """
     head = re.match(r"^(\d+\.\d+\.\d+)", version)

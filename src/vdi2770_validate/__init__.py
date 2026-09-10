@@ -52,7 +52,7 @@ def _too_old(engine):
 
     Only the release segment is compared. A hand-rolled reader of every digit
     in a version string got this wrong in five ways at once -- `0.8.0.post1`,
-    `0.8.0rc1`, `0.8.0`, `1.0` against `1.0.0`, `0.8.0+ds1` -- because it
+    `0.8.0rc1`, `0.8.0.dev0`, `1.0` against `1.0.0`, `0.8.0+ds1` -- because it
     took the trailing digit of a pre/post/local marker for another release
     component and called a correct engine too old. `packaging` would answer
     properly and the reader declares no dependencies, so what is compared is the

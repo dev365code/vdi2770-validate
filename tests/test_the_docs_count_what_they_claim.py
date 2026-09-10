@@ -357,7 +357,7 @@ def test_the_changelog_counts_the_mutation_rows_it_describes():
     said = m.group(1)
     expected = spelled(len(TABLE))
     assert said == expected, (
-        f"the CHANGELOG says {said} mutation rows and the table has {len(TABLE)}")
+        f"CONTRIBUTING says {said} mutation rows and the table has {len(TABLE)}")
 
 
 def test_no_document_cites_a_file_that_is_not_here():
@@ -433,8 +433,11 @@ def test_no_document_cites_a_file_that_is_not_here():
     # in: the root one stopped listing files it does not carry, and the engine's
     # names its two by the path they have *inside the wheel*, which is not a
     # repository path and is not this pattern's business.
-    assert seen == 31, (
-        f"{seen} citations found, not 31. If you added or removed one, say so "
+    # 31 to 28 when 0.8.0 was cut and work continued above it, the same way as
+    # at 0.7.0: three of the 31 were cited by that release's own section, and
+    # the newest section is a new one that does not repeat them.
+    assert seen == 28, (
+        f"{seen} citations found, not 28. If you added or removed one, say so "
         f"here; if you did not, some of them just stopped being checked.")
 
 
@@ -458,20 +461,26 @@ def test_the_changelog_counts_the_rules_that_fire_because_we_declined():
         f"CHANGELOG says {m.group(1)}")
 
 
-def test_the_changelog_counts_the_files_make_standalone_runs():
+def test_contributing_counts_the_files_make_standalone_runs():
     """It said 48 — the root suite only, forgetting the reader's seven — while
     the target ran 55, and then 56 the moment another file was added. A number
-    in prose about a directory listing drifts the first time anyone adds a file,
-    which is every day this project is worked on.
+    in prose about a directory listing drifts the first time anyone adds a file.
+
+    Read from CONTRIBUTING, like the count of mutation rows and for the same
+    reason: how many files a target runs is a contributor's number, not a
+    release note's. The changelog used to carry it, and the first file added
+    after a release left that released sentence stale -- and it was edited to
+    match, which is exactly what a released section must not be.
     """
 
     files = sorted((ROOT / "tests").glob("test_*.py"))
     files += sorted((ROOT / "packages" / "vdi2770" / "tests").glob("test_*.py"))
 
-    _, m = latest_changelog_claim(r"runs each of the (\d+) test files on its own")
-    assert m, "the CHANGELOG sentence this test pins has been reworded"
+    m = re.search(r"runs each of the (\d+) test files on its own",
+                  (ROOT / "CONTRIBUTING.md").read_text(encoding="utf-8"))
+    assert m, "the CONTRIBUTING sentence this test pins has been reworded"
     assert int(m.group(1)) == len(files), (
-        f"`make standalone` runs {len(files)} files; the CHANGELOG says {m.group(1)}")
+        f"`make standalone` runs {len(files)} files; CONTRIBUTING says {m.group(1)}")
 
 
 def test_the_changelog_counts_the_trailer_shapes_it_claims_are_pinned():
@@ -868,8 +877,8 @@ def test_a_claim_is_held_where_it_was_last_made():
     """
     from conftest import latest_changelog_claim
 
-    heading, match = latest_changelog_claim(r"runs each of the (\d+) test files")
-    assert match, "no changelog section says how many files run standalone"
+    heading, match = latest_changelog_claim(r"real ceiling is \*\*([\d,]+)\*\*")
+    assert match, "no changelog section states the per-rule ceiling"
     assert heading.startswith("## "), heading
 
     # And it says so rather than answering with something: a gate whose helper

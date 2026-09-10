@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+**The rule page shows where each layer stands.** It already said how many
+rules hold each `obligation`; it did not say how those fall across the layers,
+which is the shape of the answer somebody wants when they ask what a judgement
+rests on. Most of the container layer is this tool's own judgement around three
+rules of ZIP mechanics, the files layer is entirely the reference
+implementation's, and the pdf layer is almost all our own.
+The table is generated from the catalogue and its every cell is compared against
+it, because a table of counts written by hand is right on the day it is written.
+
 ## 0.8.0 — 2026-09-09
 
 **One distribution now, and the old name still works.** The validator used to
@@ -24,59 +35,6 @@ reaches the 512 it advertises. Every finding also says what its judgement rests
 on.
 
 The rest of this section is the detail, ordered newest first.
-
-**The rule page shows where each layer stands.** It already said how many
-rules hold each `obligation`; it did not say how those fall across the layers,
-which is the shape of the answer somebody wants when they ask what a judgement
-rests on. The container layer is ZIP and XML mechanics, the files layer is
-entirely the reference implementation's, and the pdf layer is almost all our own.
-The table is generated from the catalogue and its every cell is compared against
-it, because a table of counts written by hand is right on the day it is written.
-
-**Two things about the tag check were asserted by their presence rather than
-by their meaning.** Replacing `${GITHUB_REF_NAME#v}` with a number written in
-the workflow left every test of it green — a release comparing every future tag
-against a number in its own text agrees with itself. And moving one of the two
-calls into a job that runs after the first upload left them green too, though
-by then the engine is on the index and a refusal can only leave the release
-half-finished. Both are properties now: the tag comes from the ref that started
-the run, and both calls stand upstream of both publishers.
-
-And two of those rows, once they were in the harness, survived: they switch a
-job or a step off with `if: false`, which leaves the name, the command and the
-whole block exactly where they were. A test that reads the file for a step's
-presence cannot tell the difference between a gate that runs and one that never
-will. Both checks now ask whether the thing they found is switched off.
-
-Four rows that were supposed to prove earlier repairs were not in the harness
-at all. Each was added, and then swallowed by the next edit that re-cut a
-mutation's anchor — the anchors here are long blocks of workflow text, and
-re-cutting one replaces everything between two markers, including whatever was
-added just inside them. The count never moved, and it was copied forward each
-time without anybody asking why a table that had grown was the same size. The
-rows are in now, and the count is read back and checked against what it was.
-
-**Publishing this release made two of its own checks stale, and they said
-so.** The upgrade matrix asks the index what somebody already has, and two rows
-were written when the newest published release was 0.7.0. One asserted that the
-installed alias names the engine with an exact pin — the shape this release
-retires — and the other built its "before" state with a bare `pip install`,
-which stopped being the older release the moment the newer one existed. Both
-now name what they mean: the requirement has to floor the engine at the alias's
-own version or higher, and the installation to upgrade from is the newest
-published release older than the one in this tree, asked of the index rather
-than written down. Only the rows that consult the index went red, which is why
-they consult it.
-
-**The single file no longer names the machine that built it.** `pip install
---target` writes the console scripts a dependency declares, and the first line
-of each is the absolute path of the interpreter that installed them, so the
-bundle carried a filesystem layout. Two builds of one commit differed in exactly
-those three entries and agreed on the other two hundred and three. A zipapp
-cannot run them — they are files in an archive, not executables on a PATH — so
-they are left out, and the builder checks its own output before anybody can
-publish it: nothing under `bin/`, and no entry containing the directory it was
-built in or the home directory of whoever built it.
 
 **The engine's licence notice said it carried nothing, and it carries VDI's
 schema.** The XML schema and the IDTA class table shipped inside
@@ -1051,7 +1009,7 @@ in it, and both pages have to say so. The comparison is over prose rather than
 lines, because what a page says does not depend on where it wraps — the first
 version of these assertions failed on pages that said the right thing.
 
-- **`make standalone`** runs each of the 88 test files on its own.
+- **`make standalone`** runs each of the 87 test files on its own.
 - The mutation harness names, for every claim this project makes about a gate,
   the pytest selection or the tool that has to go red when the claim is broken.
   Several of its rows are about the front page: a

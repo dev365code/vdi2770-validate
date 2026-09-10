@@ -68,9 +68,10 @@ def page() -> str:
     out += ["", f"{len(catalogue)} rules.", ""]
 
     # And how those fall across the layers, which is the shape of the answer
-    # somebody wants when they ask what this tool's judgements rest on: the
-    # container layer is ZIP and XML mechanics, the files layer is entirely the
-    # reference implementation's, and the pdf layer is almost all our own. The
+    # somebody wants when they ask what this tool's judgements rest on: most of
+    # the container layer is this tool's own judgement around three rules of ZIP
+    # mechanics, the files layer is entirely the reference implementation's, and
+    # the pdf layer is almost all our own. The
     # counts come from the catalogue rather than from a sentence, because a
     # table of numbers written by hand is right on the day it is written.
     kinds = [k.value for k in BASIS]

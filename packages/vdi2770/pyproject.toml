@@ -8,7 +8,7 @@ name = "vdi2770"
 # release in two parts: released under one tag, tested against each other, and
 # a machine that has one has the other. See
 # tests/test_the_two_halves_carry_one_version.py for what that costs and buys.
-version = "0.8.0"
+version = "0.8.1.dev0"
 description = "Read a VDI 2770 handover-documentation container safely — no dependencies, no disk, no network"
 readme = "README.md"
 requires-python = ">=3.9"
