@@ -1462,6 +1462,13 @@ PLATFORM_ROWS = [
      ['tests/test_no_two_distributions_claim_one_path.py::test_a_file_listed_twice_is_a_refusal'],
      'both copies would be downloaded to one name, and one of the two archives would never be read'),
 
+    ('gates/a-crash-is-not-read-as-a-verdict',
+     'tests/test_rule_pairs.py',
+     '    assert "X5" not in ids, (',
+     '    assert True, (',
+     ['tests/test_rule_pairs.py::test_a_crash_is_not_read_as_a_verdict'],
+     'every fixture case asks only whether its rule is in the set, and a check crashing elsewhere in the run leaves that rule in it: the pair read green over a crash'),
+
 ]
 
 PUBLISHING_PATH_ROWS = [
