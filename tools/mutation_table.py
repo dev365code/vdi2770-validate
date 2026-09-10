@@ -545,9 +545,9 @@ TABLE = [
     ("gates/a-release-checkout-can-see-its-tags",
      ".github/workflows/release.yml",
      "      # skip \u2014 in the one workflow that authorises a publish.\n"
-     "      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0\n        with: { fetch-depth: 0 }",
+     "      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1\n        with: { fetch-depth: 0 }",
      "      # skip \u2014 in the one workflow that authorises a publish.\n"
-     "      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0\n        with: { fetch-depth: 1 }",
+     "      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1\n        with: { fetch-depth: 1 }",
      ["tests/test_two_packages_publish_separately.py"],
      "without the tags the assertions comparing this tree against a release tag "
      "skip rather than fail, in the one workflow that authorises a publish"),
@@ -555,9 +555,9 @@ TABLE = [
     ("gates/the-rules-checkout-can-see-them-too",
      ".github/workflows/release.yml",
      "      # and a default checkout is `--depth 1 --no-tags`.\n"
-     "      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0\n        with: { fetch-depth: 0 }",
+     "      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1\n        with: { fetch-depth: 0 }",
      "      # and a default checkout is `--depth 1 --no-tags`.\n"
-     "      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0\n        with: { fetch-depth: 1 }",
+     "      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1\n        with: { fetch-depth: 1 }",
      ["tests/test_two_packages_publish_separately.py"],
      "the order gate reads the tag history, and a gate that cannot see fails "
      "closed here -- which stops the release rather than breaking it, but stops "
@@ -1498,7 +1498,7 @@ PUBLISHING_PATH_ROWS = [
     ('release/a-publisher-does-not-check-out-the-tree',
      '.github/workflows/release.yml',
      '    environment: pypi-vdi2770-validate\n    permissions:\n      id-token: write\n    steps:\n      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4.3.0',
-     '    environment: pypi-vdi2770-validate\n    permissions:\n      id-token: write\n    steps:\n      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0\n      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4.3.0',
+     '    environment: pypi-vdi2770-validate\n    permissions:\n      id-token: write\n    steps:\n      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1\n      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4.3.0',
      ['tests/test_the_publishing_path_has_three_properties.py::'
       'test_a_publisher_downloads_and_uploads_and_does_nothing_else'],
      'code from the tagged tree would run in the job that holds a publishing '
