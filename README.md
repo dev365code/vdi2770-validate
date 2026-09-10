@@ -275,8 +275,9 @@ What has not moved, and what a build script can rely on:
   41 fire on a container in the corpus and are compared against the reference
   implementation, with the divergences published rather than reconciled; the
   other two — `X0` and `X5` — say that this tool could not run a check, which no
-  container can cause, and they are exercised by breaking the installation and
-  by making each step raise.
+  container can cause, and they are exercised by breaking the installation, by
+  making each step raise, and by making the reader hand back nothing for a
+  member it accepted.
 - **The exit codes.** `0` no error, `1` at least one finding at the chosen
   severity or an unreadable path, `2` nothing could be read at all — including
   a command line this tool rejected, since neither read anything — `3` this tool

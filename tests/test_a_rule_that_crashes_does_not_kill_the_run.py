@@ -9,7 +9,7 @@ exists to prevent.
 import pytest
 from vdi2770_validate.model import About, Severity
 
-from conftest import CLEAN_DOCUMENT, CLEAN_DOCUMENTATION
+from conftest import CLEAN_DOCUMENT, CLEAN_DOCUMENTATION, CORPUS
 from vdi2770_validate import runner
 
 
@@ -173,3 +173,84 @@ def test_when_nothing_was_checked_the_remedy_does_not_say_the_rest_stands(monkey
     assert "still stands" not in only[0].remedy, (
         f"nothing else was checked, and the remedy says otherwise: {only[0].remedy!r}")
     assert "nothing in it was checked" in only[0].remedy.lower(), only[0].remedy
+
+
+def nothing_twice(data, allowed=None):
+    """A reader that hands back nothing on the second read -- what its catch-all
+    turns any unexpected failure into."""
+    return lambda name: None
+
+
+def test_a_member_read_once_and_not_twice_is_a_failure_of_this_tool(monkeypatch):
+    """The first read opens every member to its end and checks it, so the reader
+    returning nothing for an accepted PDF later is not the refusal the comment
+    in the fact cache assumed. It used to be passed over: the file went
+    unscanned, nothing was said, and a delivery whose PDF was never looked at
+    could come back clean."""
+    monkeypatch.setattr(runner.zipread, "member_reader", nothing_twice)
+    report = runner.check_bytes(CLEAN_DOCUMENT.read_bytes(), "d.zip")
+    said = [f for f in report.findings if f.rule.id == "X5"]
+    assert said, f"a PDF went unscanned with {[f.rule.id for f in report.findings]}"
+    assert "could not hand it over a second time" in (said[0].detail or ""), said[0].detail
+    # Named, member by member, rather than as the end of every PDF check after it.
+    assert said[0].where.member == "B.pdf", said[0].where
+
+
+def test_a_container_read_once_and_not_twice_is_a_failure_of_this_tool(monkeypatch):
+    """One level up. A nested container is read a second time for its own PDFs,
+    and nothing coming back left every one of them unchecked -- with the
+    delivery still reported clean."""
+    real = runner.zipread.member_bytes
+
+    def nothing_for_containers(data, name, allowed=None):
+        return None if name.lower().endswith(".zip") else real(data, name, allowed)
+
+    monkeypatch.setattr(runner.zipread, "member_bytes", nothing_for_containers)
+    report = runner.check_file(str(CLEAN_DOCUMENTATION))
+    said = [f for f in report.findings if f.rule.id == "X5"]
+    assert said, f"a nested container's PDFs went unchecked with {[f.rule.id for f in report.findings]}"
+    assert "could not hand it over a second time" in (said[0].detail or ""), said[0].detail
+
+
+def test_members_past_the_decompression_budget_are_not_failures_of_this_tool(monkeypatch):
+    """Past the budget the first read stops checking members and says so, as
+    Z5. A member it never checked failing to inflate is that, not a crash.
+
+    4 KiB is below the first member, so the budget is spent before the PDF is
+    checked, and still enough for the metadata the PDF checks need. Written
+    first with 64 bytes, where nothing reached the PDF checks at all and "no
+    X5" held for want of anybody asking -- hence the second premise.
+    """
+    asked = []
+
+    def nothing_twice_and_counting(data, allowed=None):
+        def read(name):
+            asked.append(name)
+            return None
+        return read
+
+    monkeypatch.setattr(runner.zipread, "MAX_TOTAL_DECOMPRESSED", 4096)
+    monkeypatch.setattr(runner.zipread, "member_reader", nothing_twice_and_counting)
+    report = runner.check_bytes(CLEAN_DOCUMENT.read_bytes(), "d.zip")
+    ids = {f.rule.id for f in report.findings}
+    assert "Z5" in ids, f"the premise, the budget running out: {sorted(ids)}"
+    assert asked, "the premise, the PDF checks asking for a member nobody checked"
+    assert "X5" not in ids, f"a member nobody checked was reported as a crash: {sorted(ids)}"
+
+
+def test_one_file_read_once_and_not_twice_leaves_the_others_checked(monkeypatch):
+    """Reported against the file it names. The first version raised, which ended
+    the PDF checks there: every PDF after it lost its findings, and the X5 read
+    as a statement about one file."""
+    real = runner.zipread.member_reader
+
+    def not_b(data, allowed=None):
+        read = real(data, allowed)
+        return lambda name: None if name.endswith("B.pdf") else read(name)
+
+    monkeypatch.setattr(runner.zipread, "member_reader", not_b)
+    report = runner.check_file(str(CORPUS / "container" / "morethanonepdfcontainer.zip"))
+    about = {(f.rule.id, f.where.member) for f in report.findings}
+    assert ("X5", "B.pdf") in about, sorted(about)
+    assert ("P3", "otherPDF.pdf") in about, (
+        f"the PDF after the one that failed lost its findings: {sorted(about)}")

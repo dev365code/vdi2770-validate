@@ -1490,6 +1490,34 @@ PLATFORM_ROWS = [
      ['tests/test_rule_pairs.py::test_a_crash_is_not_read_as_a_verdict'],
      'the guard is only as good as the cases that go through it: a case reading the findings itself passes a helper that refuses and reads green over the crash'),
 
+    ('runner/a-member-read-once-and-not-twice-is-a-failure-of-this-tool',
+     'packages/vdi2770/src/vdi2770/validate/runner.py',
+     '                if not unchecked:\n                    failed.append(name)',
+     '                if False:\n                    failed.append(name)',
+     ['tests/test_a_rule_that_crashes_does_not_kill_the_run.py::test_a_member_read_once_and_not_twice_is_a_failure_of_this_tool'],
+     'the first read checks every member to its end, so nothing coming back the second time is this tool failing; passing over it left a PDF unscanned with nothing said'),
+
+    ('runner/members-past-the-budget-are-not-failures-of-this-tool',
+     'packages/vdi2770/src/vdi2770/validate/runner.py',
+     '            unchecked = any(d.kind == "decompression-budget-exhausted" for d in c.defects)',
+     '            unchecked = False',
+     ['tests/test_a_rule_that_crashes_does_not_kill_the_run.py::test_members_past_the_decompression_budget_are_not_failures_of_this_tool'],
+     'past the budget nothing was checked and Z5 says so; calling a member there a crash of this tool is a second, wrong, explanation'),
+
+    ('runner/a-container-read-once-and-not-twice-is-a-failure-of-this-tool',
+     'packages/vdi2770/src/vdi2770/validate/runner.py',
+     '    if got is None:',
+     '    if False:',
+     ['tests/test_a_rule_that_crashes_does_not_kill_the_run.py::test_a_container_read_once_and_not_twice_is_a_failure_of_this_tool'],
+     'without a nested container\'s bytes none of its PDFs are checked, and that happened with the delivery still reported clean'),
+
+    ('runner/one-unreadable-pdf-does-not-end-the-checks-of-the-others',
+     'packages/vdi2770/src/vdi2770/validate/runner.py',
+     '                    failed.append(name)',
+     '                    raise RuntimeError(name)',
+     ['tests/test_a_rule_that_crashes_does_not_kill_the_run.py::test_one_file_read_once_and_not_twice_leaves_the_others_checked'],
+     'raised inside the PDF checks, one file that could not be read again ended the checks of every PDF after it, and their findings about the sender were lost'),
+
 ]
 
 PUBLISHING_PATH_ROWS = [

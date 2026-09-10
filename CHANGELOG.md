@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+**A PDF the tool cannot read a second time is a failure of the tool, not a
+pass.** The archive is opened and every member checked once, up front; the PDF
+checks read their files again later, and a nested container is read again for
+its own. If that second read came back empty for something the first had
+accepted, the file -- or every PDF in the nested container -- was skipped with
+nothing said, and a delivery whose PDFs were never looked at could be judged
+clean. It is now reported as X5, a fault of this tool, against the file it
+names, and the other PDFs are checked as before. The exception is a container
+whose decompression budget ran out somewhere: Z5 already fails it, so nothing
+there can come out clean.
+
 **The rule page shows where each layer stands.** It already said how many
 rules hold each `obligation`; it did not say how those fall across the layers,
 which is the shape of the answer somebody wants when they ask what a judgement

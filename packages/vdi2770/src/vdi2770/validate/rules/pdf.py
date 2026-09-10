@@ -96,7 +96,7 @@ def check(container, document, facts_for) -> Iterator[Finding]:
     for name, why in _targets(container, document):
         facts = facts_for(name)
         if facts is None:
-            continue          # the reader refused it, and said so as a Z finding
+            continue          # not readable twice: the runner reports it, or Z5 has
         cut_short = isinstance(facts, Stopped)
         if cut_short:
             # A claim sitting in bytes no stream had to be inflated for is found

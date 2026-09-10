@@ -40,9 +40,11 @@ CANNOT_FIRE: dict = {
     "X5": ("only fires when a step in this tool raises, which is a bug here rather than "
            "anything a container can ask for. Not only the rules: the steps that feed "
            "them -- the parse, the document build, the schema walk, and the two calls "
-           "into the reader, a layer with a suite of its own. Exercised by "
+           "into the reader, a layer with a suite of its own -- and the reader handing "
+           "back nothing on a second read of a member it accepted. Exercised by "
            "tests/test_a_rule_that_crashes_does_not_kill_the_run.py, which makes each "
-           "rule module and each of those steps raise in turn."),
+           "rule module and each of those steps raise in turn, and the reader come "
+           "back empty."),
 }
 
 

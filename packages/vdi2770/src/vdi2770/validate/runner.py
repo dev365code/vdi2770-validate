@@ -109,8 +109,36 @@ def _step(report, where, what: str, fn, *args, fix: Optional[str] = None):
         return _CRASHED
 
 
-def _facts_for(raw: bytes, accepted, read_pdf):
+def _read_again(data: bytes, name: str):
+    """A nested container's bytes, which the first read already opened and read.
+
+    The same failure `_facts_for` records, one level up: without these bytes
+    none of this container's PDFs are checked, and that used to happen with
+    nothing said. There is no budget excuse here -- a nested container is only
+    in the tree because the first read opened it and read it to its end.
+    """
+    got = zipread.member_bytes(data, name)
+    if got is None:
+        raise RuntimeError(f"{name}: the reader read this container once and could "
+                           f"not hand it over a second time, so its PDFs are not checked")
+    return got
+
+
+def _facts_for(raw: bytes, accepted, read_pdf, unchecked=False):
     """A PDF fact cache for one container, over one parse of its directory.
+
+    A member the first read accepted was opened to its end and checked, so the
+    reader handing back nothing for it now is not a refusal some finding
+    already reports: it is this tool failing. It is recorded in `get.failed`
+    and reported, member by member, once the PDF checks are through -- not
+    raised, which ended the checks of every PDF after it. Passing over it left
+    the file unscanned with nothing said.
+
+    `unchecked` is a container whose decompression budget ran out anywhere.
+    Z5 already fails such a container, so no failure here can leave it looking
+    clean; not every member in it went unchecked, and reporting one of them as
+    a fault of this tool would still be a second explanation of a container
+    already refused.
 
     `member_bytes` opens the archive on every call, and this asks it for every
     declared PDF — so the cost was declared files times members, with no budget
@@ -122,12 +150,15 @@ def _facts_for(raw: bytes, accepted, read_pdf):
     """
     read_member = zipread.member_reader(raw, allowed=accepted)
     cache = {}
+    failed = []
 
     def get(name: str):
         if name not in cache:
             member = read_member(name)
             if member is None:
-                cache[name] = None            # refused; a Z finding already says so
+                if not unchecked:
+                    failed.append(name)
+                cache[name] = None
             else:
                 # The budget bounds inflating a file, not reading one, so the
                 # facts come back either way and only the claim search is lost.
@@ -148,6 +179,7 @@ def _facts_for(raw: bytes, accepted, read_pdf):
                                if cut_short else facts)
         return cache[name]
 
+    get.failed = failed
     return get
 
 
@@ -272,7 +304,7 @@ def check_bytes(data: bytes, name: str) -> Report:
             raw = None
             if parent is not None and parent[1] is not None and c.member_name:
                 raw = _step(report, c.where, "member read",
-                            zipread.member_bytes, parent[1], c.member_name)
+                            _read_again, parent[1], c.member_name)
                 if raw is _CRASHED:
                     raw = None
         raw_of[id(c)] = (c.depth, raw)
@@ -458,9 +490,15 @@ def check_bytes(data: bytes, name: str) -> Report:
         _into(report, r_metadata.check(c, document, foreign), c.where, "metadata")
 
         if raw is not None:
-            _into(report,
-                  r_pdf.check(c, document, _facts_for(raw, set(c.file_names), read_pdf)),
-                  c.where, "pdf")
+            unchecked = any(d.kind == "decompression-budget-exhausted" for d in c.defects)
+            facts = _facts_for(raw, set(c.file_names), read_pdf, unchecked)
+            _into(report, r_pdf.check(c, document, facts), c.where, "pdf")
+            for name in facts.failed:
+                r = rule("X5")
+                report.add(Finding(r, r.title, c.where.child(member=name),
+                                   detail="the pdf checks: the reader read this member "
+                                          "once and could not hand it over a second "
+                                          "time, so it was not checked"))
 
     # After the walk, because this is the one question that needs all of it:
     # a relationship names a document in a sibling container, so nothing
