@@ -140,7 +140,12 @@ def stage(into: Path) -> None:
     # entries and agreed on the other two hundred and three. A zipapp cannot
     # run them either -- they are files in an archive, not executables on a
     # PATH -- so nothing is lost by leaving them out.
-    for junk in (list(into.glob("*.dist-info")) + list(into.glob("__pycache__"))
+    # `__pycache__` recursively: pip's `--target` install byte-compiles beside
+    # every module, `PYTHONDONTWRITEBYTECODE` does not reach pip's own compile
+    # step, and each nested `.pyc` is stamped with the mtime of its source --
+    # which no two builds share. A top-level glob left a hundred and forty in.
+    for junk in (list(into.glob("*.dist-info")) + list(into.glob("*.egg-info"))
+                 + list(into.rglob("__pycache__"))
                  + [into / "bin", into / "Scripts"]):
         shutil.rmtree(junk, ignore_errors=True)
     (into / "__main__.py").write_text(ENTRY, encoding="utf-8")
@@ -199,14 +204,17 @@ def create_archive(source: Path, target: Path) -> None:
     target.chmod(0o755)
 
 
-def nothing_names_this_machine(pyz: Path) -> int:
+def nothing_names_this_machine(pyz: Path, build_dir: Path | None = None) -> int:
     """The bundle says nothing about where it was built.
 
-    Two things, and the second is why the first matters. No entry under `bin/`
-    or `Scripts/`, because those are pip's console scripts and their shebang is
-    an absolute path. And no entry containing the directory this build ran in,
-    because that is the general form: a bundle that names a filesystem is a
-    bundle two machines cannot produce alike, and it publishes whoever built it.
+    Several things, each of which would make two builds differ or would name
+    the machine. No entry under `bin/` or `Scripts/` (pip's console scripts,
+    whose shebang is an absolute path). No compiled bytecode (`.pyc` or
+    `__pycache__`, stamped with a source mtime). And no entry naming a directory
+    this build touched -- the tree it copied from, the home of whoever ran it,
+    or the temporary directory it staged into -- because a bundle that names a
+    filesystem is one two machines cannot produce alike, and it publishes
+    whoever built it.
 
     Checked on the artifact rather than on the staging directory. A staging
     step that stops removing something is exactly the change this has to
@@ -219,12 +227,22 @@ def nothing_names_this_machine(pyz: Path) -> int:
                 said.append(f"{name} is a console script pip wrote; its first "
                             f"line is the path of the interpreter that "
                             f"installed it, and a zipapp cannot run it anyway")
-        here = str(ROOT).encode()
-        home = str(Path.home()).encode()
+            if name.endswith(".pyc") or "__pycache__" in name:
+                said.append(f"{name} is compiled bytecode; a `.pyc` embeds the "
+                            f"mtime of the source it came from, so a bundle that "
+                            f"carries one is not two-machine reproducible")
+        needles = [(str(ROOT).encode(), "the directory this was built from"),
+                   (str(Path.home()).encode(),
+                    "the home directory of whoever built it")]
+        if build_dir is not None:
+            # The directory the build actually ran in. It is a system temp dir,
+            # under neither of the two above on macOS -- where the release file
+            # is built -- so without it the check is narrower than it reads.
+            needles.append((str(build_dir).encode(),
+                            "the temporary directory this build staged into"))
         for name in z.namelist():
             body = z.read(name)
-            for needle, what in ((here, "the directory this was built in"),
-                                 (home, "the home directory of whoever built it")):
+            for needle, what in needles:
                 if needle in body:
                     said.append(f"{name} contains {what}")
                     break
@@ -272,7 +290,7 @@ def main() -> int:
     # Always, not only under `--check`: this is a property of the file that is
     # about to be published, and the run that builds a release asset is exactly
     # the run that would skip the checking.
-    if nothing_names_this_machine(target):
+    if nothing_names_this_machine(target, tmp):
         return 1
     return smoke_test(target) if args.check else 0
 

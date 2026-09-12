@@ -247,6 +247,11 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
         with:
           python-version: "3.12"
+      # `check_upgrade_paths` imports `packaging`, and this job installs nothing
+      # else -- the runner's system Python carries it, but `setup-python` gives a
+      # fresh one that does not, so a tag was the first place this ran without it.
+      - name: Install
+        run: python -m pip install --upgrade pip packaging
       # Both wheels, into one directory. It downloaded only the rules, and every
       # case from the fourth onward installs with `--no-index --find-links` and
       # asks for the engine -- directly, or as the alias's own dependency. The

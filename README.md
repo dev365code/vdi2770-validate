@@ -307,7 +307,7 @@ The readers and the rules used to be two distributions that had to match, and
 `vdi2770-validate` named the reader with an exact pin so the pair could not be
 half-moved. They are one distribution now. `vdi2770-validate` is the old import
 name kept working: two lines that make it the same object as `vdi2770.validate`,
-asking for `vdi2770[validate]>=0.8.1.dev0` — its own version as the floor, so
+asking for `vdi2770[validate]>=0.8.2.dev0` — its own version as the floor, so
 installing it can never leave you an engine older than the one it stands for.
 (This page follows the working tree, so the number is the release being
 prepared; each release on PyPI carries its own.)
