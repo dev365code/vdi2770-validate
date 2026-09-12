@@ -82,3 +82,62 @@ def test_every_released_tag_has_a_changelog_section():
     documented = {h.split()[0].lstrip("v") for h in re.findall(r"^## (\S+)", text, re.M)}
     missing = sorted(tags - documented, key=lambda v: [int(p) for p in v.split(".")])
     assert not missing, f"released with no changelog section: {missing}"
+
+
+def test_a_released_section_is_frozen_at_its_tag():
+    """From 0.8.0 on, a tagged release's changelog section is the text that went
+    out under the tag: a released section is a record, and rewriting it changes
+    what a version said when people took it.
+
+    Only from 0.8.0. The earlier sections had their prose tidied after their
+    tags -- no rule or verdict changed, and the text each carried when it was
+    published is in that tag's own CHANGELOG.md, which the note at the top of the
+    file points to. Restoring them here would carry that superseded wording back.
+
+    The one edit a frozen section may take is an appended correction,
+    `*(Correction YYYY-MM-DD: ...)*`: the tag's text must be a prefix of the
+    section and every line past it a correction marker. Reads git, so it skips
+    inside an sdist where there are no tags.
+    """
+    import re
+    import subprocess
+
+    baseline = (0, 8, 0)
+    marker = re.compile(r"^\*\(Correct(?:ion|ed)\b.*\)\*$")
+
+    def section(text, ver):
+        m = re.search(rf"(?ms)^(## {re.escape(ver)}\b.*?)(?=^## |\Z)", text)
+        return m.group(1).rstrip() if m else None
+
+    found = subprocess.run(["git", "tag", "-l"], cwd=ROOT, capture_output=True, text=True)
+    if found.returncode != 0:
+        import pytest
+        pytest.skip("not a git checkout")
+    versions = [t[1:] for t in found.stdout.split() if re.fullmatch(r"v\d+\.\d+\.\d+", t)]
+    frozen = [v for v in versions
+              if tuple(int(p) for p in v.split(".")) >= baseline]
+    if not frozen:
+        import pytest
+        pytest.skip("nothing released at or past the baseline yet")
+
+    main_cl = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+    wrong = []
+    for v in sorted(frozen, key=lambda s: [int(p) for p in s.split(".")]):
+        tagged = subprocess.run(["git", "show", f"v{v}:CHANGELOG.md"],
+                                cwd=ROOT, capture_output=True, text=True)
+        if tagged.returncode != 0:
+            continue  # the sibling test owns "a tag has a section"; this owns "unchanged"
+        want, have = section(tagged.stdout, v), section(main_cl, v)
+        if want is None or have is None:
+            wrong.append(f"{v}: no section to compare")
+        elif have == want:
+            continue
+        elif have.startswith(want):
+            extra = [ln.strip() for ln in have[len(want):].splitlines() if ln.strip()]
+            if not all(marker.match(ln) for ln in extra):
+                wrong.append(f"{v}: edited past the tag by something other than a correction")
+        else:
+            wrong.append(f"{v}: the released record was rewritten, not appended to")
+    assert not wrong, (
+        "a released changelog section must be the text that went out under its "
+        f"tag; only `*(Correction ...)*` may be appended: {wrong}")
