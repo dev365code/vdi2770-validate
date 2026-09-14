@@ -28,3 +28,14 @@ enormously — if it cannot be shared, a description of the structure will do.
 
 Please do not report findings that amount to "a malformed container produces a
 confusing message". Those are welcome, but as ordinary issues.
+
+## Advisories
+
+A security fix that shipped in a release has a GitHub security advisory on
+this repository, naming the versions it reaches and the release that fixes it.
+
+- [GHSA-xp97-jcmj-h45f](https://github.com/dev365code/vdi2770-validate/security/advisories/GHSA-xp97-jcmj-h45f):
+  a container member that lied about its size, or used a compression method
+  the reader could not bound, could make the reader allocate far more memory
+  than the archive's own size. Every release of `vdi2770` and
+  `vdi2770-validate` up to 0.8.0; fixed in 0.8.1.
