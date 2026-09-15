@@ -358,6 +358,8 @@ def test_no_module_in_either_package_holds_an_unpinned_budget():
     assert not unpinned, f"budgets no table pins: {unpinned}"
 
 
+@pytest.mark.skipif(os.name == "nt",
+                    reason="POSIX-only: os.mkfifo (named pipes) is not on Windows")
 def test_a_path_that_never_finishes_opening_does_not_stop_the_sweep(tmp_path):
     """A FIFO with no writer blocks `open` forever.
 
@@ -389,6 +391,8 @@ def test_a_path_that_never_finishes_opening_does_not_stop_the_sweep(tmp_path):
     assert "good.zip" in r.stdout, "the readable path after it was never reached"
 
 
+@pytest.mark.skipif(os.name == "nt",
+                    reason="POSIX-only: /dev/stdin and a shell `cat |` pipeline")
 def test_a_pipe_that_has_a_writer_is_read(tmp_path):
     """The half the first repair broke.
 
