@@ -33,7 +33,7 @@ def collect(src: Path) -> list[Path]:
 
 def do_vendor(src: Path) -> int:
     commit = subprocess.run(["git", "-C", str(src), "rev-parse", "HEAD"],
-                            capture_output=True, text=True, encoding="utf-8", check=True).stdout.strip()
+                            capture_output=True, text=True, check=True).stdout.strip()
     files = collect(src)
     if not files:
         print(f"no example files under {src}/examples", file=sys.stderr)

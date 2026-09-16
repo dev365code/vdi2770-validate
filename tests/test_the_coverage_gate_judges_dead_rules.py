@@ -141,7 +141,7 @@ def test_the_gate_run_as_a_command_uses_its_own_judgement(tmp_path):
     tool.write_text(anchored, encoding="utf-8")
     env = under_test()
     done = subprocess.run([sys.executable, str(tool), "--check"],
-                          cwd=ROOT, capture_output=True, text=True, encoding="utf-8", env=env)
+                          cwd=ROOT, capture_output=True, text=True, env=env)
     assert done.returncode == 1, (
         f"the gate ran with a baseline it disagrees with and exited "
         f"{done.returncode}: {done.stdout} {done.stderr}")

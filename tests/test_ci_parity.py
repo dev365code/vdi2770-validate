@@ -548,7 +548,7 @@ def test_this_release_number_was_not_already_spent_in_the_old_namespace():
                      (ROOT / "pyproject.toml").read_text(encoding="utf-8"),
                      re.M).group(1)
     tags = subprocess.run(["git", "tag", "--list", "sdk-v*"], cwd=ROOT,
-                          capture_output=True, text=True, encoding="utf-8")
+                          capture_output=True, text=True)
     if tags.returncode != 0:
         import pytest
         pytest.skip("not a git checkout; the tag history is not available here")
@@ -626,7 +626,7 @@ def test_the_fixture_generator_owns_its_output_directory(tmp_path):
     shutil.copytree(ROOT / "corpus", tmp_path / "corpus")
 
     first = subprocess.run([sys.executable, "tools/make_fixtures.py"],
-                           cwd=tmp_path, capture_output=True, text=True, encoding="utf-8")
+                           cwd=tmp_path, capture_output=True, text=True)
     assert first.returncode == 0, first.stderr[-400:]
     out = tmp_path / "tests" / "fixtures"
     built = sorted(p.name for p in out.glob("*.zip"))
@@ -635,7 +635,7 @@ def test_the_fixture_generator_owns_its_output_directory(tmp_path):
     stray = out / "zz-not-generated.zip"
     stray.write_bytes(b"PK\x03\x04 not produced by the generator")
     again = subprocess.run([sys.executable, "tools/make_fixtures.py"],
-                           cwd=tmp_path, capture_output=True, text=True, encoding="utf-8")
+                           cwd=tmp_path, capture_output=True, text=True)
     assert again.returncode == 0, again.stderr[-400:]
     assert not stray.exists(), (
         "the generator left a file it did not produce; whatever else is in "
@@ -662,7 +662,7 @@ def test_the_code_in_this_tree_is_the_code_its_version_names():
     import subprocess
 
     tags = subprocess.run(["git", "tag", "--list", "v*", "sdk-v*"], cwd=ROOT,
-                          capture_output=True, text=True, encoding="utf-8")
+                          capture_output=True, text=True)
     if tags.returncode != 0 or not tags.stdout.split():
         import pytest
         pytest.skip("no tag history here; this compares against the last release")
@@ -685,7 +685,7 @@ def test_the_code_in_this_tree_is_the_code_its_version_names():
 
     moved = subprocess.run(["git", "diff", "--name-only", tag, "--",
                             "src", "packages/vdi2770/src"],
-                           cwd=ROOT, capture_output=True, text=True, encoding="utf-8")
+                           cwd=ROOT, capture_output=True, text=True)
     changed = [p for p in moved.stdout.split() if p]
     assert not changed, (
         f"this tree says it is {here}, `{tag}` is published, and these have "

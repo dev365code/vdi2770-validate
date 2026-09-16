@@ -89,7 +89,7 @@ def _build(project: Path, out: Path) -> Path:
         shutil.rmtree(stale, ignore_errors=True)
     done = subprocess.run(
         [sys.executable, "-m", "build", "--wheel", "--outdir", str(out), str(project)],
-        env=NO_BYTECODE, capture_output=True, text=True, encoding="utf-8")
+        env=NO_BYTECODE, capture_output=True, text=True)
     if done.returncode:
         print(done.stdout[-2000:], done.stderr[-2000:], file=sys.stderr)
         raise SystemExit(f"{project.name}: could not build a wheel")

@@ -550,7 +550,7 @@ def test_contributing_is_right_about_who_signed_off():
 
     got = subprocess.run(
         ["git", "log", "--reverse", "--format=%H%x01%(trailers:key=Signed-off-by)"],
-        cwd=ROOT, capture_output=True, text=True, encoding="utf-8")
+        cwd=ROOT, capture_output=True, text=True)
     if got.returncode != 0:
         pytest.skip("not a git checkout; the log is not available here")
     signed = [("Signed-off-by" in line.split("\x01", 1)[1])
@@ -639,7 +639,7 @@ def test_the_readme_describes_the_json_entries_the_tool_actually_emits():
     done = subprocess.run(
         [sys.executable, "-m", "vdi2770_validate", "check", "--json",
          str(CLEAN_DOCUMENT), "no-such-container.zip"],
-        capture_output=True, text=True, encoding="utf-8", timeout=120, env=under_test())
+        capture_output=True, text=True, timeout=120, env=under_test())
     checked, unread = json.loads(done.stdout)
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
 
@@ -772,7 +772,7 @@ def test_the_scope_page_quotes_what_the_tool_prints():
     done = subprocess.run(
         [sys.executable, "-m", "vdi2770_validate", "check",
          "corpus/examples/missingdocuments/folders.zip"],
-        cwd=ROOT, capture_output=True, text=True, encoding="utf-8", env=under_test())
+        cwd=ROOT, capture_output=True, text=True, env=under_test())
     printed = done.stdout
 
     said = ("This tool does not verify PDF/A conformance. It reports the claim a "

@@ -80,7 +80,7 @@ def _names():
     reported as "the tests it names already fail before the mutation".
     """
     done = subprocess.run(["git", "ls-files"], cwd=ROOT,
-                          capture_output=True, text=True, encoding="utf-8")
+                          capture_output=True, text=True)
     if done.returncode == 0 and done.stdout.strip():
         return [n for n in done.stdout.split("\n") if n]
     return [str(p.relative_to(ROOT)) for p in sorted(ROOT.rglob("*"))

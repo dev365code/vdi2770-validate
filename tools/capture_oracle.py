@@ -57,7 +57,7 @@ def their_verdicts(reference: Path, java_home: str, paths: list) -> dict:
     cp = subprocess.run(
         ["mvn", "-B", "-q", "-pl", "vdi2770-processor", "dependency:build-classpath",
          "-Dmdep.outputFile=/dev/stdout", "-DincludeScope=runtime"],
-        cwd=reference, capture_output=True, text=True, encoding="utf-8", check=True).stdout.strip().splitlines()[-1]
+        cwd=reference, capture_output=True, text=True, check=True).stdout.strip().splitlines()[-1]
     jars = [str(next(reference.glob(f"vdi2770-{m}/target/vdi2770-{m}-*.jar")))
             for m in ("processor", "core")]
     with tempfile.TemporaryDirectory() as tmp:
@@ -70,7 +70,7 @@ def their_verdicts(reference: Path, java_home: str, paths: list) -> dict:
             [f"{java_home}/bin/java", "-Duser.language=en", "-Duser.country=US",
              "-Duser.timezone=UTC", "-Dfile.encoding=UTF-8",
              "-cp", ":".join(jars + [cp, tmp]), "Sweep", *[str(p) for p in paths]],
-            cwd=tmp, capture_output=True, text=True, encoding="utf-8", check=True).stdout
+            cwd=tmp, capture_output=True, text=True, check=True).stdout
     out = {}
     for entry in json.loads(raw):
         per = {}
@@ -266,7 +266,7 @@ def main() -> int:
         return 0
 
     head = subprocess.run(["git", "-C", str(a.reference), "rev-parse", "HEAD"],
-                          capture_output=True, text=True, encoding="utf-8").stdout.strip()
+                          capture_output=True, text=True).stdout.strip()
     if head != PINNED_COMMIT:
         print(f"reference is at {head[:12]}, not the pinned {PINNED_COMMIT[:12]}", file=sys.stderr)
         return 2

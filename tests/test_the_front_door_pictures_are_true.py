@@ -126,7 +126,7 @@ def test_every_line_drawn_in_the_shot_is_one_the_tool_really_prints():
     module = generator()
     done = subprocess.run([sys.executable, "-m", "vdi2770_validate",
                            *module.SHOT_COMMAND],
-                          cwd=ROOT, capture_output=True, text=True, encoding="utf-8",
+                          cwd=ROOT, capture_output=True, text=True,
                           env=under_test())
     real = [re.sub(r"\s+", " ", line).strip() for line in done.stdout.splitlines()]
     at, previous = 0, None

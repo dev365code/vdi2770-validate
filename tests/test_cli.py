@@ -126,7 +126,7 @@ def test_the_module_entry_point_works():
 
     from conftest import ROOT
     r = subprocess.run([sys.executable, "-m", "vdi2770_validate", "--version"],
-                       capture_output=True, text=True, encoding="utf-8",
+                       capture_output=True, text=True,
                        env={"PYTHONPATH": os.pathsep.join([str(ROOT / "src"), str(ROOT / "packages" / "vdi2770" / "src")]),
                             "PATH": "/usr/bin:/bin"})
     assert r.returncode == 0, r.stderr
@@ -265,7 +265,7 @@ def test_a_console_that_is_not_utf8_still_gets_a_verdict(encoding):
     """
     done = subprocess.run(
         [sys.executable, "-m", "vdi2770_validate", "check", str(CLEAN_DOCUMENT)],
-        capture_output=True, text=True, encoding="utf-8", timeout=120,
+        capture_output=True, text=True, timeout=120,
         env={**under_test(), "PYTHONIOENCODING": encoding})
     assert "Traceback" not in done.stderr, done.stderr
     assert done.returncode == 0, done.stdout + done.stderr
@@ -297,7 +297,7 @@ def test_the_json_a_console_cannot_carry_is_still_json(encoding, tmp_path):
         z.writestr("Pr\u00fcfbericht_\u00d6lk\u00fchler.pdf", b"%PDF-1.4\n")
     done = subprocess.run(
         [sys.executable, "-m", "vdi2770_validate", "check", "--json", str(target)],
-        capture_output=True, text=True, encoding="utf-8", timeout=120,
+        capture_output=True, text=True, timeout=120,
         env={**under_test(), "PYTHONIOENCODING": encoding})
     assert "Traceback" not in done.stderr, done.stderr
     doc = json.loads(done.stdout)          # the whole point
@@ -313,7 +313,7 @@ def test_a_console_that_is_not_utf8_does_not_stop_the_sweep():
     done = subprocess.run(
         [sys.executable, "-m", "vdi2770_validate", "check",
          str(CLEAN_DOCUMENT), str(CLEAN_DOCUMENT), str(CLEAN_DOCUMENT)],
-        capture_output=True, text=True, encoding="utf-8", timeout=120,
+        capture_output=True, text=True, timeout=120,
         env={**under_test(), "PYTHONIOENCODING": "ascii"})
     assert done.stdout.count("error(s)") == 3, done.stdout + done.stderr
 

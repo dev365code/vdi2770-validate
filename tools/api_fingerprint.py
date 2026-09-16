@@ -217,7 +217,7 @@ def _at_tag(version: str):
     for prefix in (_prefix_for(version), *TAG_PREFIXES):
         done = subprocess.run(
             ["git", "show", f"{prefix}{version}:packages/vdi2770/API.json"],
-            cwd=ROOT, capture_output=True, text=True, encoding="utf-8")
+            cwd=ROOT, capture_output=True, text=True)
         if done.returncode:
             continue
         try:
@@ -248,7 +248,7 @@ def _tags() -> set:
     yes.
     """
     got = subprocess.run(["git", "tag", "--list", *(f"{p}*" for p in TAG_PREFIXES)],
-                         cwd=ROOT, capture_output=True, text=True, encoding="utf-8")
+                         cwd=ROOT, capture_output=True, text=True)
     if got.returncode:
         raise SystemExit(
             "cannot read the tag history, and every judgement in this file rests "

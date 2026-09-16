@@ -62,7 +62,7 @@ def test_a_password_protected_member_is_reported(tmp_path):
         pytest.skip("needs the zip(1) command to build an encrypted member")
     src = tmp_path / "src"
     src.mkdir()
-    (src / "VDI2770_Metadata.xml").write_text(META, encoding="utf-8")
+    (src / "VDI2770_Metadata.xml").write_text(META)
     (src / "B.pdf").write_bytes(PDF)
     (src / "B.docx").write_bytes(DOCX)
     p = str(tmp_path / "enc.zip")

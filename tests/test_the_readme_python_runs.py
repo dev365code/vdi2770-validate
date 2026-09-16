@@ -32,7 +32,7 @@ def test_every_python_block_runs():
     `cd` in before it shows any path."""
     for i, block in enumerate(BLOCKS):
         done = subprocess.run([sys.executable, "-c", block], cwd=ROOT,
-                              capture_output=True, text=True, encoding="utf-8")
+                              capture_output=True, text=True)
         assert done.returncode == 0, (
             f"README python block {i + 1} does not run:\n{block}\n"
             f"{done.stderr[-800:]}")

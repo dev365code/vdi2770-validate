@@ -30,7 +30,7 @@ def swept(tmp_path, doctor):
     (tree / "docs" / "oracle-sweep.json").write_text(json.dumps(body, indent=2),
                                                      encoding="utf-8")
     return subprocess.run([sys.executable, "tools/capture_oracle.py", "--check-swept"],
-                          cwd=tree, capture_output=True, text=True, encoding="utf-8", env=under_test())
+                          cwd=tree, capture_output=True, text=True, env=under_test())
 
 
 def test_an_honest_recording_passes(tmp_path):
@@ -144,7 +144,7 @@ def test_a_sweep_of_nothing_over_nothing_is_not_a_complete_sweep(tmp_path):
                                                      encoding="utf-8")
 
     done = subprocess.run([sys.executable, "tools/capture_oracle.py", "--check-swept"],
-                          cwd=tree, capture_output=True, text=True, encoding="utf-8", env=under_test())
+                          cwd=tree, capture_output=True, text=True, env=under_test())
     assert done.returncode != 0, done.stdout + done.stderr
     assert "0 containers has a reference verdict" not in done.stdout, done.stdout
 

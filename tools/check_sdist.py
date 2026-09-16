@@ -107,7 +107,7 @@ def _build_and_run(project: Path, before: list) -> int:
     with tempfile.TemporaryDirectory() as tmp:
         build = subprocess.run([sys.executable, "-m", "build", "--sdist", "--outdir", tmp, str(project)],
                                env=NO_BYTECODE,
-                               capture_output=True, text=True, encoding="utf-8")
+                               capture_output=True, text=True)
         if build.returncode:
             print(build.stdout[-2000:], build.stderr[-2000:], file=sys.stderr)
             print("could not build an sdist", file=sys.stderr)

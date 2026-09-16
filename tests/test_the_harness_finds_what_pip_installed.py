@@ -27,7 +27,7 @@ COMMAND = "vdi2770-validate"
 
 def test_a_plain_file_is_the_command(tmp_path):
     """What pip writes on Linux and macOS."""
-    (tmp_path / COMMAND).write_text("#!/usr/bin/env python\n", encoding="utf-8")
+    (tmp_path / COMMAND).write_text("#!/usr/bin/env python\n")
     assert installed_command(tmp_path, COMMAND) == tmp_path / COMMAND
 
 
@@ -48,14 +48,14 @@ def test_a_name_that_merely_starts_the_same_is_not_the_command(tmp_path):
     """setuptools has written `<name>-script.py` beside the executable, and a
     glob for `vdi2770-validate*` takes it for the command. So would
     `vdi2770-validate-extras` if anyone ever shipped one."""
-    (tmp_path / (COMMAND + "-script.py")).write_text("", encoding="utf-8")
-    (tmp_path / (COMMAND + "-extras")).write_text("", encoding="utf-8")
+    (tmp_path / (COMMAND + "-script.py")).write_text("")
+    (tmp_path / (COMMAND + "-extras")).write_text("")
     assert installed_command(tmp_path, COMMAND) is None
 
 
 def test_the_plain_file_wins_when_both_are_there(tmp_path):
     """Not a preference — a fixed order, so the harness reports one path and
     the same one every time it is asked."""
-    (tmp_path / COMMAND).write_text("", encoding="utf-8")
+    (tmp_path / COMMAND).write_text("")
     (tmp_path / (COMMAND + ".exe")).write_bytes(b"MZ")
     assert installed_command(tmp_path, COMMAND) == tmp_path / COMMAND

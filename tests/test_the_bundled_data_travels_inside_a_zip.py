@@ -48,7 +48,7 @@ def _run_inside(pyz: Path, code: str) -> subprocess.CompletedProcess:
     env["PYTHONPATH"] = str(pyz)
     env.pop("PYTHONHOME", None)
     return subprocess.run([sys.executable, "-c", code], capture_output=True,
-                          text=True, encoding="utf-8", timeout=120, env=env, cwd=str(ROOT))
+                          text=True, timeout=120, env=env, cwd=str(ROOT))
 
 
 def test_the_rules_are_readable_from_inside_the_zip(one_file):
@@ -73,6 +73,6 @@ def test_the_schema_is_readable_from_inside_the_zip(one_file):
 def test_a_container_is_checked_by_the_single_file(one_file):
     """End to end, because the point of the file is that somebody can run it."""
     done = subprocess.run([sys.executable, str(one_file), "check", str(CLEAN_DOCUMENT)],
-                          capture_output=True, text=True, encoding="utf-8", timeout=180, cwd=str(ROOT))
+                          capture_output=True, text=True, timeout=180, cwd=str(ROOT))
     assert done.returncode == 0, done.stdout + done.stderr
     assert "0 error(s)" in done.stdout, done.stdout
