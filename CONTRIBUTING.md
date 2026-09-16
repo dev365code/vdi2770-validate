@@ -40,7 +40,7 @@ everything. Run it when you add or change a gate. `tools/mutation_table.py`
 with no arguments lists the table; it holds 211 rows, each naming the pytest
 selection or the tool that has to go red.
 
-`make standalone` runs each of the 91 test files on its own. A suite is a shared
+`make standalone` runs each of the 92 test files on its own. A suite is a shared
 process, so a file can pass because an earlier one imported something —
 `tests/test_offline.py` did exactly that for weeks. Run it when you add a
 module-level import to a test.
