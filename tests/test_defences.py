@@ -29,7 +29,10 @@ def pack(members, compress=zipfile.ZIP_DEFLATED):
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", compress) as z:
         for n, d in members.items():
-            z.writestr(n, d)
+            info = zipfile.ZipInfo(n)
+            info.filename = n  # ZipInfo() rewrites os.sep -> / on Windows; keep the exact name
+            info.compress_type = compress
+            z.writestr(info, d)
     return buf.getvalue()
 
 

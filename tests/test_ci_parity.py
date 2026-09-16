@@ -929,7 +929,7 @@ class Install:
         # here -- a second copy of a corpus filename turns this red when the
         # corpus is rearranged, which is not what it guards.
         import check_upgrade_paths as gate
-        clean = any(args[-1].endswith(path) and code == 0
+        clean = any(args[-1].replace(chr(92), "/").endswith(path) and code == 0
                     for path, code in gate.VERDICTS)
         if self.broken.get("always_passes"):
             return 0, "0 error(s)"

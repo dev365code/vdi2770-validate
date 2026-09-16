@@ -20,6 +20,8 @@ import os
 import subprocess
 import sys
 
+import pytest
+
 from conftest import ROOT
 
 GATE = ROOT / "tools" / "check_ci_judged_this_commit.py"
@@ -48,6 +50,7 @@ def ask(tmp_path, runs, exit_code=0, sha=SHA):
     return done.returncode, done.stdout + done.stderr
 
 
+@pytest.mark.skipif(os.name == "nt", reason="the ci-judged gate runs on Linux in the release workflow; its gh stub is a PATH shim that Windows binds to the runner's real gh.exe")
 def test_a_completed_successful_run_is_a_judgement(tmp_path):
     code, said = ask(tmp_path, [{"databaseId": 1, "status": "completed",
                                  "conclusion": "success",
@@ -63,6 +66,7 @@ def test_no_run_at_all_is_a_refusal(tmp_path):
     assert "no" in said.lower() and SHA[:7] in said, said
 
 
+@pytest.mark.skipif(os.name == "nt", reason="the ci-judged gate runs on Linux in the release workflow; its gh stub is a PATH shim that Windows binds to the runner's real gh.exe")
 def test_a_cancelled_run_is_not_a_judgement(tmp_path):
     """The case this gate is named for: grey is not green."""
     code, said = ask(tmp_path, [{"databaseId": 1, "status": "completed",
@@ -72,6 +76,7 @@ def test_a_cancelled_run_is_not_a_judgement(tmp_path):
     assert "cancelled" in said, said
 
 
+@pytest.mark.skipif(os.name == "nt", reason="the ci-judged gate runs on Linux in the release workflow; its gh stub is a PATH shim that Windows binds to the runner's real gh.exe")
 def test_a_failed_run_is_not_a_judgement(tmp_path):
     code, said = ask(tmp_path, [{"databaseId": 1, "status": "completed",
                                  "conclusion": "failure",
@@ -80,6 +85,7 @@ def test_a_failed_run_is_not_a_judgement(tmp_path):
     assert "failure" in said, said
 
 
+@pytest.mark.skipif(os.name == "nt", reason="the ci-judged gate runs on Linux in the release workflow; its gh stub is a PATH shim that Windows binds to the runner's real gh.exe")
 def test_a_run_still_going_is_not_a_judgement(tmp_path):
     """It may yet pass. It has not, and a publish cannot be taken back."""
     code, said = ask(tmp_path, [{"databaseId": 1, "status": "in_progress",
@@ -89,6 +95,7 @@ def test_a_run_still_going_is_not_a_judgement(tmp_path):
     assert "in_progress" in said, said
 
 
+@pytest.mark.skipif(os.name == "nt", reason="the ci-judged gate runs on Linux in the release workflow; its gh stub is a PATH shim that Windows binds to the runner's real gh.exe")
 def test_one_success_among_several_attempts_is_enough(tmp_path):
     """A re-run after a flake is how a red commit legitimately becomes green,
     and refusing on the presence of any failure would make a re-run useless."""
@@ -155,6 +162,7 @@ def test_the_gate_is_wired_into_the_release_before_anything_is_published():
     assert asked < gate, "the release runs the whole gate before asking whether it needs to"
 
 
+@pytest.mark.skipif(os.name == "nt", reason="the ci-judged gate runs on Linux in the release workflow; its gh stub is a PATH shim that Windows binds to the runner's real gh.exe")
 def test_an_abbreviated_commit_is_named_as_the_reason(tmp_path):
     """GitHub's `--commit` filter matches the full forty characters.
 

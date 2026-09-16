@@ -32,7 +32,10 @@ def documentation(tmp_path, name, extra, compress=zipfile.ZIP_DEFLATED):
         z.writestr("VDI2770_Main.xml", MAINXML)
         z.writestr("VDI2770_Main.pdf", MAINPDF)
         for n, d in extra:
-            z.writestr(n, d)
+            info = zipfile.ZipInfo(n)
+            info.filename = n  # keep the exact member name (ZipInfo rewrites os.sep on Windows)
+            info.compress_type = compress
+            z.writestr(info, d)
     p.write_bytes(buf.getvalue())
     return str(p)
 

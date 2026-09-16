@@ -169,6 +169,8 @@ def test_a_password_protected_member_is_told_to_remove_the_password(tmp_path):
     """
     import subprocess
 
+    if subprocess.run(["which", "zip"], capture_output=True).returncode:
+        pytest.skip("needs the zip(1) command to build an encrypted member")
     src = zipfile.ZipFile(CLEAN_DOCUMENT)
     work = tmp_path / "in"
     work.mkdir()

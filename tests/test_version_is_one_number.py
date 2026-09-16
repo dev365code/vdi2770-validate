@@ -124,7 +124,8 @@ def test_a_released_section_is_frozen_at_its_tag():
     wrong = []
     for v in sorted(frozen, key=lambda s: [int(p) for p in s.split(".")]):
         tagged = subprocess.run(["git", "show", f"v{v}:CHANGELOG.md"],
-                                cwd=ROOT, capture_output=True, text=True)
+                                cwd=ROOT, capture_output=True, text=True,
+                                encoding="utf-8", errors="replace")
         if tagged.returncode != 0:
             continue  # the sibling test owns "a tag has a section"; this owns "unchanged"
         want, have = section(tagged.stdout, v), section(main_cl, v)

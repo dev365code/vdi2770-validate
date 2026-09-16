@@ -105,7 +105,7 @@ def test_unicode_canonicalisation_is_defined_once_in_the_project():
                              and isinstance(fn.value, ast.Name) and fn.value.id in aliases)
                 by_name = isinstance(fn, ast.Name) and fn.id in imported
                 if by_module or by_name:
-                    hits.append(f"{path.relative_to(ROOT)}:{node.lineno}")
+                    hits.append(f"{path.relative_to(ROOT).as_posix()}:{node.lineno}")
 
     assert len(hits) == 1, "more than one definition of canonical form:\n  " + "\n  ".join(hits)
     assert hits[0].startswith("packages/vdi2770/src/vdi2770/zipread.py"), hits[0]

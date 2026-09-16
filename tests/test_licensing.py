@@ -289,7 +289,7 @@ def test_prose_does_not_assert_what_the_paid_guideline_requires():
     somebody once heard — which is the thing CONTRIBUTING.md forbids "even from
     memory".
     """
-    paths = PROSE + sorted(str(p.relative_to(ROOT)) for p in (ROOT / "docs").glob("*.md"))
+    paths = PROSE + sorted(p.relative_to(ROOT).as_posix() for p in (ROOT / "docs").glob("*.md"))
     unsourced = []
     for name in paths:
         path = ROOT / name

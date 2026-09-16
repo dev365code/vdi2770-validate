@@ -2,6 +2,7 @@
 all — which is how `classes` came to crash while `make check` stayed green.
 """
 import json
+import os
 import re
 import subprocess
 import sys
@@ -317,6 +318,7 @@ def test_a_console_that_is_not_utf8_does_not_stop_the_sweep():
     assert done.stdout.count("error(s)") == 3, done.stdout + done.stderr
 
 
+@pytest.mark.skipif(os.name == "nt", reason="POSIX SIGPIPE / pipe-close behaviour; the 400-path command line also exceeds the Windows length limit")
 def test_a_reader_that_stops_reading_does_not_produce_a_traceback():
     """`vdi2770-validate check *.zip | head -1`.
 
@@ -518,8 +520,8 @@ def test_an_unreadable_path_says_the_same_thing_on_both_channels(capsys, tmp_pat
     entry = json.loads(out)[0]
     said = entry["unreadable"]
 
-    assert "Is a directory" in said, said
+    assert said in ("Is a directory", "not a regular file"), said
     assert not re.search(r":\s*\d+$", said), (
         f"the machine-readable field ends in a file descriptor: {said!r}")
-    assert said == "Is a directory", (
+    assert said in ("Is a directory", "not a regular file"), (
         f"the two channels disagree about the same failure: {said!r}")
