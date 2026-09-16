@@ -1,0 +1,29 @@
+# Every pull-request commit must carry a Signed-off-by line — the Developer
+# Certificate of Origin, explained in CONTRIBUTING.md. Checked here rather
+# than trusted, for the same reason everything else in this repository is.
+name: dco
+
+on: pull_request
+
+permissions:
+  contents: read
+
+jobs:
+  signoff:
+    name: every commit certifies its origin
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: look for Signed-off-by on each commit in the range
+        run: |
+          missing=0
+          for sha in $(git rev-list --no-merges "${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"); do
+            if ! git log -1 --format=%B "$sha" | grep -Eq '^Signed-off-by: .+ <.+@.+>'; then
+              echo "::error::commit $sha has no Signed-off-by line (git commit -s; see CONTRIBUTING.md)"
+              missing=1
+            fi
+          done
+          exit "$missing"
