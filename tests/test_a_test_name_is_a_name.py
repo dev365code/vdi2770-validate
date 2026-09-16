@@ -45,7 +45,7 @@ def collected():
         done = subprocess.run(
             [sys.executable, "-m", "pytest", "--collect-only", "-q",
              "-p", "no:cacheprovider", "-p", "collect_the_ids"],
-            cwd=str(ROOT), env=env, capture_output=True, text=True)
+            cwd=str(ROOT), env=env, capture_output=True, text=True, encoding="utf-8")
     assert done.returncode == 0, f"collection failed:\n{done.stdout[-2000:]}"
     found = [line[len("NODEID "):] for line in done.stdout.splitlines()
              if line.startswith("NODEID ")]

@@ -70,7 +70,7 @@ def tree_with(tmp_path, tags, pin="vdi2770==0.7.0", version="0.7.0"):
 def run(tree, *extra):
     return subprocess.run(
         [sys.executable, "tools/check_release_order.py", *extra],
-        cwd=tree, capture_output=True, text=True, env=under_test())
+        cwd=tree, capture_output=True, text=True, encoding="utf-8", env=under_test())
 
 
 def at(tmp_path, **kw):

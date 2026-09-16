@@ -96,7 +96,7 @@ def contents(project: Path, out: Path) -> tuple:
     build = subprocess.run(
         [sys.executable, "-m", "build", "--wheel", "--outdir", str(out), str(project)],
         env=NO_BYTECODE,
-        capture_output=True, text=True)
+        capture_output=True, text=True, encoding="utf-8")
     if build.returncode:
         print(build.stdout[-2000:], build.stderr[-2000:], file=sys.stderr)
         raise SystemExit(f"{project.name}: could not build a wheel")
@@ -238,7 +238,7 @@ def smoke(wheels: list) -> list:
         install = subprocess.run(
             [sys.executable, "-m", "pip", "install", "--quiet", "--no-index", "--no-deps",
              "--target", tmp, *[str(w) for w in wheels]],
-            capture_output=True, text=True, env=NO_BYTECODE)
+            capture_output=True, text=True, encoding="utf-8", env=NO_BYTECODE)
         if install.returncode:
             return [f"the wheels do not install: {install.stderr[-800:]}"]
         found = []
@@ -250,7 +250,7 @@ def smoke(wheels: list) -> list:
                   "from vdi2770_validate.cli import main;"
                   "sys.exit(main(['check', sys.argv[1]]))")
         run = subprocess.run([sys.executable, "-c", script, str(SMOKE)],
-                             capture_output=True, text=True, cwd=tmp, env=env)
+                             capture_output=True, text=True, encoding="utf-8", cwd=tmp, env=env)
         if tmp not in run.stdout:
             found.append(f"the smoke test ran a copy that was not the wheel: {run.stdout[:200]}")
         if run.returncode != 1:

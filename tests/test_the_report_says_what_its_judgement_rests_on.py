@@ -35,7 +35,7 @@ BROKEN = FIXTURES / "m2-unknown-class-id.zip"
 
 def run(*args):
     done = subprocess.run([sys.executable, "-m", "vdi2770_validate", "check", *args],
-                          cwd=ROOT, capture_output=True, text=True, env=under_test())
+                          cwd=ROOT, capture_output=True, text=True, encoding="utf-8", env=under_test())
     return done.stdout
 
 

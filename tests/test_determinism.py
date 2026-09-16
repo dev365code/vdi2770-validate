@@ -124,7 +124,7 @@ def test_the_hash_seed_does_not_reach_the_output(tmp_path):
     for seed in ("0", "524287"):
         env["PYTHONHASHSEED"] = seed
         done = subprocess.run([sys.executable, "-c", script, *targets],
-                              capture_output=True, text=True, env=env)
+                              capture_output=True, text=True, encoding="utf-8", env=env)
         assert done.returncode == 0, done.stderr[-800:]
         outputs.append(done.stdout)
 

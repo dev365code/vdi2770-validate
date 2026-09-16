@@ -66,7 +66,7 @@ SCRIPTS = "Scripts" if os.name == "nt" else "bin"
 
 def run(*args, **kw):
     kw.setdefault("env", _CLEAN)
-    return subprocess.run(args, capture_output=True, text=True, **kw)
+    return subprocess.run(args, capture_output=True, text=True, encoding="utf-8", **kw)
 
 
 def installed_command(directory: Path, command: str):

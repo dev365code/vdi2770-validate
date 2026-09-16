@@ -139,7 +139,7 @@ def run(tmp_path, *args, published=True):
                   encoding="utf-8")
     return tree, subprocess.run([sys.executable, "tools/api_fingerprint.py", "--write", *args],
                                 cwd=tree, env=_cold(),
-                          capture_output=True, text=True)
+                          capture_output=True, text=True, encoding="utf-8")
 
 
 def test_a_moved_surface_under_a_published_version_is_refused(tmp_path):
@@ -158,7 +158,7 @@ def test_editing_the_record_does_not_steer_the_refusal(tmp_path, field, value):
     baseline.write_text(json.dumps(body, indent=2), encoding="utf-8")
     done = subprocess.run([sys.executable, "tools/api_fingerprint.py", "--write"],
                           cwd=tree, env=_cold(),
-                          capture_output=True, text=True)
+                          capture_output=True, text=True, encoding="utf-8")
     assert done.returncode == 1, f"editing {field} let it record: {done.stdout}{done.stderr}"
 
 
@@ -191,7 +191,7 @@ def test_a_reader_release_made_under_the_old_name_still_reads_as_published():
     import api_fingerprint as fp
 
     got = subprocess.run(["git", "tag", "--list", "sdk-v0.6.1"], cwd=ROOT,
-                         capture_output=True, text=True)
+                         capture_output=True, text=True, encoding="utf-8")
     if got.returncode or not got.stdout.strip():
         pytest.skip("no tag history here; this reads the repository's own")
     assert fp._published("0.6.1")
@@ -202,7 +202,7 @@ def test_deleting_the_record_does_not_make_it_the_first_one(tmp_path):
     (tree / "packages" / "vdi2770" / "API.json").unlink()
     done = subprocess.run([sys.executable, "tools/api_fingerprint.py", "--write", "--first"],
                           cwd=tree, env=_cold(),
-                          capture_output=True, text=True)
+                          capture_output=True, text=True, encoding="utf-8")
     assert done.returncode == 1, done.stdout + done.stderr
 
 
@@ -319,7 +319,7 @@ def test_a_baseline_that_is_not_what_its_tag_published_is_refused(tmp_path):
 
     done = subprocess.run([sys.executable, "tools/api_fingerprint.py", "--write"],
                           cwd=tree, env=_cold(),
-                          capture_output=True, text=True)
+                          capture_output=True, text=True, encoding="utf-8")
     assert done.returncode == 1, done.stdout + done.stderr
     assert f"not what {tag_for('0.0.9')} published" in done.stderr, done.stderr
 
@@ -340,7 +340,7 @@ def test_a_checkout_without_tags_is_refused_rather_than_waved_through(tmp_path):
 
     done = subprocess.run([sys.executable, "tools/api_fingerprint.py", "--write"],
                           cwd=tree, env=_cold(),
-                          capture_output=True, text=True)
+                          capture_output=True, text=True, encoding="utf-8")
     assert done.returncode == 1, done.stdout + done.stderr
     assert "no release tags at all" in done.stderr, done.stderr
 
@@ -406,7 +406,7 @@ def test_a_version_that_is_already_published_is_not_recorded_over(tmp_path):
 
     done = subprocess.run([sys.executable, "tools/api_fingerprint.py", "--write"],
                           cwd=tree, env=_cold(),
-                          capture_output=True, text=True)
+                          capture_output=True, text=True, encoding="utf-8")
     assert done.returncode == 1, done.stdout + done.stderr
     assert f"{tag_for(now)} is already published" in done.stderr, done.stderr
     kept = json.loads((tree / "packages" / "vdi2770" / "API.json").read_text(
@@ -444,7 +444,7 @@ def test_pointing_the_record_at_a_tag_that_does_not_exist_is_refused(tmp_path):
 
     done = subprocess.run([sys.executable, "tools/api_fingerprint.py", "--write"],
                           cwd=tree, env=_cold(),
-                          capture_output=True, text=True)
+                          capture_output=True, text=True, encoding="utf-8")
     assert done.returncode == 1, done.stdout + done.stderr
     assert "no release tag ever named it" in done.stderr, done.stderr
 
@@ -468,7 +468,7 @@ def test_a_baseline_that_differs_from_its_tag_is_refused(tmp_path):
 
     done = subprocess.run([sys.executable, "tools/api_fingerprint.py", "--write"],
                           cwd=tree, env=_cold(),
-                          capture_output=True, text=True)
+                          capture_output=True, text=True, encoding="utf-8")
     assert done.returncode == 1, done.stdout + done.stderr
     assert "is not what v" in done.stderr, done.stderr
     assert "no baseline at all" not in done.stderr, (
@@ -508,7 +508,7 @@ def test_an_unreleased_version_is_told_to_re_record_not_to_bump(tmp_path):
 
     done = subprocess.run([sys.executable, "tools/api_fingerprint.py", "--check"],
                           cwd=tree, env=_cold(),
-                          capture_output=True, text=True)
+                          capture_output=True, text=True, encoding="utf-8")
     assert done.returncode == 1, done.stdout + done.stderr
     assert "from PyPI does not get this" not in done.stderr, done.stderr
     assert "--write" in done.stderr, (

@@ -68,7 +68,7 @@ def test_every_released_tag_has_a_changelog_section():
     import re
     import subprocess
 
-    found = subprocess.run(["git", "tag", "-l"], cwd=ROOT, capture_output=True, text=True)
+    found = subprocess.run(["git", "tag", "-l"], cwd=ROOT, capture_output=True, text=True, encoding="utf-8")
     if found.returncode != 0:
         import pytest
         pytest.skip("not a git checkout")
@@ -109,7 +109,7 @@ def test_a_released_section_is_frozen_at_its_tag():
         m = re.search(rf"(?ms)^(## {re.escape(ver)}\b.*?)(?=^## |\Z)", text)
         return m.group(1).rstrip() if m else None
 
-    found = subprocess.run(["git", "tag", "-l"], cwd=ROOT, capture_output=True, text=True)
+    found = subprocess.run(["git", "tag", "-l"], cwd=ROOT, capture_output=True, text=True, encoding="utf-8")
     if found.returncode != 0:
         import pytest
         pytest.skip("not a git checkout")

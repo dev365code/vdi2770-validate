@@ -260,7 +260,7 @@ def smoke_test(pyz: Path) -> int:
     failure this exists to catch, and the two are easy to confuse."""
     container = ROOT / "corpus" / "examples" / "container" / "documentcontainer.zip"
     done = subprocess.run([sys.executable, str(pyz), "check", str(container)],
-                          capture_output=True, text=True, timeout=180,
+                          capture_output=True, text=True, encoding="utf-8", timeout=180,
                           env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"})
     if done.returncode != 0 or "0 error(s)" not in done.stdout:
         print(done.stdout + done.stderr, file=sys.stderr)

@@ -203,7 +203,7 @@ def test_no_foreign_log_or_build_output_is_tracked():
     # ignored files out of the answer; walking the tree covers the sdist, where
     # only shipped files exist anyway. (A `git ls-files` with no fallback is what
     # broke the sdist gate the first time this test was written.)
-    found = subprocess.run(["git", "ls-files"], cwd=ROOT, capture_output=True, text=True)
+    found = subprocess.run(["git", "ls-files"], cwd=ROOT, capture_output=True, text=True, encoding="utf-8")
     if found.returncode == 0:
         names = found.stdout.split()
     else:
@@ -324,7 +324,7 @@ def _tracked_names():
     exist."""
     import subprocess
 
-    found = subprocess.run(["git", "ls-files"], cwd=ROOT, capture_output=True, text=True)
+    found = subprocess.run(["git", "ls-files"], cwd=ROOT, capture_output=True, text=True, encoding="utf-8")
     if found.returncode == 0 and found.stdout.split():
         return found.stdout.split()
     skip = {".git", "__pycache__", ".pytest_cache", ".ruff_cache", "build", "dist", ".venv"}

@@ -64,7 +64,7 @@ def test_that_delivery_no_longer_leaves_by_the_front_door():
     gate reads."""
     done = subprocess.run([sys.executable, "-m", "vdi2770_validate", "check",
                            str(DANGLING)], cwd=ROOT, capture_output=True,
-                          text=True, env=under_test())
+                          text=True, encoding="utf-8", env=under_test())
     assert done.returncode == 1, done.stdout
 
 

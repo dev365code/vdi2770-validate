@@ -36,7 +36,7 @@ def run(*args, isolated=False):
     installs almost nothing.
     """
     argv = [sys.executable] + (["-I"] if isolated else []) + [str(TOOL), *args]
-    return subprocess.run(argv, cwd=ROOT, capture_output=True, text=True)
+    return subprocess.run(argv, cwd=ROOT, capture_output=True, text=True, encoding="utf-8")
 
 
 def version_of(project):

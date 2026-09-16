@@ -51,7 +51,7 @@ def runs_for(commit: str, workflow: str = WORKFLOW):
     done = subprocess.run(
         ["gh", "run", "list", "--workflow", workflow, "--commit", commit,
          "--json", "databaseId,status,conclusion,headSha,workflowName"],
-        capture_output=True, text=True, env=NO_BYTECODE)
+        capture_output=True, text=True, encoding="utf-8", env=NO_BYTECODE)
     if done.returncode != 0:
         return None, (done.stderr or done.stdout).strip()
     try:

@@ -34,7 +34,7 @@ def _command_output(target: str) -> list:
     import sys
 
     done = subprocess.run([sys.executable, "-m", "vdi2770_validate", "check", target],
-                          cwd=ROOT, capture_output=True, text=True, env=under_test())
+                          cwd=ROOT, capture_output=True, text=True, encoding="utf-8", env=under_test())
     return done.stdout.splitlines()
 
 
@@ -145,7 +145,7 @@ def test_the_classes_transcript_is_output_the_tool_produces():
     block = re.search(r"```\n\$ vdi2770-validate classes\n(.*?)```", README, re.S)
     assert block, "the README no longer shows a `classes` session"
     run = subprocess.run([sys.executable, "-m", "vdi2770_validate", "classes"],
-                         cwd=ROOT, capture_output=True, text=True, env=under_test())
+                         cwd=ROOT, capture_output=True, text=True, encoding="utf-8", env=under_test())
     assert run.returncode == 0, run.stderr
     real = run.stdout.splitlines()
     for line in block.group(1).splitlines():

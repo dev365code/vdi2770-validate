@@ -54,7 +54,7 @@ def main() -> int:
             done = subprocess.run(
                 [sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider",
                  *extra, str(rel)],
-                cwd=cwd, capture_output=True, text=True, env=NO_BYTECODE)
+                cwd=cwd, capture_output=True, text=True, encoding="utf-8", env=NO_BYTECODE)
             ran += 1
             # 5 is "collected nothing", which is a file that has stopped being a
             # test rather than a file that passes.

@@ -383,7 +383,7 @@ def test_a_path_that_never_finishes_opening_does_not_stop_the_sweep(tmp_path):
 
     r = subprocess.run(
         [sys.executable, "-m", "vdi2770_validate", "check", str(pipe), str(good)],
-        capture_output=True, text=True, timeout=30, env=under_test())
+        capture_output=True, text=True, encoding="utf-8", timeout=30, env=under_test())
     # A verdict, and the path after it. *Which* verdict is not the point and
     # asserting it was a mistake: the first repair here refused everything
     # `S_ISREG` said no to, which also refused `check <(unzip -p ...)` and
@@ -409,7 +409,7 @@ def test_a_pipe_that_has_a_writer_is_read(tmp_path):
     done = subprocess.run(
         f'cat "{CLEAN_DOCUMENT}" | "{sys.executable}" -m vdi2770_validate '
         f"check --quiet /dev/stdin",
-        shell=True, capture_output=True, text=True, timeout=60, env=under_test())
+        shell=True, capture_output=True, text=True, encoding="utf-8", timeout=60, env=under_test())
     assert "cannot read it" not in done.stdout + done.stderr, done.stdout + done.stderr
     assert done.returncode == 0, done.stdout + done.stderr
 

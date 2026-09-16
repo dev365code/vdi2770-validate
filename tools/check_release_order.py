@@ -180,7 +180,7 @@ def main(argv=None) -> int:
               f"older than the release it stands for.", file=sys.stderr)
         return 1
     got = subprocess.run(["git", "tag", "--list", "v*"],
-                         cwd=ROOT, capture_output=True, text=True)
+                         cwd=ROOT, capture_output=True, text=True, encoding="utf-8")
     if got.returncode:
         print("cannot read the tag history, and the release order rests on it. "
               "Fetch tags (`fetch-depth: 0`) and try again.", file=sys.stderr)

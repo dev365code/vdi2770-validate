@@ -1917,7 +1917,7 @@ def run(tree: Path, checks: list) -> tuple:
     worst, said = 0, None
     for spec in tools:
         code = subprocess.run([sys.executable, *spec.split()],
-                              cwd=tree, capture_output=True, text=True, env=env).returncode
+                              cwd=tree, capture_output=True, text=True, encoding="utf-8", env=env).returncode
         worst = worst or code
     if tests:
         # No `-q` here. The project's `addopts` already carries one, and pytest
@@ -1925,7 +1925,7 @@ def run(tree: Path, checks: list) -> tuple:
         # which is the line `_ran` reads. The output is captured either way, so
         # the second `-q` bought nothing and cost the harness its eyesight.
         done = subprocess.run([sys.executable, "-m", "pytest", "-p", "no:cacheprovider",
-                               *tests], cwd=tree, capture_output=True, text=True,
+                               *tests], cwd=tree, capture_output=True, text=True, encoding="utf-8",
                               env=env)
         worst = worst or done.returncode
         said = done.stdout + done.stderr

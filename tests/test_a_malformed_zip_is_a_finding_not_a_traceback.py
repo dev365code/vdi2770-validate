@@ -61,7 +61,7 @@ def test_one_unreadable_archive_does_not_end_the_sweep(tmp_path):
 
     done = subprocess.run(
         [sys.executable, "-m", "vdi2770_validate", "check", str(bad), str(good)],
-        capture_output=True, text=True,
+        capture_output=True, text=True, encoding="utf-8",
         env={"PYTHONPATH": ":".join([str(ROOT / "src"),
                                      str(ROOT / "packages" / "vdi2770" / "src")]),
              "PATH": "/usr/bin:/bin"})
