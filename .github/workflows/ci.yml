@@ -62,23 +62,15 @@ jobs:
         run: python -m ruff check --no-cache src tests tools packages
       - name: Build fixtures
         run: python tools/make_fixtures.py
+      # The whole suite runs on every row, Windows included. A few tests skip on
+      # Windows -- each a POSIX-only primitive or a fixture the platform cannot
+      # build, not a gap in the tool: `os.mkfifo` and `/dev/stdin`, the SIGPIPE a
+      # closed pipe raises, the Linux-only ci-judged gate's `gh` stub, a `zip(1)`
+      # the runner may lack, and a member name carrying a backslash (`zipfile`
+      # rewrites it to `/` there; the refusal itself is checked on every
+      # platform). Each skip says why, at its own `skipif`.
       - name: Test
-        if: runner.os != 'Windows'
         run: python -m pytest
-      # The Windows row runs the part of the suite it was added for: where a
-      # module loads from, what a distribution claims, and whether the two
-      # halves of an installation agree. The rest of the suite is not
-      # Windows-clean yet and the failures are the suite's rather than the
-      # tool's -- `os.mkfifo`, `/dev/stdin`, a fixture path over the length
-      # limit, and four assertions on one operating system's wording for a
-      # missing file. Named here rather than swallowed: this job says what it
-      # covers, and widening it is its own piece of work.
-      - name: Test what differs by platform
-        if: runner.os == 'Windows'
-        run: python -m pytest tests/test_the_suite_declares_what_it_imports.py
-          tests/test_no_two_distributions_claim_one_path.py
-          tests/test_the_two_halves_have_to_agree.py
-          tests/test_the_two_halves_carry_one_version.py
       # The question no reading of a tree can answer: does the file pip wrote
       # start, on the machine it wrote it on. This release moves where the tool
       # is installed from and which distribution owns the executable, and this
