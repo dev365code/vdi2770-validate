@@ -16,8 +16,8 @@ moving reference, with write access to the file that decides what runs. The
 cost is real and is the reason this is written down: a pin does not pick up the
 fix upstream makes to it, so moving one is a thing somebody has to do.
 
-Two holes are worth guarding against, both of which let a workflow run
-unpinned while every test was green in an earlier form of this check:
+Two holes are worth guarding against, both of which can let a workflow run
+unpinned while every test here stays green:
 
 * It swept `*.yml`. GitHub runs `*.yaml` too, so a workflow added -- or
   renamed -- with the other spelling was invisible, and `attacker/exfil@main`
