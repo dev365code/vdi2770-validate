@@ -42,6 +42,11 @@ are no shared paths any more — a gate compares the built wheels against the on
 already published to say so — and the upgrade ends with everything at the new
 version.
 
+Coming next release: a command-line usage error (a bad option, a missing
+argument) will exit `64` (`EX_USAGE`) rather than `2`, so `2` keeps a single
+meaning -- nothing could be read. It is written down a release ahead because a
+CI job reads the number.
+
 ## What has not gone away
 
 Saying otherwise would be untrue, so:

@@ -13,6 +13,10 @@ halves disagree about which release they are, and the line it prints begins
 `vdi2770-validate: INSTALLATION` so a log can tell the two apart. A run whose reader goes away -- `| head` -- ends by
 `SIGPIPE` where the platform has one and 141 where it does not, because it did
 not finish: any of 0, 1 or 2 would be a claim about containers nobody looked at.
+
+Changing next release: a usage error -- a bad option, a missing argument -- will
+exit 64 (`EX_USAGE`), not 2, so that 2 keeps one meaning, that nothing could be
+read. Written here a release ahead of the change.
 """
 from __future__ import annotations
 

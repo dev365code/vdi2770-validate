@@ -33,6 +33,15 @@ separator is a backslash the name in a finding's location and in the report was
 the whole absolute path rather than the file. It is the file's own name now, on
 either platform; no verdict changes, only how the report reads.
 
+**A command-line usage error will change its exit code next release.** A bad
+option or a missing argument exits `2` today -- the code that also means
+"nothing could be read" -- so a CI job cannot tell a malformed invocation from
+a valid run that found no container. From the next release a usage error will
+exit `64` (`EX_USAGE`, the `sysexits` convention); `2` will then mean only that
+the input could not be read. Announced a release ahead because a CI job depends
+on the number; the change itself, and the exit codes shown in `--help`, come
+with it.
+
 ## 0.8.1 — 2026-09-11
 
 Who should take this release: anyone on 0.8.0 or earlier who checks containers
