@@ -165,11 +165,11 @@ jobs:
           test "$(wc -l < sums/SHA256SUMS)" -ge 2 || {
             echo "recorded $(wc -l < sums/SHA256SUMS) files; the build produced nothing"
             exit 1; }
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
           name: sums-reader
           path: sums/
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
           name: dist-reader
           path: dist/
@@ -254,11 +254,11 @@ jobs:
           test "$(wc -l < sums/SHA256SUMS)" -ge 2 || {
             echo "recorded $(wc -l < sums/SHA256SUMS) files; the build produced nothing"
             exit 1; }
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
           name: sums-rules
           path: sums/
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
           name: dist-rules
           path: dist/
@@ -352,7 +352,7 @@ jobs:
         run: |
           python tools/build_zipapp.py --check -o pyz/vdi2770.pyz
           (cd pyz && sha256sum vdi2770.pyz | tee SHA256SUMS)
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
           name: dist-single-file
           path: pyz/
