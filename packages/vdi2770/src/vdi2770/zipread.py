@@ -637,9 +637,20 @@ def read(data: bytes, path: str, depth: int = 0, _budget: Optional[_Budget] = No
     return c
 
 
+def _basename(path: str) -> str:
+    """The last segment of a filesystem path, whichever separator wrote it.
+
+    `os.path.basename` uses only the separator of the platform it runs on, so on
+    POSIX it returns a Windows path unchanged -- the container would then be
+    reported by its whole absolute path rather than by its own file name. Both
+    separators are stripped so the name is the same on either platform.
+    """
+    return path.replace('\\', "/").rsplit("/", 1)[-1]
+
+
 def read_file(path: str) -> Container:
     with open(path, "rb") as fh:
-        return read(fh.read(), path.rsplit("/", 1)[-1])
+        return read(fh.read(), _basename(path))
 
 
 def member_reader(data: bytes, allowed: Optional[Set[str]] = None):

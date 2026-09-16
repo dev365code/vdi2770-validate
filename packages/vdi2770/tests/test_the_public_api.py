@@ -937,3 +937,16 @@ def test_every_type_the_model_hands_back_can_be_named_by_the_caller():
         f"the model hands back {sorted(ours - exported)} and `vdi2770` does not "
         f"export {'it' if len(ours - exported) == 1 else 'them'}, so a caller "
         f"cannot name what they are holding")
+
+
+def test_the_container_name_survives_a_windows_path():
+    """A container is named by the last segment of its path, stripped with
+    either separator. `os.path.basename` uses the running platform's separator
+    only, so on POSIX it returns a whole Windows path unchanged -- the container
+    would then be reported by its absolute path there rather than by its file."""
+    from vdi2770 import zipread
+    sep = chr(92)  # a backslash, written without one in this file
+    windows_path = "C:" + sep + "Users" + sep + "x" + sep + "handover.zip"
+    assert zipread._basename(windows_path) == "handover.zip"
+    assert zipread._basename("/tmp/sub/handover.zip") == "handover.zip"
+    assert zipread._basename("handover.zip") == "handover.zip"

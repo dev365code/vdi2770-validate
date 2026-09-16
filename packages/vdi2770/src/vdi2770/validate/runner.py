@@ -551,4 +551,4 @@ def check_file(path: str) -> Report:
         # closing an unrelated file that had reused the number.
         with os.fdopen(fd, "rb") as fh:
             data = fh.read()
-    return check_bytes(data, path.rsplit("/", 1)[-1])
+    return check_bytes(data, zipread._basename(path))
