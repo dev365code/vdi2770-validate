@@ -75,10 +75,7 @@ jobs:
       # covers, and widening it is its own piece of work.
       - name: Test what differs by platform
         if: runner.os == 'Windows'
-        run: python -m pytest tests/test_the_suite_declares_what_it_imports.py
-          tests/test_no_two_distributions_claim_one_path.py
-          tests/test_the_two_halves_have_to_agree.py
-          tests/test_the_two_halves_carry_one_version.py
+        run: python -m pytest
       # The question no reading of a tree can answer: does the file pip wrote
       # start, on the machine it wrote it on. This release moves where the tool
       # is installed from and which distribution owns the executable, and this
