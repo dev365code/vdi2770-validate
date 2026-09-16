@@ -7,6 +7,7 @@ failed. Both directions are recorded here.
 import io
 import os
 import pathlib
+import shutil
 import struct
 import subprocess
 import unicodedata
@@ -57,7 +58,7 @@ def test_a_member_with_a_broken_crc_is_reported(tmp_path):
 def test_a_password_protected_member_is_reported(tmp_path):
     """A member the recipient cannot open without a password has not been
     handed over -- which is P2's own reasoning, one layer out."""
-    if subprocess.run(["which", "zip"], capture_output=True).returncode:
+    if not shutil.which("zip"):
         pytest.skip("needs the zip(1) command to build an encrypted member")
     src = tmp_path / "src"
     src.mkdir()
@@ -169,7 +170,7 @@ def test_a_password_protected_member_is_told_to_remove_the_password(tmp_path):
     """
     import subprocess
 
-    if subprocess.run(["which", "zip"], capture_output=True).returncode:
+    if not shutil.which("zip"):
         pytest.skip("needs the zip(1) command to build an encrypted member")
     src = zipfile.ZipFile(CLEAN_DOCUMENT)
     work = tmp_path / "in"

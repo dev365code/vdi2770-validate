@@ -523,5 +523,3 @@ def test_an_unreadable_path_says_the_same_thing_on_both_channels(capsys, tmp_pat
     assert said in ("Is a directory", "not a regular file"), said
     assert not re.search(r":\s*\d+$", said), (
         f"the machine-readable field ends in a file descriptor: {said!r}")
-    assert said in ("Is a directory", "not a regular file"), (
-        f"the two channels disagree about the same failure: {said!r}")

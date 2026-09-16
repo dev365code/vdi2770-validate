@@ -950,3 +950,4 @@ def test_the_container_name_survives_a_windows_path():
     assert zipread._basename(windows_path) == "handover.zip"
     assert zipread._basename("/tmp/sub/handover.zip") == "handover.zip"
     assert zipread._basename("handover.zip") == "handover.zip"
+    assert zipread._basename("a" + sep + "b.zip") == "b.zip"  # a POSIX backslash name truncates too -- the deliberate tradeoff over os.path.basename
