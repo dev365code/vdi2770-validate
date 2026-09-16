@@ -6,8 +6,9 @@ VDI 2770 is a paid standard. This project is built without reading it.
 
 **VDI 2770 Blatt 1:2020-04 is sold by DIN Media. It was not opened, quoted, or
 paraphrased.** No rule message, title or remedy in this project derives from the
-guideline text. There is no field in `rules.json` in which guideline prose could be
-stored without lying about what it is.
+guideline text. The prose that `rules.json` does hold — `title`, `remedy`, and `whyOurs` —
+is this project's own account of what it checks and why, never the
+guideline's words.
 
 ## What every rule traces to
 
