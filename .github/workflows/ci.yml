@@ -4,6 +4,10 @@ on:
   push:
     branches: [main]
   pull_request:
+  # Also on demand: a platform-specific fix or a change to the test matrix can
+  # be run against a branch before it lands, the way the release workflow's dry
+  # run rehearses a publish.
+  workflow_dispatch:
 
 jobs:
   # One Windows row beside the three Linux ones, on the interpreter in the
