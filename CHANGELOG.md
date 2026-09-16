@@ -2,7 +2,10 @@
 
 Sections through 0.7.0 had their wording tidied after their tags; the text each version carried when it was published is in that tag's own `CHANGELOG.md`. From 0.8.0 on, a released section is frozen at its tag and takes only appended `*(Correction ...)*` lines.
 
-## Unreleased
+## 0.8.2 — unreleased
+
+Who should take this release: anyone on 0.8.1 or earlier who checks
+containers, and anyone who runs the checker on Windows.
 
 **A PDF the tool cannot read a second time is a failure of the tool, not a
 pass.** The archive is opened and every member checked once, up front; the PDF
@@ -23,6 +26,12 @@ rules of ZIP mechanics, the files layer is entirely the reference
 implementation's, and the pdf layer is almost all our own.
 The table is generated from the catalogue and its every cell is compared against
 it, because a table of counts written by hand is right on the day it is written.
+
+**A container was named by its whole path on Windows, not by its file.** The
+checker took a container's name by splitting its path at `/`, so where the
+separator is a backslash the name in a finding's location and in the report was
+the whole absolute path rather than the file. It is the file's own name now, on
+either platform; no verdict changes, only how the report reads.
 
 ## 0.8.1 — 2026-09-11
 
