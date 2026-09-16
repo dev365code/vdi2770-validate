@@ -25,6 +25,18 @@ permissions:
 on:
   push:
     tags: ["v*"]
+  # A manual run rehearses the release without publishing. The tag push
+  # above is the only trigger that publishes; a dispatch runs the build and
+  # the whole gate and then stops. `dry_run` defaults to the rehearsal,
+  # because a real release is a tag: the one dispatch that is not a rehearsal
+  # has no tag to publish, and the tag checks below refuse it. The decision
+  # is carried by the `not-a-dry-run` job, not by a condition on a publish.
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Run the build and the gate, then stop before publishing"
+        type: boolean
+        default: true
 
 # **If the engine is published and the alias is not.** PyPI does not release a
 # version number, so the repair is to finish the release rather than to redo it.
@@ -57,6 +69,21 @@ on:
 # without its engine, which is why the order is what it is.
 
 jobs:
+  # The trigger is where a release decides whether to happen. A tag push is a
+  # release; a manual run is a rehearsal unless its `dry_run` input is off.
+  # This job is the whole of that decision -- it runs for a real release and
+  # is skipped for a rehearsal -- and the two publishers wait on it, so a
+  # publish is skipped by the job graph and never by a condition of its own.
+  # (A publisher carrying its own `if:` is a publish that can outlive the gate
+  # it waits for, which another test holds the line on.) `inputs.dry_run` is
+  # null on a push and `!null` is true, so a tag publishes without depending
+  # on an input a push does not carry.
+  not-a-dry-run:
+    if: ${{ github.event_name != 'workflow_dispatch' || !inputs.dry_run }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "a real release; the publish jobs will run"
+
   # The reader goes first, and the whole gate runs here — before anything at all
   # has been published, which is the only moment a refusal is still free.
   build-reader:
@@ -112,6 +139,7 @@ jobs:
       # re-pointed tag would carry a days-old tree through the gate and then ask
       # the index to accept a filename it already holds. Ask first.
       - name: The index must not already have this version
+        if: ${{ github.event_name != 'workflow_dispatch' || !inputs.dry_run }}
         run: python tools/check_version_is_new.py --package vdi2770 --version "${GITHUB_REF_NAME#v}"
       # A script, and one that imports nothing. This was a line that read the
       # version by importing the package, in a job that installs `build` and
@@ -120,6 +148,7 @@ jobs:
       # produced the empty string, and every tag failed with *tag != package*.
       # Nothing had ever run it.
       - name: The tag must be the version
+        if: ${{ github.event_name != 'workflow_dispatch' || !inputs.dry_run }}
         run: python tools/check_tag_is_the_version.py --tag "${GITHUB_REF_NAME#v}" --project packages/vdi2770
       - name: Build
         run: python -m build packages/vdi2770 --outdir dist/
@@ -146,7 +175,7 @@ jobs:
           path: dist/
 
   publish-reader:
-    needs: upgrade-gate
+    needs: [upgrade-gate, not-a-dry-run]
     runs-on: ubuntu-latest
     environment: pypi-vdi2770
     permissions:
@@ -205,8 +234,10 @@ jobs:
       - name: Install
         run: python -m pip install --upgrade pip build packaging
       - name: The index must not already have this version
+        if: ${{ github.event_name != 'workflow_dispatch' || !inputs.dry_run }}
         run: python tools/check_version_is_new.py --package vdi2770-validate --version "${GITHUB_REF_NAME#v}"
       - name: The tag must be the version
+        if: ${{ github.event_name != 'workflow_dispatch' || !inputs.dry_run }}
         run: python tools/check_tag_is_the_version.py --tag "${GITHUB_REF_NAME#v}" --project .
       - name: Build
         run: python -m build --outdir dist/
@@ -437,7 +468,7 @@ jobs:
           python tools/check_upgrade_paths.py --from dist
 
   publish-rules:
-    needs: [reader-is-on-the-index, upgrade-gate]
+    needs: [reader-is-on-the-index, upgrade-gate, not-a-dry-run]
     runs-on: ubuntu-latest
     # Not the reader's environment. The environment is half of what PyPI keys
     # the publisher on, so sharing it would let either job publish as the other

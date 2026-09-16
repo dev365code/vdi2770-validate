@@ -354,3 +354,127 @@ def upstream(jobs, name, seen=None):
             seen.add(up)
             upstream(jobs, up, seen)
     return seen
+
+
+# --- The dry run: a manual run rehearses the release without publishing --------
+#
+# A publish carries no condition of its own -- another test holds that line, and
+# for a reason: an `if:` on a publish is how a publish outlives the gate that
+# failed. So the dry run is not an `if:` on the publishers; it is a job they wait
+# on. `not-a-dry-run` runs for a real release and is skipped for a rehearsal, and
+# a skipped need skips the publisher after it. The same condition guards the tag
+# and version checks in the build jobs, because those assertions mean something
+# only for the release they gate: on a manual run the ref is a branch, not a tag,
+# so the version stripped from it is a branch name and the tag check refuses it.
+#
+# (event_name, inputs.dry_run, is-a-real-release-that-must-publish)
+RELEASE_SCENARIOS = [
+    ("push", None, True),                  # a tag: the input is absent
+    ("workflow_dispatch", True, False),    # a rehearsal
+    ("workflow_dispatch", False, True),    # a manual run with the box unticked
+]
+
+WANT = [must for *_, must in RELEASE_SCENARIOS]
+
+
+def guard_behaviour(expr):
+    """How a workflow `if:` expression behaves across the three release cases.
+
+    The small grammar these guards use -- `github.event_name`, `inputs.dry_run`,
+    a string literal, `==`, `!=`, `||`, `&&`, `!` and parentheses -- is
+    translated to Python and evaluated. An absent input is `None`, which is what
+    a push sends; `!None` is true, which is what lets a tag publish without
+    carrying the input. Anything outside the grammar raises, and the caller reads
+    a raise as "not a guard I can vouch for" -- notably `github.event.inputs.*`,
+    which is a string, so the unticked box would arrive as the truthy "false".
+    """
+    body = str(expr).strip()
+    assert body.startswith("${{") and body.endswith("}}"), f"not an expression: {expr!r}"
+    inner = body[3:-2]
+    inner = inner.replace("!inputs.dry_run", "(not _dry)").replace("inputs.dry_run", "_dry")
+    inner = inner.replace("github.event_name", "_e")
+    inner = inner.replace("||", " or ").replace("&&", " and ")
+    inner = inner.replace("true", "True").replace("false", "False")
+    leftover = inner.replace("!=", "")
+    for stray in ("!", "inputs", "github", "event", "${{", "}}", "."):
+        assert stray not in leftover, f"unmodelled guard: {expr!r} -> {inner!r}"
+    out = []
+    for event_name, dry_run, _ in RELEASE_SCENARIOS:
+        out.append(bool(eval(inner, {"__builtins__": {}},
+                            {"_e": event_name, "_dry": dry_run})))
+    return out
+
+
+def _guards_a_real_release(expr):
+    """True iff `expr` runs for a real release and is skipped for a dry run."""
+    if not expr:
+        return False
+    try:
+        return guard_behaviour(expr) == WANT
+    except Exception:
+        return False
+
+
+def test_a_manual_dry_run_reaches_the_gate_and_never_the_publish():
+    """Build and gate on a manual run; publish only for a real release.
+
+    The publishers carry no condition -- that is another test's line, and it
+    holds here too, because it is what forces the decision onto a job they wait
+    on. That job runs for a real release (a tag, or a manual run with the box
+    off) and is skipped for a rehearsal, and a skipped need skips the publisher.
+    Take the wait away, or make the decision job run always or never, and a dry
+    run publishes for real or a tag publishes nothing.
+    """
+    doc = workflow(RELEASE)
+    jobs = doc["jobs"]
+    for pub in publishers(doc):
+        assert "if" not in jobs[pub], (
+            f"{pub} carries its own `if:`; whether to publish belongs on a job it "
+            f"waits for, not on the publish")
+        reachable = upstream(jobs, pub) | {pub}
+        deciders = [n for n in reachable if _guards_a_real_release(jobs[n].get("if"))]
+        assert deciders, (
+            f"{pub} waits on no job that runs for a real release and is skipped "
+            f"for a dry run, so a manual dry run would reach it and publish")
+
+
+def test_the_tag_checks_run_for_a_release_and_are_skipped_for_a_rehearsal():
+    """On a manual run the ref is a branch, so the tag and version checks would
+    refuse it -- and a rehearsal that goes red at the first check has rehearsed
+    nothing. Each such check is guarded to run for a real release and skip for a
+    dry run, the very condition the publishers wait on: a rehearsal is green
+    through the gate, and a manual run that is not a rehearsal still meets the
+    checks and fails closed for want of a tag."""
+    doc = workflow(RELEASE)
+    found = 0
+    for name, job in doc["jobs"].items():
+        for step in job.get("steps", []) or []:
+            run = str(step.get("run", ""))
+            if "check_tag_is_the_version.py" in run or "check_version_is_new.py" in run:
+                expr = step.get("if")
+                assert expr, (
+                    f"{name}: the step running `{run.split()[1]}` has no dry-run "
+                    f"guard, so a manual run would drive it with a branch name and "
+                    f"the rehearsal would never go green")
+                assert _guards_a_real_release(expr), (
+                    f"{name}: the guard {expr!r} does not run for a real release "
+                    f"and skip for a dry run; behaviour {guard_behaviour(expr)}")
+                found += 1
+    assert found == 4, (
+        f"expected four guarded release-time checks -- a tag check and a version "
+        f"check in each of the two build jobs -- and found {found}")
+
+
+def test_the_dry_run_input_is_a_boolean_defaulting_to_a_rehearsal():
+    """`type: boolean` is load-bearing: `github.event.inputs.dry_run` is a
+    string and the string 'false' is truthy, so an unticked box read that way
+    would skip the tag checks and could publish without them. And the default is
+    the rehearsal, because the only manual run that is not one has no tag to
+    publish and fails closed -- so forgetting the box wastes a run rather than
+    attempting a publish."""
+    on = workflow(RELEASE)[True]          # PyYAML reads the key `on:` as True
+    spec = on["workflow_dispatch"]["inputs"]["dry_run"]
+    assert spec.get("type") == "boolean", (
+        "a string input makes `!inputs.dry_run` read 'false' as truthy")
+    assert spec.get("default") is True, (
+        "the default manual run should be the rehearsal, not a publish attempt")

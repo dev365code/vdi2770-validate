@@ -1131,8 +1131,8 @@ UPGRADE_ROWS = [
 
     ("gates/the-release-gate-runs-before-the-publish-it-guards",
      ".github/workflows/release.yml",
-     "    needs: [reader-is-on-the-index, upgrade-gate]",
-     "    needs: reader-is-on-the-index",
+     "    needs: [reader-is-on-the-index, upgrade-gate, not-a-dry-run]",
+     "    needs: [reader-is-on-the-index, not-a-dry-run]",
      ["tests/test_ci_parity.py::"
       "test_nothing_publishes_before_the_check_that_guards_it"],
      "the upgrade check would run beside the publish instead of before it, so "
@@ -1674,13 +1674,32 @@ PUBLISHING_PATH_ROWS = [
 
     ('release/the-tag-check-stands-before-every-upload',
      '.github/workflows/release.yml',
-     '      - name: The tag must be the version\n        run: python tools/check_tag_is_the_version.py --tag "${GITHUB_REF_NAME#v}" --project packages/vdi2770\n      - name: Build\n',
+     '      - name: The tag must be the version\n        if: ${{ github.event_name != \'workflow_dispatch\' || !inputs.dry_run }}\n        run: python tools/check_tag_is_the_version.py --tag "${GITHUB_REF_NAME#v}" --project packages/vdi2770\n      - name: Build\n',
      '      - name: Build\n',
      ['tests/test_the_tag_is_the_version_it_publishes.py::'
       'test_the_check_runs_before_every_upload'],
      'once the first upload has happened a refusal cannot undo it and can only '
      'leave the release half-finished, which is the state this ordering exists '
      'to avoid'),
+
+    ('release/a-dry-run-does-not-reach-the-publish',
+     '.github/workflows/release.yml',
+     "  not-a-dry-run:\n    if: ${{ github.event_name != 'workflow_dispatch' || !inputs.dry_run }}\n",
+     '  not-a-dry-run:\n    if: ${{ true }}\n',
+     ['tests/test_the_publishing_path_has_three_properties.py::test_a_manual_dry_run_reaches_the_gate_and_never_the_publish'],
+     'the job the publishers wait on would run for a rehearsal too, so a manual dry run would build, gate, and then publish for real -- a number the index never gives back'),
+    ('release/a-tag-with-no-input-still-publishes',
+     '.github/workflows/release.yml',
+     "  not-a-dry-run:\n    if: ${{ github.event_name != 'workflow_dispatch' || !inputs.dry_run }}\n",
+     "  not-a-dry-run:\n    if: ${{ github.event_name == 'workflow_dispatch' && !inputs.dry_run }}\n",
+     ['tests/test_the_publishing_path_has_three_properties.py::test_a_manual_dry_run_reaches_the_gate_and_never_the_publish'],
+     'a tag push carries no dry_run input, and this spelling is false without one, so the decision job is skipped on every real release and the publishers with it -- a tag that publishes nothing'),
+    ('release/a-publisher-waits-on-the-publish-decision',
+     '.github/workflows/release.yml',
+     '  publish-reader:\n    needs: [upgrade-gate, not-a-dry-run]',
+     '  publish-reader:\n    needs: upgrade-gate',
+     ['tests/test_the_publishing_path_has_three_properties.py::test_a_manual_dry_run_reaches_the_gate_and_never_the_publish'],
+     'the engine publisher would stop waiting on the job that is skipped for a rehearsal, so a dry run would build, gate, and publish the engine'),
 
     ('docs/the-provenance-table-counts-the-catalogue',
      'tools/rules_doc.py',
