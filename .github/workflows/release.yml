@@ -398,11 +398,11 @@ jobs:
           # a loop plus a last attempt after it -- the command appears twice,
           # and killing one of them leaves the other: the row that proves this
           # step still runs the gate survived exactly that way.
-          for wait in 0 20 30 45 60 90 120; do
+          for wait in 0 20 30 45 60 90 120 180 180 180 180 180; do
             [ "$wait" -gt 0 ] && { echo "not yet; waiting ${wait}s"; sleep "$wait"; }
             if python tools/check_release_order.py; then exit 0; fi
           done
-          echo "the engine this floors on never appeared on the index"
+          echo "the engine this floors on never appeared on the index after ~21 min -- vdi2770 (the reader) is published but not resolvable, so the alias is not published: pip install vdi2770-validate cannot resolve. Re-run this job once the index catches up."
           exit 1
       # And "the JSON view lists it" is not "a machine can install it". This is
       # the state the alias actually requires, so it is the one that is asked
@@ -410,12 +410,12 @@ jobs:
       - name: And a machine can actually install it
         run: |
           version="${GITHUB_REF_NAME#v}"
-          for wait in 0 20 30 45 60 90 120; do
+          for wait in 0 20 30 45 60 90 120 180 180 180 180 180; do
             [ "$wait" -gt 0 ] && { echo "not yet; waiting ${wait}s"; sleep "$wait"; }
             if python -m pip download --no-deps --only-binary :all: \
                  --dest /tmp/probe "vdi2770==$version"; then exit 0; fi
           done
-          echo "vdi2770 $version is listed and cannot be installed"
+          echo "vdi2770 $version is listed but not installable after ~21 min -- the reader is published, the alias is blocked here, so the window is open: pip install vdi2770 may resolve while pip install vdi2770-validate cannot. Re-run this job once the file index catches up."
           exit 1
 
   # After both are on the index, ask the whole matrix again -- this time about
@@ -452,13 +452,13 @@ jobs:
       - name: Both halves are installable
         run: |
           version="${GITHUB_REF_NAME#v}"
-          for wait in 0 20 30 45 60 90 120; do
+          for wait in 0 20 30 45 60 90 120 180 180 180 180 180; do
             [ "$wait" -gt 0 ] && { echo "not yet; waiting ${wait}s"; sleep "$wait"; }
             if python -m pip download --no-deps --only-binary :all: \
                  --dest /tmp/both "vdi2770==$version" \
                  "vdi2770-validate==$version"; then exit 0; fi
           done
-          echo "the release is on the index and cannot both be installed"
+          echo "the release is on the index and both halves are not installable after ~21 min -- one or both are published but a consumer could get a mismatched pair. Re-run this job once the index catches up."
           exit 1
       - name: The matrix, against the index this release just changed
         run: |
