@@ -169,7 +169,7 @@ Why: the rule as implemented there depends on a policy reading we cannot trace t
 the free schema or to a freely published table. `P4` reports the claimed level, so
 the information is in the report; the judgement is not.
 
-Status: **unresolved**. It may become a rule with an explicit `ours` obligation.
+Status: **decided, and deliberately not implemented.** Enforcing a level policy over a claim this tool never verifies would be a verdict with no judgement behind it, so `scope.md` now says so in the out-of-scope table. `P4` still reports the claimed level, which leaves the information in the report for a reader whose own process does require one.
 
 ## 3. Defects in the reference that this tool does not reproduce
 

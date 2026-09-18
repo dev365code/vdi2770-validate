@@ -27,6 +27,7 @@ failure — files that never claimed at all.
 | Not done | Why |
 |---|---|
 | **Verifying PDF/A conformance** | Needs a full PDF/A validator. Reporting a claim as a verdict would be a lie. |
+| **Which PDF/A level a document class may use** | The reference implementation treats PDF/A-*b* outside the certificate class as an error. This tool does not verify PDF/A at all, so enforcing which level is allowed would be a verdict about a property it never checked. `P4` reports the claim; whether your process requires a particular level is your rule to apply to it, and ours to stay out of. |
 | **Building containers** | This is a referee, not an authoring tool. |
 | **Fixing anything** | A validator that edits your data is a validator you stop trusting. |
 | **Validating an unpacked directory** | ZIP only, for now. Halves the reader's surface. |
