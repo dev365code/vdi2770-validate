@@ -10,13 +10,9 @@ container can come back 0 with findings in the report; 1 at least one finding at
 the chosen severity, or an unreadable path; 2 nothing could be read at all; 3
 this tool refused to judge, which is not a verdict on any container -- its two
 halves disagree about which release they are, and the line it prints begins
-`vdi2770-validate: INSTALLATION` so a log can tell the two apart. A run whose reader goes away -- `| head` -- ends by
+`vdi2770-validate: INSTALLATION` so a log can tell the two apart; 64 a command-line usage error -- a bad option, a missing argument, or an unknown subcommand -- the caller getting the command wrong, not a verdict on any container. A run whose reader goes away -- `| head` -- ends by
 `SIGPIPE` where the platform has one and 141 where it does not, because it did
 not finish: any of 0, 1 or 2 would be a claim about containers nobody looked at.
-
-Changing next release: a usage error -- a bad option, a missing argument -- will
-exit 64 (`EX_USAGE`), not 2, so that 2 keeps one meaning, that nothing could be
-read. Written here a release ahead of the change.
 """
 from __future__ import annotations
 
@@ -170,10 +166,40 @@ class _Version(argparse.Action):
         parser.exit(0)
 
 
+EX_USAGE = 64  # sysexits.h EX_USAGE: the command line itself was wrong
+
+#: The `--help` epilog. `--help` said nothing about the exit codes a CI job
+#: reads, so they are printed with the usage.
+EXIT_CODES = (
+    "exit codes:\n"
+    "  0   no finding at the fail severity (warnings can still be reported)\n"
+    "  1   a finding at the fail severity, or a path that could not be read\n"
+    "  2   nothing could be read at all\n"
+    "  3   refused to judge: the installation's two halves disagree\n"
+    "  64  a command-line usage error (EX_USAGE): a bad option, a missing\n"
+    "      argument, or an unknown subcommand")
+
+
+class _UsageParser(argparse.ArgumentParser):
+    """A command-line usage error exits 64 (EX_USAGE), not argparse's default 2.
+
+    2 means "nothing could be read", so a CI job that sees 2 should not have to
+    wonder whether it typed the command wrong. A bad option, a missing argument
+    or an unknown subcommand is the caller's mistake -- EX_USAGE, 64.
+    `add_subparsers` builds each subparser from this class, so `check --bogus`
+    exits 64 too.
+    """
+
+    def error(self, message):
+        self.print_usage(sys.stderr)
+        self.exit(EX_USAGE, f"{self.prog}: error: {message}\n")
+
+
 def main(argv=None) -> int:
-    p = argparse.ArgumentParser(
+    p = _UsageParser(
         prog="vdi2770-validate",
-        description="Check a VDI 2770 container, offline. Every finding comes with a remedy.")
+        description="Check a VDI 2770 container, offline. Every finding comes with a remedy.",
+        epilog=EXIT_CODES, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--version", action=_Version, nargs=0, help="show the version")
     sub = p.add_subparsers(dest="cmd", required=True)
 

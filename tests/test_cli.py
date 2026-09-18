@@ -523,3 +523,39 @@ def test_an_unreadable_path_says_the_same_thing_on_both_channels(capsys, tmp_pat
     assert said in ("Is a directory", "not a regular file"), said
     assert not re.search(r":\s*\d+$", said), (
         f"the machine-readable field ends in a file descriptor: {said!r}")
+
+
+def test_a_usage_error_exits_64_not_the_unreadable_code():
+    """A bad option, a missing argument, or an unknown subcommand is the caller
+    getting the command wrong -- `EX_USAGE`, 64. Exit 2 is reserved for a valid
+    invocation that found nothing it could read, so a CI job can tell the two
+    apart; argparse's own default of 2 collided with that.
+    """
+    for argv in ([], ["frobnicate"], ["check"], ["check", "--bogus", "x.zip"]):
+        with pytest.raises(SystemExit) as caught:
+            main(argv)
+        assert caught.value.code == 64, (argv, caught.value.code)
+
+
+def test_a_valid_run_that_reads_nothing_still_exits_2():
+    """The other side of the split: 2 keeps its one meaning."""
+    assert main(["check", "no-such-file.zip"]) == 2
+
+
+def test_help_is_not_a_usage_error():
+    """Asking for help is not getting the command wrong: it exits 0."""
+    for argv in (["--help"], ["check", "--help"]):
+        with pytest.raises(SystemExit) as caught:
+            main(argv)
+        assert caught.value.code == 0, (argv, caught.value.code)
+
+
+def test_help_shows_the_exit_codes_it_can_return(capsys):
+    """`--help` said nothing about the exit codes a CI job reads. Now it does,
+    including 64 for a usage error -- the number this change introduces."""
+    with pytest.raises(SystemExit):
+        main(["--help"])
+    out = capsys.readouterr().out
+    assert "exit codes:" in out.lower(), out
+    for code in ("0", "1", "2", "3", "64"):
+        assert code in out, (code, out)
