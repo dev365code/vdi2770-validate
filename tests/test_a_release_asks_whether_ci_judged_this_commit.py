@@ -33,10 +33,10 @@ def with_a_gh_that_says(tmp_path, runs, exit_code=0):
     stub = tmp_path / ("gh.bat" if os.name == "nt" else "gh")
     body = json.dumps(runs)
     if os.name == "nt":
-        stub.write_text(f"@echo off\r\necho {body}\r\nexit /b {exit_code}\r\n")
+        stub.write_text(f"@echo off\r\necho {body}\r\nexit /b {exit_code}\r\n", encoding="utf-8")
     else:
         stub.write_text("#!/bin/sh\ncat <<'JSON'\n" + body
-                        + f"\nJSON\nexit {exit_code}\n")
+                        + f"\nJSON\nexit {exit_code}\n", encoding="utf-8")
         stub.chmod(0o755)
     env = dict(os.environ, PATH=f"{tmp_path}{os.pathsep}{os.environ['PATH']}",
                PYTHONDONTWRITEBYTECODE="1")
