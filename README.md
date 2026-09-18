@@ -8,7 +8,7 @@
 
 &nbsp;**Apache-2.0**&nbsp;·&nbsp;**Python 3.9 · 3.12 · 3.13**&nbsp;·&nbsp;**pure Python, nothing compiled**&nbsp;·&nbsp;**zero network, by design**
 
-[Ten seconds](#ten-seconds) · [What it catches](#what-it-catches) · [Where it sits](#where-it-sits) · [Three doors](#three-doors-one-judgement) · [What it will not tell you](#what-it-will-not-tell-you) · [Roadmap](#roadmap) · [Two layers](#one-install-two-layers) · [In your product](#using-this-validator-in-your-product)
+[Ten seconds](#ten-seconds) · [What it catches](#what-it-catches) · [Where it sits](#where-it-sits) · [Four doors](#four-doors-one-judgement) · [What it will not tell you](#what-it-will-not-tell-you) · [Roadmap](#roadmap) · [Two layers](#one-install-two-layers) · [In your product](#using-this-validator-in-your-product)
 
 </div>
 
@@ -115,13 +115,14 @@ flowchart LR
     class C judge
 ```
 
-## Three doors, one judgement
+## Four doors, one judgement
 
 | Door | For | One line |
 |---|---|---|
 | Terminal | build scripts, people | `vdi2770-validate check handover.zip` |
 | Python | your own tooling | `import vdi2770` / `import vdi2770_validate` |
 | Single file | closed networks, approvals | `python vdi2770.pyz check handover.zip` |
+| GitHub Action | a workflow that blocks a bad delivery | `uses: dev365code/vdi2770-validate@v0.9.0` |
 
 No route to a package index? No pip, no virtual environment, no rights to make
 one? Carry **one file** in instead. It still needs a Python — that is the one
@@ -141,6 +142,30 @@ approve software entering the network can open it and read every line, which
 matters more than convenience when the approval is the hard part.
 
 Exit codes and a versioned JSON report make it a CI gate in one line.
+
+### In a workflow
+
+```yaml
+- uses: dev365code/vdi2770-validate@v0.9.0
+  with:
+    paths: handover.zip nameplate.zip
+```
+
+The step fails when the checker does, and it fails with *which* failure: the
+`exit-code` output carries `1` for a finding, `2` for nothing readable, `64` for
+a mistyped command line. A job that cannot tell those apart cannot tell a
+supplier's bad container from its own typo.
+
+| Input | What it is |
+|---|---|
+| `paths` | the containers to check, separated by spaces |
+| `version` | which release's single file to run; defaults to the one you pinned with `@v...` |
+| `pyz` | a `vdi2770.pyz` you already have. Given, **nothing is downloaded** and the whole step is offline |
+| `args` | anything else for `check`, such as `--json` |
+
+The action fetches one file and then runs it. If your runners have no route out,
+commit the single file and point `pyz` at it — the check itself has never opened
+a socket, and with `pyz` neither does the step around it.
 
 ## What it will not tell you
 

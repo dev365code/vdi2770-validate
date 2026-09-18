@@ -89,6 +89,12 @@ def test_the_workflows_swept_are_the_ones_this_repository_has():
 @pytest.mark.parametrize("path,action,ref", [(p, a, r) for p, a, r, _ in ALL],
                          ids=[f"{p}:{a}" for p, a, _, _ in ALL])
 def test_every_action_names_a_commit(path, action, ref):
+    if action == "./":
+        # This repository's own action, at the commit being tested. There is no
+        # third party to decide later what runs, and pinning a SHA here would
+        # pin the workflow to a *past* version of the action it is supposed to
+        # be exercising -- the one thing this job exists to prevent.
+        return
     assert COMMIT.match(ref), (
         f"{path} uses {action}@{ref} -- a tag or a branch, which is whoever owns it "
         "deciding later what runs here. (A local action, `./.github/actions/...`, "
@@ -100,6 +106,8 @@ def test_every_action_names_a_commit(path, action, ref):
                          ids=[f"{p}:{a}" for p, a, _, _ in ALL])
 def test_every_pin_says_which_version_it_is(path, action, comment):
     """Forty characters are unreadable, and an unreadable pin is never moved."""
+    if action == "./":
+        return                               # see above: no version to name
     assert re.match(r"^#\s*v?\d", comment), (
         f"{path} pins {action} with no version beside it; the comment reads {comment!r}")
 

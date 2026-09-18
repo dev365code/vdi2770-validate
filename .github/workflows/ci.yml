@@ -138,3 +138,46 @@ jobs:
           python -m pip install build
           python tools/check_sdist.py
           python tools/check_wheel.py
+
+  # The action this repository publishes, used the way somebody else would use
+  # it. A composite action can be wrong in ways no unit test sees -- an input
+  # that never reaches the command, a failure that does not fail the job -- and
+  # the only way to find that out is to run it as a step.
+  the-action-this-repo-offers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      # No editable install: the builder reads the source tree, and a third
+      # `pip install -e` here would make this workflow look like it builds its
+      # distributions in three places.
+      - name: Build the single file this working tree produces
+        run: python tools/build_zipapp.py --check
+      # The offline path: a file you already have, and nothing fetched.
+      - name: A conforming container passes
+        uses: ./
+        with:
+          pyz: dist/vdi2770.pyz
+          paths: corpus/examples/container/documentcontainer.zip
+      - name: A container with a finding fails, and says so with its own code
+        id: broken
+        continue-on-error: true
+        uses: ./
+        with:
+          pyz: dist/vdi2770.pyz
+          paths: corpus/examples/empty.zip
+      # Both directions, because an action that always failed would pass the
+      # test above and an action that always passed would pass this one.
+      - name: The failure was the checker's verdict, not the action falling over
+        run: |
+          test "${{ steps.broken.outcome }}" = failure || { echo "::error::a container with findings did not fail the step"; exit 1; }
+          test "${{ steps.broken.outputs.exit-code }}" = 1 || { echo "::error::expected exit 1 for a finding, got '${{ steps.broken.outputs.exit-code }}'"; exit 1; }
+      # The fetching path, against a release that exists. It proves the download
+      # and the version input, which the offline path above deliberately skips.
+      - name: A published release can be fetched and run
+        uses: ./
+        with:
+          version: "0.8.2"
+          paths: corpus/examples/container/documentcontainer.zip

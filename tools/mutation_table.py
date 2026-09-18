@@ -160,6 +160,14 @@ TABLE = [
      "`judge()` was tested by calling it; nothing ran the gate as a command, so "
      "main() could throw the judgement away and every check stayed green"),
 
+    ("gates/the-action-hands-back-the-code-it-got",
+     "action.yml",
+     '        exit "$rc"',
+     '        exit 0',
+     ["tests/test_the_action_runs_the_tool_and_keeps_its_code.py"],
+     "an entrance that swallows the verdict is worse than no entrance: the "
+     "workflow goes green over a container the same tool rejects in a terminal"),
+
     ("gates/the-time-budget-actually-compares",
      "tools/time_budget.py",
      "        self.ok = self.factor < FAIL_AT",

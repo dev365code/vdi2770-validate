@@ -179,6 +179,11 @@ def test_ci_runs_nothing_the_gate_does_not():
     SETUP = (
         "pip install", "pip download", "actions/", "python -m build",
         "python -m venv", "git ", "echo ",
+        # A step asserting about another step's outcome. `make check` cannot run
+        # a GitHub Action, so the job that exercises the one this repository
+        # publishes has to check the result where the result exists -- and what
+        # it asserts is the action's behaviour, not anything about this tree.
+        'test "${{ steps.',
     )
     #: And the third kind: a gate CI runs that `make check` does not, with the
     #: reason. `OUTSIDE_CHECK` says why a target is not in `check`; this says

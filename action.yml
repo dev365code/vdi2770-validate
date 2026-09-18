@@ -1,0 +1,87 @@
+name: "VDI 2770 container check"
+description: >
+  Check VDI 2770 document containers in a workflow, offline. One file, no
+  install, and the exit code the command line gives you.
+author: "dev365code"
+branding:
+  icon: "check-square"
+  color: "blue"
+
+inputs:
+  paths:
+    description: "Containers to check. Several, separated by spaces."
+    required: true
+  version:
+    description: >
+      Which release's single file to run. Defaults to the version of the
+      checkout this action came from, so `uses: ...@v0.9.0` runs 0.9.0.
+    required: false
+    default: ""
+  pyz:
+    description: >
+      A `vdi2770.pyz` you already have. Given, nothing is downloaded and the
+      whole job is offline -- which is the point of carrying one file.
+    required: false
+    default: ""
+  args:
+    description: "Anything else to pass to `check`, such as `--json`."
+    required: false
+    default: ""
+
+outputs:
+  exit-code:
+    description: >
+      What the checker returned: 0 nothing at the fail severity, 1 a finding or
+      an unreadable path, 2 nothing could be read, 3 the install disagreed with
+      itself, 64 a usage error. The step also fails on anything but 0, so a
+      workflow that only wants a gate can ignore this.
+    value: ${{ steps.check.outputs.exit-code }}
+
+runs:
+  using: "composite"
+  steps:
+    # The only step that touches the network, and only when you have not handed
+    # it a file. The check itself opens no socket for any input, ever -- that is
+    # the tool's own promise and its own test, not this action's.
+    - id: fetch
+      if: inputs.pyz == ''
+      shell: bash
+      env:
+        WANTED: ${{ inputs.version }}
+        ACTION_PATH: ${{ github.action_path }}
+      run: |
+        set -euo pipefail
+        version="$WANTED"
+        if [ -z "$version" ]; then
+          version=$(sed -n 's/^__version__ = "\(.*\)"$/\1/p' \
+            "$ACTION_PATH/packages/vdi2770/src/vdi2770/__init__.py")
+        fi
+        if [ -z "$version" ]; then
+          echo "::error::cannot tell which version to fetch, and guessing one would run a checker nobody asked for"
+          exit 1
+        fi
+        url="https://github.com/dev365code/vdi2770-validate/releases/download/v${version}/vdi2770.pyz"
+        echo "fetching $url"
+        curl --fail --silent --show-error --location --output "$RUNNER_TEMP/vdi2770.pyz" "$url"
+        echo "pyz=$RUNNER_TEMP/vdi2770.pyz" >> "$GITHUB_OUTPUT"
+
+    # Inputs reach the shell as environment variables and are quoted here.
+    # Interpolating `${{ inputs.paths }}` into the script would make a container
+    # name a place to put commands.
+    - id: check
+      shell: bash
+      env:
+        PYZ: ${{ inputs.pyz != '' && inputs.pyz || steps.fetch.outputs.pyz }}
+        PATHS: ${{ inputs.paths }}
+        EXTRA: ${{ inputs.args }}
+      run: |
+        set -uo pipefail
+        # Word-split deliberately: `paths` and `args` are lists written the way a
+        # person writes them on one line.
+        # shellcheck disable=SC2086
+        python "$PYZ" check $EXTRA $PATHS
+        rc=$?
+        echo "exit-code=$rc" >> "$GITHUB_OUTPUT"
+        # The code, not a flattened failure: a job that cannot tell 64 from 1
+        # cannot tell its own typo from somebody's bad container.
+        exit "$rc"
