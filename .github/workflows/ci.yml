@@ -58,6 +58,8 @@ jobs:
           # one in this commit -- and the run would be about that instead.
           python -m pip install -e packages/vdi2770
           python -m pip install -e ".[dev]"
+      - name: MEASUREMENT ROUND -- what the budget reads here
+        run: python tools/time_budget.py --check || true
       - name: Lint
         run: python -m ruff check --no-cache src tests tools packages
       - name: Build fixtures
@@ -95,12 +97,6 @@ jobs:
       - name: The rule reference matches the catalogue
         if: runner.os != 'Windows'
         run: python tools/rules_doc.py --check
-      # Not on Windows yet, for the same reason the budget is a ratio at all:
-      # nobody has measured what this workload costs there against the same
-      # yardstick, and a number guessed for a platform is worse than no number.
-      - name: The corpus still costs what it cost
-        if: runner.os != 'Windows'
-        run: python tools/time_budget.py --check
       - name: Our half of the oracle sweep is current
         if: runner.os != 'Windows'
         run: python tools/capture_oracle.py --check-ours

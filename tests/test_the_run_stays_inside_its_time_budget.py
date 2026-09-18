@@ -76,19 +76,27 @@ def test_the_recorded_baseline_is_a_ratio_and_not_seconds():
             "keep the seconds for a reader, clearly marked as not the thing compared")
 
 
-def test_this_platform_has_a_budget_of_its_own():
+def test_every_platform_the_gate_runs_on_has_a_budget_of_its_own():
     """A budget belongs to the platform it was measured on.
 
     The first version compared every platform against one number, and CI said
-    what that is worth: a Linux runner read 0.56x of the laptop's budget, so a
-    genuine doubling there would have come back as 1.12x and passed. Recording
-    per platform is the fix; this is the test that nobody quietly drops back to
-    one number by deleting the key this machine needs.
+    what that was worth: a Linux runner read 0.56x of the laptop's budget, so a
+    genuine doubling there would have come back as 1.12x and passed. The list of
+    platforms comes from the workflow rather than from this file, so turning the
+    step on for a new runner and forgetting to measure it is a failure here
+    rather than a gate that quietly compares nothing.
     """
+    workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    step = workflow.split("run: python tools/time_budget.py --check")[0].rsplit("- name:", 1)[-1]
+    skips_windows = "runner.os != 'Windows'" in step
+    runners = {"Linux"} | (set() if skips_windows else {"Windows"})
+
     recorded = time_budget.load()
-    mine = time_budget.budgets_for(recorded, time_budget.platform_key())
-    assert mine, (f"no budget recorded for {time_budget.platform_key()}; another "
-                  f"platform's number does not mean anything here")
+    missing = sorted(r for r in runners if not time_budget.budgets_for(recorded, r))
+    assert not missing, (
+        f"the gate runs on {sorted(runners)} and no budget was measured on {missing}. "
+        f"Run the tool there and record what it reports -- another platform's number "
+        f"does not mean anything on that one")
 
 
 def test_one_platforms_budget_is_never_used_for_another():
