@@ -24,15 +24,26 @@ from vdi2770.zipread import MAIN_PDF, MAIN_XML, METADATA_XML, Kind
 #: An exception that names an object names the address it happened to live at,
 #: because that is what `repr` does. Rendered into a finding, that address makes
 #: two runs of one container differ in bytes -- the tool's own promise, broken by
-#: a detail line -- and shows a reader an internal that tells them nothing. It is
-#: removed rather than the whole message: the rest of what the exception said is
-#: the only account of what went wrong that reaches the report.
-_ADDRESS = re.compile(r" at 0x[0-9a-fA-F]+")
+#: a detail line -- and shows a reader an internal that tells them nothing.
+#:
+#: Anchored on the angle brackets rather than on the text " at 0x": exception
+#: messages quote the document, and a container whose metadata said
+#: `Bogus at 0x41` had that value silently shortened to `Bogus` by the first
+#: version of this -- a report naming something the document does not contain,
+#: which is worse than a report carrying an address. Only the default `repr`
+#: shape is touched, and what is left (`<_io.BytesIO object>`) still reads as an
+#: object rather than pretending to be anything else.
+#:
+#: It does not catch every way an address can be written: `id()` rendered in
+#: decimal is invisible to it. Nothing in this project renders one, and the
+#: corpus sweep in `tests/test_determinism.py` is what would notice if that
+#: changed.
+_ADDRESS = re.compile(r"(<[^<>]*) at 0x[0-9a-fA-F]+>")
 
 
 def without_addresses(text: str) -> str:
-    """The exception's words, minus the addresses they mention."""
-    return _ADDRESS.sub("", text)
+    """The exception's words, with addresses gone from the objects they name."""
+    return _ADDRESS.sub(r"\1>", text)
 
 
 __all__ = ["About", "Defect", "Finding", "Kind", "Location", "MAIN_PDF", "MAIN_XML", "METADATA_XML",

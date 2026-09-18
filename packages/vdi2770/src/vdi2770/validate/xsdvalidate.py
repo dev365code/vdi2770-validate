@@ -49,7 +49,13 @@ def _rendered(errors, tree: Node) -> List[dict]:
     for err in errors:
         path = getattr(err, "path", "") or ""
         node = _resolve(tree, path, kids_of) if path else None
-        reason = _first_line(getattr(err, "reason", None) or str(err)) or repr(err)
+        # `without_addresses` on the fallback: when `reason` is falsy what is
+        # left is the exception's own `str`, and xmlschema's begins
+        # "failed validating <Element ... at 0x...>". The bundled schema has no
+        # construct that makes `reason` falsy today, so this door is held shut
+        # by somebody else's attribute rather than by us.
+        reason = without_addresses(
+            _first_line(getattr(err, "reason", None) or str(err)) or repr(err))
         out.append({
             "line": node.line if node else None,
             "column": node.column if node else None,

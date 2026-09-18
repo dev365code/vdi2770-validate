@@ -27,7 +27,7 @@ from . import __version__ as VERSION  # one place, not three
 from . import report as rendering
 from .agreement import MARKER, InstallationDisagrees, refuse_if_disagreeing
 from .catalog import document_classes, rules
-from .model import Severity
+from .model import Severity, without_addresses
 from .runner import check_file
 
 
@@ -66,7 +66,13 @@ def _cmd_check(args) -> int:
             # `[Errno 21] Is a directory: 12`, a number from inside this process
             # that changes between runs. `strerror` is the part that is about
             # the file.
-            why = getattr(e, "strerror", None) or str(e)
+            # `without_addresses` on the fallback for the same reason the
+            # comment above prefers `strerror`: what is left when there is no
+            # `strerror` is the exception's own words, and those name objects.
+            # An address here is worse than one in a finding -- this field is
+            # the machine-readable one, so a consumer diffing two runs of one
+            # drop folder sees a change that is not about their files.
+            why = getattr(e, "strerror", None) or without_addresses(str(e))
             print(f"{path}: cannot read it — {why}", file=sys.stderr)
             unreadable += 1
             # And it appears in the JSON. Skipping it gave a consumer N-1

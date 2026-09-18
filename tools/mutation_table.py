@@ -89,8 +89,8 @@ TABLE = [
 
     ("cli/one-bad-path-does-not-stop-the-rest",
      "packages/vdi2770/src/vdi2770/validate/cli.py",
-     'why = getattr(e, "strerror", None) or str(e)',
-     'why = e.strerror or str(e)',
+     'why = getattr(e, "strerror", None) or without_addresses(str(e))',
+     'why = e.strerror or without_addresses(str(e))',
      ["tests/test_cli.py"],
      "the handler that existed to keep going was itself stopping"),
 
