@@ -402,7 +402,7 @@ jobs:
             [ "$wait" -gt 0 ] && { echo "not yet; waiting ${wait}s"; sleep "$wait"; }
             if python tools/check_release_order.py; then exit 0; fi
           done
-          echo "the engine this floors on never appeared on the index after ~21 min -- vdi2770 (the reader) is published but not resolvable, so the alias is not published: pip install vdi2770-validate cannot resolve. Re-run this job once the index catches up."
+          echo "the engine this floors on never appeared on the index after ~21 min -- vdi2770 (the reader) is published but not resolvable, so this release's alias is not published: an install pinned to this version of vdi2770-validate cannot resolve, while a bare install still gets the previous release. Re-run this job once the index catches up."
           exit 1
       # And "the JSON view lists it" is not "a machine can install it". This is
       # the state the alias actually requires, so it is the one that is asked
@@ -458,7 +458,7 @@ jobs:
                  --dest /tmp/both "vdi2770==$version" \
                  "vdi2770-validate==$version"; then exit 0; fi
           done
-          echo "the release is on the index and both halves are not installable after ~21 min -- one or both are published but a consumer could get a mismatched pair. Re-run this job once the index catches up."
+          echo "the release is on the index and both halves are not installable after ~21 min -- both are published but a consumer could get a mismatched pair. Re-run this job once the index catches up."
           exit 1
       - name: The matrix, against the index this release just changed
         run: |
