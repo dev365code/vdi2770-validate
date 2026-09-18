@@ -4,9 +4,10 @@ Sections through 0.7.0 had their wording tidied after their tags; the text each 
 
 ## 0.9.0 — unreleased
 
-Who should take this release: anyone whose CI reads the exit code, and anyone
-whose delivery reached the PDF/A scan's budget and saw it name, among
-"declared" files, one the container had not declared.
+Who should take this release: anyone whose CI reads the exit code, anyone whose
+delivery reached the PDF/A scan's budget and saw it name, among "declared"
+files, one the container had not declared, and anyone who keeps reports and
+compares them, because one of them could differ from itself.
 
 **A command-line usage error has its own exit code.** A bad option, a missing
 argument or an unknown subcommand exited 2 -- the code that also means "nothing
