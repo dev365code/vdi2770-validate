@@ -1,0 +1,23 @@
+{
+ "_about": "Budgets are ratios against a yardstick measured in the same run (zlib + hashlib over fixed bytes, never this project's code), because seconds recorded on one machine cannot gate another. The seconds below are for a reader; they are not what is compared.",
+ "budgets": {
+  "corpus_over_reference": 2532.7,
+  "pdf_layer_over_reference": 630.8
+ },
+ "recorded_on": {
+  "platform": "Darwin",
+  "machine": "arm64",
+  "python": "3.9.6",
+  "containers": 49,
+  "pdfs": 47,
+  "yardstick_seconds": 0.000175,
+  "absolute_seconds": {
+   "corpus_pass": 0.4438,
+   "pdf_layer": 0.1105
+  }
+ },
+ "thresholds": {
+  "warn_at": 1.5,
+  "fail_at": 2.0
+ }
+}

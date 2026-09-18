@@ -95,6 +95,12 @@ jobs:
       - name: The rule reference matches the catalogue
         if: runner.os != 'Windows'
         run: python tools/rules_doc.py --check
+      # Not on Windows yet, for the same reason the budget is a ratio at all:
+      # nobody has measured what this workload costs there against the same
+      # yardstick, and a number guessed for a platform is worse than no number.
+      - name: The corpus still costs what it cost
+        if: runner.os != 'Windows'
+        run: python tools/time_budget.py --check
       - name: Our half of the oracle sweep is current
         if: runner.os != 'Windows'
         run: python tools/capture_oracle.py --check-ours

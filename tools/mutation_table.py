@@ -160,6 +160,23 @@ TABLE = [
      "`judge()` was tested by calling it; nothing ran the gate as a command, so "
      "main() could throw the judgement away and every check stayed green"),
 
+    ("gates/the-time-budget-actually-compares",
+     "tools/time_budget.py",
+     "        self.ok = self.factor < FAIL_AT",
+     "        self.ok = True",
+     ["tests/test_the_run_stays_inside_its_time_budget.py"],
+     "a budget that passes whatever it measures is a clock nobody is watching, "
+     "which is the state the quadratic PDF scan shipped in"),
+
+    ("gates/the-time-budget-reports-what-it-found",
+     "tools/time_budget.py",
+     "    return 1 if bad else 0",
+     "    return 0",
+     ["tests/test_the_run_stays_inside_its_time_budget.py",
+      "tools/time_budget.py --check"],
+     "the sibling coverage gate had a tested judgement and a main() that threw "
+     "it away; the command has to be run, not only the function called"),
+
     ("gates/a-rule-that-lost-its-fixture-is-noticed",
      "tools/make_fixtures.py",
      '    add("m9-repeated-document-id.zip"',
