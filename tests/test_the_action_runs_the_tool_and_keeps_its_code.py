@@ -34,12 +34,31 @@ def test_the_action_runs_the_single_file(action):
 
 def test_the_exit_code_reaches_the_job(action):
     """A step that returns success or failure loses the difference between "your
-    container has a finding" (1) and "your workflow is misspelt" (64). The code
-    is published as an output and re-raised as the step's own status."""
+    container has a finding" (1) and "your workflow is misspelt" (64).
+
+    It cannot be had both ways at once, and CI is what said so: with the step
+    failing, `steps.<id>.outputs.exit-code` came back empty, because GitHub
+    publishes no outputs for a step it has decided failed. So the action does
+    one or the other on purpose -- fail with the code, or succeed and hand it
+    over -- and the code is written to the output before either branch, so the
+    log has it even when the job cannot.
+    """
     body = next(b for b in _run_bodies(action) if 'python "$PYZ" check' in b)
     assert 'exit-code=$rc' in body, "the code is not published as an output"
     assert re.search(r'exit "\$rc"', body), "the code is computed and then thrown away"
     assert action["outputs"]["exit-code"]["value"] == "${{ steps.check.outputs.exit-code }}"
+    assert "fail-on-finding" in action["inputs"], "there is no way to ask for the code"
+    written, branched = body.index("exit-code=$rc"), body.index("fail-on-finding is false")
+    assert written < branched, (
+        "the code is written after the branch that can end the step, so the one "
+        "case that needs it most -- a failure -- would not have it")
+
+
+def test_the_gate_is_the_default(action):
+    """An action that reports and does not stop anything is decoration. Somebody
+    who wants the reading asks for it; somebody who wants the gate types nothing.
+    """
+    assert str(action["inputs"]["fail-on-finding"]["default"]).lower() == "true"
 
 
 def test_no_user_input_is_interpolated_into_a_shell_script(action):
@@ -78,6 +97,10 @@ def test_the_repository_uses_its_own_action_both_ways(action):
     assert any("version" in s.get("with", {}) for s in uses), "the fetching path is never taken"
     failing = [s for s in uses if s.get("continue-on-error")]
     assert failing, "nothing checks that a container with findings fails the step"
+    reporting = [s for s in uses if str(s.get("with", {}).get("fail-on-finding", "")).lower() == "false"]
+    assert reporting, (
+        "the mode that hands back the code is never exercised, and it is the mode "
+        "whose behaviour GitHub -- not this repository -- decides")
 
 
 def test_every_input_is_described_where_a_user_would_look(action):

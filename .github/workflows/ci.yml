@@ -173,7 +173,20 @@ jobs:
       - name: The failure was the checker's verdict, not the action falling over
         run: |
           test "${{ steps.broken.outcome }}" = failure || { echo "::error::a container with findings did not fail the step"; exit 1; }
-          test "${{ steps.broken.outputs.exit-code }}" = 1 || { echo "::error::expected exit 1 for a finding, got '${{ steps.broken.outputs.exit-code }}'"; exit 1; }
+      # The other mode, and the reason there are two: GitHub publishes no outputs
+      # for a step it has decided failed, so the code above is in the log and not
+      # in the job. Asked not to fail, the action succeeds and hands it over.
+      - name: Asked not to fail, it reports the code instead
+        id: reported
+        uses: ./
+        with:
+          pyz: dist/vdi2770.pyz
+          paths: corpus/examples/empty.zip
+          fail-on-finding: "false"
+      - name: The reported code is the checker's own
+        run: |
+          test "${{ steps.reported.outcome }}" = success || { echo "::error::fail-on-finding:false still failed the step"; exit 1; }
+          test "${{ steps.reported.outputs.exit-code }}" = 1 || { echo "::error::expected exit 1 for a finding, got '${{ steps.reported.outputs.exit-code }}'"; exit 1; }
       # The fetching path, against a release that exists. It proves the download
       # and the version input, which the offline path above deliberately skips.
       - name: A published release can be fetched and run

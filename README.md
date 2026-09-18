@@ -151,17 +151,30 @@ Exit codes and a versioned JSON report make it a CI gate in one line.
     paths: handover.zip nameplate.zip
 ```
 
-The step fails when the checker does, and it fails with *which* failure: the
-`exit-code` output carries `1` for a finding, `2` for nothing readable, `64` for
-a mistyped command line. A job that cannot tell those apart cannot tell a
-supplier's bad container from its own typo.
+The step fails when the checker does, which is what a gate is for. If you want
+the *number* instead — `1` a finding, `2` nothing readable, `64` a mistyped
+command line — ask for it:
+
+```yaml
+- uses: dev365code/vdi2770-validate@v0.9.0
+  id: vdi
+  with:
+    paths: handover.zip
+    fail-on-finding: "false"
+- run: echo "the checker said ${{ steps.vdi.outputs.exit-code }}"
+```
+
+One or the other, not both: GitHub publishes no outputs for a step it has
+decided failed, so a failing step is the verdict or the output is — never the
+two together. The code is printed either way, so the log always has it.
 
 | Input | What it is |
 |---|---|
 | `paths` | the containers to check, separated by spaces |
-| `version` | which release's single file to run; defaults to the one you pinned with `@v...` |
+| `version` | which release's single file to run; defaults to the version in the checkout the action came from |
 | `pyz` | a `vdi2770.pyz` you already have. Given, **nothing is downloaded** and the whole step is offline |
 | `args` | anything else for `check`, such as `--json` |
+| `fail-on-finding` | `true` by default: a non-zero verdict fails the step. `false` succeeds and fills `exit-code` |
 
 The action fetches one file and then runs it. If your runners have no route out,
 commit the single file and point `pyz` at it — the check itself has never opened

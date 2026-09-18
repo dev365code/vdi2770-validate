@@ -27,14 +27,24 @@ inputs:
     description: "Anything else to pass to `check`, such as `--json`."
     required: false
     default: ""
+  fail-on-finding:
+    description: >
+      Fail the step when the checker returns anything but 0. True by default,
+      because a gate that does not stop anything is decoration. Set it false to
+      always succeed and read `exit-code` instead -- GitHub does not publish the
+      outputs of a step it has decided failed, so the verdict can come back as a
+      failed step or as a number, and not as both.
+    required: false
+    default: "true"
 
 outputs:
   exit-code:
     description: >
       What the checker returned: 0 nothing at the fail severity, 1 a finding or
       an unreadable path, 2 nothing could be read, 3 the install disagreed with
-      itself, 64 a usage error. The step also fails on anything but 0, so a
-      workflow that only wants a gate can ignore this.
+      itself, 64 a usage error. **Only readable with `fail-on-finding: false`**
+      -- a failed step publishes no outputs, which is GitHub's rule and not this
+      action's choice. With the default, the failed step is the verdict.
     value: ${{ steps.check.outputs.exit-code }}
 
 runs:
@@ -74,6 +84,7 @@ runs:
         PYZ: ${{ inputs.pyz != '' && inputs.pyz || steps.fetch.outputs.pyz }}
         PATHS: ${{ inputs.paths }}
         EXTRA: ${{ inputs.args }}
+        FAIL_ON_FINDING: ${{ inputs.fail-on-finding }}
       run: |
         set -uo pipefail
         # Word-split deliberately: `paths` and `args` are lists written the way a
@@ -82,6 +93,14 @@ runs:
         python "$PYZ" check $EXTRA $PATHS
         rc=$?
         echo "exit-code=$rc" >> "$GITHUB_OUTPUT"
+        # Written before either branch, because it is the only place the code
+        # exists: on the failing branch GitHub discards this action's outputs,
+        # and the line above is then what the log has and the job does not.
+        # `tr`, not bash 4's `${x,,}`: macOS runners still ship bash 3.2.
+        if [ "$(printf '%s' "$FAIL_ON_FINDING" | tr '[:upper:]' '[:lower:]')" = "false" ]; then
+          echo "vdi2770-validate returned $rc; the step is not failing because fail-on-finding is false"
+          exit 0
+        fi
         # The code, not a flattened failure: a job that cannot tell 64 from 1
         # cannot tell its own typo from somebody's bad container.
         exit "$rc"
