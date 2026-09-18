@@ -42,10 +42,10 @@ are no shared paths any more — a gate compares the built wheels against the on
 already published to say so — and the upgrade ends with everything at the new
 version.
 
-Coming next release: a command-line usage error (a bad option, a missing
-argument) will exit `64` (`EX_USAGE`) rather than `2`, so `2` keeps a single
-meaning -- nothing could be read. It is written down a release ahead because a
-CI job reads the number.
+A command-line usage error -- a bad option, a missing argument, an unknown
+subcommand -- exits `64` (`EX_USAGE`): the caller got the command wrong. `2` is
+kept for a valid run that found nothing it could read, so a CI job can tell the
+two apart, and `--help` lists the codes.
 
 ## What has not gone away
 
