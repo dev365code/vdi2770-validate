@@ -67,11 +67,48 @@ def test_the_recorded_baseline_is_a_ratio_and_not_seconds():
     the ratio exists to avoid. The file may *carry* seconds for a reader; what
     is compared has to be the ratio."""
     recorded = time_budget.load()
-    assert set(recorded["budgets"]) == {"corpus_over_reference", "pdf_layer_over_reference"}
-    for name, value in recorded["budgets"].items():
-        assert isinstance(value, (int, float)) and value > 0, (name, value)
-    assert "absolute_seconds" in recorded["recorded_on"], (
-        "keep the seconds for a reader, clearly marked as not the thing compared")
+    assert recorded["budgets"], "no platform has a budget recorded at all"
+    for platform_name, budgets in recorded["budgets"].items():
+        assert set(budgets) == {"corpus_over_reference", "pdf_layer_over_reference"}, platform_name
+        for name, value in budgets.items():
+            assert isinstance(value, (int, float)) and value > 0, (platform_name, name, value)
+        assert "absolute_seconds" in recorded["recorded_on"][platform_name], (
+            "keep the seconds for a reader, clearly marked as not the thing compared")
+
+
+def test_every_platform_the_gate_runs_on_has_a_budget_of_its_own():
+    """A budget belongs to the platform it was measured on.
+
+    The first version compared every platform against one number, and CI said
+    what that was worth: a Linux runner read 0.56x of the laptop's budget, so a
+    genuine doubling there would have come back as 1.12x and passed. The list of
+    platforms comes from the workflow rather than from this file, so turning the
+    step on for a new runner and forgetting to measure it is a failure here
+    rather than a gate that quietly compares nothing.
+    """
+    workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    gating = [block for block in workflow.split("- name:")
+              if "run: python tools/time_budget.py --check\n" in block
+              and "|| true" not in block]
+    # No gating step at all is a legitimate state -- during a measurement round
+    # the step is deliberately non-fatal -- and it must not be read as "every
+    # platform is required", which is what a split() on a missing needle quietly
+    # produced: the message then named platforms nobody had asked for.
+    if not gating:
+        pytest.skip("ci.yml has no gating budget step right now")
+    runners = {"Linux"} | (set() if "runner.os != 'Windows'" in gating[0] else {"Windows"})
+
+    recorded = time_budget.load()
+    missing = sorted(r for r in runners if not time_budget.budgets_for(recorded, r))
+    assert not missing, (
+        f"the gate runs on {sorted(runners)} and no budget was measured on {missing}. "
+        f"Run the tool there and record what it reports -- another platform's number "
+        f"does not mean anything on that one")
+
+
+def test_one_platforms_budget_is_never_used_for_another():
+    recorded = {"budgets": {"Solaris": {"corpus_over_reference": 1.0}}}
+    assert time_budget.budgets_for(recorded, "Linux") == {}
 
 
 def test_the_gate_run_as_a_command_fails_when_the_budget_is_exceeded(tmp_path, monkeypatch, capsys):
@@ -82,9 +119,10 @@ def test_the_gate_run_as_a_command_fails_when_the_budget_is_exceeded(tmp_path, m
     command, against a budget small enough that this machine cannot meet it.
     """
     budget = tmp_path / "time-budget.json"
+    here = time_budget.platform_key()
     budget.write_text(json.dumps({
-        "budgets": {"corpus_over_reference": 1.0, "pdf_layer_over_reference": 1.0},
-        "recorded_on": {"absolute_seconds": {}}}), encoding="utf-8")
+        "budgets": {here: {"corpus_over_reference": 1.0, "pdf_layer_over_reference": 1.0}},
+        "recorded_on": {here: {"absolute_seconds": {}}}}), encoding="utf-8")
     monkeypatch.setattr(time_budget, "BUDGET_FILE", budget)
     assert time_budget.main(["--check"]) == 1, "the budget was impossible and the gate passed"
     assert "got slower" in capsys.readouterr().err
@@ -94,8 +132,9 @@ def test_the_gate_run_as_a_command_passes_a_budget_it_meets(tmp_path, monkeypatc
     """The other direction, so the test above cannot pass by the gate always
     failing -- which would be just as useless and much easier to miss."""
     budget = tmp_path / "time-budget.json"
+    here = time_budget.platform_key()
     budget.write_text(json.dumps({
-        "budgets": {"corpus_over_reference": 10 ** 9, "pdf_layer_over_reference": 10 ** 9},
-        "recorded_on": {"absolute_seconds": {}}}), encoding="utf-8")
+        "budgets": {here: {"corpus_over_reference": 10 ** 9, "pdf_layer_over_reference": 10 ** 9}},
+        "recorded_on": {here: {"absolute_seconds": {}}}}), encoding="utf-8")
     monkeypatch.setattr(time_budget, "BUDGET_FILE", budget)
     assert time_budget.main(["--check"]) == 0

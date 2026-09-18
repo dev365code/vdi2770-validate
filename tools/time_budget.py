@@ -30,7 +30,6 @@ import platform
 import sys
 import time
 import zipfile
-import zlib
 from typing import Optional
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -84,41 +83,74 @@ def judge(measured: float, baseline: Optional[float]) -> Verdict:
     return Verdict(measured, baseline)
 
 
+def platform_key() -> str:
+    """One budget per operating system.
+
+    The ratio was supposed to travel, and it travels *some*: a Linux runner read
+    0.56x of the budget recorded on the laptop, because `zlib` is three times
+    slower there while this project's own work is only one and a half times
+    slower. A single number across both is a weak gate exactly where it matters
+    -- at 0.56x, a genuine doubling on that runner reads 1.12x and passes -- so
+    each platform carries its own, measured on that platform.
+    """
+    return platform.system() or "unknown"
+
+
 def load() -> dict:
     if not BUDGET_FILE.exists():
         raise NoBaseline(f"{BUDGET_FILE.relative_to(ROOT)} is not there")
     return json.loads(BUDGET_FILE.read_text(encoding="utf-8"))
 
 
+def budgets_for(recorded: dict, key: str) -> dict:
+    """The budgets recorded for this platform, or nothing -- never another
+    platform's, which is the mistake the numbers above measured."""
+    return recorded.get("budgets", {}).get(key, {})
+
+
 def _yardstick() -> float:
     """One unit of this machine, in seconds. Not this project's code.
 
-    `zlib` alone, and deliberately: inflating members is the work the reader
-    actually spends its time on, and it is implemented much the same everywhere.
-    A yardstick that also hashed would measure whether the CPU has SHA
-    instructions, which has nothing to do with whether this project got slower
-    and would read differently on an ARM laptop and an x86 runner.
-    """
-    blob = bytes(range(256)) * 4096          # 1 MiB, compressible but not trivially
-    packed = zlib.compress(blob, 6)
+    **Pure Python on purpose.** The first version of this inflated a fixed blob
+    with `zlib`, on the reasoning that inflating members is what the reader
+    spends its time on. CI disagreed with that reasoning: on one Linux runner the
+    same tree read 1412, 1650 and 950 units on Python 3.13, 3.12 and 3.9, because
+    `zlib` is C and barely notices which interpreter called it while this
+    project -- which is Python all the way down -- is half again faster on 3.13
+    than on 3.9. A yardstick that ignores the interpreter cannot normalise work
+    that is made of it.
 
-    rounds = 64
+    So the yardstick is the interpreter: dictionary, integer and string work in a
+    loop, which is what the rules layer is when you look at it closely. No I/O,
+    nothing random, nothing this project defines.
+    """
+    def work(rounds: int) -> int:
+        counts: dict = {}
+        total = 0
+        for i in range(rounds):
+            key = i & 1023
+            counts[key] = counts.get(key, 0) + i
+            total += len(str(key)) + (i % 7)
+        return total
+
+    rounds = 4096
     while True:
         t = time.perf_counter()
-        for _ in range(rounds):
-            zlib.decompress(packed)
+        work(rounds)
         spent = time.perf_counter() - t
-        if spent >= YARDSTICK_FLOOR_SECONDS or rounds > 1 << 20:
+        if spent >= YARDSTICK_FLOOR_SECONDS or rounds > 1 << 24:
             break
         rounds *= 2
 
     runs = []
     for _ in range(3):
         t = time.perf_counter()
-        for _ in range(rounds):
-            zlib.decompress(packed)
+        work(rounds)
         runs.append((time.perf_counter() - t) / rounds)
-    return min(runs)
+    # Per ten thousand rounds rather than per round, so the budgets read in the
+    # hundreds instead of the millions. Nothing about the comparison changes;
+    # a number a person can hold in their head is easier to argue with.
+    return min(runs) * 10_000
 
 
 def _containers() -> list:
@@ -200,35 +232,52 @@ def main(argv=None) -> int:
         ap.error("say --check or --write")
 
     now = measure()
+    key = platform_key()
     if args.write:
+        existing = load() if BUDGET_FILE.exists() else {}
+        budgets = dict(existing.get("budgets", {}))
+        recorded_on = dict(existing.get("recorded_on", {}))
+        budgets[key] = now["budgets"]
+        recorded_on[key] = {
+            "machine": platform.machine(), "python": platform.python_version(),
+            "containers": now["containers"], "pdfs": now["pdfs"],
+            "yardstick_seconds": round(now["yardstick_seconds"], 6),
+            "absolute_seconds": now["absolute_seconds"],
+        }
         BUDGET_FILE.write_text(json.dumps({
             "_about": "Budgets are ratios against a yardstick measured in the same run "
-                      "(zlib + hashlib over fixed bytes, never this project's code), because "
-                      "seconds recorded on one machine cannot gate another. The seconds below "
-                      "are for a reader; they are not what is compared.",
-            "budgets": now["budgets"],
-            "recorded_on": {
-                "platform": platform.system(), "machine": platform.machine(),
-                "python": platform.python_version(),
-                "containers": now["containers"], "pdfs": now["pdfs"],
-                "yardstick_seconds": round(now["yardstick_seconds"], 6),
-                "absolute_seconds": now["absolute_seconds"],
-            },
+                      "(zlib over fixed bytes, never this project's code), because seconds "
+                      "recorded on one machine cannot gate another. One entry per operating "
+                      "system: the ratio travels only part of the way -- a Linux runner read "
+                      "0.56x of the laptop's budget -- so each platform carries what was "
+                      "measured on it. The seconds are for a reader, not what is compared.",
+            "budgets": budgets,
+            "recorded_on": recorded_on,
             "thresholds": {"warn_at": WARN_AT, "fail_at": FAIL_AT},
         }, indent=1) + "\n", encoding="utf-8")
-        print(f"recorded {now['budgets']} from {now['containers']} containers "
+        print(f"recorded {key} {now['budgets']} from {now['containers']} containers "
               f"({now['absolute_seconds']['corpus_pass']}s) and {now['pdfs']} PDFs "
               f"({now['absolute_seconds']['pdf_layer']}s)")
         return 0
 
-    recorded = load()["budgets"]
-    # The seconds, printed beside the ratio rather than instead of it: when a
-    # factor moves, the first question is which half moved, and a reader who
-    # only has the ratio cannot tell a slower tree from a faster yardstick.
-    print(f"this run: corpus {now['absolute_seconds']['corpus_pass']}s, "
+    # What this machine measured, printed before anything is compared -- and the
+    # seconds beside the ratios rather than instead of them: when a factor moves,
+    # the first question is which half moved, and a reader holding only the ratio
+    # cannot tell a slower tree from a faster yardstick. It also means a platform
+    # with no budget yet still reports its numbers, which are exactly the numbers
+    # somebody needs in order to record one.
+    print(f"{key}: corpus {now['absolute_seconds']['corpus_pass']}s, "
           f"pdf layer {now['absolute_seconds']['pdf_layer']}s, "
           f"yardstick {now['yardstick_seconds'] * 1000:.3f}ms "
-          f"({now['containers']} containers, {now['pdfs']} PDFs)")
+          f"({now['containers']} containers, {now['pdfs']} PDFs) -> {now['budgets']}")
+
+    recorded = budgets_for(load(), key)
+    if not recorded:
+        raise NoBaseline(
+            f"no budget recorded for {key}; measured {now['budgets']} here just now. "
+            f"Run `python tools/time_budget.py --write` on this platform when the "
+            f"machine is quiet and commit the file -- another platform's number "
+            f"would not mean anything here")
     bad = False
     for key, measured in now["budgets"].items():
         verdict = judge(measured, recorded.get(key))
