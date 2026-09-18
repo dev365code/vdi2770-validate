@@ -1,7 +1,8 @@
 name: "VDI 2770 container check"
 description: >
-  Check VDI 2770 document containers in a workflow, offline. One file, no
-  install, and the exit code the command line gives you.
+  Check VDI 2770 document containers in a workflow. One file, no install, no
+  socket opened while checking, and the exit code the command line gives you.
+  Point `pyz` at a file you already have and this action downloads nothing.
 author: "dev365code"
 branding:
   icon: "check-square"
@@ -19,8 +20,17 @@ inputs:
     default: ""
   pyz:
     description: >
-      A `vdi2770.pyz` you already have. Given, nothing is downloaded and the
-      whole job is offline -- which is the point of carrying one file.
+      A `vdi2770.pyz` you already have. Given, this action downloads nothing --
+      which is the point of carrying one file. (The job around it still reached
+      GitHub to get here; that is the runner's doing, not this step's.)
+    required: false
+    default: ""
+  sha256:
+    description: >
+      The SHA-256 the fetched file must have, which the release prints beside
+      it. Left empty, the download is run unverified -- this action holds third
+      parties to pinned commits and should not ask for more trust than it gives,
+      so say so here rather than in a comment nobody reads.
     required: false
     default: ""
   args:
@@ -31,9 +41,9 @@ inputs:
     description: >
       Fail the step when the checker returns anything but 0. True by default,
       because a gate that does not stop anything is decoration. Set it false to
-      always succeed and read `exit-code` instead -- GitHub does not publish the
-      outputs of a step it has decided failed, so the verdict can come back as a
-      failed step or as a number, and not as both.
+      succeed and read `exit-code` instead: whether a *failed* step still hands
+      its outputs on is GitHub's rule rather than this action's, so this is the
+      way to be sure of the number.
     required: false
     default: "true"
 
@@ -42,9 +52,10 @@ outputs:
     description: >
       What the checker returned: 0 nothing at the fail severity, 1 a finding or
       an unreadable path, 2 nothing could be read, 3 the install disagreed with
-      itself, 64 a usage error. **Only readable with `fail-on-finding: false`**
-      -- a failed step publishes no outputs, which is GitHub's rule and not this
-      action's choice. With the default, the failed step is the verdict.
+      itself, 64 a usage error. Certain to be readable with
+      `fail-on-finding: false`; with the default the step fails, and whether a
+      failed step's outputs reach the job is GitHub's rule, not this action's.
+      The code is printed either way, so the log always has it.
     value: ${{ steps.check.outputs.exit-code }}
 
 runs:
@@ -59,6 +70,7 @@ runs:
       env:
         WANTED: ${{ inputs.version }}
         ACTION_PATH: ${{ github.action_path }}
+        WANT_SHA: ${{ inputs.sha256 }}
       run: |
         set -euo pipefail
         version="$WANTED"
@@ -72,8 +84,19 @@ runs:
         fi
         url="https://github.com/dev365code/vdi2770-validate/releases/download/v${version}/vdi2770.pyz"
         echo "fetching $url"
-        curl --fail --silent --show-error --location --output "$RUNNER_TEMP/vdi2770.pyz" "$url"
-        echo "pyz=$RUNNER_TEMP/vdi2770.pyz" >> "$GITHUB_OUTPUT"
+        out="${RUNNER_TEMP:-/tmp}/vdi2770.pyz"
+        curl --fail --silent --show-error --location --output "$out" "$url"
+        if [ -n "$WANT_SHA" ]; then
+          got=$(python -c "import hashlib,sys;print(hashlib.sha256(open(sys.argv[1],'rb').read()).hexdigest())" "$out")
+          if [ "$got" != "$WANT_SHA" ]; then
+            echo "::error::the file at $url hashes to $got and you asked for $WANT_SHA"
+            exit 1
+          fi
+          echo "sha256 matches what you asked for"
+        else
+          echo "note: fetched without checking a hash. The release prints one beside the file; pass it as sha256: to have this step check it."
+        fi
+        echo "pyz=$out" >> "$GITHUB_OUTPUT"
 
     # Inputs reach the shell as environment variables and are quoted here.
     # Interpolating `${{ inputs.paths }}` into the script would make a container
@@ -87,11 +110,28 @@ runs:
         FAIL_ON_FINDING: ${{ inputs.fail-on-finding }}
       run: |
         set -uo pipefail
+        # A path that is not there is the caller's mistake, and CPython would
+        # report it as exit 2 -- the code this tool reserves for "nothing in the
+        # container could be read". A workflow would then blame a supplier for a
+        # typo in its own YAML.
+        if [ -z "$PYZ" ] || [ ! -f "$PYZ" ]; then
+          echo "::error::no checker to run at '''$PYZ'''. Give pyz: a file that exists, or leave it empty to fetch one."
+          exit 64
+        fi
+        # `|| rc=$?`, not a bare call followed by `$?`. GitHub runs `shell: bash`
+        # as `bash --noprofile --norc -e -o pipefail`, so errexit is already on
+        # before this script says anything: a bare call that exits non-zero ends
+        # the step *there*, and everything below -- the output, the branch, the
+        # message -- never happens. That is what shipped an hour ago, and it read
+        # as "a failed step publishes no outputs" because the output was never
+        # written. `set -uo pipefail` above does not turn `-e` off, and this line
+        # is why it does not need to.
+        #
         # Word-split deliberately: `paths` and `args` are lists written the way a
         # person writes them on one line.
+        rc=0
         # shellcheck disable=SC2086
-        python "$PYZ" check $EXTRA $PATHS
-        rc=$?
+        python "$PYZ" check $EXTRA $PATHS || rc=$?
         echo "exit-code=$rc" >> "$GITHUB_OUTPUT"
         # Written before either branch, because it is the only place the code
         # exists: on the failing branch GitHub discards this action's outputs,

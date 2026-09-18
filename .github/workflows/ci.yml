@@ -156,10 +156,15 @@ jobs:
       - name: Build the single file this working tree produces
         run: python tools/build_zipapp.py --check
       # The offline path: a file you already have, and nothing fetched.
-      - name: A conforming container passes
+      # `version` names a release that cannot exist, so if the fetch ever stopped
+      # being skipped this step would go red instead of quietly downloading. The
+      # promise is "given `pyz`, this action downloads nothing"; a test that reads
+      # the `if:` proves the text, and this proves the behaviour.
+      - name: A conforming container passes, with nothing fetched
         uses: ./
         with:
           pyz: dist/vdi2770.pyz
+          version: "0.0.0-there-is-no-such-release"
           paths: corpus/examples/container/documentcontainer.zip
       - name: A container with a finding fails, and says so with its own code
         id: broken
@@ -173,6 +178,10 @@ jobs:
       - name: The failure was the checker's verdict, not the action falling over
         run: |
           test "${{ steps.broken.outcome }}" = failure || { echo "::error::a container with findings did not fail the step"; exit 1; }
+          # Observed rather than asserted: whether a *failed* step still publishes
+          # its outputs is GitHub's business and nothing here should guess. The
+          # line below is how this repository finds out, in a log it can read.
+          echo "gate mode published exit-code='${{ steps.broken.outputs.exit-code }}'"
       # The other mode, and the reason there are two: GitHub publishes no outputs
       # for a step it has decided failed, so the code above is in the log and not
       # in the job. Asked not to fail, the action succeeds and hands it over.
@@ -190,6 +199,19 @@ jobs:
       # The fetching path, against a release that exists. It proves the download
       # and the version input, which the offline path above deliberately skips.
       - name: A published release can be fetched and run
+        uses: ./
+        with:
+          version: "0.8.2"
+          paths: corpus/examples/container/documentcontainer.zip
+
+  # The README's shortest example is `- uses:` and `paths:` -- no `setup-python`,
+  # no build. Every other use of the action here is preceded by both, so the line
+  # a reader actually copies was the one nothing ran.
+  the-action-on-a-runner-as-it-comes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: The shortest example, against a release that exists
         uses: ./
         with:
           version: "0.8.2"

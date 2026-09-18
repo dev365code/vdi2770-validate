@@ -107,6 +107,57 @@ def test_every_input_is_described_where_a_user_would_look(action):
     """The front page is where somebody decides whether to use this. An input
     that exists only in `action.yml` is an input nobody knows about."""
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
-    section = readme.split("## Three doors")[-1] if "## Three doors" in readme else readme
+    # Split on the section, and *fail* when the marker is gone rather than
+    # falling back to the whole page. The fallback was live for an hour: the
+    # heading became "Four doors" in the same commit that wrote this, so the
+    # test searched the entire README and passed on words that happen to appear
+    # elsewhere. A gate with a fallback is a gate with an off switch.
+    marker = "### In a workflow"
+    assert marker in readme, f"README no longer has a {marker!r} section for the action"
+    section = readme.split(marker, 1)[1].split("\n## ", 1)[0]
     missing = [name for name in action["inputs"] if name not in section]
-    assert not missing, f"README does not mention the action's inputs: {missing}"
+    assert not missing, f"the action's own section does not mention: {missing}"
+
+
+def test_a_missing_checker_is_the_callers_mistake_and_says_so(action):
+    """`pyz: dist/typo.pyz` must not come back as "nothing could be read".
+
+    CPython exits 2 when it cannot open the file it was given, and 2 is this
+    tool's code for a container it could not read at all -- so a typo in the
+    workflow would be reported as the supplier's archive being unreadable. The
+    step checks the file is there and exits 64, the code for "you typed it
+    wrong", before python is asked.
+    """
+    body = next(b for b in _run_bodies(action) if 'python "$PYZ" check' in b)
+    guard = body.split('python "$PYZ" check')[0]
+    assert '! -f "$PYZ"' in guard, "nothing checks that the checker is actually there"
+    assert "exit 64" in guard, "a missing file does not come back as a usage error"
+
+
+def test_an_unverified_download_is_admitted_out_loud(action):
+    """This project refuses to run a third-party action from a tag. It cannot
+    then hand its own users an unverified executable and say nothing: either the
+    caller passes the hash the release prints, or the step says it did not check.
+    """
+    assert "sha256" in action["inputs"], "there is no way to pin what gets downloaded"
+    fetch = next(s for s in action["runs"]["steps"] if s.get("id") == "fetch")
+    assert "WANT_SHA" in fetch["run"] and "hashlib.sha256" in fetch["run"], (
+        "the hash input exists and nothing checks it")
+    assert "without checking a hash" in fetch["run"], (
+        "a run that verified nothing has to say so where somebody reads it")
+
+
+def test_the_checker_is_allowed_to_fail_without_ending_the_step(action):
+    """GitHub runs `shell: bash` with `-e` already set.
+
+    A bare `python ... check` that exits non-zero therefore ends the step where
+    it stands, and every line after it -- the output, the branch, the message --
+    is never reached. The first version of this action was written as though
+    `set -uo pipefail` decided that, and CI failed twice before the flags in
+    GitHub's own invocation line explained why.
+    """
+    body = next(b for b in _run_bodies(action) if 'python "$PYZ" check' in b)
+    call = next(line for line in body.splitlines() if 'python "$PYZ" check' in line)
+    assert call.rstrip().endswith("|| rc=$?"), (
+        f"the checker is called in a way errexit would end the step on: {call!r}")
+    assert "rc=0" in body.split(call)[0], "rc is read before it is ever set"

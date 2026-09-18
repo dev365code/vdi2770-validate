@@ -19,6 +19,7 @@ is the working assumption, not an edge case.
 | XXE / entity expansion | The XML parser refuses every entity declaration — internal, external and parameter — before the entity can be referenced. An external DTD subset on its own is not fetched either. | fixture `x3-entity-expansion.zip`; `tests/test_defences.py` |
 | Remote schema fetch | The schema is bundled. `xsi:schemaLocation` in the document is never dereferenced. | `tests/test_offline.py` |
 | Any network access at all | No socket is opened. A test counts attempts rather than waiting for one to fail, because a tool that reaches out and falls back quietly on error would satisfy the weaker check. | `tests/test_promises.py::test_nothing_reaches_for_the_network` — which watches `sys.addaudithook`, because patching names on the `socket` module misses a caller that bound the constructor before the patch; `tests/test_offline.py` for the verdict being the same either way |
+| The GitHub Action's download | The action this repository publishes fetches `vdi2770.pyz` from these releases unless you hand it one with `pyz:`, and it verifies that download only when you pass the `sha256:` the release prints. That download is the action's, not the tool's: the checker still opens no socket for any input. A reviewer who cannot accept an unverified fetch should commit the file and use `pyz:`, which removes it. | `action.yml`, `tests/test_the_action_runs_the_tool_and_keeps_its_code.py` |
 
 ## Reporting a vulnerability
 

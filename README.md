@@ -6,7 +6,7 @@
 [![rules](https://img.shields.io/badge/rules-41_each_with_a_remedy-a8721c)](https://github.com/dev365code/vdi2770-validate/blob/main/docs/rules.md)
 [![license](https://img.shields.io/badge/license-Apache--2.0-5f6a75)](https://github.com/dev365code/vdi2770-validate/blob/main/LICENSE)
 
-&nbsp;**Apache-2.0**&nbsp;·&nbsp;**Python 3.9 · 3.12 · 3.13**&nbsp;·&nbsp;**pure Python, nothing compiled**&nbsp;·&nbsp;**zero network, by design**
+&nbsp;**Apache-2.0**&nbsp;·&nbsp;**Python 3.9 · 3.12 · 3.13**&nbsp;·&nbsp;**pure Python, nothing compiled**&nbsp;·&nbsp;**the check opens no socket**
 
 [Ten seconds](#ten-seconds) · [What it catches](#what-it-catches) · [Where it sits](#where-it-sits) · [Four doors](#four-doors-one-judgement) · [What it will not tell you](#what-it-will-not-tell-you) · [Roadmap](#roadmap) · [Two layers](#one-install-two-layers) · [In your product](#using-this-validator-in-your-product)
 
@@ -152,8 +152,9 @@ Exit codes and a versioned JSON report make it a CI gate in one line.
 ```
 
 The step fails when the checker does, which is what a gate is for. If you want
-the *number* instead — `1` a finding, `2` nothing readable, `64` a mistyped
-command line — ask for it:
+the *number* instead — `0` clean, `1` a finding or an unreadable path, `2`
+nothing readable at all, `3` the install disagreed with itself, `64` a mistyped
+command line or a `pyz:` that is not there — ask for it:
 
 ```yaml
 - uses: dev365code/vdi2770-validate@v0.9.0
@@ -164,21 +165,30 @@ command line — ask for it:
 - run: echo "the checker said ${{ steps.vdi.outputs.exit-code }}"
 ```
 
-One or the other, not both: GitHub publishes no outputs for a step it has
-decided failed, so a failing step is the verdict or the output is — never the
-two together. The code is printed either way, so the log always has it.
+Ask for the number when you want to branch on it: a step that fails is the
+verdict, and whether a failed step's outputs still reach the job is GitHub's
+rule rather than this action's. The code is printed either way, so the log
+always has it.
 
 | Input | What it is |
 |---|---|
 | `paths` | the containers to check, separated by spaces |
-| `version` | which release's single file to run; defaults to the version in the checkout the action came from |
-| `pyz` | a `vdi2770.pyz` you already have. Given, **nothing is downloaded** and the whole step is offline |
+| `version` | which release's single file to run. Left empty it is the version recorded in the action's own checkout — so `@v0.9.0` runs 0.9.0, while `@main` may name a version that has no release yet. The file always comes from this repository's releases, forks included, and **the rules travel with the engine**: an older `version` is an older rule set and may return a different verdict |
+| `pyz` | a `vdi2770.pyz` you already have. Given, **this action downloads nothing** |
+| `sha256` | the hash the fetched file must have — the release prints it beside the file. Left empty, the download is run unverified and the step says so |
 | `args` | anything else for `check`, such as `--json` |
 | `fail-on-finding` | `true` by default: a non-zero verdict fails the step. `false` succeeds and fills `exit-code` |
 
-The action fetches one file and then runs it. If your runners have no route out,
-commit the single file and point `pyz` at it — the check itself has never opened
-a socket, and with `pyz` neither does the step around it.
+The runner needs a Python on `PATH` as `python`; `actions/setup-python` is the
+usual way to be sure. And the action ships **in 0.9.0** — until that tag exists,
+the `@v0.9.0` line above does not resolve.
+
+The action fetches one file and then runs it. If fetching a release asset is not
+allowed on your runners — or you would rather run bytes you have reviewed —
+commit the single file and point `pyz` at it: the step then contacts nothing
+beyond GitHub, which the runner already reached to get here. The checker opens
+no socket for any input either way; the download is the action's, not the
+tool's.
 
 ## What it will not tell you
 

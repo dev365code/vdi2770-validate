@@ -7,8 +7,8 @@ Sections through 0.7.0 had their wording tidied after their tags; the text each 
 Who should take this release: anyone whose CI reads the exit code, anyone whose
 delivery reached the PDF/A scan's budget and saw it name, among "declared"
 files, one the container had not declared, anyone who keeps reports and compares
-them, because one of them could differ from itself, and anyone who would rather
-write one line of workflow than three.
+them, because one of them could differ from itself, and anyone who would rather gate a
+workflow on a `uses:` line than on an install script they maintain.
 
 **A command-line usage error has its own exit code.** A bad option, a missing
 argument or an unknown subcommand exited 2 -- the code that also means "nothing
@@ -17,7 +17,7 @@ exits 64 (`EX_USAGE`) now, and 2 means only that nothing could be read; `--help`
 lists the codes.
 
 **There is a GitHub Action now.** `uses: dev365code/vdi2770-validate@v0.9.0`
-runs the same single file your terminal would, in a workflow, and fails the step
+runs the same engine, from the same release, in a workflow, and fails the step
 with the code the checker returned rather than a flattened failure -- `1` for a
 finding, `64` for a mistyped command line. Hand it `pyz:` and it downloads
 nothing at all. It is a fourth door onto the same engine, not a second
