@@ -1,12 +1,13 @@
 """The same container must produce the same bytes, twice, and regardless of the
 order its members happen to be stored in."""
 import io
+import re
 import zipfile
 
 from vdi2770_validate.model import MAX_LISTED_PER_RULE
 from vdi2770_validate.runner import check_bytes, check_file
 
-from conftest import CLEAN_DOCUMENT
+from conftest import CLEAN_DOCUMENT, CORPUS, FIXTURES
 from vdi2770_validate import report as rendering
 
 
@@ -137,3 +138,42 @@ def test_the_hash_seed_does_not_reach_the_output(tmp_path):
     z9 = [f for f in json.loads(json.loads(outputs[0])[1])["findings"] if f["rule"] == "Z9"]
     assert z9 and z9[0]["detail"].count(",") >= 5, (
         "Z9 must be naming several folders, or its truncated list proves nothing")
+
+
+def test_two_runs_are_byte_identical_when_a_check_could_not_finish():
+    """The clean path was the only one this module ever ran twice.
+
+    A document the schema check gives up on reports the exception's own words,
+    and `XMLResourceExceeded` names the object it gave up on -- including the
+    address that object happened to live at. Two runs of one file then differ in
+    bytes, which is the single thing this module exists to forbid. It surfaced
+    from the outside: the same container checked in two interpreters produced
+    two reports, and the only difference in either was the address.
+    """
+    fixture = FIXTURES / "x4-too-deep.zip"
+    data = fixture.read_bytes()
+    a = rendering.as_json(check_bytes(data, fixture.name))
+    b = rendering.as_json(check_bytes(data, fixture.name))
+    assert a == b
+
+
+def test_no_report_carries_a_memory_address():
+    """Addresses are the shape this file cannot see coming.
+
+    Byte-identity within one process is not enough: `id()` is stable for the
+    life of an object, so a report can repeat an address run after run inside
+    one interpreter and still differ between two. Every place that renders an
+    exception's text into a finding can carry one, so the corpus is swept rather
+    than the one container that was caught.
+    """
+    addr = re.compile(r"0x[0-9a-fA-F]{4,}")
+    carrying = []
+    for z in sorted({p.name: p for p in
+                     [*FIXTURES.glob("*.zip"), *CORPUS.glob("*.zip"),
+                      *(CORPUS / "container").glob("*.zip")]}.values()):
+        text = rendering.as_json(check_bytes(z.read_bytes(), z.name))
+        if addr.search(text):
+            carrying.append(z.name)
+    assert not carrying, (
+        f"these reports name a memory address, so they are not reproducible "
+        f"between runs and they print this tool's internals at a reader: {carrying}")

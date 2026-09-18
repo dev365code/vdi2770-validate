@@ -13,12 +13,27 @@ had no opinion about that.
 from __future__ import annotations
 
 import enum
+import re
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
 
 from vdi2770.model import Defect, Location
 from vdi2770.xmlread import NS, UnsafeXml, XmlTooLarge
 from vdi2770.zipread import MAIN_PDF, MAIN_XML, METADATA_XML, Kind
+
+#: An exception that names an object names the address it happened to live at,
+#: because that is what `repr` does. Rendered into a finding, that address makes
+#: two runs of one container differ in bytes -- the tool's own promise, broken by
+#: a detail line -- and shows a reader an internal that tells them nothing. It is
+#: removed rather than the whole message: the rest of what the exception said is
+#: the only account of what went wrong that reaches the report.
+_ADDRESS = re.compile(r" at 0x[0-9a-fA-F]+")
+
+
+def without_addresses(text: str) -> str:
+    """The exception's words, minus the addresses they mention."""
+    return _ADDRESS.sub("", text)
+
 
 __all__ = ["About", "Defect", "Finding", "Kind", "Location", "MAIN_PDF", "MAIN_XML", "METADATA_XML",
            "NS", "Obligation", "Report", "Rule", "Severity", "UnsafeXml", "XmlTooLarge"]

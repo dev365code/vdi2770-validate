@@ -19,7 +19,7 @@ from vdi2770.zipread import Kind
 from . import xsdvalidate
 from .agreement import refuse_if_disagreeing
 from .catalog import rule
-from .model import MAIN_XML, METADATA_XML, NS, Finding, Location, Report
+from .model import MAIN_XML, METADATA_XML, NS, Finding, Location, Report, without_addresses
 from .names import folder_path
 from .rules import container as r_container
 from .rules import delivery as r_delivery
@@ -49,7 +49,7 @@ def _into(report, findings, where, what: str) -> None:
     except Exception as e:                       # noqa: BLE001 - that is the point
         r = rule("X5")
         report.add(Finding(r, r.title, where,
-                           detail=f"the {what} checks: {type(e).__name__}: {e}"))
+                           detail=f"the {what} checks: {type(e).__name__}: {without_addresses(str(e))}"))
 
 
 # The reader bounds one document; this bounds the sum of them.
@@ -104,7 +104,7 @@ def _step(report, where, what: str, fn, *args, fix: Optional[str] = None):
         return fn(*args)
     except Exception as e:                       # noqa: BLE001 - that is the point
         r = rule("X5")
-        report.add(Finding(r, r.title, where, detail=f"the {what} step: {type(e).__name__}: {e}",
+        report.add(Finding(r, r.title, where, detail=f"the {what} step: {type(e).__name__}: {without_addresses(str(e))}",
                            fix=fix))
         return _CRASHED
 
@@ -356,7 +356,7 @@ def check_bytes(data: bytes, name: str) -> Report:
             except Exception as e:               # noqa: BLE001
                 r = rule("X5")
                 report.add(Finding(r, r.title, c.where,
-                                   detail=f"the parse step: {type(e).__name__}: {e}"))
+                                   detail=f"the parse step: {type(e).__name__}: {without_addresses(str(e))}"))
                 tree = None
             if tree is not None:
                 document = _step(report, c.where, "document", build, tree,

@@ -15,6 +15,7 @@ from typing import List, Optional
 
 from vdi2770.xmlread import Node
 
+from .model import without_addresses
 from .resources import schema_text
 
 _SEG = re.compile(r"^(?:\{(?P<ns>[^}]*)\})?(?P<tag>[^\[/]+)(?:\[(?P<idx>\d+)\])?$")
@@ -59,7 +60,7 @@ def _rendered(errors, tree: Node) -> List[dict]:
 
 
 def _one_line(e: BaseException) -> str:
-    return f"{type(e).__name__}: {_first_line(str(e))[:200]}".rstrip(": ")
+    return f"{type(e).__name__}: {_first_line(without_addresses(str(e)))[:200]}".rstrip(": ")
 
 
 def _resolve(root: Node, path: str, kids_of=None) -> Optional[Node]:
@@ -127,7 +128,8 @@ def validate(data: bytes, tree: Node) -> List[dict]:
         schema = _schema()
     except Exception as e:                       # noqa: BLE001 - any failure is ours
         return [{"broken": "install", "line": None, "column": None, "path": "",
-                 "reason": f"the bundled schema could not be loaded: {e}"}]
+                 "reason": "the bundled schema could not be loaded: "
+                           + without_addresses(str(e))}]
 
     out: List[dict] = []
     try:

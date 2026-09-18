@@ -14,6 +14,12 @@ could be read" -- so a CI job could not tell a typo from an empty drop folder. I
 exits 64 (`EX_USAGE`) now, and 2 means only that nothing could be read; `--help`
 lists the codes.
 
+**A report no longer names a memory address.** When the schema check gave up on
+a document it passed the exception's words through, and one of those exceptions
+names the object it gave up on -- address included. The same container then
+produced a different report on every run. The address is gone and the rest of
+the message stays, wherever an exception's words reach a reader.
+
 **A cut-short PDF scan no longer calls an undeclared file "declared".** When a
 read spends its budget for inflating PDF streams, `Z5` names the files whose
 search for a PDF/A claim it could not finish. The reserved `VDI2770_Main.pdf` is
