@@ -163,7 +163,10 @@ def test_the_stub_really_is_what_ran(tmp_path):
     above would be measuring something else."""
     _, _, log = _run(tmp_path, 3)
     assert "stub ran:" in log, log[-300:]
-    assert shutil.which("python3", path=str(tmp_path / "bin")), "the stub was never on PATH"
+    # The file, not `shutil.which`: on Windows that asks for an extension a
+    # shell script does not have, and the CI row there failed on the premise
+    # while the thing it was a premise for had worked.
+    assert (tmp_path / "bin" / "python3").exists(), "the stub was never written"
 
 
 def test_a_runner_with_no_python_is_told_so(tmp_path):
