@@ -260,19 +260,24 @@ def main(argv=None) -> int:
               f"({now['absolute_seconds']['pdf_layer']}s)")
         return 0
 
-    recorded = budgets_for(load(), key)
-    if not recorded:
-        raise NoBaseline(
-            f"no budget recorded for {key}. Run `python tools/time_budget.py --write` "
-            f"on this platform when the machine is quiet, and commit the file -- "
-            f"another platform's number would not mean anything here")
-    # The seconds, printed beside the ratio rather than instead of it: when a
-    # factor moves, the first question is which half moved, and a reader who
-    # only has the ratio cannot tell a slower tree from a faster yardstick.
+    # What this machine measured, printed before anything is compared -- and the
+    # seconds beside the ratios rather than instead of them: when a factor moves,
+    # the first question is which half moved, and a reader holding only the ratio
+    # cannot tell a slower tree from a faster yardstick. It also means a platform
+    # with no budget yet still reports its numbers, which are exactly the numbers
+    # somebody needs in order to record one.
     print(f"{key}: corpus {now['absolute_seconds']['corpus_pass']}s, "
           f"pdf layer {now['absolute_seconds']['pdf_layer']}s, "
           f"yardstick {now['yardstick_seconds'] * 1000:.3f}ms "
-          f"({now['containers']} containers, {now['pdfs']} PDFs)")
+          f"({now['containers']} containers, {now['pdfs']} PDFs) -> {now['budgets']}")
+
+    recorded = budgets_for(load(), key)
+    if not recorded:
+        raise NoBaseline(
+            f"no budget recorded for {key}; measured {now['budgets']} here just now. "
+            f"Run `python tools/time_budget.py --write` on this platform when the "
+            f"machine is quiet and commit the file -- another platform's number "
+            f"would not mean anything here")
     bad = False
     for key, measured in now["budgets"].items():
         verdict = judge(measured, recorded.get(key))
