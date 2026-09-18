@@ -162,9 +162,10 @@ TABLE = [
 
     ("gates/the-action-hands-back-the-code-it-got",
      "action.yml",
-     '        exit "$rc"',
+     '        # The code, not a flattened failure: a job that cannot tell 64 from 1\n        # cannot tell its own typo from somebody\'s bad container.\n        exit "$rc"',
      '        exit 0',
-     ["tests/test_the_action_runs_the_tool_and_keeps_its_code.py"],
+     ["tests/test_the_action_runs_the_tool_and_keeps_its_code.py",
+      "tests/test_the_action_behaves_the_way_its_names_claim.py"],
      "an entrance that swallows the verdict is worse than no entrance: the "
      "workflow goes green over a container the same tool rejects in a terminal"),
 

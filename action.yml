@@ -40,10 +40,9 @@ inputs:
   fail-on-finding:
     description: >
       Fail the step when the checker returns anything but 0. True by default,
-      because a gate that does not stop anything is decoration. Set it false to
-      succeed and read `exit-code` instead: whether a *failed* step still hands
-      its outputs on is GitHub's rule rather than this action's, so this is the
-      way to be sure of the number.
+      because a gate that does not stop anything is decoration. Set it false when
+      you want the job to carry on and read `exit-code` instead -- to report
+      rather than to stop.
     required: false
     default: "true"
 
@@ -52,11 +51,17 @@ outputs:
     description: >
       What the checker returned: 0 nothing at the fail severity, 1 a finding or
       an unreadable path, 2 nothing could be read, 3 the install disagreed with
-      itself, 64 a usage error. Certain to be readable with
-      `fail-on-finding: false`; with the default the step fails, and whether a
-      failed step's outputs reach the job is GitHub's rule, not this action's.
-      The code is printed either way, so the log always has it.
+      itself, 64 a usage error. Readable in both modes -- a failed step does
+      still publish this, which CI measured rather than assumed -- so with the
+      default you need `continue-on-error: true` on the step to reach the line
+      that reads it. The code is printed either way.
     value: ${{ steps.check.outputs.exit-code }}
+  pyz:
+    description: >
+      The single file this step ran -- the one you handed over, or the one it
+      fetched. Published so a caller can ask that file what version it is rather
+      than trusting that the right one was chosen.
+    value: ${{ steps.check.outputs.pyz }}
 
 runs:
   using: "composite"
@@ -69,14 +74,27 @@ runs:
       shell: bash
       env:
         WANTED: ${{ inputs.version }}
+        ACTION_REF: ${{ github.action_ref }}
         ACTION_PATH: ${{ github.action_path }}
         WANT_SHA: ${{ inputs.sha256 }}
       run: |
         set -euo pipefail
         version="$WANTED"
+        # The ref the caller actually wrote, when it looks like a release: this
+        # repository tags the validator `v*` and the reader `sdk-v*`, and the
+        # file this action ran was reading the *reader's* `__version__`. They
+        # agree today and did not at 0.6.0, where the default would quietly have
+        # fetched 0.4.0 -- "a checker nobody asked for", which is what the error
+        # below says it refuses to do.
         if [ -z "$version" ]; then
-          version=$(sed -n 's/^__version__ = "\(.*\)"$/\1/p' \
-            "$ACTION_PATH/packages/vdi2770/src/vdi2770/__init__.py")
+          case "$ACTION_REF" in
+            v[0-9]*) version="${ACTION_REF#v}" ;;
+          esac
+        fi
+        # A branch, a commit, or `./`: fall back to the version this tree
+        # publishes, which is the top-level one -- the `v*` stream.
+        if [ -z "$version" ]; then
+          version=$(sed -n 's/^version = "\(.*\)"$/\1/p' "$ACTION_PATH/pyproject.toml" | head -1)
         fi
         if [ -z "$version" ]; then
           echo "::error::cannot tell which version to fetch, and guessing one would run a checker nobody asked for"
@@ -87,9 +105,18 @@ runs:
         out="${RUNNER_TEMP:-/tmp}/vdi2770.pyz"
         curl --fail --silent --show-error --location --output "$out" "$url"
         if [ -n "$WANT_SHA" ]; then
-          got=$(python -c "import hashlib,sys;print(hashlib.sha256(open(sys.argv[1],'rb').read()).hexdigest())" "$out")
-          if [ "$got" != "$WANT_SHA" ]; then
-            echo "::error::the file at $url hashes to $got and you asked for $WANT_SHA"
+          # `sha256sum`/`shasum`, not the interpreter: this step runs before
+          # anything has established that a Python exists, and on macOS runners
+          # without `actions/setup-python` it does not.
+          if command -v sha256sum >/dev/null 2>&1; then
+            got=$(sha256sum "$out" | cut -d" " -f1)
+          else
+            got=$(shasum -a 256 "$out" | cut -d" " -f1)
+          fi
+          want=$(printf '%s' "$WANT_SHA" | tr 'A-Z' 'a-z' | tr -d '[:space:]')
+          got=$(printf '%s' "$got" | tr 'A-Z' 'a-z')
+          if [ "$got" != "$want" ]; then
+            echo "::error::the file at $url hashes to $got and you asked for $want"
             exit 1
           fi
           echo "sha256 matches what you asked for"
@@ -115,9 +142,39 @@ runs:
         # container could be read". A workflow would then blame a supplier for a
         # typo in its own YAML.
         if [ -z "$PYZ" ] || [ ! -f "$PYZ" ]; then
-          echo "::error::no checker to run at '''$PYZ'''. Give pyz: a file that exists, or leave it empty to fetch one."
+          echo "::error::no checker to run at [$PYZ]. Give pyz: a file that exists, or leave it empty to fetch one."
           exit 64
         fi
+        # `python3` first, then `python`. macOS runners ship neither under the
+        # bare name unless `actions/setup-python` ran, and a missing interpreter
+        # must say so rather than surface as exit 127 -- which the codes below
+        # would otherwise be asked to call a verdict.
+        PY=$(command -v python3 || command -v python || true)
+        if [ -z "$PY" ]; then
+          echo "::error::no python on PATH. Add actions/setup-python before this step, or put one there."
+          exit 64
+        fi
+        # Build the argument list by hand. `paths` written as a YAML block is one
+        # container per line -- which is the only way to name a file whose
+        # directory has a space in it, and directories do. Written on one line it
+        # is still space-separated, the way the input has always been documented.
+        newline=$(printf '\nx'); newline=${newline%x}
+        old_ifs=$IFS
+        set -f                          # a container called `a[1].zip` is a file,
+                                        # not a pattern, and `*.zip` is not this
+                                        # action's to expand
+        IFS=' '
+        # shellcheck disable=SC2086
+        set -- $EXTRA
+        case $PATHS in
+          *"$newline"*) IFS=$newline ;;
+          *)            IFS=' ' ;;
+        esac
+        # shellcheck disable=SC2086
+        set -- "$@" $PATHS
+        IFS=$old_ifs
+        set +f
+
         # `|| rc=$?`, not a bare call followed by `$?`. GitHub runs `shell: bash`
         # as `bash --noprofile --norc -e -o pipefail`, so errexit is already on
         # before this script says anything: a bare call that exits non-zero ends
@@ -126,13 +183,22 @@ runs:
         # as "a failed step publishes no outputs" because the output was never
         # written. `set -uo pipefail` above does not turn `-e` off, and this line
         # is why it does not need to.
-        #
-        # Word-split deliberately: `paths` and `args` are lists written the way a
-        # person writes them on one line.
         rc=0
-        # shellcheck disable=SC2086
-        python "$PYZ" check $EXTRA $PATHS || rc=$?
+        "$PY" "$PYZ" check "$@" || rc=$?
+
+        # Only the codes this tool defines are verdicts. 127 is "no python here",
+        # 126 is "not executable"; reported as a verdict they would say a
+        # container has a finding when nothing looked at one -- and in report
+        # mode the step would go green over a run that never happened.
+        case "$rc" in
+          0|1|2|3|64) ;;
+          *)
+            echo "::error::the checker did not run (exit $rc); this is not a verdict on any container"
+            exit "$rc"
+            ;;
+        esac
         echo "exit-code=$rc" >> "$GITHUB_OUTPUT"
+        echo "pyz=$PYZ" >> "$GITHUB_OUTPUT"
         # Written before either branch, because it is the only place the code
         # exists: on the failing branch GitHub discards this action's outputs,
         # and the line above is then what the log has and the job does not.

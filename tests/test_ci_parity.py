@@ -184,6 +184,10 @@ def test_ci_runs_nothing_the_gate_does_not():
         # publishes has to check the result where the result exists -- and what
         # it asserts is the action's behaviour, not anything about this tree.
         'test "${{ steps.',
+        # Same job, same reason: asking the file the action fetched what version
+        # it is. Exiting 0 would also happen if the fetch resolved some other
+        # release, and only the file can say which one ran.
+        'got=$(python "${{ steps.',
     )
     #: And the third kind: a gate CI runs that `make check` does not, with the
     #: reason. `OUTSIDE_CHECK` says why a target is not in `check`; this says

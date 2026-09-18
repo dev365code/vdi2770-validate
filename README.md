@@ -165,10 +165,11 @@ command line or a `pyz:` that is not there — ask for it:
 - run: echo "the checker said ${{ steps.vdi.outputs.exit-code }}"
 ```
 
-Ask for the number when you want to branch on it: a step that fails is the
-verdict, and whether a failed step's outputs still reach the job is GitHub's
-rule rather than this action's. The code is printed either way, so the log
-always has it.
+`exit-code` is filled in either way — a failed step does still publish it, which
+this repository's CI measures on every push rather than taking on trust. What
+`fail-on-finding: false` buys you is a step that *succeeds*, so the job carries
+on to whatever reads the number; with the default you would add
+`continue-on-error: true` to get that far.
 
 | Input | What it is |
 |---|---|

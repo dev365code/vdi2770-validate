@@ -28,7 +28,7 @@ def _run_bodies(action):
 
 def test_the_action_runs_the_single_file(action):
     assert action["runs"]["using"] == "composite"
-    ran = [body for body in _run_bodies(action) if re.search(r'python "\$PYZ" check', body)]
+    ran = [body for body in _run_bodies(action) if re.search(r'"\$PY" "\$PYZ" check', body)]
     assert ran, "no step runs the checker; the action would be a door onto nothing"
 
 
@@ -43,7 +43,7 @@ def test_the_exit_code_reaches_the_job(action):
     over -- and the code is written to the output before either branch, so the
     log has it even when the job cannot.
     """
-    body = next(b for b in _run_bodies(action) if 'python "$PYZ" check' in b)
+    body = next(b for b in _run_bodies(action) if '"$PYZ" check' in b)
     assert 'exit-code=$rc' in body, "the code is not published as an output"
     assert re.search(r'exit "\$rc"', body), "the code is computed and then thrown away"
     assert action["outputs"]["exit-code"]["value"] == "${{ steps.check.outputs.exit-code }}"
@@ -61,14 +61,36 @@ def test_the_gate_is_the_default(action):
     assert str(action["inputs"]["fail-on-finding"]["default"]).lower() == "true"
 
 
-def test_no_user_input_is_interpolated_into_a_shell_script(action):
+def test_no_expression_at_all_is_interpolated_into_a_shell_script(action):
     """`${{ inputs.paths }}` inside a `run:` makes a container name a place to
     put commands. Inputs travel as environment variables and are quoted where
-    they are used -- so a file called `; rm -rf /` is a file, not a sentence."""
-    offenders = [body for body in _run_bodies(action) if re.search(r"\$\{\{\s*inputs\.", body)]
+    they are used -- so a file called `; rm -rf /` is a file, not a sentence.
+
+    The rule is not "no inputs" but "no expressions": `github.event.*` carries
+    text strangers write, and this test used to look only for `inputs.`, which
+    is narrower than the sentence above it claims.
+    """
+    offenders = [body for body in _run_bodies(action) if "${{" in body]
     assert not offenders, (
-        "an input is interpolated into a script rather than passed through env: "
-        f"{offenders}")
+        "an expression is interpolated into a script rather than passed through "
+        f"env: {offenders}")
+
+
+def test_the_workflow_only_interpolates_things_it_wrote_itself():
+    """The same rule where this repository uses the action. `steps.*.outcome`
+    and the action's own outputs are ours; anything from `github.event` is a
+    stranger's text and has no business in a shell."""
+    workflow = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))
+    allowed = re.compile(r"^steps\.[\w-]+\.(outcome|outputs\.[\w-]+)$")
+    bad = []
+    for name, job in workflow["jobs"].items():
+        if not name.startswith("the-action"):
+            continue
+        for step in job["steps"]:
+            for expr in re.findall(r"\$\{\{\s*([^}]+?)\s*\}\}", step.get("run", "")):
+                if not allowed.match(expr):
+                    bad.append((name, expr))
+    assert not bad, f"a shell in the action's job interpolates something else: {bad}"
 
 
 def test_only_the_fetch_step_can_reach_the_network(action):
@@ -128,8 +150,8 @@ def test_a_missing_checker_is_the_callers_mistake_and_says_so(action):
     step checks the file is there and exits 64, the code for "you typed it
     wrong", before python is asked.
     """
-    body = next(b for b in _run_bodies(action) if 'python "$PYZ" check' in b)
-    guard = body.split('python "$PYZ" check')[0]
+    body = next(b for b in _run_bodies(action) if '"$PYZ" check' in b)
+    guard = body.split('"$PYZ" check')[0]
     assert '! -f "$PYZ"' in guard, "nothing checks that the checker is actually there"
     assert "exit 64" in guard, "a missing file does not come back as a usage error"
 
@@ -141,7 +163,7 @@ def test_an_unverified_download_is_admitted_out_loud(action):
     """
     assert "sha256" in action["inputs"], "there is no way to pin what gets downloaded"
     fetch = next(s for s in action["runs"]["steps"] if s.get("id") == "fetch")
-    assert "WANT_SHA" in fetch["run"] and "hashlib.sha256" in fetch["run"], (
+    assert "WANT_SHA" in fetch["run"] and ("sha256sum" in fetch["run"] or "shasum" in fetch["run"]), (
         "the hash input exists and nothing checks it")
     assert "without checking a hash" in fetch["run"], (
         "a run that verified nothing has to say so where somebody reads it")
@@ -156,8 +178,8 @@ def test_the_checker_is_allowed_to_fail_without_ending_the_step(action):
     `set -uo pipefail` decided that, and CI failed twice before the flags in
     GitHub's own invocation line explained why.
     """
-    body = next(b for b in _run_bodies(action) if 'python "$PYZ" check' in b)
-    call = next(line for line in body.splitlines() if 'python "$PYZ" check' in line)
+    body = next(b for b in _run_bodies(action) if '"$PYZ" check' in b)
+    call = next(line for line in body.splitlines() if '"$PYZ" check' in line)
     assert call.rstrip().endswith("|| rc=$?"), (
         f"the checker is called in a way errexit would end the step on: {call!r}")
     assert "rc=0" in body.split(call)[0], "rc is read before it is ever set"
