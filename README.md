@@ -279,10 +279,10 @@ What has not moved, and what a build script can rely on:
   making each step raise, and by making the reader hand back nothing for a
   member it accepted.
 - **The exit codes.** `0` no error, `1` at least one finding at the chosen
-  severity or an unreadable path, `2` nothing could be read at all — including
-  a command line this tool rejected, since neither read anything — `3` this tool
+  severity or an unreadable path, `2` nothing could be read at all, `3` this tool
   refused to judge because its two halves disagree about which release they are,
-  and `141` a closed pipe. `3` is not a verdict on any container.
+  `64` a command-line usage error — a bad option, a missing argument, an unknown
+  subcommand — and `141` a closed pipe. `3` is not a verdict on any container.
 - **The command line.** `vdi2770-validate check <container>` and its options.
   There is one console script, and two module doors that run the same code:
   `python -m vdi2770_validate` for anything written against the old name, and
