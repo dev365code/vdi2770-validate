@@ -87,9 +87,16 @@ def test_every_platform_the_gate_runs_on_has_a_budget_of_its_own():
     rather than a gate that quietly compares nothing.
     """
     workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
-    step = workflow.split("run: python tools/time_budget.py --check")[0].rsplit("- name:", 1)[-1]
-    skips_windows = "runner.os != 'Windows'" in step
-    runners = {"Linux"} | (set() if skips_windows else {"Windows"})
+    gating = [block for block in workflow.split("- name:")
+              if "run: python tools/time_budget.py --check\n" in block
+              and "|| true" not in block]
+    # No gating step at all is a legitimate state -- during a measurement round
+    # the step is deliberately non-fatal -- and it must not be read as "every
+    # platform is required", which is what a split() on a missing needle quietly
+    # produced: the message then named platforms nobody had asked for.
+    if not gating:
+        pytest.skip("ci.yml has no gating budget step right now")
+    runners = {"Linux"} | (set() if "runner.os != 'Windows'" in gating[0] else {"Windows"})
 
     recorded = time_budget.load()
     missing = sorted(r for r in runners if not time_budget.budgets_for(recorded, r))
