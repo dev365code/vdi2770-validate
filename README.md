@@ -174,22 +174,27 @@ on to whatever reads the number; with the default you would add
 | Input | What it is |
 |---|---|
 | `paths` | the containers to check, separated by spaces |
-| `version` | which release's single file to run. Left empty it is the version recorded in the action's own checkout — so `@v0.9.0` runs 0.9.0, while `@main` may name a version that has no release yet. The file always comes from this repository's releases, forks included, and **the rules travel with the engine**: an older `version` is an older rule set and may return a different verdict |
-| `pyz` | a `vdi2770.pyz` you already have. Given, **this action downloads nothing** |
-| `sha256` | the hash the fetched file must have — the release prints it beside the file. Left empty, the download is run unverified and the step says so |
+| `version` | which release to install. Left empty it is the ref you pinned — `@v0.9.0` installs 0.9.0 — falling back to the version the action's own checkout publishes, so `@main` may name a version not on the index yet. **The rules travel with the engine**: an older `version` is an older rule set and may return a different verdict |
+| `pyz` | a `vdi2770.pyz` you already have. Given, **this action installs nothing and fetches nothing** |
+| `sha256` | the hash `pyz` must have. For a file carried into a closed network; the default path does not need it, because `pip` checks the index's own hashes |
 | `args` | anything else for `check`, such as `--json` |
 | `fail-on-finding` | `true` by default: a non-zero verdict fails the step. `false` succeeds and fills `exit-code` |
 
-The runner needs a Python on `PATH` as `python`; `actions/setup-python` is the
-usual way to be sure. And the action ships **in 0.9.0** — until that tag exists,
-the `@v0.9.0` line above does not resolve.
+The runner needs a Python on `PATH` (`python3` or `python`); `actions/setup-python`
+is the usual way to be sure. The action ships **in 0.9.0** — until that tag
+exists, the `@v0.9.0` line above does not resolve.
 
-The action fetches one file and then runs it. If fetching a release asset is not
-allowed on your runners — or you would rather run bytes you have reviewed —
-commit the single file and point `pyz` at it: the step then contacts nothing
-beyond GitHub, which the runner already reached to get here. The checker opens
-no socket for any input either way; the download is the action's, not the
-tool's.
+By default the action installs the released checker from PyPI and runs it —
+`pip` checks what the index serves against the hashes the index publishes, and
+publishing to the index is something the release workflow does by itself.
+Release assets are attached by a person, and a person can forget; two of this
+project's own releases carry none, so the default path does not lean on one.
+
+If your runners cannot reach an index at all, commit the single file and point
+`pyz` at it: the step then installs nothing and fetches nothing, and `sha256`
+holds that file to a hash if you want the step to check rather than trust. The
+checker opens no socket for any input either way; reaching the index is the
+action's doing, not the tool's.
 
 ## What it will not tell you
 

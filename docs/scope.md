@@ -27,7 +27,7 @@ failure — files that never claimed at all.
 | Not done | Why |
 |---|---|
 | **Verifying PDF/A conformance** | Needs a full PDF/A validator. Reporting a claim as a verdict would be a lie. |
-| **Fetching anything while checking** | Nothing is fetched for any input, ever. The one exception is not the checker: the GitHub Action downloads the single file it runs, unless you hand it one. See `SECURITY.md`. |
+| **Fetching anything while checking** | Nothing is fetched for any input, ever. The one exception is not the checker: the GitHub Action installs the checker it runs, unless you hand it one with `pyz:`. See `SECURITY.md`. |
 | **Which PDF/A level a document class may use** | The reference implementation treats PDF/A-*b* outside the certificate class as an error. This tool does not verify PDF/A at all, so enforcing which level is allowed would be a verdict about a property it never checked. `P4` reports the claim; whether your process requires a particular level is your rule to apply to it, and ours to stay out of. |
 | **Building containers** | This is a referee, not an authoring tool. |
 | **Fixing anything** | A validator that edits your data is a validator you stop trusting. |

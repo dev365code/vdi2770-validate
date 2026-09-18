@@ -28,7 +28,8 @@ def _run_bodies(action):
 
 def test_the_action_runs_the_single_file(action):
     assert action["runs"]["using"] == "composite"
-    ran = [body for body in _run_bodies(action) if re.search(r'"\$PY" "\$PYZ" check', body)]
+    ran = [body for body in _run_bodies(action) if re.search(r'set -- "\$PY" "\$PYZ" check', body)
+           and re.search(r'set -- "\$PY" -m vdi2770_validate check', body)]
     assert ran, "no step runs the checker; the action would be a door onto nothing"
 
 
@@ -43,7 +44,7 @@ def test_the_exit_code_reaches_the_job(action):
     over -- and the code is written to the output before either branch, so the
     log has it even when the job cannot.
     """
-    body = next(b for b in _run_bodies(action) if '"$PYZ" check' in b)
+    body = next(b for b in _run_bodies(action) if '"$@" || rc=$?' in b)
     assert 'exit-code=$rc' in body, "the code is not published as an output"
     assert re.search(r'exit "\$rc"', body), "the code is computed and then thrown away"
     assert action["outputs"]["exit-code"]["value"] == "${{ steps.check.outputs.exit-code }}"
@@ -93,17 +94,36 @@ def test_the_workflow_only_interpolates_things_it_wrote_itself():
     assert not bad, f"a shell in the action's job interpolates something else: {bad}"
 
 
-def test_only_the_fetch_step_can_reach_the_network(action):
-    """The tool opens no socket for any input. The action may fetch the file it
-    runs -- once, and only when it was not handed one -- and nothing else here
-    is allowed to make that promise smaller."""
+def test_only_the_install_step_can_reach_an_index(action):
+    """The tool opens no socket for any input. The action may install the
+    checker -- once, and only when it was not handed a file -- and nothing else
+    here is allowed to make that promise smaller."""
     reaching = [s for s in action["runs"]["steps"]
                 if "run" in s and re.search(r"\bcurl\b|\bwget\b|pip install", s["run"])]
-    assert len(reaching) == 1 and reaching[0].get("id") == "fetch", (
-        f"more than the fetch step touches the network: {[s.get('id') for s in reaching]}")
+    assert len(reaching) == 1 and reaching[0].get("id") == "obtain", (
+        f"more than the install step reaches out: {[s.get('id') for s in reaching]}")
     assert reaching[0].get("if") == "inputs.pyz == ''", (
-        "the fetch runs even when the caller supplied the file, which is the one "
+        "the install runs even when the caller supplied the file, which is the one "
         "thing carrying your own copy is supposed to avoid")
+
+
+def test_the_default_path_takes_the_release_from_the_index(action):
+    """Release assets are attached by a person, and a person can forget -- two
+    of this repository's own releases carry none. Publishing to the index is
+    what the release workflow does by itself, so that is what the action leans
+    on; `pyz:` remains for a runner that cannot reach an index at all."""
+    install = next(s for s in action["runs"]["steps"] if s.get("id") == "obtain")
+    assert "pip install" in install["run"]
+    assert "vdi2770-validate==$version" in install["run"], (
+        "the install does not pin the version it resolved")
+    assert "--only-binary" in install["run"], (
+        "a source build on somebody else's runner is not this action's to ask for")
+    assert "--target" in install["run"], (
+        "installing into the caller's environment changes a machine this action "
+        "does not own")
+    assert "releases/download" not in ACTION.read_text(encoding="utf-8"), (
+        "the default path is back on a release asset, which is the dependency "
+        "this design removed")
 
 
 def test_the_repository_uses_its_own_action_both_ways(action):
@@ -150,23 +170,21 @@ def test_a_missing_checker_is_the_callers_mistake_and_says_so(action):
     step checks the file is there and exits 64, the code for "you typed it
     wrong", before python is asked.
     """
-    body = next(b for b in _run_bodies(action) if '"$PYZ" check' in b)
-    guard = body.split('"$PYZ" check')[0]
+    body = next(b for b in _run_bodies(action) if '"$@" || rc=$?' in b)
+    guard = body.split('set -- "$PY" "$PYZ" check')[0]
     assert '! -f "$PYZ"' in guard, "nothing checks that the checker is actually there"
     assert "exit 64" in guard, "a missing file does not come back as a usage error"
 
 
-def test_an_unverified_download_is_admitted_out_loud(action):
-    """This project refuses to run a third-party action from a tag. It cannot
-    then hand its own users an unverified executable and say nothing: either the
-    caller passes the hash the release prints, or the step says it did not check.
-    """
-    assert "sha256" in action["inputs"], "there is no way to pin what gets downloaded"
-    fetch = next(s for s in action["runs"]["steps"] if s.get("id") == "fetch")
-    assert "WANT_SHA" in fetch["run"] and ("sha256sum" in fetch["run"] or "shasum" in fetch["run"]), (
+def test_a_carried_file_can_be_pinned_to_a_hash(action):
+    """The default path is an index, and `pip` checks what an index serves. What
+    is left unchecked is a file somebody carried in by hand, so the input that
+    checks *that* stays."""
+    assert "sha256" in action["inputs"], "there is no way to pin a file carried in"
+
+    checking = next(b for b in _run_bodies(action) if "WANT_SHA" in b)
+    assert "sha256sum" in checking or "shasum" in checking, (
         "the hash input exists and nothing checks it")
-    assert "without checking a hash" in fetch["run"], (
-        "a run that verified nothing has to say so where somebody reads it")
 
 
 def test_the_checker_is_allowed_to_fail_without_ending_the_step(action):
@@ -178,8 +196,8 @@ def test_the_checker_is_allowed_to_fail_without_ending_the_step(action):
     `set -uo pipefail` decided that, and CI failed twice before the flags in
     GitHub's own invocation line explained why.
     """
-    body = next(b for b in _run_bodies(action) if '"$PYZ" check' in b)
-    call = next(line for line in body.splitlines() if '"$PYZ" check' in line)
+    body = next(b for b in _run_bodies(action) if '"$@" || rc=$?' in b)
+    call = next(line for line in body.splitlines() if line.strip().startswith('"$@"'))
     assert call.rstrip().endswith("|| rc=$?"), (
         f"the checker is called in a way errexit would end the step on: {call!r}")
     assert "rc=0" in body.split(call)[0], "rc is read before it is ever set"

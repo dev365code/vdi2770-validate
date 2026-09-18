@@ -19,8 +19,10 @@ lists the codes.
 **There is a GitHub Action now.** `uses: dev365code/vdi2770-validate@v0.9.0`
 runs the same engine, from the same release, in a workflow, and fails the step
 with the code the checker returned rather than a flattened failure -- `1` for a
-finding, `64` for a mistyped command line. Hand it `pyz:` and it downloads
-nothing at all. It is a fourth door onto the same engine, not a second
+finding, `64` for a mistyped command line. It installs the release from the
+index, so nothing about it depends on somebody remembering to attach a file;
+hand it `pyz:` and it installs nothing at all, which is what a runner with no
+route to an index needs. A fourth door onto the same engine, not a second
 implementation of anything.
 
 **A report no longer names a memory address.** When the schema check gave up on

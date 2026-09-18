@@ -156,11 +156,11 @@ jobs:
       - name: Build the single file this working tree produces
         run: python tools/build_zipapp.py --check
       # The offline path: a file you already have, and nothing fetched.
-      # `version` names a release that cannot exist, so if the fetch ever stopped
-      # being skipped this step would go red instead of quietly downloading. The
-      # promise is "given `pyz`, this action downloads nothing"; a test that reads
-      # the `if:` proves the text, and this proves the behaviour.
-      - name: A conforming container passes, with nothing fetched
+      # `version` names a release that cannot exist, so if the install ever
+      # stopped being skipped this step would go red instead of quietly reaching
+      # an index. The promise is "given `pyz`, this action installs nothing"; a
+      # test that reads the `if:` proves the text, and this proves the behaviour.
+      - name: A conforming container passes, with nothing installed
         uses: ./
         with:
           pyz: dist/vdi2770.pyz
@@ -199,18 +199,19 @@ jobs:
           test "${{ steps.reported.outputs.exit-code }}" = 1 || { echo "::error::expected exit 1 for a finding, got '${{ steps.reported.outputs.exit-code }}'"; exit 1; }
       # The fetching path, against a release that exists. It proves the download
       # and the version input, which the offline path above deliberately skips.
-      - name: A published release can be fetched and run
-        id: fetched
+      - name: A published release installs and runs
+        id: installed
         uses: ./
         with:
           version: "0.8.2"
           paths: corpus/examples/container/documentcontainer.zip
-      # Exiting 0 would also happen if the fetch resolved some *other* release,
+      # Exiting 0 would also happen if the install resolved some *other* release,
       # which is precisely the failure this repository's two tag streams make
-      # possible. So ask the file that ran what it is.
-      - name: The file that ran is the release that was asked for
+      # possible. So ask what ran what it is.
+      - name: The version that ran is the one that was asked for
         run: |
-          got=$(python "${{ steps.fetched.outputs.pyz }}" --version)
+          test "${{ steps.installed.outputs.version }}" = "0.8.2" || { echo "::error::the action resolved ${{ steps.installed.outputs.version }}"; exit 1; }
+          got=$(PYTHONPATH="$RUNNER_TEMP/vdi2770-validate" python -m vdi2770_validate --version)
           test "$got" = "0.8.2" || { echo "::error::asked for 0.8.2 and ran $got"; exit 1; }
 
   # The README's shortest example is `- uses:` and `paths:` -- no `setup-python`,
@@ -220,7 +221,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: The shortest example, against a release that exists
+      - name: The shortest example, against a release on the index
         uses: ./
         with:
           version: "0.8.2"

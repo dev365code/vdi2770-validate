@@ -1,8 +1,9 @@
 name: "VDI 2770 container check"
 description: >
-  Check VDI 2770 document containers in a workflow. One file, no install, no
-  socket opened while checking, and the exit code the command line gives you.
-  Point `pyz` at a file you already have and this action downloads nothing.
+  Check VDI 2770 document containers in a workflow. It installs the released
+  checker from PyPI and runs it, or runs a single file you already have -- no
+  socket opened while checking either way, and the exit code the command line
+  gives you.
 author: "dev365code"
 branding:
   icon: "check-square"
@@ -20,17 +21,18 @@ inputs:
     default: ""
   pyz:
     description: >
-      A `vdi2770.pyz` you already have. Given, this action downloads nothing --
-      which is the point of carrying one file. (The job around it still reached
+      A `vdi2770.pyz` you already have. Given, this action installs nothing and
+      fetches nothing -- which is the point of carrying one file, and what a
+      runner with no route to an index needs. (The job around it still reached
       GitHub to get here; that is the runner's doing, not this step's.)
     required: false
     default: ""
   sha256:
     description: >
-      The SHA-256 the fetched file must have, which the release prints beside
-      it. Left empty, the download is run unverified -- this action holds third
-      parties to pinned commits and should not ask for more trust than it gives,
-      so say so here rather than in a comment nobody reads.
+      The SHA-256 that `pyz` must have. Useful when the file is carried into a
+      closed network and somebody wants the step to check it rather than trust
+      it. The default path does not need this: `pip` checks what an index serves
+      against the hashes that index publishes.
     required: false
     default: ""
   args:
@@ -58,10 +60,16 @@ outputs:
     value: ${{ steps.check.outputs.exit-code }}
   pyz:
     description: >
-      The single file this step ran -- the one you handed over, or the one it
-      fetched. Published so a caller can ask that file what version it is rather
-      than trusting that the right one was chosen.
+      The single file this step ran, when it ran one. Empty on the default path,
+      which installs instead. Published so a caller can ask the file itself what
+      version it is rather than trust that the right one was chosen.
     value: ${{ steps.check.outputs.pyz }}
+  version:
+    description: >
+      The version this step decided to run -- from `version`, or from the ref
+      you pinned, or from the tree the action came from. Published because
+      "which checker ran" is the question a verdict is only meaningful against.
+    value: ${{ steps.obtain.outputs.version }}
 
 runs:
   using: "composite"
@@ -69,91 +77,105 @@ runs:
     # The only step that touches the network, and only when you have not handed
     # it a file. The check itself opens no socket for any input, ever -- that is
     # the tool's own promise and its own test, not this action's.
-    - id: fetch
+    # The only step that reaches an index, and only when you have not handed it
+    # a file. It installs the released checker rather than downloading a release
+    # asset: assets are attached by a person and a person can forget, while
+    # publishing to the index is what the release workflow does on its own. The
+    # check itself opens no socket for any input -- that is the tool's promise
+    # and its own test, not this action's.
+    - id: obtain
       if: inputs.pyz == ''
       shell: bash
       env:
         WANTED: ${{ inputs.version }}
         ACTION_REF: ${{ github.action_ref }}
         ACTION_PATH: ${{ github.action_path }}
-        WANT_SHA: ${{ inputs.sha256 }}
       run: |
         set -euo pipefail
-        version="$WANTED"
-        # The ref the caller actually wrote, when it looks like a release: this
-        # repository tags the validator `v*` and the reader `sdk-v*`, and the
-        # file this action ran was reading the *reader's* `__version__`. They
-        # agree today and did not at 0.6.0, where the default would quietly have
-        # fetched 0.4.0 -- "a checker nobody asked for", which is what the error
-        # below says it refuses to do.
-        if [ -z "$version" ]; then
-          case "$ACTION_REF" in
-            v[0-9]*) version="${ACTION_REF#v}" ;;
-          esac
-        fi
-        # A branch, a commit, or `./`: fall back to the version this tree
-        # publishes, which is the top-level one -- the `v*` stream.
-        if [ -z "$version" ]; then
-          version=$(sed -n 's/^version = "\(.*\)"$/\1/p' "$ACTION_PATH/pyproject.toml" | head -1)
-        fi
-        if [ -z "$version" ]; then
-          echo "::error::cannot tell which version to fetch, and guessing one would run a checker nobody asked for"
-          exit 1
-        fi
-        url="https://github.com/dev365code/vdi2770-validate/releases/download/v${version}/vdi2770.pyz"
-        echo "fetching $url"
-        out="${RUNNER_TEMP:-/tmp}/vdi2770.pyz"
-        curl --fail --silent --show-error --location --output "$out" "$url"
-        if [ -n "$WANT_SHA" ]; then
-          # `sha256sum`/`shasum`, not the interpreter: this step runs before
-          # anything has established that a Python exists, and on macOS runners
-          # without `actions/setup-python` it does not.
-          if command -v sha256sum >/dev/null 2>&1; then
-            got=$(sha256sum "$out" | cut -d" " -f1)
-          else
-            got=$(shasum -a 256 "$out" | cut -d" " -f1)
-          fi
-          want=$(printf '%s' "$WANT_SHA" | tr 'A-Z' 'a-z' | tr -d '[:space:]')
-          got=$(printf '%s' "$got" | tr 'A-Z' 'a-z')
-          if [ "$got" != "$want" ]; then
-            echo "::error::the file at $url hashes to $got and you asked for $want"
-            exit 1
-          fi
-          echo "sha256 matches what you asked for"
-        else
-          echo "note: fetched without checking a hash. The release prints one beside the file; pass it as sha256: to have this step check it."
-        fi
-        echo "pyz=$out" >> "$GITHUB_OUTPUT"
-
-    # Inputs reach the shell as environment variables and are quoted here.
-    # Interpolating `${{ inputs.paths }}` into the script would make a container
-    # name a place to put commands.
-    - id: check
-      shell: bash
-      env:
-        PYZ: ${{ inputs.pyz != '' && inputs.pyz || steps.fetch.outputs.pyz }}
-        PATHS: ${{ inputs.paths }}
-        EXTRA: ${{ inputs.args }}
-        FAIL_ON_FINDING: ${{ inputs.fail-on-finding }}
-      run: |
-        set -uo pipefail
-        # A path that is not there is the caller's mistake, and CPython would
-        # report it as exit 2 -- the code this tool reserves for "nothing in the
-        # container could be read". A workflow would then blame a supplier for a
-        # typo in its own YAML.
-        if [ -z "$PYZ" ] || [ ! -f "$PYZ" ]; then
-          echo "::error::no checker to run at [$PYZ]. Give pyz: a file that exists, or leave it empty to fetch one."
-          exit 64
-        fi
-        # `python3` first, then `python`. macOS runners ship neither under the
-        # bare name unless `actions/setup-python` ran, and a missing interpreter
-        # must say so rather than surface as exit 127 -- which the codes below
-        # would otherwise be asked to call a verdict.
         PY=$(command -v python3 || command -v python || true)
         if [ -z "$PY" ]; then
           echo "::error::no python on PATH. Add actions/setup-python before this step, or put one there."
           exit 64
         fi
+
+        version="$WANTED"
+        # The ref the caller actually wrote, when it looks like a release: this
+        # repository tags the validator `v*` and the reader `sdk-v*`, and reading
+        # the reader's `__version__` would have chosen 0.4.0 for `@v0.6.0` --
+        # "a checker nobody asked for", which is what this step refuses to do.
+        if [ -z "$version" ]; then
+          case "$ACTION_REF" in
+            v[0-9]*) version="${ACTION_REF#v}" ;;
+          esac
+        fi
+        # A branch, a commit, or `./`: the version this tree publishes, which is
+        # the top-level one -- the `v*` stream.
+        if [ -z "$version" ]; then
+          version=$(sed -n 's/^version = "\(.*\)"$/\1/p' "$ACTION_PATH/pyproject.toml" | head -1)
+        fi
+        if [ -z "$version" ]; then
+          echo "::error::cannot tell which version to run, and guessing one would run a checker nobody asked for"
+          exit 64
+        fi
+
+        target="${RUNNER_TEMP:-/tmp}/vdi2770-validate"
+        # `--target`, so the caller's environment is left as it was found; and
+        # `--only-binary :all:`, so nothing is built from source on a machine
+        # this action does not own.
+        "$PY" -m pip install --disable-pip-version-check --no-input \
+          --only-binary :all: --target "$target" "vdi2770-validate==$version"
+        echo "target=$target" >> "$GITHUB_OUTPUT"
+        echo "version=$version" >> "$GITHUB_OUTPUT"
+
+    - id: check
+      shell: bash
+      env:
+        PYZ: ${{ inputs.pyz }}
+        WANT_SHA: ${{ inputs.sha256 }}
+        TARGET: ${{ steps.obtain.outputs.target }}
+        PATHS: ${{ inputs.paths }}
+        EXTRA: ${{ inputs.args }}
+        FAIL_ON_FINDING: ${{ inputs.fail-on-finding }}
+      run: |
+        set -uo pipefail
+        PY=$(command -v python3 || command -v python || true)
+        if [ -z "$PY" ]; then
+          echo "::error::no python on PATH. Add actions/setup-python before this step, or put one there."
+          exit 64
+        fi
+
+        # Two ways in, one invocation. The single file when you carried one --
+        # and then its hash, if you asked for that; the installed distribution
+        # otherwise. Nothing downstream knows which door was used.
+        if [ -n "$PYZ" ]; then
+          if [ ! -f "$PYZ" ]; then
+            echo "::error::no checker to run at [$PYZ]. Give pyz: a file that exists, or leave it empty to install one."
+            exit 64
+          fi
+          if [ -n "$WANT_SHA" ]; then
+            if command -v sha256sum >/dev/null 2>&1; then
+              got=$(sha256sum "$PYZ" | cut -d" " -f1)
+            else
+              got=$(shasum -a 256 "$PYZ" | cut -d" " -f1)
+            fi
+            want=$(printf '%s' "$WANT_SHA" | tr 'A-Z' 'a-z' | tr -d '[:space:]')
+            got=$(printf '%s' "$got" | tr 'A-Z' 'a-z')
+            if [ "$got" != "$want" ]; then
+              echo "::error::[$PYZ] hashes to $got and you asked for $want"
+              exit 64
+            fi
+          fi
+          echo "pyz=$PYZ" >> "$GITHUB_OUTPUT"
+          set -- "$PY" "$PYZ" check
+        else
+          if [ -z "${TARGET:-}" ] || [ ! -d "${TARGET:-}" ]; then
+            echo "::error::nothing was installed to run. The install step did not leave anything behind."
+            exit 64
+          fi
+          export PYTHONPATH="$TARGET"
+          set -- "$PY" -m vdi2770_validate check
+        fi
+
         # Build the argument list by hand. `paths` written as a YAML block is one
         # container per line -- which is the only way to name a file whose
         # directory has a space in it, and directories do. Written on one line it
@@ -165,7 +187,7 @@ runs:
                                         # action's to expand
         IFS=' '
         # shellcheck disable=SC2086
-        set -- $EXTRA
+        set -- "$@" $EXTRA
         case $PATHS in
           *"$newline"*) IFS=$newline ;;
           *)            IFS=' ' ;;
@@ -184,7 +206,7 @@ runs:
         # written. `set -uo pipefail` above does not turn `-e` off, and this line
         # is why it does not need to.
         rc=0
-        "$PY" "$PYZ" check "$@" || rc=$?
+        "$@" || rc=$?
 
         # Only the codes this tool defines are verdicts. 127 is "no python here",
         # 126 is "not executable"; reported as a verdict they would say a

@@ -28,9 +28,25 @@ BASH = shutil.which("bash") or "/bin/bash"
 GITHUB_BASH = [BASH, "--noprofile", "--norc", "-e", "-o", "pipefail"]
 
 
-def _check_step_body():
+def _check_step():
     action = yaml.safe_load(ACTION.read_text(encoding="utf-8"))
-    return next(s["run"] for s in action["runs"]["steps"] if s.get("id") == "check")
+    return next(s for s in action["runs"]["steps"] if s.get("id") == "check")
+
+
+def _check_step_body():
+    return _check_step()["run"]
+
+
+def _declared_env():
+    """Every variable the step declares, empty by default.
+
+    GitHub defines all of them -- an input nobody passed arrives as an empty
+    string, not as an absent name -- and the step runs under `set -u`. A harness
+    that sets only the interesting ones tests a shell nobody will ever run, and
+    this one did: three tests failed on `WANT_SHA: unbound variable` the moment
+    the action grew an input.
+    """
+    return dict.fromkeys(_check_step().get("env", {}), "")
 
 
 def _run(tmp_path, exit_code, fail_on_finding="true", pyz=None, paths="a.zip"):
@@ -55,11 +71,11 @@ def _run(tmp_path, exit_code, fail_on_finding="true", pyz=None, paths="a.zip"):
     output.write_text("", encoding="utf-8")
 
     env = dict(os.environ)
+    env.update(_declared_env())
     env.update({
         "PATH": f"{stub_dir}:{os.environ['PATH']}",
         "PYZ": str(checker),
         "PATHS": paths,
-        "EXTRA": "",
         "FAIL_ON_FINDING": fail_on_finding,
         "GITHUB_OUTPUT": str(output),
     })
@@ -123,9 +139,10 @@ def _argv_from(tmp_path, paths):
     output = tmp_path / "GITHUB_OUTPUT"
     output.write_text("", encoding="utf-8")
     env = dict(os.environ)
+    env.update(_declared_env())
     env.update({
         "PATH": f"{stub_dir}:{os.environ['PATH']}", "PYZ": str(checker),
-        "PATHS": paths, "EXTRA": "", "FAIL_ON_FINDING": "true",
+        "PATHS": paths, "FAIL_ON_FINDING": "true",
         "GITHUB_OUTPUT": str(output), "ARGV_FILE": str(stub_seen),
     })
     subprocess.run([*GITHUB_BASH, str(script)], capture_output=True, text=True, env=env)
@@ -182,7 +199,8 @@ def test_a_runner_with_no_python_is_told_so(tmp_path):
     output = tmp_path / "GITHUB_OUTPUT"
     output.write_text("", encoding="utf-8")
     env = dict(os.environ)
-    env.update({"PATH": str(empty), "PYZ": str(checker), "PATHS": "a.zip", "EXTRA": "",
+    env.update(_declared_env())
+    env.update({"PATH": str(empty), "PYZ": str(checker), "PATHS": "a.zip",
                 "FAIL_ON_FINDING": "true", "GITHUB_OUTPUT": str(output)})
     done = subprocess.run([*GITHUB_BASH, str(script)], capture_output=True, text=True, env=env)
     assert done.returncode == 64, f"no interpreter came back as {done.returncode}"
@@ -205,3 +223,74 @@ def test_the_exit_codes_the_action_publishes_are_the_ones_the_tool_defines():
     assert in_cli, "could not read the tool's own exit-code table"
     assert in_cli <= in_docs, (
         f"the tool defines exit codes the action does not describe: {sorted(in_cli - in_docs)}")
+
+
+def _run_installed(tmp_path, target, exit_code=0):
+    """The default door: nothing carried in, something installed instead."""
+    stub_dir = tmp_path / "bin"
+    stub_dir.mkdir(exist_ok=True)
+    argv_file = tmp_path / "argv.txt"
+    for name in ("python3", "python"):
+        stub = stub_dir / name
+        stub.write_text(
+            '#!/bin/sh\n: > "$ARGV_FILE"\nfor a in "$@"; do printf "%s\\n" "$a" >> "$ARGV_FILE"; done\n'
+            f'printf "PYTHONPATH=%s\\n" "${{PYTHONPATH:-}}" >> "$ARGV_FILE"\nexit {exit_code}\n',
+            encoding="utf-8")
+        stub.chmod(0o755)
+    script = tmp_path / "step.sh"
+    script.write_text(_check_step_body(), encoding="utf-8")
+    output = tmp_path / "GITHUB_OUTPUT"
+    output.write_text("", encoding="utf-8")
+    env = dict(os.environ)
+    env.update(_declared_env())
+    env.update({"PATH": f"{stub_dir}:{os.environ['PATH']}", "PYZ": "", "TARGET": str(target),
+                "PATHS": "a.zip", "FAIL_ON_FINDING": "true",
+                "GITHUB_OUTPUT": str(output), "ARGV_FILE": str(argv_file)})
+    done = subprocess.run([*GITHUB_BASH, str(script)], capture_output=True, text=True, env=env)
+    seen = argv_file.read_text(encoding="utf-8").splitlines() if argv_file.exists() else []
+    return done.returncode, seen, done.stdout + done.stderr
+
+
+def test_the_default_door_runs_what_was_installed(tmp_path):
+    """No `pyz:` means the released distribution, run out of the directory the
+    install step left it in -- and the caller's own environment untouched, which
+    is why it is `--target` and `PYTHONPATH` rather than a plain install."""
+    target = tmp_path / "installed"
+    target.mkdir()
+    status, argv, log = _run_installed(tmp_path, target)
+    assert status == 0, log[-300:]
+    assert argv[:3] == ["-m", "vdi2770_validate", "check"], argv
+    assert f"PYTHONPATH={target}" in argv, argv
+
+
+def test_nothing_installed_is_a_usage_error_not_a_verdict(tmp_path):
+    """If the install step left nothing behind, there is no checker -- and a
+    step that reported that as a finding would be blaming a container for it."""
+    status, _, log = _run_installed(tmp_path, tmp_path / "never-made")
+    assert status == 64, f"came back as {status}"
+    assert "nothing was installed" in log
+
+
+def test_a_carried_file_can_be_held_to_a_hash(tmp_path):
+    """The reason `sha256:` still exists once the default path is an index: a
+    file carried into a closed network is checked by somebody, or by nobody."""
+    checker = tmp_path / "vdi2770.pyz"
+    checker.write_bytes(b"not the file you were promised")
+    stub_dir = tmp_path / "bin"
+    stub_dir.mkdir(exist_ok=True)
+    for name in ("python3", "python"):
+        stub = stub_dir / name
+        stub.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+        stub.chmod(0o755)
+    script = tmp_path / "step.sh"
+    script.write_text(_check_step_body(), encoding="utf-8")
+    output = tmp_path / "GITHUB_OUTPUT"
+    output.write_text("", encoding="utf-8")
+    env = dict(os.environ)
+    env.update(_declared_env())
+    env.update({"PATH": f"{stub_dir}:{os.environ['PATH']}", "PYZ": str(checker),
+                "WANT_SHA": "0" * 64, "PATHS": "a.zip", "FAIL_ON_FINDING": "true",
+                "GITHUB_OUTPUT": str(output)})
+    done = subprocess.run([*GITHUB_BASH, str(script)], capture_output=True, text=True, env=env)
+    assert done.returncode == 64, f"a file that is not what was asked for came back as {done.returncode}"
+    assert "hashes to" in done.stdout + done.stderr
