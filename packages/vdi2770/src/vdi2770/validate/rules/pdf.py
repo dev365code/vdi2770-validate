@@ -93,6 +93,7 @@ def _targets(container, document):
 
 def check(container, document, facts_for) -> Iterator[Finding]:
     unopened = []
+    reserved_cut = False
     for name, why in _targets(container, document):
         facts = facts_for(name)
         if facts is None:
@@ -112,6 +113,7 @@ def check(container, document, facts_for) -> Iterator[Finding]:
             # tool axis -- an ordinary multi-page PDF reaches them.
             if cut_short and stopped.reason == "read":
                 unopened.append((name, stopped))
+                reserved_cut = reserved_cut or why == RESERVED
         where = container.where.child(member=name, subject=name)
         if facts.is_pdf is False:
             r = rule("P1")
@@ -275,7 +277,7 @@ def check(container, document, facts_for) -> Iterator[Finding]:
             r, r.title, container.where,
             detail=f"this read spent its {gib:g} GiB budget for inflating PDF "
                    f"streams, so the search for a PDF/A claim inside "
-                   f"{len(unopened)} declared PDF "
+                   f"{len(unopened)} {'PDF' if reserved_cut else 'declared PDF'} "
                    f"file{'' if one else 's'} was cut short for: "
                    + ", ".join(as_written(n) for n, _ in unopened[:MAX_NAMED])
                    + (", ..." if len(unopened) > MAX_NAMED else "")

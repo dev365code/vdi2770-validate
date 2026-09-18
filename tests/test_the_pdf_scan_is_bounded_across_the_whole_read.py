@@ -667,3 +667,48 @@ def test_one_files_allowance_is_the_smaller_of_the_two(counted, monkeypatch):
     pdfread.reader(1)(_GREEDY)
     assert counted[0] <= pdfread.MAX_INFLATED_PER_STREAM, (
         f"one byte of allowance bought {counted[0]} bytes of inflation")
+
+
+def test_a_reserved_main_cut_short_is_not_called_a_declared_pdf(counted, monkeypatch):
+    """`Z5` counts the files whose PDF/A-claim search the read budget cut short.
+
+    The reserved `VDI2770_Main.pdf` is a target the container never declared --
+    it is owed because the recipient opens it as a PDF, not because a
+    `DigitalFile` named it -- so counting it among "declared PDF files" says
+    something the container did not.
+    """
+    base = zipfile.ZipFile(CLEAN_DOCUMENTATION)
+    files = {n: base.read(n) for n in base.namelist()}
+    # Make the reserved Main UNDECLARED: drop its DigitalFile so it reaches the
+    # scan as the reserved name, not as a declared rendition.
+    xml = files["VDI2770_Main.xml"].decode("utf-8")
+    xml = re.sub(r"\s*<[A-Za-z:]*DigitalFile[^>]*>VDI2770_Main\.pdf</[A-Za-z:]*DigitalFile>",
+                 "", xml)
+    assert "VDI2770_Main.pdf" not in xml, "the Main is still declared"
+    files["VDI2770_Main.xml"] = xml.encode("utf-8")
+    files["VDI2770_Main.pdf"] = _GREEDY   # present, greedy, and now undeclared
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as out:
+        for name, body in files.items():
+            out.writestr(name, body)
+    monkeypatch.setattr(pdfread, "MAX_INFLATED_PER_READ", 1_000_000)
+    report = check_bytes(buf.getvalue(), "reserved-cut-short.zip")
+    z5 = [f for f in report.findings if f.rule.id == "Z5"]
+    assert z5, sorted(f.rule.id for f in report.findings)
+    assert "VDI2770_Main.pdf" in z5[0].detail, z5[0].detail
+    assert "declared" not in z5[0].detail, (
+        "Z5 called the undeclared reserved main a 'declared PDF file': "
+        + z5[0].detail)
+
+
+def test_declared_renditions_cut_short_are_still_called_declared(counted, monkeypatch):
+    """The other side: when every cut-short file is a declared rendition, the
+    sentence still says so. The reserved-name fix must not take that word from
+    the ordinary case.
+    """
+    monkeypatch.setattr(pdfread, "MAX_INFLATED_PER_READ", 1_000_000)
+    report = check_bytes(_container_of({f"c{i}.pdf": _GREEDY for i in range(3)}),
+                         "declared-cut-short.zip")
+    z5 = [f for f in report.findings if f.rule.id == "Z5"]
+    assert z5, sorted(f.rule.id for f in report.findings)
+    assert "declared PDF" in z5[0].detail, z5[0].detail

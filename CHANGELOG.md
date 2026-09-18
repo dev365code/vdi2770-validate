@@ -2,6 +2,20 @@
 
 Sections through 0.7.0 had their wording tidied after their tags; the text each version carried when it was published is in that tag's own `CHANGELOG.md`. From 0.8.0 on, a released section is frozen at its tag and takes only appended `*(Correction ...)*` lines.
 
+## 0.9.0 — unreleased
+
+Who should take this release: anyone whose delivery reached the PDF/A scan's
+budget and saw it name, among "declared" files, one the container had not
+declared.
+
+**A cut-short PDF scan no longer calls an undeclared file "declared".** When a
+read spends its budget for inflating PDF streams, `Z5` names the files whose
+search for a PDF/A claim it could not finish. The reserved `VDI2770_Main.pdf` is
+scanned whether or not a `DigitalFile` declared it -- the recipient opens it as a
+PDF regardless -- so counting it among "declared PDF files" said something the
+container did not. The count reads "PDF files" when the reserved name is among
+them, and keeps "declared" for the ordinary all-declared case.
+
 ## 0.8.2 — 2026-09-18
 
 Who should take this release: anyone on 0.8.1 or earlier who checks
