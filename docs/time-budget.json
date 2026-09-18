@@ -10,8 +10,8 @@
    "pdf_layer_over_reference": 61.5
   },
   "Windows": {
-   "corpus_over_reference": 285.2,
-   "pdf_layer_over_reference": 75.5
+   "corpus_over_reference": 307.6,
+   "pdf_layer_over_reference": 78.6
   }
  },
  "recorded_on": {
@@ -55,12 +55,41 @@
    "python": "3.12",
    "containers": 49,
    "pdfs": 47,
-   "absolute_seconds": {
-    "corpus_pass": 0.7119,
-    "pdf_layer": 0.1885
+   "samples": {
+    "corpus_over_reference": [
+     285.2,
+     333.5,
+     277.9,
+     334.0
+    ],
+    "pdf_layer_over_reference": [
+     75.5,
+     84.7,
+     75.8,
+     78.4
+    ]
    },
-   "yardstick_seconds": 0.002496,
-   "_from": "read out of CI run 35358714204. One measurement, not three: this is the only interpreter the gate runs there. A single sample is thin, which the generous thresholds absorb -- and a second sample will arrive with the next push, as a factor rather than as a new budget."
+   "_from": "four measurements on that runner -- CI runs 35358714204, 35366103013, 35368187722 and 35371208576 -- averaged. The first version recorded the first of them alone, and it sat at the low end: healthy runs came back at 1.17x, close enough to the warning line that ordinary runner noise would have started reporting a regression nobody caused.",
+   "absolute_seconds": {
+    "corpus_pass": [
+     0.7119,
+     0.4117,
+     0.6913,
+     0.7601
+    ],
+    "pdf_layer": [
+     0.1885,
+     0.1045,
+     0.1887,
+     0.1783
+    ]
+   },
+   "yardstick_seconds": [
+    0.002496,
+    0.001235,
+    0.002488,
+    0.002276
+   ]
   }
  },
  "thresholds": {
