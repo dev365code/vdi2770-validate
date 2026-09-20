@@ -194,6 +194,10 @@
           "Tuple[DocumentId, ...]",
           "no-default"
         ],
+        "objects": [
+          "Tuple[ObjectId, ...]",
+          "has-default"
+        ],
         "src": [
           "Location",
           "has-default"
@@ -430,6 +434,31 @@
         "find_all",
         "text_of"
       ],
+      "properties": []
+    },
+    "ObjectId": {
+      "bases": [
+        "object"
+      ],
+      "fields": {
+        "id": [
+          "str",
+          "no-default"
+        ],
+        "object_type": [
+          "str",
+          "no-default"
+        ],
+        "ref_type": [
+          "str",
+          "no-default"
+        ],
+        "src": [
+          "Location",
+          "has-default"
+        ]
+      },
+      "methods": [],
       "properties": []
     },
     "PdfFacts": {

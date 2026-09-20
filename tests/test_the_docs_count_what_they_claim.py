@@ -232,7 +232,10 @@ def test_the_divergence_numbers_are_derived_from_the_sweep_and_the_catalogue():
 
     words = {6: "Six", 13: "thirteen", 28: "Twenty-eight", 2: "two"}
 
-    citations = sum(len(r["refKeys"]) for r in catalogue["rules"])
+    # `.get`: a rule may honestly cite nothing -- `M13` is our own reading of
+    # a contradiction, with no observed key behind it -- and a docs gate that
+    # raises KeyError instead of reporting is a gate nobody can read.
+    citations = sum(len(r.get("refKeys", ())) for r in catalogue["rules"])
     assert f"{words[28] if citations == 28 else citations} citations" in prose, (
         f"the rules cite {citations} keys; divergences.md says otherwise")
 

@@ -216,21 +216,33 @@ alongside `refCodes` (display only).
 
 ## 5. What the reference reports that we do not
 
-Three containers in the sweep draw a warning or an error from the reference and
-nothing louder than a note from us. One is the PDF/A conformance policy in §2
-(`REP_038` on `document-invalid-pdfa-b.zip`). The other two are open:
+One container in the sweep draws a warning from the reference and nothing louder
+than a note from us:
 
 | container | reference | us |
 | --- | --- | --- |
 | `documentcontainer-invalid.zip` | `REP_018` (warning) | a PDF/A note, nothing else |
-| `objectreferences.zip` | `D_010` (warning) | a PDF/A note, nothing else |
 
-We cannot say here what those two assert. The reference's message *keys* are what
-the sweep records, and the file vendored into this repository holds its message
+We cannot say here what it asserts. The reference's message *keys* are what the
+sweep records, and the file vendored into this repository holds its message
 *values* — see §4 — so the sentence behind a key is not something this repository
-can print. Naming them unexplained is better than averaging them away, and a test
-in this repository fails if the sweep ever grows a fourth that this page does not
+can print. Naming it unexplained is better than averaging it away, and a test in
+this repository fails if the sweep ever grows a second that this page does not
 name.
+
+**`D_010` is still open, and it left this list for a reason that does not settle
+it.** `M13` now reports a contradiction inside `objectreferences.zip` — one
+identifier filed as a `Type` in one document container and an `Individual` in
+another — so that container is no longer one we are silent about, and the test
+above no longer names it. That is a fact about our silence, not about `D_010`.
+Whether the two findings are about the same thing is not something this
+repository can establish: the key-to-message mapping is not vendored here, so we
+cannot read what `D_010` claims.
+
+It closes when one of two things happens: somebody reads the guideline text and
+can say what the reference is asserting, or the sweep turns up an input where the
+reference reports `D_010` and `M13` is quiet — which would prove they are
+different questions. Until then this paragraph is the record.
 
 ### The rest are progress lines
 

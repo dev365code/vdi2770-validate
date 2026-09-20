@@ -84,6 +84,26 @@ def refers_to(documents) -> Iterator[tuple]:
                     yield container, doc, relationship, target
 
 
+def objects_claimed(documents) -> dict:
+    """Each object identifier, and every kind it was filed under, with where.
+
+    Keyed case-insensitively for the same reason `_identity` folds case: a
+    delivery that writes `ABC1223` in one container and `abc1223` in the other
+    is naming one thing, and a comparison that says otherwise misses the
+    contradiction it exists to find.
+    """
+    seen = {}
+    for container, doc in documents:
+        for obj in doc.objects:
+            if not obj.id or not obj.object_type:
+                # Nothing to contradict. An absent type is the schema's problem
+                # and an absent id is not an identifier.
+                continue
+            seen.setdefault(obj.id.strip().casefold(), []).append(
+                (obj.object_type.strip(), obj, container))
+    return seen
+
+
 def check(documents, read_everything: bool) -> Iterator[Finding]:
     """`documents` is (container, document) for every document the run modelled.
 
@@ -102,6 +122,25 @@ def check(documents, read_everything: bool) -> Iterator[Finding]:
     the sender, which is the failure this project keeps a severity axis to
     avoid.
     """
+    # Said before the guard below, deliberately. `M11`/`M12` need a complete
+    # read because "no document declares this" cannot be established from half a
+    # delivery -- but a contradiction is the other shape. Two declarations that
+    # disagree are a fact about what was actually read, and a tool that had
+    # already seen both and stayed quiet because a third container would not
+    # open would be hiding something it knew.
+    for _folded, claims in sorted(objects_claimed(documents).items()):
+        kinds = {kind for kind, _obj, _c in claims}
+        if len(kinds) < 2:
+            continue
+        r = rule("M13")
+        first = claims[0][1]
+        shown = ", ".join(sorted(kinds))
+        where = ", ".join(sorted({c.path or "the delivery" for _k, _o, c in claims}))
+        yield Finding(
+            r, r.title, (first.src or claims[0][2].where),
+            detail=f"{first.id!r} is declared as {shown} in this delivery "
+                   f"({where}); an identifier names one kind of thing")
+
     if not read_everything:
         return
     # One set per referring document, because each excludes its own

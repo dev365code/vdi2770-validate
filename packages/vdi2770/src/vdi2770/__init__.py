@@ -42,6 +42,7 @@ from .domain import (
     DocumentId,
     DocumentRelationship,
     DocumentVersion,
+    ObjectId,
     Tagged,
 )
 from .domain import build as build_document
@@ -69,6 +70,7 @@ __version__ = "0.9.1"
 __all__ = ["ClassName", "Classification", "Container", "DEFECT_KINDS", "Defect", "Description",
            "DigitalFile", "Document", "DocumentId", "DocumentRelationship", "DocumentVersion",
            "Kind", "Location",
+           "ObjectId",
            "MAIN_PDF", "MAIN_XML", "METADATA_XML", "Member", "NS", "Node", "PdfFacts",
            "REFUSAL_KINDS", "Tagged", "UnsafeXml", "XmlError", "XmlTooLarge", "__version__",
            "build_document", "member_bytes", "member_reader", "nfc", "parse_xml", "read_container",

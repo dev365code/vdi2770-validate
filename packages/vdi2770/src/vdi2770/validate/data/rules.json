@@ -258,6 +258,18 @@
       "about": "container"
     },
     {
+      "id": "M13",
+      "layer": "metadata",
+      "severity": "warning",
+      "obligation": "ours",
+      "whyOurs": "Nobody told us this. ObjectType distinguishes a product model from the one machine carrying that serial, and a delivery that files the same identifier under both has contradicted itself -- which holds without reading the guideline, because no reading makes a number a model and an instance of it at once. The guideline is paid and unread here, so we do not claim it says so. The observation is one: ABC1223 in objectreferences.zip, a Type in one document container and an Individual in its sibling. The broader question -- whether a documentation container must share an object with the documents it bundles -- is not asked by any rule here, because a plant-level bundle carrying sub-component documents may differ for good reasons and we cannot cite anything that forbids it.",
+      "title": "One identifier is called both a type and an individual",
+      "remedy": "Decide which the identifier names and say the same thing in both places: ObjectType=\"Type\" for a product model, ObjectType=\"Individual\" for one manufactured item. If the two documents really are about different things, give them different identifiers.",
+      "refKeys": [],
+      "refCodes": [],
+      "about": "container"
+    },
+    {
       "id": "P1",
       "layer": "pdf",
       "severity": "error",

@@ -3,7 +3,7 @@
 
 [![CI](https://github.com/dev365code/vdi2770-validate/actions/workflows/ci.yml/badge.svg)](https://github.com/dev365code/vdi2770-validate/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/vdi2770-validate?label=PyPI&color=2f6fb3)](https://pypi.org/project/vdi2770-validate/)
-[![rules](https://img.shields.io/badge/rules-41_each_with_a_remedy-a8721c)](https://github.com/dev365code/vdi2770-validate/blob/main/docs/rules.md)
+[![rules](https://img.shields.io/badge/rules-42_each_with_a_remedy-a8721c)](https://github.com/dev365code/vdi2770-validate/blob/main/docs/rules.md)
 [![license](https://img.shields.io/badge/license-Apache--2.0-5f6a75)](https://github.com/dev365code/vdi2770-validate/blob/main/LICENSE)
 
 &nbsp;**Apache-2.0**&nbsp;·&nbsp;**Python 3.9 · 3.12 · 3.13**&nbsp;·&nbsp;**pure Python, nothing compiled**&nbsp;·&nbsp;**the check opens no socket**
@@ -232,7 +232,7 @@ iiRDS, if that is the handover format you are on.
   rendered as [docs/rules.md](https://github.com/dev365code/vdi2770-validate/blob/main/docs/rules.md) — each
   rule carries where its requirement comes from, a remedy sentence, and — where the
   reference implementation checks the same thing — the message keys it uses.
-- **28 of 41 rules have a minimal fixture pair** — a container that violates the rule
+- **28 of 42 rules have a minimal fixture pair** — a container that violates the rule
   and a conforming one differing in as little as a single member. A 29th has a violating
   fixture and no counterpart, because there is no conforming version of *this file is not
   a ZIP*. The rest are exercised by the vendored corpus. A rule that fires nowhere fails
@@ -253,7 +253,7 @@ An item moves right when it is built and checked, not when it is decided.
 timeline
     title Where vdi2770-validate is going
     Shipped : Reader and rules, same version, one tag, one install
-            : 41 rules, each with a source and a remedy
+            : 42 rules, each with a source and a remedy
             : Versioned JSON report, exit codes, single-file offline build
     Building : An obligation index — what is asked for, and how much of it is covered
              : Deeper documentation-container checks
@@ -324,8 +324,8 @@ minor version.
 What has not moved, and what a build script can rely on:
 
 - **The verdicts.** A rule that fires today fires tomorrow on the same
-  container, and a rule's severity does not change quietly. Thirty-nine of the
-  41 fire on a container in the corpus and are compared against the reference
+  container, and a rule's severity does not change quietly. Forty of the
+  42 fire on a container in the corpus and are compared against the reference
   implementation, with the divergences published rather than reconciled; the
   other two — `X0` and `X5` — say that this tool could not run a check, which no
   container can cause, and they are exercised by breaking the installation, by

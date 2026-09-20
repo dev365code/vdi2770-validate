@@ -103,6 +103,26 @@ class DocumentId:
 
 
 @dataclass(frozen=True)
+class ObjectId:
+    """An object a document is about, and which kind of object it is.
+
+    `ObjectType` is the distinction that matters: `Type` names a product model,
+    `Individual` names the one machine on the floor carrying that serial. The
+    same string under both is a delivery contradicting itself -- there is no
+    reading in which a number is simultaneously a model and an instance of it.
+
+    `RefType` is kept because it is what the identifier is *for* (a serial
+    number, an order number) and a caller comparing identifiers across a
+    delivery needs it to say which axis two ids share.
+    """
+
+    object_type: str
+    ref_type: str
+    id: str
+    src: Location = Location()
+
+
+@dataclass(frozen=True)
 class DocumentRelationship:
     """A pointer from this document version to another document.
 
@@ -128,6 +148,7 @@ class Document:
     identifiers: Tuple[DocumentId, ...]
     classifications: Tuple[Classification, ...]
     versions: Tuple[DocumentVersion, ...]
+    objects: Tuple[ObjectId, ...] = ()
     src: Location = Location()
 
     @property
@@ -143,6 +164,27 @@ class Document:
 
 def _loc(base: Location, n: Node, subject: Optional[str] = None) -> Location:
     return base.child(line=n.line, column=n.column, subject=subject)
+
+
+def _object_ids(root: Node, base: Location) -> Tuple[ObjectId, ...]:
+    """The objects a document says it is about.
+
+    `ObjectId` sits under `ReferencedObject` and was in the schema and nowhere
+    in this model, so no caller could ask what a document is about and no rule
+    could compare two documents' answers. `DocumentRelationship` was invisible
+    the same way, for the same length of time.
+
+    Read from the whole subtree rather than from direct children, because the
+    element this is called with is the document root and `ReferencedObject` is a
+    child of it, not of the document.
+    """
+    return tuple(
+        ObjectId(object_type=n.attrib.get("ObjectType", "").strip(),
+                 ref_type=n.attrib.get("RefType", "").strip(),
+                 id=(n.text or "").strip(),
+                 src=_loc(base, n, (n.text or "").strip() or None))
+        for parent in root.find_all("ReferencedObject")
+        for n in parent.find_all("ObjectId"))
 
 
 def _document_ids(parent: Node, base: Location) -> Tuple[DocumentId, ...]:
@@ -162,6 +204,7 @@ def _document_ids(parent: Node, base: Location) -> Tuple[DocumentId, ...]:
 
 def build(root: Node, base: Location) -> Document:
     identifiers = _document_ids(root, base)
+    objects = _object_ids(root, base)
 
     classifications = []
     for c in root.find_all("DocumentClassification"):
@@ -224,4 +267,4 @@ def build(root: Node, base: Location) -> Document:
         ))
 
     return Document(identifiers=identifiers, classifications=tuple(classifications),
-                    versions=tuple(versions), src=_loc(base, root))
+                    versions=tuple(versions), objects=objects, src=_loc(base, root))

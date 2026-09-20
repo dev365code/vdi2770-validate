@@ -561,6 +561,27 @@ TABLE = [
      "release reached the index, and the pair would refuse to run -- which is "
      "what happened to 0.8.2 the day 0.9.0 went out"),
 
+    ("rules/a-contradiction-is-reported-from-what-was-read",
+     "packages/vdi2770/src/vdi2770/validate/rules/delivery.py",
+     "    for _folded, claims in sorted(objects_claimed(documents).items()):",
+     "    for _folded, claims in sorted({}.items()):",
+     ["tests/test_one_identifier_is_one_kind_of_thing.py::"
+      "test_the_corpus_container_that_says_both_is_told_so"],
+     "one identifier filed as both a type and an individual would go unreported "
+     "again, which is the state this delivery layer was in while the model could "
+     "not see an ObjectId at all"),
+
+    ("rules/a-contradiction-does-not-wait-for-a-complete-read",
+     "packages/vdi2770/src/vdi2770/validate/rules/delivery.py",
+     "    for _folded, claims in sorted(objects_claimed(documents).items()):",
+     "    if not read_everything:\n        return\n"
+     "    for _folded, claims in sorted(objects_claimed(documents).items()):",
+     ["tests/test_one_identifier_is_one_kind_of_thing.py::"
+      "test_the_contradiction_is_reported_without_reading_the_whole_delivery"],
+     "the contradiction would be held back whenever some other container in the "
+     "delivery could not be opened -- the tool staying quiet about something it "
+     "had already seen, which is the opposite of what the guard above it is for"),
+
     ("gates/the-pin-names-the-reader-that-was-built",
      "packages/vdi2770/pyproject.toml",
      'version = "0.9.1"',
@@ -1020,7 +1041,7 @@ FRONT_DOOR = [
 
     ("gates/the-badge-counts-the-catalogue",
      "README.md",
-     "rules-41_each_with_a_remedy",
+     "rules-42_each_with_a_remedy",
      "rules-42_each_with_a_remedy",
      ["tests/test_the_front_page_points_at_what_it_shows.py::"
       "test_the_badge_that_counts_rules_counts_the_catalogue"],
