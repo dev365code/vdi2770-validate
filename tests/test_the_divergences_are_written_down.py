@@ -38,7 +38,16 @@ def test_a_verdict_we_do_not_make_is_named_on_the_page():
     # What still has to hold is that the comparison ran at all: an empty sweep
     # would pass this test while establishing nothing, and that is the failure
     # the original guard was reaching for.
-    assert SWEEP["containers"], "the sweep is empty; there is nothing to derive from"
+    # The premise, taken from the side our rules cannot change. "At least one
+    # container is silent" reads the day this gate finishes its job as the day
+    # its premise broke. "The sweep is not empty" is too weak the other way: a
+    # capture that recorded no reference verdicts at all would pass it while
+    # establishing nothing, which is the vacuity the original guard was reaching
+    # for. What has to hold is that the reference said something louder than a
+    # note *somewhere* -- if it did not, there was no comparison to make.
+    assert any(_louder_than_a_note(e["reference"]) for e in SWEEP["containers"].values()), (
+        "the sweep records no reference verdict louder than a note; there is "
+        "nothing here to be silent about and nothing to derive")
     unrecorded = {name: keys for name, keys in silent.items()
                   if name not in PAGE and not any(k in PAGE for k in keys)}
     assert not unrecorded, (

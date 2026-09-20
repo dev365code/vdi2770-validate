@@ -563,7 +563,7 @@ TABLE = [
 
     ("rules/a-contradiction-is-reported-from-what-was-read",
      "packages/vdi2770/src/vdi2770/validate/rules/delivery.py",
-     "    for (_folded_id, axis), claims in sorted(objects_claimed(documents).items()):",
+     "    for _folded_id, claims in sorted(objects_claimed(documents).items()):",
      "    for (_folded_id, axis), claims in sorted({}.items()):",
      ["tests/test_one_identifier_is_one_kind_of_thing.py::"
       "test_the_corpus_container_that_says_both_is_told_so"],
@@ -573,9 +573,9 @@ TABLE = [
 
     ("rules/a-contradiction-does-not-wait-for-a-complete-read",
      "packages/vdi2770/src/vdi2770/validate/rules/delivery.py",
-     "    for (_folded_id, axis), claims in sorted(objects_claimed(documents).items()):",
+     "    for _folded_id, claims in sorted(objects_claimed(documents).items()):",
      "    if not read_everything:\n        return\n"
-     "    for (_folded_id, axis), claims in sorted(objects_claimed(documents).items()):",
+     "    for _folded_id, claims in sorted(objects_claimed(documents).items()):",
      ["tests/test_one_identifier_is_one_kind_of_thing.py::"
       "test_the_contradiction_is_reported_without_reading_the_whole_delivery"],
      "the contradiction would be held back whenever some other container in the "

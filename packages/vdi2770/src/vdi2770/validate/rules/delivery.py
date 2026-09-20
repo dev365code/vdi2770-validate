@@ -115,10 +115,31 @@ def objects_claimed(documents) -> dict:
                 # Nothing to contradict. An absent type is the schema's problem
                 # and an absent id is not an identifier.
                 continue
-            axis = (obj.id.strip().casefold(), obj.ref_type.strip().casefold())
-            seen.setdefault(axis, []).append(
+            seen.setdefault(obj.id.strip().casefold(), []).append(
                 (obj.object_type.strip(), obj, container))
     return seen
+
+
+def _register(ref_type) -> str:
+    """A `RefType` reduced to what two senders would have to agree on."""
+    return " ".join(str(ref_type or "").split()).casefold()
+
+
+def different_registers(a, b) -> bool:
+    """True only when both claims name a register and the two differ.
+
+    Keyed the other way round -- grouping by `(id, RefType)` -- this rule could
+    be switched off by writing a `RefType` on one of two contradicting claims
+    and not the other, or by spelling it `serialNumber` on one side. Measured on
+    this project's own corpus container: one attribute on one side, and the
+    finding disappeared. A rule a sender can silence by adding a word is worse
+    than the false positive it was avoiding.
+
+    So an absent or blank register matches every register, and only two stated
+    and unequal ones mean "different things that happen to be spelled alike".
+    """
+    left, right = _register(a), _register(b)
+    return bool(left) and bool(right) and left != right
 
 
 def check(documents, read_everything: bool) -> Iterator[Finding]:
@@ -145,19 +166,24 @@ def check(documents, read_everything: bool) -> Iterator[Finding]:
     # disagree are a fact about what was actually read, and a tool that had
     # already seen both and stayed quiet because a third container would not
     # open would be hiding something it knew.
-    for (_folded_id, axis), claims in sorted(objects_claimed(documents).items()):
-        kinds = {kind for kind, _obj, _c in claims}
-        if len(kinds) < 2:
+    for _folded_id, claims in sorted(objects_claimed(documents).items()):
+        # Two claims are a contradiction when they disagree about the kind and
+        # nothing says they are about different registers.
+        clash = [(a, b) for i, a in enumerate(claims) for b in claims[i + 1:]
+                 if a[0] != b[0] and not different_registers(a[1].ref_type,
+                                                             b[1].ref_type)]
+        if not clash:
             continue
+        kinds = {kind for pair in clash for kind, _obj, _c in pair}
+        claims = [c for pair in clash for c in pair]
         r = rule("M13")
         first = claims[0][1]
         shown = ", ".join(sorted(kinds))
         where = ", ".join(sorted({c.path or "the delivery" for _k, _o, c in claims}))
         yield Finding(
             r, r.title, (first.src or claims[0][2].where),
-            detail=f"{first.id!r}{f' (as a {axis})' if axis else ''} is declared "
-                   f"as {shown} in this delivery ({where}); an identifier names "
-                   f"one kind of thing")
+            detail=f"{first.id!r} is declared as {shown} in this delivery "
+                   f"({where}); an identifier names one kind of thing")
 
     if not read_everything:
         return

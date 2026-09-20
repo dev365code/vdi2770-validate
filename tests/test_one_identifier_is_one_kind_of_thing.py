@@ -159,6 +159,40 @@ def test_one_register_claimed_two_ways_is_still_caught(tmp_path):
     assert "M13" in ids(p), "one register claiming both kinds went unreported"
 
 
+def test_naming_a_register_on_one_side_only_does_not_silence_the_rule(tmp_path):
+    """The evasion the first draft of this shipped.
+
+    Grouped by `(identifier, RefType)`, a sender could switch this rule off by
+    writing a register on one of two contradicting claims and leaving it off
+    the other -- one attribute, one side. Measured against this project's own
+    corpus container at the time: the finding disappeared. An unstated register
+    has to match every register, or the rule is advisory.
+    """
+    p = _delivery_with_axes(tmp_path, "one-sided.zip", [
+        ("Type", "", "4711"),
+        ("Individual", "serial number", "4711"),
+    ])
+    assert "M13" in ids(p), (
+        "naming a register on one side and not the other silenced a real "
+        "contradiction")
+
+
+def test_a_register_spelled_two_ways_is_one_register(tmp_path):
+    """And the escape must not be reachable by spelling either.
+
+    One register written with different spacing is one register, and a
+    comparison that treats them as two lets a stray space do what the attribute
+    above could not.
+    """
+    p = _delivery_with_axes(tmp_path, "spelled.zip", [
+        ("Type", "serial  number", "4711"),
+        ("Individual", "serial number", "4711"),
+    ])
+    assert "M13" in ids(p), (
+        "the same register written with different spacing was read as two "
+        "registers, which is an escape hatch a space wide")
+
+
 def _delivery_with_axes(tmp_path, name, triples):
     """One document container per (kind, register, identifier)."""
     import re
@@ -183,3 +217,60 @@ def _delivery_with_axes(tmp_path, name, triples):
             z.writestr(n, d)
     p.write_bytes(buf.getvalue())
     return str(p)
+
+
+def test_the_uniqueness_flag_keeps_absent_apart_from_false():
+    """`IsGloballyBiUnique` is parsed and no rule consults it, which is exactly
+    when a parser goes wrong unnoticed.
+
+    Absent is not `False`. A sender who said nothing has not said the identifier
+    is local, and a reader that collapses the two will one day act on a claim
+    nobody made. The corpus carries real `false` values, so this is not
+    hypothetical shape-checking.
+    """
+    from vdi2770.domain import _flag
+
+    assert _flag(None) is None, "an absent attribute became a stated one"
+    assert _flag("true") is True and _flag("1") is True
+    assert _flag("false") is False and _flag("0") is False
+    assert _flag(" TRUE ") is True, "xs:boolean is not case- or space-sensitive"
+    assert _flag("perhaps") is None, "an unreadable value became a decision"
+
+
+def test_the_corpus_uniqueness_flags_are_read_as_written():
+    """And read through the real parse path off a real container.
+
+    `vdi2770_excel.zip` states `IsGloballyBiUnique` both ways, so this is the
+    difference between a parser that works and one that has only been reasoned
+    about.
+    """
+    import glob
+    import zipfile
+
+    import pytest
+
+    from vdi2770 import build_document
+    from vdi2770.model import Location
+    from vdi2770.xmlread import parse
+
+    found = glob.glob("corpus/**/vdi2770_excel.zip", recursive=True)
+    if not found:
+        pytest.skip("the container that carries the flag is not here")
+
+    stated = set()
+    with zipfile.ZipFile(found[0]) as outer:
+        for name in outer.namelist():
+            if not name.endswith(".zip"):
+                continue
+            with zipfile.ZipFile(io.BytesIO(outer.read(name))) as inner:
+                for member in inner.namelist():
+                    if not member.endswith(".xml"):
+                        continue
+                    root = parse(inner.read(member))
+                    doc = build_document(root, Location())
+                    stated |= {o.globally_unique for o in doc.objects}
+
+    assert stated, "premise: this container declares objects at all"
+    assert False in stated, (
+        f"the corpus states IsGloballyBiUnique=\"false\" and the parse never "
+        f"produced False: {stated}")

@@ -119,12 +119,16 @@ class ObjectId:
     object_type: str
     ref_type: str
     id: str
-    #: The schema's own statement that this identifier may be compared outside
-    #: the delivery that carries it. `None` when the attribute is absent, which
-    #: is not the same as `False`. Carried for callers; no rule consults it yet,
-    #: and the rule that compares identifiers says in its own note why.
-    globally_unique: Optional[bool] = None
     src: Location = Location()
+    #: After `src`, for the reason `Document.objects` is last: a defaulted field
+    #: ahead of an existing one re-binds positional construction, and the API
+    #: record stores fields by name, so no gate here can see the order. This
+    #: class is new and unshipped, so nothing can have broken yet -- which is
+    #: the only moment the ordering is free to get right.
+    #:
+    #: The schema's own statement that this identifier may be compared outside
+    #: the delivery carrying it. `None` when absent, which is not `False`.
+    globally_unique: Optional[bool] = None
 
 
 @dataclass(frozen=True)
