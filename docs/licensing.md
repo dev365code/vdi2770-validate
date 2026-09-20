@@ -23,7 +23,7 @@ guideline's words.
 | `ours` | our own judgement | carries `whyOurs`, always |
 
 `obligation` and `refKeys` are independent. A rule may cite a message key from
-the reference implementation while its obligation is `ours`, and five do: the
+the reference implementation while its obligation is `ours`, and six do: the
 key records that the other project checks something in the same area, and the
 obligation records whose claim ours is. `P3` is the clearest case — the reference
 asserts the file carries no PDF/A identification; we assert only that a bounded

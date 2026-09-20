@@ -228,16 +228,17 @@ nothing louder than a note from us. One is the PDF/A conformance policy in §2
 five containers in the sweep, and every one of those now draws a finding here.
 Three draw `F3`, which asks whether a declared media type and the file's own name
 agree — that rule existed and knew two media types, so a `.docx` declared as RTF
-passed it. The other two declare `application/pdf` on a file named `.pdf` whose
-bytes are not a PDF; the name half is right there and the bytes half is `P1`'s,
-which reported them all along. Two halves, two rules, and the sweep now shows a
+passed it. The other two declare `application/pdf` on a file named `.pdf`, so the name
+half is right and the bytes are not. `P1` reports one of them. The other
+declares a member so large the budget refuses it, which `Z5` and `F1` report
+without ever decompressing it -- `P1` never sees those bytes, by design. Two halves, two rules, and the sweep now shows a
 finding on all five.
 
 We cannot say here what the remaining one asserts. The reference's message *keys* are what
 the sweep records, and the file vendored into this repository holds its message
 *values* — see §4 — so the sentence behind a key is not something this repository
-can print. Naming them unexplained is better than averaging them away, and a test
-in this repository fails if the sweep ever grows a fourth that this page does not
+can print. Naming it unexplained is better than averaging it away, and a test
+in this repository fails if the sweep ever grows a third that this page does not
 name.
 
 ### The rest are progress lines

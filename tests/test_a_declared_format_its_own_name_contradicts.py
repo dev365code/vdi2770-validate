@@ -107,3 +107,55 @@ def test_a_parameter_after_the_format_does_not_hide_the_mismatch(tmp_path):
     """`application/rtf; charset=utf-8` is still `application/rtf`."""
     p = with_extra(tmp_path, "param.zip", "application/rtf; charset=utf-8", "B.docx")
     assert "F3" in ids(p), "a media type with a parameter was not read as its type"
+
+
+def test_a_legacy_office_family_carries_more_than_its_everyday_name(tmp_path):
+    """The false positives the first draft of this table would have reported.
+
+    Each of the three legacy Office media types covers a family: a template, a
+    slideshow, an add-in. An inspection form handed over as `.xlt` and training
+    material as `.pps` are ordinary deliveries, correctly declared, and a table
+    naming only `.xls` and `.ppt` would have called both of them wrong -- the
+    single failure this rule cannot afford.
+    """
+    cases = [("application/vnd.ms-excel", "form.xlt"),
+             ("application/vnd.ms-excel", "parts.csv"),
+             ("application/vnd.ms-powerpoint", "training.pps"),
+             ("application/vnd.ms-powerpoint", "theme.pot"),
+             ("application/msword", "form.dot"),
+             ("image/jpeg", "plate.jpe")]
+    for declared, member in cases:
+        p = with_extra(tmp_path, f"ok-{member}.zip", declared, member)
+        assert "F3" not in ids(p), (
+            f"{member} declared {declared} was reported, and that is a correct "
+            f"delivery: the extension is registered for that media type")
+
+
+def test_the_table_is_never_narrower_than_the_registered_set():
+    """The property behind the case list above, asked of every entry at once.
+
+    A future entry added from memory rather than from the registry is the way
+    this rule starts reporting correct deliveries again, and the case list only
+    covers the families somebody thought of.
+    """
+    import mimetypes
+
+    from vdi2770.validate.rules.files import EXTENSION_FOR
+
+    narrower = {}
+    for media_type, ours in EXTENSION_FOR.items():
+        missing = sorted(set(mimetypes.guess_all_extensions(media_type)) - set(ours))
+        if missing:
+            narrower[media_type] = missing
+    assert not narrower, (
+        f"these entries name fewer extensions than are registered for the type, "
+        f"so a correct delivery using one of the others is reported: {narrower}")
+
+
+def test_a_declaration_that_is_not_a_string_is_not_a_crash():
+    """The library is importable and its model is public, so a caller can build
+    a `DigitalFile` by hand. This rule reads an attribute the XML path always
+    fills; a hand-built one need not."""
+    from vdi2770.validate.rules.files import EXTENSION_FOR
+
+    assert EXTENSION_FOR.get((None or "").split(";")[0].strip().lower()) is None

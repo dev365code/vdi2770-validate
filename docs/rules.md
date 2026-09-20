@@ -11,8 +11,8 @@ tool, because both are errors on purpose and severity cannot carry the differenc
 - **`schema`** (1) — the XSD VDI publishes free says so, mechanically
 - **`table`** (2) — a freely published table says so (IDTA 02004)
 - **`container`** (4) — mechanics of ZIP and XML — true without VDI 2770
-- **`reference`** (15) — observed in the MIT reference implementation, **not** verified against the guideline, which is paywalled
-- **`ours`** (19) — our own judgement, and it carries a reason
+- **`reference`** (14) — observed in the MIT reference implementation, **not** verified against the guideline, which is paywalled
+- **`ours`** (20) — our own judgement, and it carries a reason
 
 41 rules.
 
@@ -21,12 +21,12 @@ Where each layer stands:
 | layer | `schema` | `table` | `container` | `reference` | `ours` | total |
 |---|---|---|---|---|---|---|
 | `container` | 0 | 0 | 3 | 3 | 7 | 13 |
-| `files` | 0 | 0 | 0 | 4 | 0 | 4 |
+| `files` | 0 | 0 | 0 | 3 | 1 | 4 |
 | `metadata` | 0 | 2 | 0 | 7 | 3 | 12 |
 | `pdf` | 0 | 0 | 0 | 1 | 4 | 5 |
 | `schema` | 1 | 0 | 1 | 0 | 4 | 6 |
 | `tool` | 0 | 0 | 0 | 0 | 1 | 1 |
-| **total** | **1** | **2** | **4** | **15** | **19** | **41** |
+| **total** | **1** | **2** | **4** | **14** | **20** | **41** |
 
 ## container
 
@@ -154,11 +154,13 @@ Reference implementation: `processor:REP_MESSAGE_006` (displayed as `REP_006`). 
 
 ### `F3` — The declared file format disagrees with the file name
 
-*warning* · obligation `reference`
+*warning* · obligation `ours`
 
 Reference implementation: `core:DigitalFile_VAL2`, `core:DigitalFile_VAL3` (displayed as `DF_002`, `DF_003`). Citing a key records that the other project checks something in the same area; it does not borrow its claim.
 
-**Remedy.** Make FileFormat and the file extension agree — application/pdf with .pdf, application/zip with .zip.
+Why this is ours: The reference implementation was observed refusing one media-type-and-name disagreement, and that is the whole of what was observed: across the swept corpus its DF_002 fires once and DF_003 never. Which other media types have an extension that is not a matter of taste is this project's judgement. The table names fifteen and leaves out text/plain, which is honestly carried by .txt, .log, .md and .csv -- a rule that guessed there would report a correct delivery. So a finding here is our reading, and the cited keys are evidence for the question rather than for the answer.
+
+**Remedy.** Make FileFormat and the file name agree. This rule knows the extensions for a fixed list of media types and says nothing about the rest, so a finding here means the declared type has one customary extension and this file does not carry it.
 
 ### `F4` — A declared file has no name
 
