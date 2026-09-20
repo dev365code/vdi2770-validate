@@ -189,6 +189,14 @@ def test_ci_runs_nothing_the_gate_does_not():
         # release -- this repository has two tag streams, so that is a real way
         # to be wrong -- and only the thing that ran can say which one it was.
         'got=$(PYTHONPATH=',
+        # Asking the index which release is newest. It judges nothing -- it
+        # chooses the input for the two jobs that install a published release.
+        # A number written into the workflow instead has to be hand-edited on
+        # every release and is red until somebody does, and no number from
+        # before 0.9.1 can be made to work at all: those releases ask for their
+        # engine with `>=`, so installing one resolves a newer engine beside an
+        # older command and the tool refuses the mismatch.
+        'v=$(python3 -c "import json,urllib.request',
     )
     #: And the third kind: a gate CI runs that `make check` does not, with the
     #: reason. `OUTSIDE_CHECK` says why a target is not in `check`; this says

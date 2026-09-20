@@ -197,22 +197,42 @@ jobs:
         run: |
           test "${{ steps.reported.outcome }}" = success || { echo "::error::fail-on-finding:false still failed the step"; exit 1; }
           test "${{ steps.reported.outputs.exit-code }}" = 1 || { echo "::error::expected exit 1 for a finding, got '${{ steps.reported.outputs.exit-code }}'"; exit 1; }
+      # Which release? The newest the index serves, asked at run time.
+      #
+      # A number written here has to be hand-edited on every release, and until
+      # somebody does it this job is red -- which is not a worry, it is what
+      # happened: the first push after 0.9.0 went out failed here, because the
+      # number still said 0.8.2. Worse, no number from before 0.9.1 can be made
+      # to work again. Those releases ask for their engine with `>=`, so
+      # installing one now resolves a newer engine beside an older command and
+      # the tool refuses to judge the mismatch. Their metadata is published and
+      # cannot be recalled. "The newest" is the only answer that was true
+      # yesterday and stays true tomorrow.
+      - name: The newest release the index serves
+        id: newest
+        run: |
+          v=$(python3 -c "import json,urllib.request as u;print(json.load(u.urlopen('https://pypi.org/pypi/vdi2770-validate/json'))['info']['version'])")
+          test -n "$v" || { echo "::error::the index named no version"; exit 1; }
+          echo "asking for $v"
+          echo "version=$v" >> "$GITHUB_OUTPUT"
       # The fetching path, against a release that exists. It proves the download
       # and the version input, which the offline path above deliberately skips.
       - name: A published release installs and runs
         id: installed
         uses: ./
         with:
-          version: "0.8.2"
+          version: ${{ steps.newest.outputs.version }}
           paths: corpus/examples/container/documentcontainer.zip
       # Exiting 0 would also happen if the install resolved some *other* release,
       # which is precisely the failure this repository's two tag streams make
       # possible. So ask what ran what it is.
       - name: The version that ran is the one that was asked for
+        env:
+          WANT: ${{ steps.newest.outputs.version }}
         run: |
-          test "${{ steps.installed.outputs.version }}" = "0.8.2" || { echo "::error::the action resolved ${{ steps.installed.outputs.version }}"; exit 1; }
+          test "${{ steps.installed.outputs.version }}" = "$WANT" || { echo "::error::asked for $WANT and the action resolved ${{ steps.installed.outputs.version }}"; exit 1; }
           got=$(PYTHONPATH="$RUNNER_TEMP/vdi2770-validate" python -m vdi2770_validate --version)
-          test "$got" = "0.8.2" || { echo "::error::asked for 0.8.2 and ran $got"; exit 1; }
+          test "$got" = "$WANT" || { echo "::error::asked for $WANT and ran $got"; exit 1; }
 
   # The README's shortest example is `- uses:` and `paths:` -- no `setup-python`,
   # no build. Every other use of the action here is preceded by both, so the line
@@ -221,8 +241,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # The same question as above, asked again rather than passed between jobs:
+      # a reader copying the line gets whatever the index serves them that day.
+      - name: The newest release the index serves
+        id: newest
+        run: |
+          v=$(python3 -c "import json,urllib.request as u;print(json.load(u.urlopen('https://pypi.org/pypi/vdi2770-validate/json'))['info']['version'])")
+          test -n "$v" || { echo "::error::the index named no version"; exit 1; }
+          echo "version=$v" >> "$GITHUB_OUTPUT"
       - name: The shortest example, against a release on the index
         uses: ./
         with:
-          version: "0.8.2"
+          version: ${{ steps.newest.outputs.version }}
           paths: corpus/examples/container/documentcontainer.zip
