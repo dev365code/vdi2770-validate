@@ -28,8 +28,17 @@ def test_a_verdict_we_do_not_make_is_named_on_the_page():
         if theirs and not ours:
             silent[name] = sorted(theirs)
 
-    assert silent, ("the premise: the sweep holds at least one container the "
-                    "reference is louder about than we are")
+    # Not `assert silent`. That guard was here so the test could not pass
+    # vacuously, and it read the day silence reaches zero as a broken premise
+    # rather than as the day this gate finished its job. Two rules now in flight
+    # -- one for a declared format, one for an identifier claimed two ways --
+    # cover between them every container the reference is louder about, and
+    # measured across both, the silent set is empty.
+    #
+    # What still has to hold is that the comparison ran at all: an empty sweep
+    # would pass this test while establishing nothing, and that is the failure
+    # the original guard was reaching for.
+    assert SWEEP["containers"], "the sweep is empty; there is nothing to derive from"
     unrecorded = {name: keys for name, keys in silent.items()
                   if name not in PAGE and not any(k in PAGE for k in keys)}
     assert not unrecorded, (
