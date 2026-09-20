@@ -87,10 +87,26 @@ def refers_to(documents) -> Iterator[tuple]:
 def objects_claimed(documents) -> dict:
     """Each object identifier, and every kind it was filed under, with where.
 
-    Keyed case-insensitively for the same reason `_identity` folds case: a
-    delivery that writes `ABC1223` in one container and `abc1223` in the other
-    is naming one thing, and a comparison that says otherwise misses the
-    contradiction it exists to find.
+    Keyed on the identifier *and the axis it was issued on*, both folded for
+    case. The axis is the half that was missing and it is not a nicety: an
+    article number and a serial number are different registers, and this corpus
+    pairs them inside one document -- `Individual/serial number/U1-99999` beside
+    `Type/article number/U1`. The day a manufacturer's article number equals
+    somebody's serial, a comparison on the bare string calls a correct delivery
+    a contradiction. This module already argues the same point against itself
+    fifty lines up, where `_identity` says comparing a bare id "accepts a
+    delivery that carries a different document under a coincidentally equal
+    number".
+
+    `RefType` is an open string in the schema, so this groups what senders
+    actually wrote rather than a vocabulary. Two claims with no `RefType` at all
+    share the empty axis, which is right: they were issued with nothing to tell
+    them apart.
+
+    `globally_unique` is deliberately not consulted. It says whether an
+    identifier may be compared *outside* this delivery, and every comparison
+    here is inside one -- a sender who marks an id local has not licensed us to
+    call it two kinds of thing in one handover.
     """
     seen = {}
     for container, doc in documents:
@@ -99,7 +115,8 @@ def objects_claimed(documents) -> dict:
                 # Nothing to contradict. An absent type is the schema's problem
                 # and an absent id is not an identifier.
                 continue
-            seen.setdefault(obj.id.strip().casefold(), []).append(
+            axis = (obj.id.strip().casefold(), obj.ref_type.strip().casefold())
+            seen.setdefault(axis, []).append(
                 (obj.object_type.strip(), obj, container))
     return seen
 
@@ -128,7 +145,7 @@ def check(documents, read_everything: bool) -> Iterator[Finding]:
     # disagree are a fact about what was actually read, and a tool that had
     # already seen both and stayed quiet because a third container would not
     # open would be hiding something it knew.
-    for _folded, claims in sorted(objects_claimed(documents).items()):
+    for (_folded_id, axis), claims in sorted(objects_claimed(documents).items()):
         kinds = {kind for kind, _obj, _c in claims}
         if len(kinds) < 2:
             continue
@@ -138,8 +155,9 @@ def check(documents, read_everything: bool) -> Iterator[Finding]:
         where = ", ".join(sorted({c.path or "the delivery" for _k, _o, c in claims}))
         yield Finding(
             r, r.title, (first.src or claims[0][2].where),
-            detail=f"{first.id!r} is declared as {shown} in this delivery "
-                   f"({where}); an identifier names one kind of thing")
+            detail=f"{first.id!r}{f' (as a {axis})' if axis else ''} is declared "
+                   f"as {shown} in this delivery ({where}); an identifier names "
+                   f"one kind of thing")
 
     if not read_everything:
         return

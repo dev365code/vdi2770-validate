@@ -119,6 +119,11 @@ class ObjectId:
     object_type: str
     ref_type: str
     id: str
+    #: The schema's own statement that this identifier may be compared outside
+    #: the delivery that carries it. `None` when the attribute is absent, which
+    #: is not the same as `False`. Carried for callers; no rule consults it yet,
+    #: and the rule that compares identifiers says in its own note why.
+    globally_unique: Optional[bool] = None
     src: Location = Location()
 
 
@@ -148,8 +153,12 @@ class Document:
     identifiers: Tuple[DocumentId, ...]
     classifications: Tuple[Classification, ...]
     versions: Tuple[DocumentVersion, ...]
-    objects: Tuple[ObjectId, ...] = ()
     src: Location = Location()
+    #: Last on purpose. `Document` is published and frozen, and a new field
+    #: ahead of `src` re-binds every positional call a caller already wrote --
+    #: silently, because the API record stores fields by name and cannot see
+    #: their order.
+    objects: Tuple[ObjectId, ...] = ()
 
     @property
     def ids(self) -> Tuple[str, ...]:
@@ -160,6 +169,18 @@ class Document:
     @property
     def all_files(self) -> Tuple[DigitalFile, ...]:
         return tuple(f for v in self.versions for f in v.files)
+
+
+def _flag(raw) -> Optional[bool]:
+    """An `xs:boolean` attribute, or None when it is not there at all.
+
+    Absent is not False: the schema leaves the attribute optional, and a sender
+    who said nothing has not said the identifier is local.
+    """
+    if raw is None:
+        return None
+    said = raw.strip().lower()
+    return True if said in ("true", "1") else False if said in ("false", "0") else None
 
 
 def _loc(base: Location, n: Node, subject: Optional[str] = None) -> Location:
@@ -174,14 +195,17 @@ def _object_ids(root: Node, base: Location) -> Tuple[ObjectId, ...]:
     could compare two documents' answers. `DocumentRelationship` was invisible
     the same way, for the same length of time.
 
-    Read from the whole subtree rather than from direct children, because the
-    element this is called with is the document root and `ReferencedObject` is a
-    child of it, not of the document.
+    Two levels of direct children, not a subtree walk: `find_all` reads one
+    level (see `_document_ids`, where that is load-bearing), and the schema puts
+    `ReferencedObject` directly under the document root with `ObjectId` directly
+    under it. An earlier version of this note said "the whole subtree", which is
+    not what the function does and would have licensed the wrong change next.
     """
     return tuple(
         ObjectId(object_type=n.attrib.get("ObjectType", "").strip(),
                  ref_type=n.attrib.get("RefType", "").strip(),
                  id=(n.text or "").strip(),
+                 globally_unique=_flag(n.attrib.get("IsGloballyBiUnique")),
                  src=_loc(base, n, (n.text or "").strip() or None))
         for parent in root.find_all("ReferencedObject")
         for n in parent.find_all("ObjectId"))

@@ -563,8 +563,8 @@ TABLE = [
 
     ("rules/a-contradiction-is-reported-from-what-was-read",
      "packages/vdi2770/src/vdi2770/validate/rules/delivery.py",
-     "    for _folded, claims in sorted(objects_claimed(documents).items()):",
-     "    for _folded, claims in sorted({}.items()):",
+     "    for (_folded_id, axis), claims in sorted(objects_claimed(documents).items()):",
+     "    for (_folded_id, axis), claims in sorted({}.items()):",
      ["tests/test_one_identifier_is_one_kind_of_thing.py::"
       "test_the_corpus_container_that_says_both_is_told_so"],
      "one identifier filed as both a type and an individual would go unreported "
@@ -573,9 +573,9 @@ TABLE = [
 
     ("rules/a-contradiction-does-not-wait-for-a-complete-read",
      "packages/vdi2770/src/vdi2770/validate/rules/delivery.py",
-     "    for _folded, claims in sorted(objects_claimed(documents).items()):",
+     "    for (_folded_id, axis), claims in sorted(objects_claimed(documents).items()):",
      "    if not read_everything:\n        return\n"
-     "    for _folded, claims in sorted(objects_claimed(documents).items()):",
+     "    for (_folded_id, axis), claims in sorted(objects_claimed(documents).items()):",
      ["tests/test_one_identifier_is_one_kind_of_thing.py::"
       "test_the_contradiction_is_reported_without_reading_the_whole_delivery"],
      "the contradiction would be held back whenever some other container in the "
@@ -584,7 +584,7 @@ TABLE = [
 
     ("gates/the-pin-names-the-reader-that-was-built",
      "packages/vdi2770/pyproject.toml",
-     'version = "0.9.1"',
+     'version = "0.10.0"',
      'version = "0.7.1"',
      ["tools/check_wheel.py"],
      "the two manifests agree with each other and the artifacts do not: the "
@@ -1032,7 +1032,7 @@ FRONT_DOOR = [
 
     ("gates/the-page-quotes-the-requirement-the-project-declares",
      "README.md",
-     "`vdi2770[validate]==0.9.1`",
+     "`vdi2770[validate]==0.10.0`",
      "`vdi2770[validate]>=0.7.0`",
      ["tests/test_the_front_page_points_at_what_it_shows.py::"
       "test_the_requirement_the_page_quotes_is_the_one_the_project_declares"],
@@ -1042,7 +1042,7 @@ FRONT_DOOR = [
     ("gates/the-badge-counts-the-catalogue",
      "README.md",
      "rules-42_each_with_a_remedy",
-     "rules-42_each_with_a_remedy",
+     "rules-41_each_with_a_remedy",
      ["tests/test_the_front_page_points_at_what_it_shows.py::"
       "test_the_badge_that_counts_rules_counts_the_catalogue"],
      "a number inside a shields.io URL is not the shape the prose gate reads, "

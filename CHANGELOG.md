@@ -2,6 +2,29 @@
 
 Sections through 0.7.0 had their wording tidied after their tags; the text each version carried when it was published is in that tag's own `CHANGELOG.md`. From 0.8.0 on, a released section is frozen at its tag and takes only appended `*(Correction ...)*` lines.
 
+## 0.10.0 — unreleased
+
+Who should take this release: anyone whose delivery declares what its documents
+are *about*. A new rule reports one object identifier filed under two different
+kinds in the same handover, and ten containers in this project's own corpus draw
+it — so a delivery that passed may now carry a warning. That is why this is a
+minor release.
+
+**`M13`: an identifier names one kind of thing.** `ObjectType` distinguishes a
+product model (`Type`) from the one manufactured item carrying that serial
+(`Individual`). A delivery that files the same identifier under both has
+contradicted itself, and a recipient's system has to guess which was meant.
+
+The comparison is per register. An article number and a serial number are
+different things that may be spelled the same, so identifiers are only compared
+against others issued on the same `RefType`. The rule does not ask whether a
+documentation container and the documents it bundles name the same object;
+settling that would mean reading the guideline text, which this project has not.
+
+**`ObjectId` is part of the model now**, and exported: `vdi2770.ObjectId`, with
+the objects a document declares on `Document.objects`. It was in the schema and
+nowhere in the model before, which is why nothing could ask this question.
+
 ## 0.9.1 — unreleased
 
 Who should take this release: anyone whose pipeline pins `vdi2770-validate`

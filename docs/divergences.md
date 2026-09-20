@@ -230,6 +230,11 @@ can print. Naming it unexplained is better than averaging it away, and a test in
 this repository fails if the sweep ever grows a second that this page does not
 name.
 
+`document-invalid-pdfa-b.zip` left this list in the same change and for the same
+reason — `M13` now reports a contradiction inside it — and the PDF/A policy
+divergence of §2 is unchanged by that. Our silence moved; the disagreement did
+not.
+
 **`D_010` is still open, and it left this list for a reason that does not settle
 it.** `M13` now reports a contradiction inside `objectreferences.zip` — one
 identifier filed as a `Type` in one document container and an `Individual` in

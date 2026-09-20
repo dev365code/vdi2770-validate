@@ -100,7 +100,14 @@ def _delivery(tmp_path, name, objects, unreadable=False):
 
     entries = [("VDI2770_Main.xml", MAINXML), ("VDI2770_Main.pdf", MAINPDF)] + inner
     if unreadable:
-        entries.append(("broken.zip", b"not a zip at all"))
+        # A *folder*, not a broken archive. An unopenable nested zip contributes
+        # nothing to either side of the read count -- it is invisible to the
+        # completeness question -- so a fixture built that way reports a
+        # complete read and pins nothing. A metadata file delivered in a folder
+        # is listed and never opened (`Z13`), which is what actually makes
+        # `read_everything` false. Measured: 3 of 4 metadata files read.
+        entries.append(("sub/VDI2770_Metadata.xml", MAINXML))
+        entries.append(("sub/B.pdf", MAINPDF))
     p = tmp_path / name
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
@@ -113,7 +120,66 @@ def _delivery(tmp_path, name, objects, unreadable=False):
 def _with_object(metadata_xml, object_type, object_id):
     """Replace the container's ReferencedObject ids with one of our own."""
     import re
+    # Every one of them, not the first. The clean container declares two
+    # objects -- a product type and a serial number -- and replacing one left
+    # the other in every document, so the fixtures carried four declarations
+    # where their own docstring said two and the pins were partly pinned by the
+    # leftover rather than by the identifier under test.
     return re.sub(
         r"<ObjectId[^>]*>[^<]*</ObjectId>",
         f'<ObjectId ObjectType="{object_type}">{object_id}</ObjectId>',
-        metadata_xml, count=1)
+        metadata_xml)
+
+
+def test_two_registers_that_happen_to_agree_are_not_one_thing(tmp_path):
+    """The false positive this rule was one line away from.
+
+    An article number and a serial number are different registers. This corpus
+    already pairs them inside a single document -- `Individual/serial number/
+    U1-99999` beside `Type/article number/U1` -- so the day a manufacturer's
+    article number equals somebody's serial, a rule comparing the bare string
+    calls a correct delivery a contradiction.
+    """
+    p = _delivery_with_axes(tmp_path, "axes.zip", [
+        ("Type", "article number", "4711"),
+        ("Individual", "serial number", "4711"),
+    ])
+    assert "M13" not in ids(p), (
+        "two identifiers on different registers were read as one identifier "
+        "claimed two ways")
+
+
+def test_one_register_claimed_two_ways_is_still_caught(tmp_path):
+    """And the axis must not become a way to escape the rule: same register,
+    two kinds, is the contradiction."""
+    p = _delivery_with_axes(tmp_path, "same-axis.zip", [
+        ("Type", "serial number", "4711"),
+        ("Individual", "serial number", "4711"),
+    ])
+    assert "M13" in ids(p), "one register claiming both kinds went unreported"
+
+
+def _delivery_with_axes(tmp_path, name, triples):
+    """One document container per (kind, register, identifier)."""
+    import re
+    inner = []
+    for i, (object_type, ref_type, object_id) in enumerate(triples):
+        meta = MAINXML.replace("VDI2770_Main.pdf", "B.pdf")
+        meta = re.sub(
+            r"<ObjectId[^>]*>[^<]*</ObjectId>",
+            f'<ObjectId ObjectType="{object_type}" RefType="{ref_type}">'
+            f'{object_id}</ObjectId>',
+            meta)
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+            z.writestr("VDI2770_Metadata.xml", meta)
+            z.writestr("B.pdf", MAINPDF)
+        inner.append((f"doc{i}.zip", buf.getvalue()))
+    p = tmp_path / name
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        for n, d in [("VDI2770_Main.xml", MAINXML),
+                     ("VDI2770_Main.pdf", MAINPDF)] + inner:
+            z.writestr(n, d)
+    p.write_bytes(buf.getvalue())
+    return str(p)
