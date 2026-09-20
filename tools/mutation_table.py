@@ -550,6 +550,16 @@ TABLE = [
      "one tag drives both distributions, and either half left on an older "
      "number is a pair that was never built"),
 
+    ("rules/a-declared-format-is-checked-against-more-than-two-names",
+     "packages/vdi2770/src/vdi2770/validate/rules/files.py",
+     '    "application/rtf": (".rtf",),\n',
+     '',
+     ["tests/test_a_declared_format_its_own_name_contradicts.py::"
+      "test_a_word_document_declared_as_rtf_is_caught"],
+     "the table would stop knowing the one media type the corpus actually gets "
+     "wrong, and a Word document declared as RTF would pass again -- which is "
+     "the state this rule was in while the reference implementation reported it"),
+
     ("gates/a-pin-of-this-package-pins-its-engine",
      "pyproject.toml",
      'dependencies = ["vdi2770[validate]==',

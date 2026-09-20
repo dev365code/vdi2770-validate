@@ -216,16 +216,24 @@ alongside `refCodes` (display only).
 
 ## 5. What the reference reports that we do not
 
-Three containers in the sweep draw a warning or an error from the reference and
+Two containers in the sweep draw a warning or an error from the reference and
 nothing louder than a note from us. One is the PDF/A conformance policy in §2
-(`REP_038` on `document-invalid-pdfa-b.zip`). The other two are open:
+(`REP_038` on `document-invalid-pdfa-b.zip`). The other is open:
 
 | container | reference | us |
 | --- | --- | --- |
-| `documentcontainer-invalid.zip` | `REP_018` (warning) | a PDF/A note, nothing else |
 | `objectreferences.zip` | `D_010` (warning) | a PDF/A note, nothing else |
 
-We cannot say here what those two assert. The reference's message *keys* are what
+`REP_018` used to be on that list and is not any more. The reference warns it on
+five containers in the sweep, and every one of those now draws a finding here.
+Three draw `F3`, which asks whether a declared media type and the file's own name
+agree — that rule existed and knew two media types, so a `.docx` declared as RTF
+passed it. The other two declare `application/pdf` on a file named `.pdf` whose
+bytes are not a PDF; the name half is right there and the bytes half is `P1`'s,
+which reported them all along. Two halves, two rules, and the sweep now shows a
+finding on all five.
+
+We cannot say here what the remaining one asserts. The reference's message *keys* are what
 the sweep records, and the file vendored into this repository holds its message
 *values* — see §4 — so the sentence behind a key is not something this repository
 can print. Naming them unexplained is better than averaging them away, and a test
