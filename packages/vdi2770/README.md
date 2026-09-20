@@ -43,8 +43,11 @@ extra: `pip install "vdi2770[validate]"` adds the schema parser and the rule
 set, and you run it as `python -m vdi2770.validate check YOUR-CONTAINER.zip`
 (that install carries no command). [`vdi2770-validate`](https://pypi.org/project/vdi2770-validate/)
 is the older name for the same thing and installs the `vdi2770-validate`
-command; it asks for this package at its own version or newer, so it can never
-leave you an engine older than the release it stands for.
+command; it asks for this package at exactly its own version, so the two are
+always the release they say they are. A floor was used for four releases and
+stopped only the direction that never went wrong: it let a newer engine install
+beside an older command, and halves that disagree about which release they are
+refuse to judge rather than guess.
 
 ## Three properties, each tested rather than promised
 

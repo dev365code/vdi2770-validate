@@ -24,7 +24,7 @@ make check
 Two installs, and the order is the point. This repository builds two
 distributions — the engine `vdi2770`, which now carries the rules as well, and
 `vdi2770-validate`, which is the old import name kept working and asks for the
-engine at its own version or newer. Skip the first line and pip resolves `vdi2770`
+engine at exactly its own version. Skip the first line and pip resolves `vdi2770`
 from PyPI, so the gate you ran was the published reader rather than the one in
 the commit you were changing: that is exactly the split that shipped a release
 whose own fix never reached the user. CI installs the same two, in the same

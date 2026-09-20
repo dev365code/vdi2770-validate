@@ -174,7 +174,7 @@ on to whatever reads the number; with the default you would add
 | Input | What it is |
 |---|---|
 | `paths` | the containers to check, separated by spaces |
-| `version` | which release to install. Left empty it is the ref you pinned — `@v0.9.1` installs 0.9.1 — falling back to the version the action's own checkout publishes, so `@main` may name a version not on the index yet. **The rules travel with the engine**: an older `version` is an older rule set and returns that release's verdicts, for 0.9.1 and later. Ask for an earlier one and the install puts a newer engine beside an older command, and the tool refuses to judge a pair that disagrees with itself (exit 3) rather than guess which half is right |
+| `version` | which release to install. Left empty it is the ref you pinned — `@v0.9.1` installs 0.9.1 — falling back to the version the action's own checkout publishes, so `@main` may name a version not on the index yet. **The rules travel with the engine**: an older `version` is an older rule set and may return a different verdict. Four releases cannot be asked for at all: 0.8.0, 0.8.1, 0.8.2 and 0.9.0 name their engine with a floor, so installing one brings a newer engine beside it and the tool refuses to judge a pair that disagrees with itself (exit 3). Pin both names, or ask for 0.9.1 or later |
 | `pyz` | a `vdi2770.pyz` you already have. Given, **this action installs nothing and fetches nothing** |
 | `sha256` | the hash `pyz` must have. For a file carried into a closed network; the default path does not need it, because `pip` checks the index's own hashes |
 | `args` | anything else for `check`, such as `--json` |

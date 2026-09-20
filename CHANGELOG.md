@@ -2,31 +2,42 @@
 
 Sections through 0.7.0 had their wording tidied after their tags; the text each version carried when it was published is in that tag's own `CHANGELOG.md`. From 0.8.0 on, a released section is frozen at its tag and takes only appended `*(Correction ...)*` lines.
 
-## 0.9.1 — 2026-09-20
+## 0.9.1 — unreleased
 
-Who should take this release: anyone whose pipeline pins a version of this
-tool. Pinning one stopped working the day 0.9.0 was published, and this is the
-release that stops it happening again.
+Who should take this release: anyone whose pipeline pins `vdi2770-validate`
+**0.8.0, 0.8.1, 0.8.2 or 0.9.0**, and anyone about to write a pin. Those four
+releases are the only ones that ask for their engine with a floor instead of a
+pin, and a floor stops holding the moment a newer engine exists. The three
+0.8.x pins stopped working when 0.9.0 was published. **A 0.9.0 pin stops
+working when this release is published** — by this release, for the same
+reason — so if you pin 0.9.0 today, read the workaround below before upgrading
+anything. Pins of 0.7.0 and earlier were never affected and still are not: those
+releases name the engine they were built with, and they install and judge with
+their own rules.
 
-**An exact pin now installs an exact pair.** This package asked for
-`vdi2770[validate]>=` its own version -- a floor, not a pin -- so
-`pip install vdi2770-validate==0.8.2` resolved the newest engine beside the
-older command. The two halves then disagreed about which release they were and
-the tool refused to judge: exit 3, which is the right answer to a half-matched
-install and a useless one to get back from a pin somebody wrote on purpose. A
-release names its engine exactly now, so pinning this package pins both halves.
-The same applies to the Action's `version:` input, which installs by that pin.
+**An exact pin now installs an exact pair.** Those four releases asked for
+`vdi2770[validate]>=` their own version, so `pip install
+vdi2770-validate==0.8.2` resolved the newest engine beside the older command.
+The two halves then disagreed about which release they were and the tool
+refused to judge: exit 3, which is the right answer to a half-matched install
+and a useless one to get back from a pin somebody wrote on purpose. This
+release names its engine exactly, so **pinning this package pins both halves**.
+The Action's `version:` input installs by the same pin and gets the same
+guarantee.
 
-**If you already pin an older version, pin both names** until you move:
+**If you pin 0.8.0, 0.8.1, 0.8.2 or 0.9.0, pin both names** until you move:
 
 ```
-pip install "vdi2770-validate==0.8.2" "vdi2770==0.8.2"
+pip install "vdi2770-validate==0.9.0" "vdi2770==0.9.0"
 ```
 
-That installs a matching pair and runs. From this release on, one pin is enough.
+That installs a matching pair and runs. Do not do this for 0.7.0 or earlier:
+those releases already name their own engine, and asking for a different one
+contradicts them — `vdi2770-validate==0.6.0` with `vdi2770==0.6.0` is a
+resolver error, because 0.6.0 asks for a 0.4.x engine on purpose.
 
 No verdict moves in this release. A container judged by 0.9.0 is judged the
-same way here.
+same way here; the only difference a report shows is `toolVersion`.
 
 ## 0.9.0 — 2026-09-20
 

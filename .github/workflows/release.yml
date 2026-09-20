@@ -63,9 +63,9 @@ on:
 #
 # If the alias cannot be published at all — the wheel is wrong rather than the
 # upload — then the engine at that number stands and the alias goes out at the
-# next one. The alias floors on the engine's version, so an alias 0.8.1 asking
-# for `vdi2770[validate]>=0.8.1` would need an engine to match: bump both and
-# tag again. What must never happen is the reverse, an alias on the index
+# next one. The alias pins the engine's version exactly, so an alias 0.9.2
+# asking for `vdi2770[validate]==0.9.2` has nothing to install against until an
+# engine of that number exists: bump both and tag again. What must never happen is the reverse, an alias on the index
 # without its engine, which is why the order is what it is.
 
 jobs:
@@ -392,7 +392,7 @@ jobs:
       # index had not caught up, and the job failed with the alias unpublished.
       # Waiting is cheap and a half-finished release is not, so the patience is
       # bounded but generous, and the numbers live here rather than in prose.
-      - name: The engine this floors on must be on the index
+      - name: The engine this pins must be on the index
         run: |
           # One invocation, and the first wait is zero. Written the other way --
           # a loop plus a last attempt after it -- the command appears twice,
@@ -402,7 +402,7 @@ jobs:
             [ "$wait" -gt 0 ] && { echo "not yet; waiting ${wait}s"; sleep "$wait"; }
             if python tools/check_release_order.py; then exit 0; fi
           done
-          echo "the engine this floors on never appeared on the index after ~21 min -- vdi2770 (the reader) is published but not resolvable, so this release's alias is not published: an install pinned to this version of vdi2770-validate cannot resolve, while a bare install still gets the previous release. Re-run this job once the index catches up."
+          echo "the engine this pins never appeared on the index after ~21 min -- vdi2770 (the reader) is published but not resolvable, so this release's alias is not published: an install pinned to this version of vdi2770-validate cannot resolve, while a bare install still gets the previous release. Re-run this job once the index catches up."
           exit 1
       # And "the JSON view lists it" is not "a machine can install it". This is
       # the state the alias actually requires, so it is the one that is asked

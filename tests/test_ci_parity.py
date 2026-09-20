@@ -192,8 +192,8 @@ def test_ci_runs_nothing_the_gate_does_not():
         # Asking the index which release is newest. It judges nothing -- it
         # chooses the input for the two jobs that install a published release.
         # A number written into the workflow instead has to be hand-edited on
-        # every release and is red until somebody does, and no number from
-        # before 0.9.1 can be made to work at all: those releases ask for their
+        # every release and is red until somebody does, and four numbers can
+        # never be put back at all: 0.8.0, 0.8.1, 0.8.2 and 0.9.0 ask for their
         # engine with `>=`, so installing one resolves a newer engine beside an
         # older command and the tool refuses the mismatch.
         'v=$(python3 -c "import json,urllib.request',

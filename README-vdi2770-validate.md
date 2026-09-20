@@ -29,11 +29,13 @@ It asks for `vdi2770[validate]==0.9.1` — its own version, exactly. A floor
 would stop an engine older than this one and let a newer one install beside
 it, and halves that disagree about which release they are do not judge.
 
-## What changed in 0.8
+## What changed in 0.8 and 0.9
 
 The readers and the rules were two distributions that had to match, and this one
 named the reader with an exact pin so the pair could not be half-moved. They are
-one distribution now, and the pin has nothing left to hold together.
+one distribution now. The pin stayed, and 0.8.0 through 0.9.0 replaced it with a
+floor -- which held only against an older engine, never against a newer one. It
+is an exact pin again from 0.9.1.
 
 **`pip install -U vdi2770-validate` is the upgrade, and it is now an ordinary
 one.** On an installation of 0.7 that same command used to leave a tool that
