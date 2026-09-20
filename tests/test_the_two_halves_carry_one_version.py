@@ -219,27 +219,35 @@ def test_the_rules_name_the_reader_exactly_and_not_a_range():
     spec = asked_of(RULES, "vdi2770")
     assert spec, "the rules do not depend on the reader at all"
     here = field(RULES, "version")
-    # A floor, and this release's number as the floor. That is a change, and it
-    # is worth saying why an exact pin was right before and is not now.
+    # An exact pin, and this release's number. It was a floor for two releases,
+    # and the argument for the floor was wrong in a way nothing could show until
+    # a second release existed to show it.
     #
-    # The pin existed because two distributions carried code that had to match:
-    # `~=0.3.0` let pip install a reader without the fix the release was made
-    # for, and the fix never reached anybody. `==` made a mismatched pair
-    # unreachable, because there was no version of one that paired with a
-    # different version of the other.
+    # That argument ran: the exact pin existed because two distributions carried
+    # code that had to match, and there is no pair any more -- the alias is two
+    # lines making an old import name the same object as `vdi2770.validate`, so
+    # it "carries no logic that a reader version could disagree with", and all
+    # it needs is an engine at least as new as it claims to be.
     #
-    # There is no pair any more. The rules are two lines that make the old
-    # import name the same object as `vdi2770.validate`; they carry no logic
-    # that a reader version could disagree with. What the alias needs is an
-    # engine at least as new as the alias claims to be — install
-    # `vdi2770-validate 0.9` and you get an engine of 0.9 or later, never 0.8's
-    # — and the extra, because a schema check without a parser is `X0`.
-    assert spec == f"vdi2770[validate]>={here}", (
+    # The alias carries no such logic. The tool does. An install whose halves
+    # name different releases is refused at startup, by design and rightly --
+    # and that refusal does not care which half is newer. So the pair the floor
+    # was declared not to be is enforced at run time either way, and a floor
+    # only decides which direction breaks it. `>=` picked the direction that
+    # happens on every release: publish a new engine and pip resolves it beside
+    # every older alias still pinned in somebody's pipeline.
+    #
+    # Measured, not reasoned: with 0.9.0 on the index,
+    # `pip install vdi2770-validate==0.8.2` installed engine 0.9.0 beside alias
+    # 0.8.2, and the tool exited 3 without judging anything. The extra stays --
+    # a schema check without a parser is `X0`.
+    assert spec == f"vdi2770[validate]=={here}", (
         f"the rules ask for {spec!r} and this repository publishes {here}. The "
-        f"alias has to name the engine it is an alias for: a floor below its "
-        f"own version would install an engine that does not have what this "
-        f"release describes, and no extra would leave the schema check unable "
-        f"to run.")
+        f"alias names the engine it was built and judged with, exactly: a floor "
+        f"lets a newer engine install beside an older alias, and halves that "
+        f"disagree about which release they are refuse to judge rather than "
+        f"guess. The extra is not optional either -- a schema check with no "
+        f"parser is `X0`.")
 
 
 def test_the_reader_depends_on_nothing():

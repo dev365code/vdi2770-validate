@@ -203,20 +203,29 @@ def pin_names_what_was_built(wheels: list) -> list:
         return [f"vdi2770-validate asks for {needed[0]!r}, without the extra "
                 f"that installs the schema parser -- so the schema check would "
                 f"report X0 on a machine that did everything right"]
-    asked = re.search(r">=\s*([^\s,;]+)", needed[0])
+    # `==`, not `>=`. A floor was here for two releases and it stopped only the
+    # direction that never happened. The tool refuses to run when the engine and
+    # the alias name different releases -- rightly, and without caring which is
+    # newer -- so a floor does not prevent a mismatched install, it only chooses
+    # which way the mismatch arrives. Upward is the way that arrives on its own:
+    # publish a new engine and pip resolves it beside every older alias anybody
+    # pinned. Measured with 0.9.0 on the index, `vdi2770-validate==0.8.2` brought
+    # engine 0.9.0 and exited 3 without judging anything.
+    asked = re.search(r"==\s*([^\s,;]+)", needed[0])
     if not asked:
-        return [f"vdi2770-validate asks for {needed[0]!r}, which names no floor. "
-                f"The alias has to require an engine at least as new as itself: "
-                f"without that, installing it can leave an older engine in place "
-                f"and the release describes something nobody has."]
+        return [f"vdi2770-validate asks for {needed[0]!r}, which is not an exact "
+                f"pin. The alias names the engine it was built and judged with: "
+                f"anything looser lets a resolver put a different engine beside "
+                f"it, and halves that disagree about which release they are "
+                f"refuse to judge."]
     if "vdi2770" not in built:
         return ["the reader was not built here, so the requirement cannot be "
                 "checked against the artifact it names"]
     if asked.group(1) != built["vdi2770-validate"]:
-        return [f"vdi2770-validate {built['vdi2770-validate']} asks for an engine "
-                f">= {asked.group(1)}. The floor is its own version or it is "
-                f"wrong: lower and an older engine satisfies it, higher and the "
-                f"release cannot install itself."]
+        return [f"vdi2770-validate {built['vdi2770-validate']} pins an engine "
+                f"== {asked.group(1)}. The pin is its own version or it is "
+                f"wrong: any other number is an engine this release was never "
+                f"built against, and the pair refuses to run."]
     return []
 
 

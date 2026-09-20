@@ -122,7 +122,7 @@ flowchart LR
 | Terminal | build scripts, people | `vdi2770-validate check handover.zip` |
 | Python | your own tooling | `import vdi2770` / `import vdi2770_validate` |
 | Single file | closed networks, approvals | `python vdi2770.pyz check handover.zip` |
-| GitHub Action | a workflow that blocks a bad delivery | `uses: dev365code/vdi2770-validate@v0.9.0` |
+| GitHub Action | a workflow that blocks a bad delivery | `uses: dev365code/vdi2770-validate@v0.9.1` |
 
 No route to a package index? No pip, no virtual environment, no rights to make
 one? Carry **one file** in instead. It still needs a Python — that is the one
@@ -146,7 +146,7 @@ Exit codes and a versioned JSON report make it a CI gate in one line.
 ### In a workflow
 
 ```yaml
-- uses: dev365code/vdi2770-validate@v0.9.0
+- uses: dev365code/vdi2770-validate@v0.9.1
   with:
     paths: handover.zip nameplate.zip
 ```
@@ -157,7 +157,7 @@ nothing readable at all, `3` the install disagreed with itself, `64` a mistyped
 command line or a `pyz:` that is not there — ask for it:
 
 ```yaml
-- uses: dev365code/vdi2770-validate@v0.9.0
+- uses: dev365code/vdi2770-validate@v0.9.1
   id: vdi
   with:
     paths: handover.zip
@@ -174,15 +174,14 @@ on to whatever reads the number; with the default you would add
 | Input | What it is |
 |---|---|
 | `paths` | the containers to check, separated by spaces |
-| `version` | which release to install. Left empty it is the ref you pinned — `@v0.9.0` installs 0.9.0 — falling back to the version the action's own checkout publishes, so `@main` may name a version not on the index yet. **The rules travel with the engine**: an older `version` is an older rule set and may return a different verdict |
+| `version` | which release to install. Left empty it is the ref you pinned — `@v0.9.1` installs 0.9.1 — falling back to the version the action's own checkout publishes, so `@main` may name a version not on the index yet. **The rules travel with the engine**: an older `version` is an older rule set and returns that release's verdicts, for 0.9.1 and later. Ask for an earlier one and the install puts a newer engine beside an older command, and the tool refuses to judge a pair that disagrees with itself (exit 3) rather than guess which half is right |
 | `pyz` | a `vdi2770.pyz` you already have. Given, **this action installs nothing and fetches nothing** |
 | `sha256` | the hash `pyz` must have. For a file carried into a closed network; the default path does not need it, because `pip` checks the index's own hashes |
 | `args` | anything else for `check`, such as `--json` |
 | `fail-on-finding` | `true` by default: a non-zero verdict fails the step. `false` succeeds and fills `exit-code` |
 
 The runner needs a Python on `PATH` (`python3` or `python`); `actions/setup-python`
-is the usual way to be sure. The action ships **in 0.9.0** — until that tag
-exists, the `@v0.9.0` line above does not resolve.
+is the usual way to be sure.
 
 By default the action installs the released checker from PyPI and runs it —
 `pip` checks what the index serves against the hashes the index publishes, and
@@ -361,8 +360,9 @@ The readers and the rules used to be two distributions that had to match, and
 `vdi2770-validate` named the reader with an exact pin so the pair could not be
 half-moved. They are one distribution now. `vdi2770-validate` is the old import
 name kept working: two lines that make it the same object as `vdi2770.validate`,
-asking for `vdi2770[validate]>=0.9.0` — its own version as the floor, so
-installing it can never leave you an engine older than the one it stands for.
+asking for `vdi2770[validate]==0.9.1` — its own version, exactly. A floor
+would stop an older engine and let a newer one install beside it, and halves
+that disagree about which release they are do not judge.
 (This page follows the working tree, so the number is the release being
 prepared; each release on PyPI carries its own.)
 

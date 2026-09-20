@@ -7,7 +7,7 @@ one release drift; this takes the account that ships in the repository and adds
 the part a release page needs and a changelog does not -- how to check the file
 you just downloaded.
 
-    python tools/release_notes.py --version 0.9.0 --pyz-sha <hex>
+    python tools/release_notes.py --version 0.9.1 --pyz-sha <hex>
 
 It refuses rather than improvises. A CHANGELOG whose top section is for another
 version, or which has no opening paragraph, gets no release notes: a release

@@ -2,6 +2,32 @@
 
 Sections through 0.7.0 had their wording tidied after their tags; the text each version carried when it was published is in that tag's own `CHANGELOG.md`. From 0.8.0 on, a released section is frozen at its tag and takes only appended `*(Correction ...)*` lines.
 
+## 0.9.1 — 2026-09-20
+
+Who should take this release: anyone whose pipeline pins a version of this
+tool. Pinning one stopped working the day 0.9.0 was published, and this is the
+release that stops it happening again.
+
+**An exact pin now installs an exact pair.** This package asked for
+`vdi2770[validate]>=` its own version -- a floor, not a pin -- so
+`pip install vdi2770-validate==0.8.2` resolved the newest engine beside the
+older command. The two halves then disagreed about which release they were and
+the tool refused to judge: exit 3, which is the right answer to a half-matched
+install and a useless one to get back from a pin somebody wrote on purpose. A
+release names its engine exactly now, so pinning this package pins both halves.
+The same applies to the Action's `version:` input, which installs by that pin.
+
+**If you already pin an older version, pin both names** until you move:
+
+```
+pip install "vdi2770-validate==0.8.2" "vdi2770==0.8.2"
+```
+
+That installs a matching pair and runs. From this release on, one pin is enough.
+
+No verdict moves in this release. A container judged by 0.9.0 is judged the
+same way here.
+
 ## 0.9.0 — 2026-09-20
 
 Who should take this release: anyone whose CI reads the exit code, anyone whose

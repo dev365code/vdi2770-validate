@@ -25,8 +25,9 @@ It answers to the new name, though. A module imported through the old path
 reports `__name__` as `vdi2770.validate.…`, so that is what a traceback, a log
 line and a pickle will say.
 
-It asks for `vdi2770[validate]>=0.9.0` — its own version as the floor, so
-installing it can never leave you an engine older than the one it stands for.
+It asks for `vdi2770[validate]==0.9.1` — its own version, exactly. A floor
+would stop an engine older than this one and let a newer one install beside
+it, and halves that disagree about which release they are do not judge.
 
 ## What changed in 0.8
 

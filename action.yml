@@ -16,7 +16,7 @@ inputs:
   version:
     description: >
       Which release's single file to run. Defaults to the version of the
-      checkout this action came from, so `uses: ...@v0.9.0` runs 0.9.0.
+      checkout this action came from, so `uses: ...@v0.9.1` runs 0.9.1.
     required: false
     default: ""
   pyz:

@@ -550,9 +550,20 @@ TABLE = [
      "one tag drives both distributions, and either half left on an older "
      "number is a pair that was never built"),
 
+    ("gates/a-pin-of-this-package-pins-its-engine",
+     "pyproject.toml",
+     'dependencies = ["vdi2770[validate]==',
+     'dependencies = ["vdi2770[validate]>=',
+     ["tests/test_the_two_halves_carry_one_version.py::"
+      "test_the_rules_name_the_reader_exactly_and_not_a_range"],
+     "the engine would float again: every exact pin of this package would "
+     "resolve a newer engine beside an older command on the day the next "
+     "release reached the index, and the pair would refuse to run -- which is "
+     "what happened to 0.8.2 the day 0.9.0 went out"),
+
     ("gates/the-pin-names-the-reader-that-was-built",
      "packages/vdi2770/pyproject.toml",
-     'version = "0.9.0"',
+     'version = "0.9.1"',
      'version = "0.7.1"',
      ["tools/check_wheel.py"],
      "the two manifests agree with each other and the artifacts do not: the "
@@ -1000,7 +1011,7 @@ FRONT_DOOR = [
 
     ("gates/the-page-quotes-the-requirement-the-project-declares",
      "README.md",
-     "`vdi2770[validate]>=0.9.0`",
+     "`vdi2770[validate]==0.9.1`",
      "`vdi2770[validate]>=0.7.0`",
      ["tests/test_the_front_page_points_at_what_it_shows.py::"
       "test_the_requirement_the_page_quotes_is_the_one_the_project_declares"],
