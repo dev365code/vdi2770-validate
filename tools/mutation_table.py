@@ -372,8 +372,8 @@ TABLE = [
 
     ("rules/two-rules-name-one-folder-one-way",
      "packages/vdi2770/src/vdi2770/validate/rules/container.py",
-     '            where = folder_path(folder) + "/"',
-     "            where = folder\n",
+     '            by_folder.setdefault(folder_path(prefix) + "/", []).append(leaf)',
+     '            by_folder.setdefault(prefix, []).append(leaf)',
      ["tests/test_documents_delivered_as_folders.py"],
      "`Z9` said `AB393/` and `Z13` said `./AB393/` in one report, and a reader "
      "has to work out they are the same place"),
@@ -1033,8 +1033,8 @@ FRONT_DOOR = [
 
     ("gates/the-elision-in-the-shot-says-what-it-elided",
      "tools/gen_door.py",
-     '"… 2 more error (Z13) and 1 warning (Z9)"',
-     '"… 2 more error (Z9) and 1 warning (Z13)"',
+     '"… 2 more errors (Z13) and 1 warning (Z9)"',
+     '"… 2 more errors (Z9) and 1 warning (Z13)"',
      ["tests/test_the_front_door_pictures_are_true.py::"
       "test_the_elision_in_the_shot_says_what_it_elided"],
      "a marked gap is a claim about the output, and this project has already "
@@ -1585,6 +1585,14 @@ PLATFORM_ROWS = [
      '        r = rule("Z2")\n        yield Finding(r, r.title, container.where.child(container=""))',
      ['tests/test_a_finding_says_where_it_is.py::test_every_finding_names_the_container_it_is_about'],
      'a finding whose container is blank sends a sender looking in no file at all, and every other gate here reads the rule id and the severity rather than the place'),
+
+    ('rules/one-folder-is-one-finding',
+     'packages/vdi2770/src/vdi2770/validate/rules/container.py',
+     '            by_folder.setdefault(folder_path(prefix) + "/", []).append(leaf)',
+     '            by_folder[folder_path(prefix) + "/"] = [leaf]',
+     ['tests/test_documents_delivered_as_folders.py::'
+      'test_a_folder_holding_two_reserved_names_is_still_one_folder'],
+     'the rule reads (prefix, leaf) pairs, so a folder holding both reserved names is two entries -- reporting per entry puts two findings at one location, which is the deduplication this rule exists to stop asking a consumer to do'),
 
     ('report/the-whole-report-is-stored-and-compared',
      'docs/golden-report.json',

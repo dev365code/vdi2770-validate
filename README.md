@@ -14,7 +14,7 @@
 
 ## Ten seconds
 
-<img src="https://raw.githubusercontent.com/dev365code/vdi2770-validate/main/docs/assets/tenseconds.svg?v=aef50b67" alt="Real vdi2770-validate output: error F1, a file named in the metadata is not in the container, with the metadata line it is declared on and the remedy; error Z7, the documentation container has no VDI2770_Main.pdf, with its remedy; three errors, one warning." width="100%">
+<img src="https://raw.githubusercontent.com/dev365code/vdi2770-validate/main/docs/assets/tenseconds.svg?v=14164ddf" alt="Real vdi2770-validate output: error F1, a file named in the metadata is not in the container, with the metadata line it is declared on and the remedy; error Z7, the documentation container has no VDI2770_Main.pdf, with its remedy; then a line saying how many findings follow and how many of them are this tool declining to look." width="100%">
 
 ```console
 $ pip install vdi2770-validate

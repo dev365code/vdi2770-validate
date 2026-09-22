@@ -99,6 +99,45 @@ def test_the_terminal_shots_caption_carries_no_number_either():
         f"the caption says {caption!r}, and a number there regenerates by hand")
 
 
+def test_the_pictures_alt_text_carries_no_number_either():
+    """The third surface on this page that regenerates by hand, and the one the
+    two gates above did not reach.
+
+    `alt` is what a reader who cannot see the picture is given *instead of* it,
+    so a count there is read by exactly the person who cannot check it against
+    the drawing. This one said "three errors, one warning" while the run it
+    describes printed four, and it had been right when it was written: the
+    commit that changed the output bumped the image's cache-busting hash and
+    left the sentence.
+
+    Same rule as the banner and the caption, with the two kinds of digit that
+    are names rather than counts removed first: a rule id, and the reserved file
+    names the guideline fixes. A change to either is a change of subject, the
+    way `vdi2770` is in the banner. A count is the thing that drifts while the
+    sentence around it still reads true.
+    """
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    alts = re.findall(r'<img[^>]*\salt="([^"]*)"', readme)
+    alts += [alt for alt, _target in re.findall(r"!\[([^\]]*)\]\(([^)\s]+)\)", readme)]
+    assert alts, "the front page draws no picture with alt text; this read one"
+    #: A count can be spelled. The text this gate was written for said "three
+    #: errors, one warning" -- no digit in it anywhere -- so refusing digits
+    #: alone would have let exactly that back in, which is how a guard comes to
+    #: pass for a reason unrelated to its name.
+    spelled = (r"one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|"
+               r"no|zero")
+    counted = r"errors?|warnings?|notes?|findings?|rules?|containers?|files?"
+    for alt in alts:
+        fixed = re.sub(r"VDI2770_\w+\.\w+|VDI\s?2770|vdi2770", "", alt)
+        fixed = re.sub(r"\b[A-Z]{1,2}\d{1,2}\b", "", fixed)
+        assert not re.search(r"\d", fixed), (
+            f"alt text holds a number nothing regenerates: {alt!r}")
+        said = re.search(rf"\b({spelled})\s+({counted})\b", fixed, re.I)
+        assert not said, (
+            f"alt text counts something in words, which drifts exactly the way "
+            f"a digit does: {said.group(0)!r} in {alt!r}")
+
+
 def _logical_lines(module):
     """The shot's rows rebuilt into the lines the tool would have printed.
 
@@ -220,7 +259,7 @@ def test_the_elision_in_the_shot_says_what_it_elided():
     said = [("".join(run[2] for run in runs))
             for _dy, runs, kind in module.SHOT_LINES if kind == "elision"]
     assert len(said) == 1, f"the shot has {len(said)} elisions and this reads one"
-    claim = re.search(r"…\s*(\d+) more error \(([^)]+)\) and (\d+) warning \(([^)]+)\)",
+    claim = re.search(r"…\s*(\d+) more errors? \(([^)]+)\) and (\d+) warnings? \(([^)]+)\)",
                       said[0])
     assert claim, f"the elision has been reworded: {said[0]!r}"
 

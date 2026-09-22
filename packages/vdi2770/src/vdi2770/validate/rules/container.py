@@ -420,7 +420,7 @@ def check(container, declared, is_declared_payload) -> Iterator[Finding]:
                           "a .zip member is what removes the folder without "
                           "flattening what is inside it."
                           if len(also_a_container) == 1 else
-                          ": the finding beside this one says those folders are "
+                          ": the findings beside this one say those folders are "
                           "containers this tool did not open, and zipping each "
                           "into its own .zip member is what removes the folders "
                           "without flattening what is inside them.")))
@@ -661,17 +661,14 @@ def check(container, declared, is_declared_payload) -> Iterator[Finding]:
     as_folders = [] if opaque else folders_holding_metadata(container)
     if as_folders:
         r = rule("Z13")
-        # Named the way `Z9` names it. The two rules were spelling one folder two
-        # ways in the same report -- `AB393/` and `./AB393/` -- and a reader then
-        # has to work out that the tool is not talking about two places. The list
-        # itself keeps the archive's prefix, because `files.py` matches it against
-        # member names to suppress `F2`; it is the sentence that is rendered.
-        # The file each folder actually holds. The matching was widened to
-        # `VDI2770_Main.xml` and the sentence still said `VDI2770_Metadata.xml`
+        # What `folders_holding_metadata` returns keeps the archive's own prefix,
+        # because `files.py` matches it against member names to suppress `F2`.
+        # It is the location and the sentence that are normalised.
+        #
+        # The leaf is named because the matching was widened to
+        # `VDI2770_Main.xml` while the sentence still said `VDI2770_Metadata.xml`
         # for every folder, so a reader grepped their listing for a name that is
-        # not in it. And `as_written`, because a folder's name is the archive's
-        # own string and one spelled with newlines forged report lines through
-        # this door.
+        # not in it.
         # One finding per folder, so the folder is in `where` and not only in
         # the sentence. It used to be one finding carrying all of them, with the
         # names listed in the detail and cut at five: a person could read the
@@ -682,17 +679,30 @@ def check(container, declared, is_declared_payload) -> Iterator[Finding]:
         # container and counts the rest into `notListed`, the way it does for
         # every rule that fires per element. A delivery of a thousand unopened
         # folders lists the first few and says how many more.
-        for folder, leaf in as_folders:
+        # Grouped by folder, because `folders_holding_metadata` returns
+        # `(prefix, leaf)` *pairs* and a folder may hold more than one reserved
+        # name. Iterating the pairs emitted two findings at one location --
+        # same `member`, same `subject`, different sentence -- which is the
+        # deduplication this change exists to take off the consumer, handed
+        # straight back to them.
+        by_folder: dict = {}
+        for prefix, leaf in as_folders:
+            by_folder.setdefault(folder_path(prefix) + "/", []).append(leaf)
+
+        for where, leaves in by_folder.items():
             # `folder_path` then a trailing slash, the way `Z9` spells it: the
             # two rules were naming one folder `AB393/` and `./AB393/` in the
             # same report, leaving a reader to work out it was one place. And
             # `as_written` for the sentence, because a folder's name is the
             # archive's own string and one spelled with newlines forged report
             # lines through this door.
-            where = folder_path(folder) + "/"
+            #
+            # Both surfaces, and a test compares them: an earlier repair put the
+            # normalised name in `where` and left the raw one in the sentence.
+            held = ", ".join(sorted(set(leaves)))
             yield Finding(r, r.title,
                           container.where.child(member=where, subject=where),
-                          detail=f"{as_written(where)} holds {leaf}, and nothing "
+                          detail=f"{as_written(where)} holds {held}, and nothing "
                                  f"inside it was read")
 
     if container.kind is Kind.DOCUMENTATION:

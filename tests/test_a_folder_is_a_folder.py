@@ -221,10 +221,19 @@ def test_a_folder_this_tool_did_not_open_says_which_remedy_to_follow():
     from vdi2770_validate.runner import check_bytes
 
     report = check_bytes(_handover_with_folder("docdir"), "plain.zip")
-    said = {f.rule.id: f for f in report.findings if f.rule.id in ("Z9", "Z13")}
+    # Grouped, not keyed by rule id: `Z13` fires once per folder, and a mapping
+    # keyed on the id keeps whichever came last. This fixture has one folder, so
+    # the shortcut was invisible and would stay invisible until the day it
+    # mattered.
+    said = {}
+    for f in report.findings:
+        if f.rule.id in ("Z9", "Z13"):
+            said.setdefault(f.rule.id, []).append(f)
     assert set(said) == {"Z9", "Z13"}, sorted(said)
-    assert "docdir/" in said["Z9"].remedy, said["Z9"].remedy
-    assert ".zip member" in said["Z9"].remedy, said["Z9"].remedy
+    assert len(said["Z9"]) == 1, said["Z9"]
+    z9 = said["Z9"][0]
+    assert "docdir/" in z9.remedy, z9.remedy
+    assert ".zip member" in z9.remedy, z9.remedy
 
     # And an ordinary folder, with no container in it, keeps the plain remedy.
     import io
