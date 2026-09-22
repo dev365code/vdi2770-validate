@@ -60,6 +60,15 @@ release moves, what a patch does and does not promise, how to pin, and what 1.0
 will mean. Three of this package's four patch releases changed what a pipeline
 sees, and the section names them rather than promising that a patch cannot.
 
+**`Z13` names the folder it did not open.** A delivery whose documents arrived
+as folders drew one finding listing them all, with the names in the sentence and
+nothing in the location — readable by a person, invisible to anything filtering
+a report by where a problem is. It reports one folder per finding now, each
+naming that folder in `where`, so the count of `Z13` findings is the number of
+folders rather than one. Nothing new is diagnosed and no container changes
+verdict; if you count findings by rule, this is the release where that number
+moves.
+
 **The report's contract has a stored answer beside it.** `docs/report-schema.md`
 says what the JSON promises; `docs/golden-report.json` is what the tool actually
 says about one container that ships here, compared on every run. The page and

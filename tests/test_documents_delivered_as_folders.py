@@ -200,10 +200,18 @@ def test_two_rules_name_the_same_folder_the_same_way():
     because `files.py` matches it against the archive's member names to suppress
     `F2`; it is only the sentence that changes.
     """
-    said = {f.rule.id: f.detail for f in report(foldered("./AB393")).findings
-            if f.rule.id in ("Z9", "Z13")}
-    assert set(said) == {"Z9", "Z13"}, said
-    named = {rid: detail.split(": ", 1)[1] for rid, detail in said.items()}
+    found = [f for f in report(foldered("./AB393")).findings
+             if f.rule.id in ("Z9", "Z13")]
+    assert {f.rule.id for f in found} == {"Z9", "Z13"}, found
+
+    # `Z13` used to carry the folder in its sentence and now carries it in
+    # `where`, so the comparison reads the field where there is one. That is the
+    # stronger half of this claim anyway: a reader filtering by location is the
+    # one who cannot afford two spellings of one place.
+    def spelling(f):
+        return f.where.member if f.rule.id == "Z13" else f.detail.split(": ", 1)[1]
+
+    named = {f.rule.id: spelling(f) for f in found}
     assert named["Z9"] == named["Z13"], named
 
 

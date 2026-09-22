@@ -152,9 +152,9 @@ SHOT_LINES = [
     (19, [(172, N, "against the standard (REP_025)", 0)], "wrap"),
     (17, [(150, F, "-> Add the main document as VDI2770_Main.pdf at the root of the", 0)], "line"),
     (28, [(172, F, "documentation container, next to VDI2770_Main.xml.", 0)], "wrap"),
-    (30, [(46, D, "… 1 more error (Z13) and 1 warning (Z9)", 0)], "elision"),
-    (17, [(28, T, "3 error(s), 1 warning(s), 0 note(s) ", 1),
-          (292, N, "— 1 of the errors is this tool", 0)], "line"),
+    (30, [(46, D, "… 2 more error (Z13) and 1 warning (Z9)", 0)], "elision"),
+    (17, [(28, T, "4 error(s), 1 warning(s), 0 note(s) ", 1),
+          (292, N, "— 2 of the errors are this tool", 0)], "line"),
     (21, [(292, N, "declining to look, not the container", 0)], "wrap"),
     (14, [(28, N, "read 1 of 1 archives, 1 of 3 metadata files", 0)], "line"),
 ]

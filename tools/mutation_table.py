@@ -372,8 +372,8 @@ TABLE = [
 
     ("rules/two-rules-name-one-folder-one-way",
      "packages/vdi2770/src/vdi2770/validate/rules/container.py",
-     '        named = [folder_path(f) + "/" for f, _ in as_folders[:5]]',
-     "        named = [f for f, _ in as_folders[:5]]",
+     '            where = folder_path(folder) + "/"',
+     "            where = folder\n",
      ["tests/test_documents_delivered_as_folders.py"],
      "`Z9` said `AB393/` and `Z13` said `./AB393/` in one report, and a reader "
      "has to work out they are the same place"),
@@ -1033,8 +1033,8 @@ FRONT_DOOR = [
 
     ("gates/the-elision-in-the-shot-says-what-it-elided",
      "tools/gen_door.py",
-     '"… 1 more error (Z13) and 1 warning (Z9)"',
-     '"… 1 more error (Z9) and 1 warning (Z13)"',
+     '"… 2 more error (Z13) and 1 warning (Z9)"',
+     '"… 2 more error (Z9) and 1 warning (Z13)"',
      ["tests/test_the_front_door_pictures_are_true.py::"
       "test_the_elision_in_the_shot_says_what_it_elided"],
      "a marked gap is a claim about the output, and this project has already "
@@ -1574,8 +1574,8 @@ PLATFORM_ROWS = [
 
     ('report/a-rules-location-behaviour-is-recorded',
      'tests/test_a_finding_says_where_it_is.py',
-     'NAMES_NO_MEMBER = {"Z1", "Z2", "Z3", "Z7", "Z8", "Z9", "Z13"}',
-     'NAMES_NO_MEMBER = {"Z1", "Z2", "Z3", "Z7", "Z8", "Z9", "Z13", "P4"}',
+     'NAMES_NO_MEMBER = {"Z1", "Z2", "Z3", "Z7", "Z8", "Z9"}',
+     'NAMES_NO_MEMBER = {"Z1", "Z2", "Z3", "Z7", "Z8", "Z9", "P4"}',
      ['tests/test_a_finding_says_where_it_is.py::test_which_rules_name_a_member_is_the_recorded_set'],
      'an excuse added for a rule that does name a member is how the set stops being a list of real debts and starts being a list of rules somebody once waved through'),
 

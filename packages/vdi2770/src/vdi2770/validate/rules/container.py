@@ -672,21 +672,28 @@ def check(container, declared, is_declared_payload) -> Iterator[Finding]:
         # not in it. And `as_written`, because a folder's name is the archive's
         # own string and one spelled with newlines forged report lines through
         # this door.
-        leaves = {leaf for _, leaf in as_folders}
-        named = [folder_path(f) + "/" for f, _ in as_folders[:5]]
-        if len(leaves) == 1:
-            what = leaves.pop()
-            listed = ", ".join(as_written(f) for f in named)
-        else:
-            what = "a container's own file"
-            listed = ", ".join(f"{as_written(folder_path(f) + '/')} ({leaf})"
-                               for f, leaf in as_folders[:5])
-        yield Finding(r, r.title, container.where,
-                      detail=f"{len(as_folders)} folder"
-                             f"{'' if len(as_folders) == 1 else 's'} "
-                             f"{'holds' if len(as_folders) == 1 else 'hold'} "
-                             f"{what}: " + listed
-                             + (", ..." if len(as_folders) > 5 else ""))
+        # One finding per folder, so the folder is in `where` and not only in
+        # the sentence. It used to be one finding carrying all of them, with the
+        # names listed in the detail and cut at five: a person could read the
+        # location and a consumer filtering by it got nothing, which is backwards
+        # for the field that exists to be read by a machine.
+        #
+        # Safe to fan out because `Report.add` bounds the listing per rule and
+        # container and counts the rest into `notListed`, the way it does for
+        # every rule that fires per element. A delivery of a thousand unopened
+        # folders lists the first few and says how many more.
+        for folder, leaf in as_folders:
+            # `folder_path` then a trailing slash, the way `Z9` spells it: the
+            # two rules were naming one folder `AB393/` and `./AB393/` in the
+            # same report, leaving a reader to work out it was one place. And
+            # `as_written` for the sentence, because a folder's name is the
+            # archive's own string and one spelled with newlines forged report
+            # lines through this door.
+            where = folder_path(folder) + "/"
+            yield Finding(r, r.title,
+                          container.where.child(member=where, subject=where),
+                          detail=f"{as_written(where)} holds {leaf}, and nothing "
+                                 f"inside it was read")
 
     if container.kind is Kind.DOCUMENTATION:
         # `present`, not `file_names`. A main document with a bad CRC is in the
