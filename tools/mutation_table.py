@@ -1572,6 +1572,20 @@ PLATFORM_ROWS = [
      ['tests/test_ci_parity.py::test_a_superseded_run_of_a_ref_is_cancelled'],
      'checking every push of a branch is only affordable while the runs do not queue behind each other, and nothing else here would notice the queue growing'),
 
+    ('report/a-rules-location-behaviour-is-recorded',
+     'tests/test_a_finding_says_where_it_is.py',
+     'NAMES_NO_MEMBER = {"Z1", "Z2", "Z3", "Z7", "Z8", "Z9", "Z13"}',
+     'NAMES_NO_MEMBER = {"Z1", "Z2", "Z3", "Z7", "Z8", "Z9", "Z13", "P4"}',
+     ['tests/test_a_finding_says_where_it_is.py::test_which_rules_name_a_member_is_the_recorded_set'],
+     'an excuse added for a rule that does name a member is how the set stops being a list of real debts and starts being a list of rules somebody once waved through'),
+
+    ('report/every-finding-names-its-container',
+     'packages/vdi2770/src/vdi2770/validate/rules/container.py',
+     '        r = rule("Z2")\n        yield Finding(r, r.title, container.where)',
+     '        r = rule("Z2")\n        yield Finding(r, r.title, container.where.child(container=""))',
+     ['tests/test_a_finding_says_where_it_is.py::test_every_finding_names_the_container_it_is_about'],
+     'a finding whose container is blank sends a sender looking in no file at all, and every other gate here reads the rule id and the severity rather than the place'),
+
     ('gates/a-crash-beside-the-rule-under-test-is-not-a-verdict',
      'tests/test_rule_pairs.py',
      '    assert "X5" not in ids, (',
