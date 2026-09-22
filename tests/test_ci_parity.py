@@ -1128,6 +1128,44 @@ def test_the_env_the_harness_builds_reports_a_missing_command(tmp_path,
 UNGUARDABLE = {}
 
 
+def test_the_branches_that_get_checked_include_the_ones_being_written():
+    """The Windows row runs nowhere but here, so a branch that does not trigger
+    this workflow is a branch whose Windows behaviour is unknown until it lands.
+
+    Two defects reached main in one night that way -- a media-type table
+    narrower than the Windows registry, and a test label built with the
+    platform's path separator -- each green on macOS, on three Linux rows, on
+    the branch and under review. Narrowing these triggers back to `main` would
+    restore exactly that blind spot, silently, so it fails here instead.
+
+    The tag triggers and `release.yml` are deliberately not this test's business.
+    """
+    ci = _yaml(CI)
+    # `on` is YAML's `true` once parsed -- the word is a boolean, and the key
+    # reads as `True` unless it was quoted in the file.
+    triggers = ci.get("on", ci.get(True, {}))
+    branches = triggers.get("push", {}).get("branches", [])
+    assert "main" in branches, f"main no longer triggers this workflow: {branches}"
+    assert any(b.startswith("wip/") for b in branches), (
+        f"no `wip/` pattern triggers this workflow: {branches}. The Windows job "
+        f"then runs only after a merge, which is where it found two defects "
+        f"nothing else could see.")
+
+
+def test_a_superseded_run_of_a_ref_is_cancelled():
+    """Checking every push of a branch under work is only affordable if the
+    runs do not queue behind each other; the last push is the one worth six
+    jobs. Written down because removing it would not fail anything else, and
+    the queue it builds is somebody else's wait."""
+    ci = _yaml(CI)
+    group = ci.get("concurrency", {})
+    assert group.get("cancel-in-progress") is True, (
+        f"pushes to one ref no longer cancel the run before them: {group}")
+    assert "github.ref" in str(group.get("group", "")), (
+        f"the concurrency group is not per-ref, so one branch's pushes would "
+        f"cancel another's: {group}")
+
+
 def _yaml(path):
     import yaml
     return yaml.safe_load(path.read_text(encoding="utf-8")) or {}

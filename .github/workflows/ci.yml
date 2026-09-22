@@ -2,12 +2,27 @@ name: check
 
 on:
   push:
-    branches: [main]
+    # `wip/**` as well as main, because the Windows row runs nowhere else.
+    # Twice in one night a defect reached main that no branch check could have
+    # caught: a media-type table narrower than the Windows registry, and a test
+    # label built with the platform's path separator. Both were green on macOS
+    # and on three Linux rows, on the branch, under review, and red the moment
+    # they merged -- because a branch never saw the only reader that disagreed.
+    # A gate that cannot run before the merge is not a gate on the merge.
+    branches: [main, 'wip/**']
   pull_request:
   # Also on demand: a platform-specific fix or a change to the test matrix can
   # be run against a branch before it lands, the way the release workflow's dry
   # run rehearses a publish.
   workflow_dispatch:
+
+# A branch under active work is pushed repeatedly, and only the last push is
+# worth six jobs. This cancels the previous run of the same ref rather than
+# queueing behind it; `main` is a ref like any other here, and a superseded run
+# of main is a run of a commit that is no longer the tip.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   # One Windows row beside the three Linux ones, on the interpreter in the

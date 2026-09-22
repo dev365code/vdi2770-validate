@@ -116,9 +116,13 @@ def published_prose():
     # one directory down would leave here without a sound.
     pages += sorted(p for p in (ROOT / "docs").rglob("*.md"))
     for page in pages:
-        rel = page.relative_to(ROOT)
+        # `as_posix`, because the label is compared against a written path. A
+        # plain `str()` renders `docs\rules.md` on Windows, and the guard below
+        # -- which exists to prove the `docs` half was read at all -- then says
+        # it was not. Found on the one job that runs nowhere but CI.
+        rel = page.relative_to(ROOT).as_posix()
         text, lines = flattened(page.read_text(encoding="utf-8"))
-        yield str(rel), text, lines
+        yield rel, text, lines
     rules = json.loads((ROOT / RULES).read_text(encoding="utf-8"))
     for value in strings_in(rules):
         text, lines = flattened(value)

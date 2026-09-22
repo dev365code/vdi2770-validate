@@ -1558,6 +1558,20 @@ PLATFORM_ROWS = [
      ['tests/test_the_page_says_how_releases_are_numbered.py::test_the_section_promises_no_support_window'],
      'a window is one sentence to add and nothing else here reads the page for it, and this project has never measured whether it kept one'),
 
+    ('gates/a-branch-under-work-is-checked-on-every-platform',
+     '.github/workflows/ci.yml',
+     "branches: [main, 'wip/**']",
+     'branches: [main]',
+     ['tests/test_ci_parity.py::test_the_branches_that_get_checked_include_the_ones_being_written'],
+     'the Windows row runs nowhere but this workflow, so a branch that does not trigger it has unknown Windows behaviour until it lands -- which is how two defects reached main in one night'),
+
+    ('gates/a-superseded-run-of-a-ref-is-cancelled',
+     '.github/workflows/ci.yml',
+     '  cancel-in-progress: true\n',
+     '',
+     ['tests/test_ci_parity.py::test_a_superseded_run_of_a_ref_is_cancelled'],
+     'checking every push of a branch is only affordable while the runs do not queue behind each other, and nothing else here would notice the queue growing'),
+
     ('gates/a-crash-beside-the-rule-under-test-is-not-a-verdict',
      'tests/test_rule_pairs.py',
      '    assert "X5" not in ids, (',
