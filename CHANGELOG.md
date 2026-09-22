@@ -24,6 +24,10 @@ than one honest extension the rule accepts all of them — an inspection form as
 The finding now names the extensions the declared type is carried by, because
 "disagrees with the file name" on its own is not something a sender can act on.
 
+One of the fifteen carries an extension only a Windows registry lists: a bitmap
+named `.dib` is a bitmap, and the table learned so from the platform that says
+so rather than from memory.
+
 ## 0.9.1 — 2026-09-22
 
 Who should take this release: anyone whose pipeline pins `vdi2770-validate`

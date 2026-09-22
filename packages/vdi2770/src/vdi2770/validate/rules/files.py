@@ -47,7 +47,10 @@ EXTENSION_FOR = {
     "image/jpeg": (".jpg", ".jpeg", ".jpe", ".jfif"),
     "image/gif": (".gif",),
     "image/tiff": (".tif", ".tiff"),
-    "image/bmp": (".bmp",),
+    # `.dib` is the same format under its older name, and only a Windows
+    # registry lists it -- which is why the sibling test found this and
+    # three green platforms did not. A delivery naming one is correct.
+    "image/bmp": (".bmp", ".dib"),
 }
 
 

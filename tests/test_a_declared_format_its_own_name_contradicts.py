@@ -137,6 +137,14 @@ def test_the_table_is_never_narrower_than_the_registered_set():
     A future entry added from memory rather than from the registry is the way
     this rule starts reporting correct deliveries again, and the case list only
     covers the families somebody thought of.
+
+    `mimetypes` answers from the platform, and on Windows that includes the
+    registry -- so this property is strictest there, and the Windows job is
+    where it first went red. `.dib` for `image/bmp` reached the table that way,
+    after three green platforms had nothing to say about it. If it reddens for a
+    type you have never heard of, read the extension before widening the entry:
+    the question is whether a delivery naming it would be correct, and the
+    registry is evidence rather than an answer.
     """
     import mimetypes
 
