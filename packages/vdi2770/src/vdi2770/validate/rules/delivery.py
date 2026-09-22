@@ -84,6 +84,64 @@ def refers_to(documents) -> Iterator[tuple]:
                     yield container, doc, relationship, target
 
 
+def objects_claimed(documents) -> dict:
+    """Each object identifier, and every kind it was filed under, with where.
+
+    Keyed on the identifier *and the axis it was issued on*, both folded for
+    case. The axis is the half that was missing and it is not a nicety: an
+    article number and a serial number are different registers, and this corpus
+    pairs them inside one document -- `Individual/serial number/U1-99999` beside
+    `Type/article number/U1`. The day a manufacturer's article number equals
+    somebody's serial, a comparison on the bare string calls a correct delivery
+    a contradiction. This module already argues the same point against itself
+    fifty lines up, where `_identity` says comparing a bare id "accepts a
+    delivery that carries a different document under a coincidentally equal
+    number".
+
+    `RefType` is an open string in the schema, so this groups what senders
+    actually wrote rather than a vocabulary. Two claims with no `RefType` at all
+    share the empty axis, which is right: they were issued with nothing to tell
+    them apart.
+
+    `globally_unique` is deliberately not consulted. It says whether an
+    identifier may be compared *outside* this delivery, and every comparison
+    here is inside one -- a sender who marks an id local has not licensed us to
+    call it two kinds of thing in one handover.
+    """
+    seen = {}
+    for container, doc in documents:
+        for obj in doc.objects:
+            if not obj.id or not obj.object_type:
+                # Nothing to contradict. An absent type is the schema's problem
+                # and an absent id is not an identifier.
+                continue
+            seen.setdefault(obj.id.strip().casefold(), []).append(
+                (obj.object_type.strip(), obj, container))
+    return seen
+
+
+def _register(ref_type) -> str:
+    """A `RefType` reduced to what two senders would have to agree on."""
+    return " ".join(str(ref_type or "").split()).casefold()
+
+
+def different_registers(a, b) -> bool:
+    """True only when both claims name a register and the two differ.
+
+    Keyed the other way round -- grouping by `(id, RefType)` -- this rule could
+    be switched off by writing a `RefType` on one of two contradicting claims
+    and not the other, or by spelling it `serialNumber` on one side. Measured on
+    this project's own corpus container: one attribute on one side, and the
+    finding disappeared. A rule a sender can silence by adding a word is worse
+    than the false positive it was avoiding.
+
+    So an absent or blank register matches every register, and only two stated
+    and unequal ones mean "different things that happen to be spelled alike".
+    """
+    left, right = _register(a), _register(b)
+    return bool(left) and bool(right) and left != right
+
+
 def check(documents, read_everything: bool) -> Iterator[Finding]:
     """`documents` is (container, document) for every document the run modelled.
 
@@ -102,6 +160,31 @@ def check(documents, read_everything: bool) -> Iterator[Finding]:
     the sender, which is the failure this project keeps a severity axis to
     avoid.
     """
+    # Said before the guard below, deliberately. `M11`/`M12` need a complete
+    # read because "no document declares this" cannot be established from half a
+    # delivery -- but a contradiction is the other shape. Two declarations that
+    # disagree are a fact about what was actually read, and a tool that had
+    # already seen both and stayed quiet because a third container would not
+    # open would be hiding something it knew.
+    for _folded_id, claims in sorted(objects_claimed(documents).items()):
+        # Two claims are a contradiction when they disagree about the kind and
+        # nothing says they are about different registers.
+        clash = [(a, b) for i, a in enumerate(claims) for b in claims[i + 1:]
+                 if a[0] != b[0] and not different_registers(a[1].ref_type,
+                                                             b[1].ref_type)]
+        if not clash:
+            continue
+        kinds = {kind for pair in clash for kind, _obj, _c in pair}
+        claims = [c for pair in clash for c in pair]
+        r = rule("M13")
+        first = claims[0][1]
+        shown = ", ".join(sorted(kinds))
+        where = ", ".join(sorted({c.path or "the delivery" for _k, _o, c in claims}))
+        yield Finding(
+            r, r.title, (first.src or claims[0][2].where),
+            detail=f"{first.id!r} is declared as {shown} in this delivery "
+                   f"({where}); an identifier names one kind of thing")
+
     if not read_everything:
         return
     # One set per referring document, because each excludes its own

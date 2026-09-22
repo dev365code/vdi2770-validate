@@ -103,6 +103,35 @@ class DocumentId:
 
 
 @dataclass(frozen=True)
+class ObjectId:
+    """An object a document is about, and which kind of object it is.
+
+    `ObjectType` is the distinction that matters: `Type` names a product model,
+    `Individual` names the one machine on the floor carrying that serial. The
+    same string under both is a delivery contradicting itself -- there is no
+    reading in which a number is simultaneously a model and an instance of it.
+
+    `RefType` is kept because it is what the identifier is *for* (a serial
+    number, an order number) and a caller comparing identifiers across a
+    delivery needs it to say which axis two ids share.
+    """
+
+    object_type: str
+    ref_type: str
+    id: str
+    src: Location = Location()
+    #: After `src`, for the reason `Document.objects` is last: a defaulted field
+    #: ahead of an existing one re-binds positional construction, and the API
+    #: record stores fields by name, so no gate here can see the order. This
+    #: class is new and unshipped, so nothing can have broken yet -- which is
+    #: the only moment the ordering is free to get right.
+    #:
+    #: The schema's own statement that this identifier may be compared outside
+    #: the delivery carrying it. `None` when absent, which is not `False`.
+    globally_unique: Optional[bool] = None
+
+
+@dataclass(frozen=True)
 class DocumentRelationship:
     """A pointer from this document version to another document.
 
@@ -129,6 +158,11 @@ class Document:
     classifications: Tuple[Classification, ...]
     versions: Tuple[DocumentVersion, ...]
     src: Location = Location()
+    #: Last on purpose. `Document` is published and frozen, and a new field
+    #: ahead of `src` re-binds every positional call a caller already wrote --
+    #: silently, because the API record stores fields by name and cannot see
+    #: their order.
+    objects: Tuple[ObjectId, ...] = ()
 
     @property
     def ids(self) -> Tuple[str, ...]:
@@ -141,8 +175,44 @@ class Document:
         return tuple(f for v in self.versions for f in v.files)
 
 
+def _flag(raw) -> Optional[bool]:
+    """An `xs:boolean` attribute, or None when it is not there at all.
+
+    Absent is not False: the schema leaves the attribute optional, and a sender
+    who said nothing has not said the identifier is local.
+    """
+    if raw is None:
+        return None
+    said = raw.strip().lower()
+    return True if said in ("true", "1") else False if said in ("false", "0") else None
+
+
 def _loc(base: Location, n: Node, subject: Optional[str] = None) -> Location:
     return base.child(line=n.line, column=n.column, subject=subject)
+
+
+def _object_ids(root: Node, base: Location) -> Tuple[ObjectId, ...]:
+    """The objects a document says it is about.
+
+    `ObjectId` sits under `ReferencedObject` and was in the schema and nowhere
+    in this model, so no caller could ask what a document is about and no rule
+    could compare two documents' answers. `DocumentRelationship` was invisible
+    the same way, for the same length of time.
+
+    Two levels of direct children, not a subtree walk: `find_all` reads one
+    level (see `_document_ids`, where that is load-bearing), and the schema puts
+    `ReferencedObject` directly under the document root with `ObjectId` directly
+    under it. An earlier version of this note said "the whole subtree", which is
+    not what the function does and would have licensed the wrong change next.
+    """
+    return tuple(
+        ObjectId(object_type=n.attrib.get("ObjectType", "").strip(),
+                 ref_type=n.attrib.get("RefType", "").strip(),
+                 id=(n.text or "").strip(),
+                 globally_unique=_flag(n.attrib.get("IsGloballyBiUnique")),
+                 src=_loc(base, n, (n.text or "").strip() or None))
+        for parent in root.find_all("ReferencedObject")
+        for n in parent.find_all("ObjectId"))
 
 
 def _document_ids(parent: Node, base: Location) -> Tuple[DocumentId, ...]:
@@ -162,6 +232,7 @@ def _document_ids(parent: Node, base: Location) -> Tuple[DocumentId, ...]:
 
 def build(root: Node, base: Location) -> Document:
     identifiers = _document_ids(root, base)
+    objects = _object_ids(root, base)
 
     classifications = []
     for c in root.find_all("DocumentClassification"):
@@ -224,4 +295,4 @@ def build(root: Node, base: Location) -> Document:
         ))
 
     return Document(identifiers=identifiers, classifications=tuple(classifications),
-                    versions=tuple(versions), src=_loc(base, root))
+                    versions=tuple(versions), objects=objects, src=_loc(base, root))

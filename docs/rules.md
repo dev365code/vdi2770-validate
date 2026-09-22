@@ -12,9 +12,9 @@ tool, because both are errors on purpose and severity cannot carry the differenc
 - **`table`** (2) — a freely published table says so (IDTA 02004)
 - **`container`** (4) — mechanics of ZIP and XML — true without VDI 2770
 - **`reference`** (14) — observed in the MIT reference implementation, **not** verified against the guideline, which is paywalled
-- **`ours`** (20) — our own judgement, and it carries a reason
+- **`ours`** (21) — our own judgement, and it carries a reason
 
-41 rules.
+42 rules.
 
 Where each layer stands:
 
@@ -22,11 +22,11 @@ Where each layer stands:
 |---|---|---|---|---|---|---|
 | `container` | 0 | 0 | 3 | 3 | 7 | 13 |
 | `files` | 0 | 0 | 0 | 3 | 1 | 4 |
-| `metadata` | 0 | 2 | 0 | 7 | 3 | 12 |
+| `metadata` | 0 | 2 | 0 | 7 | 4 | 13 |
 | `pdf` | 0 | 0 | 0 | 1 | 4 | 5 |
 | `schema` | 1 | 0 | 1 | 0 | 4 | 6 |
 | `tool` | 0 | 0 | 0 | 0 | 1 | 1 |
-| **total** | **1** | **2** | **4** | **14** | **20** | **41** |
+| **total** | **1** | **2** | **4** | **14** | **21** | **42** |
 
 ## container
 
@@ -273,6 +273,14 @@ Reference implementation: `core:Document_VAL4` (displayed as `D_004`). Citing a 
 Reference implementation: `core:Document_VAL4` (displayed as `D_004`). Citing a key records that the other project checks something in the same area; it does not borrow its claim.
 
 **Remedy.** Add the document this relationship names, or remove the relationship. The container this points from promises a document the handover does not deliver, and a recipient reading the metadata has no way to tell the difference between a document that is missing and one that was never meant to travel.
+
+### `M13` — One identifier is called both a type and an individual
+
+*warning* · obligation `ours`
+
+Why this is ours: Nobody told us this. ObjectType distinguishes a product model from the one machine carrying that serial, and a delivery that files the same identifier under both has contradicted itself -- which holds without reading the guideline, because no reading makes a number a model and an instance of it at once. The guideline is paid and unread here, so we do not claim it says so. The observation is one: ABC1223 in objectreferences.zip, a Type in one document container and an Individual in its sibling. The broader question -- whether a documentation container must share an object with the documents it bundles -- is not asked by any rule here, because a plant-level bundle carrying sub-component documents may differ for good reasons and we cannot cite anything that forbids it.
+
+**Remedy.** Decide which the identifier names and say the same thing in both places: ObjectType="Type" for a product model, ObjectType="Individual" for one manufactured item. If the two documents really are about different things, give them different identifiers.
 
 ## pdf
 

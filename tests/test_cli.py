@@ -440,7 +440,11 @@ def test_that_standing_line_is_not_a_finding(capsys):
 
     box = str(CORPUS / "demo_vdi.zip")
     code, out = run(capsys, ["check", "--quiet", box])
-    assert "0 error(s), 0 warning(s), 3 note(s)" in out, out
+    # The warning is `M13`, and it is this container's own: `demo_vdi.zip`
+    # declares `ABC1223` as a `Type` in two places and an `Individual` in a
+    # third. What this test is about is the standing PDF/A line, which is not a
+    # finding and must not appear in these counts -- three notes, and no fourth.
+    assert "0 error(s), 1 warning(s), 3 note(s)" in out, out
     assert code == 0
 
     code, raw = run(capsys, ["check", "--json", "--quiet", box])

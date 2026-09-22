@@ -216,30 +216,46 @@ alongside `refCodes` (display only).
 
 ## 5. What the reference reports that we do not
 
-Two containers in the sweep draw a warning or an error from the reference and
-nothing louder than a note from us. One is the PDF/A conformance policy in §2
-(`REP_038` on `document-invalid-pdfa-b.zip`). The other is open:
+**Nothing is on this list any more.** No container in the sweep draws a warning
+or an error from the reference while we say nothing louder than a note. The list
+held three, and the two rules in this release are why — measured on the sweep
+this release records rather than predicted from what the rules were meant to do.
 
-| container | reference | us |
-| --- | --- | --- |
-| `objectreferences.zip` | `D_010` (warning) | a PDF/A note, nothing else |
+`REP_018` was the largest of the three. The reference warns it on five
+containers, and every one of those now draws a finding here. Three draw `F3`,
+which asks whether a declared media type and the file's own name agree — that
+rule existed and knew two media types, so a `.docx` declared as RTF passed it.
+The other two declare `application/pdf` on a file named `.pdf`, so the name half
+is right and the bytes are not: `P1` reports one of them, and the other declares
+a member so large the budget refuses it, which `Z5` and `F1` report without ever
+decompressing it — `P1` never sees those bytes, by design. Two halves, two
+rules, a finding on all five.
 
-`REP_018` used to be on that list and is not any more. The reference warns it on
-five containers in the sweep, and every one of those now draws a finding here.
-Three draw `F3`, which asks whether a declared media type and the file's own name
-agree — that rule existed and knew two media types, so a `.docx` declared as RTF
-passed it. The other two declare `application/pdf` on a file named `.pdf`, so the name
-half is right and the bytes are not. `P1` reports one of them. The other
-declares a member so large the budget refuses it, which `Z5` and `F1` report
-without ever decompressing it -- `P1` never sees those bytes, by design. Two halves, two rules, and the sweep now shows a
-finding on all five.
-
-We cannot say here what the remaining one asserts. The reference's message *keys* are what
-the sweep records, and the file vendored into this repository holds its message
-*values* — see §4 — so the sentence behind a key is not something this repository
-can print. Naming it unexplained is better than averaging it away, and a test
-in this repository fails if the sweep ever grows a third that this page does not
+An empty list is this page's gate finishing its work, not a premise breaking.
+The test that reads this page does not require the list to have an entry; it
+requires that the reference said something louder than a note *somewhere* in the
+sweep, because without that there was no comparison to make. It still fails if
+the sweep ever grows an entry this page does not
 name.
+
+`document-invalid-pdfa-b.zip` left this list in the same change and for the same
+reason — `M13` now reports a contradiction inside it — and the PDF/A policy
+divergence of §2 is unchanged by that. Our silence moved; the disagreement did
+not.
+
+**`D_010` is still open, and it left this list for a reason that does not settle
+it.** `M13` now reports a contradiction inside `objectreferences.zip` — one
+identifier filed as a `Type` in one document container and an `Individual` in
+another — so that container is no longer one we are silent about, and the test
+above no longer names it. That is a fact about our silence, not about `D_010`.
+Whether the two findings are about the same thing is not something this
+repository can establish: the key-to-message mapping is not vendored here, so we
+cannot read what `D_010` claims.
+
+It closes when one of two things happens: somebody reads the guideline text and
+can say what the reference is asserting, or the sweep turns up an input where the
+reference reports `D_010` and `M13` is quiet — which would prove they are
+different questions. Until then this paragraph is the record.
 
 ### The rest are progress lines
 
