@@ -1520,6 +1520,13 @@ PLATFORM_ROWS = [
      ['tests/test_a_claim_about_others_names_what_it_checked.py::test_no_page_claims_something_about_everyone_else'],
      'a sentence that quantifies over checkers this project has never run reads as a measurement of them, and prose is the one place nothing else here is reading'),
 
+    ('docs/a-support-window-is-not-promised-back-in',
+     'README.md',
+     'A patch is a smaller promise than a minor release.',
+     'Each release is supported for six months. A patch is a smaller promise than a minor release.',
+     ['tests/test_the_page_says_how_releases_are_numbered.py::test_the_section_promises_no_support_window'],
+     'a window is one sentence to add and nothing else here reads the page for it, and this project has never measured whether it kept one'),
+
     ('gates/a-crash-beside-the-rule-under-test-is-not-a-verdict',
      'tests/test_rule_pairs.py',
      '    assert "X5" not in ids, (',

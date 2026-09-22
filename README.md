@@ -349,11 +349,6 @@ What is not stable: which distribution ships which file, the wheel layout, and
 the module paths under `vdi2770.validate`. A pickle written through the new
 path names the new modules, and no aliasing carries that across.
 
-Releases come in batches rather than one per fix. Three things are published as
-soon as they are ready — a security fix, a wrong verdict (a conforming package
-refused, or a non-conforming one passed), and following a change in the
-standard. Everything else waits for the next batch.
-
 ### What changed in 0.8, and what it means for an installation you already have
 
 The readers and the rules used to be two distributions that had to match, and
@@ -391,6 +386,61 @@ vdi2770_validate`, `from vdi2770_validate.cli import main`, `python -m
 vdi2770_validate` and the command itself. One thing cannot be carried across: a
 pickle written through the new module path names `vdi2770.validate.…`, and code
 that only has the old release cannot read it.
+
+## Releases and version numbers
+
+**This is 0.x.** A release goes out when a unit of judgement is ready rather
+than on a calendar, and the packaging is not the contract: 0.8.0 moved the
+validator inside the reader, and 0.9.1 changed how the two halves ask for each
+other. What a build script may rely on is the list above — the verdicts, the
+exit codes, the command line and the report.
+
+Releases come in batches rather than one per fix. Three things do not wait for a
+batch: a security fix, a wrong verdict (a conforming container refused, or a
+non-conforming one passed), and following a change in the standard.
+
+**A minor release moves judgement** — a rule added, a reading corrected, a
+condition that was silent becoming a finding. That release's CHANGELOG section
+names every verdict that moves and, where an exit code moves with it, says so in
+a paragraph addressed to whoever gates a build on the number. That is the
+paragraph to read before upgrading; it is the one place this project undertakes
+to be exhaustive.
+
+**A patch release repairs — and where the repair changes what a pipeline sees,
+the section says so.** Three of the five patches here did:
+
+- `0.3.1` gave the read two budgets that span the whole container tree, so a
+  delivery that used to be walked and quietly truncated is reported as
+  `container-budget-exhausted` instead.
+- `0.8.1` bounded what a single member may cost, and a member compressed with a
+  method this reader does not expand is now refused by name rather than read.
+- `0.8.2` turned a PDF this tool had silently skipped into `X5`, so a container
+  that came back clean can come back with a finding against that file.
+
+A patch is a smaller promise than a minor release. It is not a promise that
+nothing your pipeline reads can change.
+
+**Pin the version you validated against, and pin it exactly.** A rule added is a
+verdict your pipeline has not seen, and the point of a validator is that the
+answer it gives today is the answer it gave when you signed off on it. From
+0.9.1 the two distributions name each other exactly, so
+`vdi2770-validate==0.9.1` installs one matching pair. Four releases cannot be
+pinned that way — 0.8.0, 0.8.1, 0.8.2 and 0.9.0 name their engine with a floor,
+and a floor stops holding the moment a newer engine exists — so pin both names
+or move to 0.9.1 or later:
+
+```
+pip install "vdi2770-validate==0.9.0" "vdi2770==0.9.0"
+```
+
+**A security fix that shipped in a release carries a GitHub security advisory**
+on this repository, naming the versions it reaches and the release that fixes
+it. [SECURITY.md](https://github.com/dev365code/vdi2770-validate/blob/main/SECURITY.md) is where to report one.
+
+**1.0 means two things and no more**: the JSON report's schema is frozen under
+`schemaVersion: 1`, and this page says which parts of VDI 2770 are checked and
+to what depth, so that "checks VDI 2770 containers" stops being a phrase you
+have to read the source to size. It does not mean the rule set is finished.
 
 ## The classification table, and a disagreement
 
