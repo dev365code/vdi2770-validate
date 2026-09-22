@@ -2,7 +2,7 @@
 
 Sections through 0.7.0 had their wording tidied after their tags; the text each version carried when it was published is in that tag's own `CHANGELOG.md`. From 0.8.0 on, a released section is frozen at its tag and takes only appended `*(Correction ...)*` lines.
 
-## 0.9.1 — unreleased
+## 0.9.1 — 2026-09-22
 
 Who should take this release: anyone whose pipeline pins `vdi2770-validate`
 **0.8.0, 0.8.1, 0.8.2 or 0.9.0**, and anyone about to write a pin. Those four
