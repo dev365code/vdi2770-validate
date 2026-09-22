@@ -2,6 +2,19 @@
 
 Sections through 0.7.0 had their wording tidied after their tags; the text each version carried when it was published is in that tag's own `CHANGELOG.md`. From 0.8.0 on, a released section is frozen at its tag and takes only appended `*(Correction ...)*` lines.
 
+## 0.10.0 — unreleased
+
+**A rule no longer says what other tools do.** `Z8` explained itself by saying
+that nobody else makes its judgement. This project has run one other checker —
+the reference implementation, at the commit `docs/oracle-sweep.json` pins — so
+the sentence claimed more than was ever measured. It now says what was: the
+reference has no rule here. No verdict moves; `whyOurs` is read only by the
+generator that writes `docs/rules.md`.
+
+**The page says how releases are numbered.** What 0.x means here, what a minor
+release moves, what a patch does and does not promise, how to pin both halves,
+and what 1.0 will mean. No behaviour changes.
+
 ## 0.9.1 — 2026-09-22
 
 Who should take this release: anyone whose pipeline pins `vdi2770-validate`

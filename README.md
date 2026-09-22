@@ -355,7 +355,7 @@ The readers and the rules used to be two distributions that had to match, and
 `vdi2770-validate` named the reader with an exact pin so the pair could not be
 half-moved. They are one distribution now. `vdi2770-validate` is the old import
 name kept working: two lines that make it the same object as `vdi2770.validate`,
-asking for `vdi2770[validate]==0.9.1` — its own version, exactly. A floor
+asking for `vdi2770[validate]==0.10.0` — its own version, exactly. A floor
 would stop an older engine and let a newer one install beside it, and halves
 that disagree about which release they are do not judge.
 (This page follows the working tree, so the number is the release being
