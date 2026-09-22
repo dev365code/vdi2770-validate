@@ -6,12 +6,22 @@ Sign your commits — `git commit -s`. That is a
 [certificate of origin](https://developercertificate.org/), not a transfer of
 rights; you keep the copyright in what you write.
 
-32 commits here do not carry the line. The practice was in place,
-lapsed for a run of commits, and resumed; nothing caught it, because
-the check that exists for this reads pull requests and every one of those
-commits arrived by a direct push. The trailers were not added afterwards — a
-certificate of origin signed on somebody's behalf, later, certifies nothing. A
-test holds the lapse closed: it fails if any commit newer than it is unsigned.
+33 commits here do not carry the line, and they are two different things.
+
+Thirty-two are a lapse: the practice was in place, stopped for a run of commits,
+and resumed; nothing caught it, because the check that exists for this reads
+pull requests and every one of those commits arrived by a direct push.
+
+The other is `d4d647d`, a merge made on 2026-09-23. A `--no-ff` merge that meets
+no conflict is committed by git with a default message, so it carried no
+trailer, and the gate that would have said so ran against the branch — before
+the merge commit existed. It is one commit and nothing was pushed after it, so
+it could have been remade; published history is not rewound for tidiness here.
+
+The trailers were not added afterwards to either — a certificate of origin
+signed on somebody's behalf, later, certifies nothing. The test below names
+every unsigned commit rather than counting them, so a new one fails on arrival
+instead of being absorbed into a total.
 
 ## Before you open a pull request
 
@@ -37,7 +47,7 @@ makes about a gate, breaks the thing that gate protects, and checks the gate
 notices — including one row that must *survive*, because a harness that
 reports red for a change that does not matter is reporting red for
 everything. Run it when you add or change a gate. `tools/mutation_table.py`
-with no arguments lists the table; it holds 226 rows, each naming the pytest
+with no arguments lists the table; it holds 227 rows, each naming the pytest
 selection or the tool that has to go red.
 
 `make standalone` runs each of the 102 test files on its own. A suite is a shared

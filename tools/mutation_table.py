@@ -1594,6 +1594,14 @@ PLATFORM_ROWS = [
       'test_a_folder_holding_two_reserved_names_is_still_one_folder'],
      'the rule reads (prefix, leaf) pairs, so a folder holding both reserved names is two entries -- reporting per entry puts two findings at one location, which is the deduplication this rule exists to stop asking a consumer to do'),
 
+    ('gates/an-unsigned-commit-is-named-not-counted',
+     'tests/test_the_docs_count_what_they_claim.py',
+     '    "d4d647d17327c72ef00d2b417b4a2d9d63cf83da",',
+     '',
+     ['tests/test_the_docs_count_what_they_claim.py::'
+      'test_contributing_is_right_about_who_signed_off'],
+     'a total can be raised by whoever meets it red, which absorbs a new unsigned commit into a paragraph about an old lapse; a name has to be written down one commit at a time'),
+
     ('report/the-whole-report-is-stored-and-compared',
      'docs/golden-report.json',
      '"rule": "Z8",\n    "severity": "warning"',

@@ -548,6 +548,57 @@ def test_the_changelog_counts_the_trailer_shapes_it_claims_are_pinned():
     assert said == real + 1, f"the CHANGELOG says {said}; there are {real} + 1"
 
 
+#: Every commit here that carries no `Signed-off-by`, by name.
+#:
+#: A count was not enough, twice over. It is satisfied by any set of the same
+#: size, so a total can be raised to match reality by whoever notices it going
+#: red -- which absorbs a new unsigned commit into a paragraph about an old
+#: lapse instead of naming it. And the assertion meant to catch a reopened lapse
+#: compared positions: `git log --reverse` is oldest-first, so it read the
+#: commits *after* the newest unsigned one, and when the unsigned commit is the
+#: tip -- exactly when a lapse reopens -- that range is empty and it passes
+#: having read nothing. It did, on `d4d647d`.
+#:
+#: Names depend on neither position nor arithmetic. A commit that is not on this
+#: list and carries no trailer fails on arrival, and putting one here is a
+#: deliberate act that has to say which commit, and why, on the page.
+UNSIGNED = (
+    "501d6c3bd1c66449e1ba1024e168953d44c972d2",
+    "d65421977c615414e5a326d4734f4039f2365511",
+    "59dd67f496b6376a73697f95faa294c0716722ee",
+    "d8828631fa4570f1b4e980f94b4814d81a674248",
+    "4d00dd176f5851e54b3f259dce121f406ea4a41d",
+    "f354c4254d0f6e4fc982f305c15c00095382a470",
+    "2dd35b4a13d37112c8e2c4cf5cd4dd2b9ad1b942",
+    "87b3e7a2374f1a14464e4b05b4f52867ecbe75bb",
+    "03292e534a47341d741615321cab17e7de32b257",
+    "e2eac7299dc9b2e1c80c80a293971bc35f59c97f",
+    "624500a9c659a48d5de9b00bd074ce6067eabd20",
+    "c7485f049f00a2b5b3a73867cb83a550a88ee36c",
+    "06aebd295547b215b68b63d4b39a72168d64ee8b",
+    "6b81c4e03b204805101d1bd501244122f44a0d48",
+    "aca780971479d67feae4853e9e0b7488f4a90c08",
+    "c4e920e5e4175be6ffff22ba2d5ef0e50f00d1fc",
+    "3e064cedb96074f6cf41d39068f5f92796875aa2",
+    "7db1abfc3e588f73452ee48531e4b9cc8a66a1dd",
+    "c03ba036dab13fe8615974c630d38a3b05f6777e",
+    "a56842b14626077673c158d0204f0e573da358af",
+    "e37b135218dda5886acdecef28a4e055bdc5401f",
+    "8891ff8e0eb811ea22b7f650237876ca34bb2162",
+    "f31cdad8c92949c67bb5ff0d0fbced524d09d05f",
+    "961576e25cb05db3a94bc8369504f5a1e4f4b670",
+    "ba3ec91884c18641d0d50409d2d508dbe51bee8d",
+    "b50cc412ae06dc5f4cf794c48e62ed5198d7ba98",
+    "92ea1f4c615f0ab944a94a4360a696ee337c256e",
+    "eb6f1cc596a717eebc57e2b8690042629a640739",
+    "9bc2d597c92bb60ef46dfc1e5868f3bfbbf57227",
+    "f41016a145a9025796ce1cc3cf227f8d25b9b16b",
+    "16ebebe751ebc5cf37b3f135a62620624ed783c6",
+    "cb1cfa45d1f5cb425dc75c621a78b52abfe759a1",
+    "d4d647d17327c72ef00d2b417b4a2d9d63cf83da",
+)
+
+
 def test_contributing_is_right_about_who_signed_off():
     """`CONTRIBUTING.md` said every commit carries a `Signed-off-by` line.
 
@@ -571,8 +622,9 @@ def test_contributing_is_right_about_who_signed_off():
         cwd=ROOT, capture_output=True, text=True)
     if got.returncode != 0:
         pytest.skip("not a git checkout; the log is not available here")
-    signed = [("Signed-off-by" in line.split("\x01", 1)[1])
-              for line in got.stdout.splitlines() if "\x01" in line]
+    rows = [line.split("\x01", 1) for line in got.stdout.splitlines() if "\x01" in line]
+    hashes = [h for h, _ in rows]
+    signed = [("Signed-off-by" in trailers) for _, trailers in rows]
     assert signed, "no commits found; this test is looking in the wrong place"
 
     unsigned = [i for i, ok in enumerate(signed) if not ok]
@@ -594,6 +646,22 @@ def test_contributing_is_right_about_who_signed_off():
     assert said, (
         f"{len(unsigned)} commits carry no Signed-off-by line and CONTRIBUTING.md "
         f"does not say so")
+
+    # And which, not merely how many. This is the assertion that fails on a new
+    # unsigned commit whatever its position, including the tip -- where the
+    # positional check below reads an empty range and says nothing.
+    here = [h for h, ok in zip(hashes, signed) if not ok]
+    arrived = [h for h in here if h not in UNSIGNED]
+    assert not arrived, (
+        "these commits carry no Signed-off-by line and are not among the ones "
+        "this repository has written down:\n  " + "\n  ".join(arrived)
+        + "\nSign them, or -- if history cannot be rewound -- add them to "
+          "UNSIGNED and say on the page which commit and why.")
+    gone = [h for h in UNSIGNED if h not in here]
+    assert not gone, (
+        "UNSIGNED names commits that are signed or absent, so the list has "
+        "stopped describing this repository:\n  " + "\n  ".join(gone))
+
     assert all(signed[i] for i in range(unsigned[-1] + 1, len(signed))), (
         "a commit newer than the lapse is unsigned; the lapse has reopened")
 
