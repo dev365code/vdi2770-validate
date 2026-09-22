@@ -8,7 +8,47 @@ from ..model import MAIN_PDF, MAIN_XML, METADATA_XML, About, Finding, Kind
 from ..names import Members, as_written, escaped, extracts_to, folder_path, nfc, without_edge_space
 from .container import MAX_ALIKE, _inside
 
-EXTENSION_FOR = {"application/pdf": ".pdf", "application/zip": ".zip"}
+#: Declared media types whose file extension is not a matter of taste, and the
+#: spellings each one is honestly carried by. `F3` compares a declaration
+#: against the name beside it, so a type may only appear here if naming its
+#: extensions wrongly would be a mistake rather than a preference.
+#:
+#: That is why `text/plain` is absent, and `application/octet-stream` with it.
+#: Plain text is honestly `.txt`, `.log`, `.md` or `.csv`, and a table naming
+#: one of those would report a correct delivery. A declaration this rule cannot
+#: judge is one it says nothing about -- the table was two entries long for the
+#: same reason, and two was too few rather than the wrong idea.
+EXTENSION_FOR = {
+    "application/pdf": (".pdf",),
+    "application/zip": (".zip",),
+    "application/rtf": (".rtf",),
+    "text/rtf": (".rtf",),
+    # The registered set, not the common one. Each of the three legacy Office
+    # types covers a family -- a template, a slideshow, an add-in -- and each of
+    # those is an ordinary thing to hand over: an inspection form as `.xlt`,
+    # training material as `.pps`. Naming only the everyday extension would have
+    # reported a correct delivery, which is the one failure this rule cannot
+    # afford. `.csv` sits with Excel because a Windows system that reads the
+    # registry stamps `application/vnd.ms-excel` on one.
+    "application/msword": (".doc", ".dot", ".wiz"),
+    "application/vnd.ms-excel":
+        (".xls", ".xlt", ".xlw", ".xla", ".xlb", ".xlc", ".xlm", ".csv"),
+    "application/vnd.ms-powerpoint": (".ppt", ".pps", ".pot", ".ppa", ".pwz"),
+    # The OOXML types do not have that problem: a template or a macro-enabled
+    # document is its *own* media type, so nothing leaks in here.
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+        (".docx",),
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
+        (".xlsx",),
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation":
+        (".pptx",),
+    "image/png": (".png",),
+    # `.jpe` is registered and `.jfif` is what some systems write.
+    "image/jpeg": (".jpg", ".jpeg", ".jpe", ".jfif"),
+    "image/gif": (".gif",),
+    "image/tiff": (".tif", ".tiff"),
+    "image/bmp": (".bmp",),
+}
 
 
 #: Refusals that are this tool's limit rather than a fault in the delivery.
@@ -298,9 +338,14 @@ def check(container, document, foreign) -> Iterator[Finding]:
                        "container."))
 
     for f in document.all_files:
-        want = EXTENSION_FOR.get(f.file_format.split(";")[0].strip().lower())
+        # The type, without any parameter after it: `application/rtf` and
+        # `application/rtf; charset=utf-8` are one declaration, and reading the
+        # whole string would let a parameter hide the mismatch.
+        want = EXTENSION_FOR.get((f.file_format or "").split(";")[0].strip().lower())
         if want and f.file_name and not f.file_name.lower().endswith(want):
             r = rule("F3")
             yield Finding(r, r.title,
                           f.src.child(container=container.path, member=container.metadata_name),
-                          detail=f"{f.file_name!r} is declared as {f.file_format!r}")
+                          detail=f"{f.file_name!r} is declared as {f.file_format!r}, "
+                                 f"which is carried by "
+                                 + " or ".join(repr(w) for w in want))

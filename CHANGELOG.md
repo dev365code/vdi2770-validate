@@ -2,6 +2,28 @@
 
 Sections through 0.7.0 had their wording tidied after their tags; the text each version carried when it was published is in that tag's own `CHANGELOG.md`. From 0.8.0 on, a released section is frozen at its tag and takes only appended `*(Correction ...)*` lines.
 
+## 0.10.0 — unreleased
+
+Who should take this release: anyone who hands over a file whose declared media
+type and file name might not agree. Two more containers in this project's own
+corpus are told about it than were before, so a delivery that passed may now
+draw a warning — which is why this is a minor release and not a patch.
+
+**`F3` knew two media types and now knows fifteen.** The rule asks whether a
+declared `FileFormat` agrees with the file's own name, and it only ever
+answered for `application/pdf` and `application/zip`; everything else passed
+whatever it was attached to. A Word document declared as RTF is the case the
+corpus holds and the one this closes.
+
+The table is short on purpose and says nothing about a media type it does not
+know: `text/plain` is honestly carried by `.txt`, `.log`, `.md` and `.csv`, so a
+rule that guessed there would report a correct delivery. Where a type has more
+than one honest extension the rule accepts all of them — an inspection form as
+`.xlt`, training material as `.pps`, a photograph as `.jpe`.
+
+The finding now names the extensions the declared type is carried by, because
+"disagrees with the file name" on its own is not something a sender can act on.
+
 ## 0.9.1 — 2026-09-22
 
 Who should take this release: anyone whose pipeline pins `vdi2770-validate`

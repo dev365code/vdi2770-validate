@@ -50,9 +50,10 @@
       "id": "F3",
       "layer": "files",
       "severity": "warning",
-      "obligation": "reference",
+      "obligation": "ours",
+      "whyOurs": "The reference implementation was observed refusing one media-type-and-name disagreement, and that is the whole of what was observed: across the swept corpus its DF_002 fires once and DF_003 never. Which other media types have an extension that is not a matter of taste is this project's judgement. The table names fifteen and leaves out text/plain, which is honestly carried by .txt, .log, .md and .csv -- a rule that guessed there would report a correct delivery. So a finding here is our reading, and the cited keys are evidence for the question rather than for the answer.",
       "title": "The declared file format disagrees with the file name",
-      "remedy": "Make FileFormat and the file extension agree — application/pdf with .pdf, application/zip with .zip.",
+      "remedy": "Make FileFormat and the file name agree. This rule knows the extensions for a fixed list of media types and says nothing about the rest, so a finding here means the declared type has one customary extension and this file does not carry it.",
       "refKeys": [
         "core:DigitalFile_VAL2",
         "core:DigitalFile_VAL3"

@@ -550,6 +550,16 @@ TABLE = [
      "one tag drives both distributions, and either half left on an older "
      "number is a pair that was never built"),
 
+    ("rules/a-declared-format-is-checked-against-more-than-two-names",
+     "packages/vdi2770/src/vdi2770/validate/rules/files.py",
+     '    "application/rtf": (".rtf",),\n',
+     '',
+     ["tests/test_a_declared_format_its_own_name_contradicts.py::"
+      "test_a_word_document_declared_as_rtf_is_caught"],
+     "the table would stop knowing the one media type the corpus actually gets "
+     "wrong, and a Word document declared as RTF would pass again -- which is "
+     "the state this rule was in while the reference implementation reported it"),
+
     ("gates/a-pin-of-this-package-pins-its-engine",
      "pyproject.toml",
      'dependencies = ["vdi2770[validate]==',
@@ -563,7 +573,7 @@ TABLE = [
 
     ("gates/the-pin-names-the-reader-that-was-built",
      "packages/vdi2770/pyproject.toml",
-     'version = "0.9.1"',
+     'version = "0.10.0"',
      'version = "0.7.1"',
      ["tools/check_wheel.py"],
      "the two manifests agree with each other and the artifacts do not: the "
@@ -1011,7 +1021,7 @@ FRONT_DOOR = [
 
     ("gates/the-page-quotes-the-requirement-the-project-declares",
      "README.md",
-     "`vdi2770[validate]==0.9.1`",
+     "`vdi2770[validate]==0.10.0`",
      "`vdi2770[validate]>=0.7.0`",
      ["tests/test_the_front_page_points_at_what_it_shows.py::"
       "test_the_requirement_the_page_quotes_is_the_one_the_project_declares"],
