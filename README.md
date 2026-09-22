@@ -323,8 +323,10 @@ minor version.
 
 What has not moved, and what a build script can rely on:
 
-- **The verdicts.** A rule that fires today fires tomorrow on the same
-  container, and a rule's severity does not change quietly. Thirty-nine of the
+- **The verdicts, within a release.** Across releases they move, and never
+  quietly: the CHANGELOG section for the release that moves one names it. `0.7.0`
+  is the example to read — `Z6` went from warning to error there, and `F2` and
+  `Z8` stopped firing on files inside folders. Thirty-nine of the
   41 fire on a container in the corpus and are compared against the reference
   implementation, with the divergences published rather than reconciled; the
   other two — `X0` and `X5` — say that this tool could not run a check, which no
@@ -391,56 +393,63 @@ that only has the old release cannot read it.
 
 **This is 0.x.** A release goes out when a unit of judgement is ready rather
 than on a calendar, and the packaging is not the contract: 0.8.0 moved the
-validator inside the reader, and 0.9.1 changed how the two halves ask for each
-other. What a build script may rely on is the list above — the verdicts, the
-exit codes, the command line and the report.
+validator inside the reader, and 0.9.1 changed how this package asks for it.
 
 Releases come in batches rather than one per fix. Three things do not wait for a
 batch: a security fix, a wrong verdict (a conforming container refused, or a
 non-conforming one passed), and following a change in the standard.
+[SECURITY.md](https://github.com/dev365code/vdi2770-validate/blob/main/SECURITY.md)
+is where to report the first of those.
 
 **A minor release moves judgement** — a rule added, a reading corrected, a
-condition that was silent becoming a finding. That release's CHANGELOG section
-names every verdict that moves and, where an exit code moves with it, says so in
-a paragraph addressed to whoever gates a build on the number. That is the
-paragraph to read before upgrading; it is the one place this project undertakes
-to be exhaustive.
+condition that was silent becoming a finding, a severity moved. That release's
+CHANGELOG section names every verdict that moves and, where an exit code moves
+with it, says so in a paragraph addressed to whoever gates a build on the
+number. That is the paragraph to read before upgrading; it is the one place this
+project undertakes to be exhaustive.
 
-**A patch release repairs — and where the repair changes what a pipeline sees,
-the section says so.** Three of the five patches here did:
+**A patch release repairs — and three of the four patch releases of this package
+changed what a pipeline sees:**
 
-- `0.3.1` gave the read two budgets that span the whole container tree, so a
-  delivery that used to be walked and quietly truncated is reported as
-  `container-budget-exhausted` instead.
-- `0.8.1` bounded what a single member may cost, and a member compressed with a
-  method this reader does not expand is now refused by name rather than read.
-- `0.8.2` turned a PDF this tool had silently skipped into `X5`, so a container
-  that came back clean can come back with a finding against that file.
+- `0.5.1` asked for a fixed reader instead of merely permitting one. Until it,
+  `vdi2770-validate==0.5.0` installed beside the *unfixed* reader, so the hang
+  0.5.0 announced a fix for went on happening to anyone who took that fix.
+- `0.8.1` bounded what one member of an archive may cost, and began refusing a
+  member compressed with a method it does not expand — naming the method, as a
+  limit of this reader rather than a verdict on the container.
+- `0.8.2` turned a PDF it had silently skipped into an `X5` error, so a
+  container that came back clean can come back with a finding against that file.
 
-A patch is a smaller promise than a minor release. It is not a promise that
-nothing your pipeline reads can change.
+The fourth, `0.9.1`, moved no verdict at all. A patch is a smaller promise than
+a minor release; it is not a promise that nothing your pipeline reads can
+change.
 
 **Pin the version you validated against, and pin it exactly.** A rule added is a
 verdict your pipeline has not seen, and the point of a validator is that the
 answer it gives today is the answer it gave when you signed off on it. From
-0.9.1 the two distributions name each other exactly, so
-`vdi2770-validate==0.9.1` installs one matching pair. Four releases cannot be
-pinned that way — 0.8.0, 0.8.1, 0.8.2 and 0.9.0 name their engine with a floor,
-and a floor stops holding the moment a newer engine exists — so pin both names
-or move to 0.9.1 or later:
+0.9.1 this package names the engine it was built with exactly, so
+`vdi2770-validate==0.9.1` installs one matching pair.
+
+Four releases cannot be pinned that way: 0.8.0, 0.8.1, 0.8.2 and 0.9.0 name
+their engine with a floor, and a floor stops holding the moment a newer engine
+exists. Pin both names, or move to 0.9.1 or later:
 
 ```
 pip install "vdi2770-validate==0.9.0" "vdi2770==0.9.0"
 ```
 
-**A security fix that shipped in a release carries a GitHub security advisory**
-on this repository, naming the versions it reaches and the release that fixes
-it. [SECURITY.md](https://github.com/dev365code/vdi2770-validate/blob/main/SECURITY.md) is where to report one.
+Do not do that for 0.7.0 or earlier — those releases already name the engine
+they were built with, and asking for a different one contradicts them. And note
+the pin only runs in this direction: the engine does not name this package back,
+so `pip install vdi2770==0.9.1` beside an older command is still a mismatched
+pair, and the tool refuses it rather than judging (exit `3`).
 
-**1.0 means two things and no more**: the JSON report's schema is frozen under
-`schemaVersion: 1`, and this page says which parts of VDI 2770 are checked and
-to what depth, so that "checks VDI 2770 containers" stops being a phrase you
-have to read the source to size. It does not mean the rule set is finished.
+**1.0 means one thing that is not true yet.** This page will say which parts of
+VDI 2770 are checked and to what depth, so that "checks VDI 2770 containers"
+stops being a phrase you have to read the source to size. The report's
+`schemaVersion` is already `1` and is already on the list above; 1.0 does not
+change it, it commits to not changing it. Neither meaning is that the rule set
+is finished.
 
 ## The classification table, and a disagreement
 

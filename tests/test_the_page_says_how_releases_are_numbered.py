@@ -2,16 +2,27 @@
 
 Without this section a reader learns the rules of this project's numbering by
 upgrading and finding out. The section is prose, so what is held here is the
-part a reader would act on: that it exists, that every release it names is a
-release this repository actually cut, that the patch releases it names really
-are patch releases, and that it does not promise a support window -- a sentence
-this project cannot keep and has never checked.
+part a reader would act on.
+
+**The CHANGELOG is not the source of truth for what was released.** It carries
+sections for the reader's releases as well as this package's -- `## 0.3.1` is
+one, and there has never been a `vdi2770-validate` 0.3.1 on any index -- so a
+version lifted from a heading may name a distribution nobody can pin. The tags
+are the source: `v*` is this package, `sdk-v*` is the reader. A draft of this
+file read the headings instead and blessed `0.3.1` as a patch release of this
+package, in a section whose whole subject is pinning.
 """
 import re
+import subprocess
 
-from conftest import ROOT, changelog_sections
+from conftest import ROOT
 
 HEADING = "## Releases and version numbers"
+
+#: Only as far as the paragraph counts. Written out because prose writes them
+#: out, and a number spelled as a digit in this section would read as a version.
+COUNT = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5,
+         "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10}
 
 
 def section() -> str:
@@ -22,40 +33,54 @@ def section() -> str:
     return body[: nxt.start()] if nxt else body
 
 
-def released() -> set:
-    """The versions this repository has a CHANGELOG section for, read out of the
-    headings rather than from a list kept beside them."""
-    found = set()
-    for heading, _ in changelog_sections():
-        m = re.search(r"(\d+\.\d+\.\d+)", heading)
-        if m:
-            found.add(m.group(1))
-    return found
+def published():
+    """Every release of *this package*, from the tags rather than from prose."""
+    done = subprocess.run(["git", "tag", "--list", "v*"], cwd=ROOT,
+                          capture_output=True, text=True)
+    if done.returncode != 0 or not done.stdout.split():
+        import pytest
+        pytest.skip("no tag history here; this reads the tags to know what shipped")
+    return {t[1:] for t in done.stdout.split() if re.fullmatch(r"v\d+\.\d+\.\d+", t)}
+
+
+def patches():
+    return {v for v in published() if v.split(".")[2] != "0"}
 
 
 def test_every_release_the_section_names_is_one_this_repository_cut():
-    """A number in prose outlives the thing it names. These are pin examples --
-    a reader copies them -- so a version that was never published, or was
-    renumbered, has to fail here rather than in their lockfile."""
+    """These are pin examples and a reader copies them, so a number that was
+    never published -- or that belongs to the other distribution -- has to fail
+    here rather than in somebody's lockfile."""
     named = set(re.findall(r"\b(\d+\.\d+\.\d+)\b", section()))
     assert named, "the section names no version; the pin advice has no example"
-    unknown = sorted(named - released())
+    unknown = sorted(named - published())
     assert not unknown, (
-        f"the section names {unknown}, which no CHANGELOG section does. "
-        f"Released here: {sorted(released())}")
+        f"the section names {unknown}, which no `v*` tag does. Released: "
+        f"{sorted(published())}. `0.3.1` is the trap: it is in the CHANGELOG, "
+        f"it is on PyPI as `vdi2770`, and it has never been this package.")
 
 
-def test_the_patch_releases_it_names_are_patch_releases():
-    """The section's argument is that a patch can still move what a pipeline
-    sees, and it argues it by pointing at three. Pointing at a minor release
-    instead would make the paragraph true of nothing."""
+def test_the_patch_paragraph_counts_what_the_tags_say():
+    """Both numbers in "three of the four patch releases" are derived, not
+    written. The first has to equal the releases the bullets name; the second
+    has to equal the patch releases that exist. A draft asserted only that at
+    least three were named, which let the sentence say "three" while naming
+    four, and let "five" stand when there were four."""
     body = section()
-    claimed = set(re.findall(r"`(\d+\.\d+\.\d+)` (?:gave|bounded|turned)", body))
-    assert len(claimed) >= 3, (
-        f"the patch paragraph names {sorted(claimed)}; it argues from the ones "
-        f"that moved a verdict and there are three")
-    not_patches = sorted(v for v in claimed if v.split(".")[2] == "0")
-    assert not not_patches, f"{not_patches} are not patch releases"
+    m = re.search(r"(\w+) of the (\w+) patch releases", body)
+    assert m, "the patch paragraph no longer states two counts in words"
+    said_moved, said_total = COUNT[m.group(1).lower()], COUNT[m.group(2).lower()]
+
+    assert said_total == len(patches()), (
+        f"the section says there are {said_total} patch releases; the tags say "
+        f"{len(patches())}: {sorted(patches())}")
+
+    bullets = set(re.findall(r"^- `(\d+\.\d+\.\d+)`", body, re.M))
+    assert len(bullets) == said_moved, (
+        f"the section says {said_moved} moved and its bullets name "
+        f"{len(bullets)}: {sorted(bullets)}")
+    assert bullets <= patches(), (
+        f"{sorted(bullets - patches())} are named as patch releases and are not")
 
 
 def test_the_section_promises_no_support_window():
@@ -64,6 +89,7 @@ def test_the_section_promises_no_support_window():
     make it -- and the sentence is easy to add back without noticing."""
     body = section().lower()
     windows = [p for p in ("supported for", "support window", "months of support",
+                           "supported until", "end of life", "end-of-life",
                            "latest two releases", "last two releases",
                            "security support for") if p in body]
     assert not windows, f"the section promises a support window: {windows}"

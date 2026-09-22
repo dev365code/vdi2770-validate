@@ -4,16 +4,32 @@ Sections through 0.7.0 had their wording tidied after their tags; the text each 
 
 ## 0.10.0 — unreleased
 
-**A rule no longer says what other tools do.** `Z8` explained itself by saying
-that nobody else makes its judgement. This project has run one other checker —
-the reference implementation, at the commit `docs/oracle-sweep.json` pins — so
-the sentence claimed more than was ever measured. It now says what was: the
-reference has no rule here. No verdict moves; `whyOurs` is read only by the
-generator that writes `docs/rules.md`.
+Who should take this release: anyone reading this project's pages to decide
+whether to depend on it, and anyone about to pin a version. No verdict moves.
+Two sentences this repository wrote about itself were narrowed to what it has
+actually measured, and the front page gained the section that says what a
+version number here means.
+
+**A rule stopped claiming what other checkers do.** `Z8` explained itself with a
+sentence about the whole field of tools. What this project has measured is one
+other implementation, on 49 containers, and on the single one of those that
+exercises `Z8` the reference reported something of its own — so the sentence
+claimed more than any measurement here can show. It now rests on what the rule
+is: a judgement this tool makes on its own authority, citing no reference key
+and no line of the guideline, which is why it is a warning and not an error.
+`whyOurs` is read only by the generator that writes `docs/rules.md`.
 
 **The page says how releases are numbered.** What 0.x means here, what a minor
-release moves, what a patch does and does not promise, how to pin both halves,
-and what 1.0 will mean. No behaviour changes.
+release moves, what a patch does and does not promise, how to pin, and what 1.0
+will mean. Three of this package's four patch releases changed what a pipeline
+sees, and the section names them rather than promising that a patch cannot.
+
+**And the stability list stopped saying something this project's own history
+disproves.** It said a rule that fires today fires tomorrow on the same
+container. `0.7.0` moved `Z6` from warning to error and stopped `F2` and `Z8`
+firing on files inside folders — both announced in that release's section, which
+is the promise that actually holds. The list now says that: verdicts move across
+releases, never quietly, and the CHANGELOG names each one.
 
 ## 0.9.1 — 2026-09-22
 

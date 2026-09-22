@@ -442,9 +442,8 @@ def test_no_document_cites_a_file_that_is_not_here():
     # 29 to 30 when the GitHub Action arrived: SECURITY.md now discloses that the
     # action downloads the file it runs -- which the checker never does -- and
     # cites the test that holds the action to admitting it.
-    # 30 to 31 when `Z8` stopped saying that nobody else makes its judgement and
-    # named the recorded sweep it had actually read instead, so the rules page
-    # now cites `docs/oracle-sweep.json` where it used to assert about a field.
+    # 30 to 31 when the section being written started naming the generated page
+    # a rule's prose lives on, so the reader of the entry can go and read it.
     assert seen == 31, (
         f"{seen} citations found, not 31. If you added or removed one, say so "
         f"here; if you did not, some of them just stopped being checked.")

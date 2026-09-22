@@ -563,7 +563,7 @@ TABLE = [
 
     ("gates/the-pin-names-the-reader-that-was-built",
      "packages/vdi2770/pyproject.toml",
-     'version = "0.9.1"',
+     'version = "0.10.0"',
      'version = "0.7.1"',
      ["tools/check_wheel.py"],
      "the two manifests agree with each other and the artifacts do not: the "
@@ -1011,7 +1011,7 @@ FRONT_DOOR = [
 
     ("gates/the-page-quotes-the-requirement-the-project-declares",
      "README.md",
-     "`vdi2770[validate]==0.9.1`",
+     "`vdi2770[validate]==0.10.0`",
      "`vdi2770[validate]>=0.7.0`",
      ["tests/test_the_front_page_points_at_what_it_shows.py::"
       "test_the_requirement_the_page_quotes_is_the_one_the_project_declares"],
@@ -1515,15 +1515,15 @@ PLATFORM_ROWS = [
 
     ('docs/a-claim-about-everyone-else-is-caught',
      'packages/vdi2770/src/vdi2770/validate/data/rules.json',
-     'that is worth saying even where the reference is silent',
-     'that is worth saying out loud even though nobody else says it',
+     "The judgement is this tool's own",
+     'Nobody else makes this judgement',
      ['tests/test_a_claim_about_others_names_what_it_checked.py::test_no_page_claims_something_about_everyone_else'],
      'a sentence that quantifies over checkers this project has never run reads as a measurement of them, and prose is the one place nothing else here is reading'),
 
     ('docs/a-support-window-is-not-promised-back-in',
      'README.md',
-     'A patch is a smaller promise than a minor release.',
-     'Each release is supported for six months. A patch is a smaller promise than a minor release.',
+     'it is not a promise that nothing your pipeline reads can',
+     'Each release is supported for six months and it is not a promise that nothing your pipeline reads can',
      ['tests/test_the_page_says_how_releases_are_numbered.py::test_the_section_promises_no_support_window'],
      'a window is one sentence to add and nothing else here reads the page for it, and this project has never measured whether it kept one'),
 
