@@ -37,7 +37,7 @@ makes about a gate, breaks the thing that gate protects, and checks the gate
 notices — including one row that must *survive*, because a harness that
 reports red for a change that does not matter is reporting red for
 everything. Run it when you add or change a gate. `tools/mutation_table.py`
-with no arguments lists the table; it holds 224 rows, each naming the pytest
+with no arguments lists the table; it holds 225 rows, each naming the pytest
 selection or the tool that has to go red.
 
 `make standalone` runs each of the 101 test files on its own. A suite is a shared
@@ -45,13 +45,15 @@ process, so a file can pass because an earlier one imported something —
 `tests/test_offline.py` did exactly that for weeks. Run it when you add a
 module-level import to a test.
 
-`make check` is the whole gate. It is eleven targets, and one of them —
+`make check` is the whole gate. It is twelve targets, and one of them —
 `fixtures` — is a build step rather than a gate: it regenerates the
 fixtures the tests need, and can only fail if the generator crashes. The
-other ten judge something: `lint`,
+other eleven judge something: `lint`,
 `test`, `corpus` (the vendored corpus is unchanged), `coverage-check` (every rule
 still fires somewhere), `rules-doc` (the generated rule reference matches
-the catalogue), `time-budget` (the corpus still costs what it cost, measured
+the catalogue), `golden-report` (the whole JSON report for one committed
+container is stored, so a value that quietly becomes a different value is a line
+in a diff rather than a change nobody reads), `time-budget` (the corpus still costs what it cost, measured
 against a yardstick timed in the same run so a slow machine is not a failure),
 `oracle-half` (our half of the recorded differential sweep is
 what this tool currently reports), `sdist-runs-its-own-tests` (each package's source

@@ -1586,6 +1586,13 @@ PLATFORM_ROWS = [
      ['tests/test_a_finding_says_where_it_is.py::test_every_finding_names_the_container_it_is_about'],
      'a finding whose container is blank sends a sender looking in no file at all, and every other gate here reads the rule id and the severity rather than the place'),
 
+    ('report/the-whole-report-is-stored-and-compared',
+     'docs/golden-report.json',
+     '"rule": "Z8",\n    "severity": "warning"',
+     '"rule": "Z8",\n    "severity": "Warning"',
+     ['tools/golden_report.py --check'],
+     'a value quietly becoming a different value is what no other gate here reads -- the shape tests ask which keys exist, and a severity spelled differently keeps every one of them green'),
+
     ('gates/a-crash-beside-the-rule-under-test-is-not-a-verdict',
      'tests/test_rule_pairs.py',
      '    assert "X5" not in ids, (',

@@ -114,6 +114,9 @@ jobs:
       # is the only way one means anything. The step is cheap -- five passes over
       # the corpus and a yardstick -- and it is the platform whose file I/O is
       # least like everybody else's.
+      - name: The whole report is the one that is stored
+        if: runner.os != 'Windows'
+        run: python tools/golden_report.py --check
       - name: The corpus still costs what it cost
         run: python tools/time_budget.py --check
       - name: Our half of the oracle sweep is current

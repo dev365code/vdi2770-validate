@@ -6,9 +6,9 @@ RUFF_VERSION   := 0.16.3
 PYTEST_VERSION := 8.3.4
 XMLSCHEMA_VERSION := 4.2.0
 
-.PHONY: paths-disjoint upgrade-paths wheels installed-runs upgrade-paths-from-wheels zipapp check lint test fixtures corpus coverage-check rules-doc time-budget oracle-half sdist-runs-its-own-tests wheel-installs-and-runs reader-api-matches-its-version mutations standalone clean oracle-fully-swept
+.PHONY: paths-disjoint upgrade-paths wheels installed-runs upgrade-paths-from-wheels zipapp check lint test fixtures corpus coverage-check rules-doc golden-report time-budget oracle-half sdist-runs-its-own-tests wheel-installs-and-runs reader-api-matches-its-version mutations standalone clean oracle-fully-swept
 
-check: lint fixtures test corpus coverage-check rules-doc time-budget oracle-half reader-api-matches-its-version sdist-runs-its-own-tests wheel-installs-and-runs
+check: lint fixtures test corpus coverage-check rules-doc golden-report time-budget oracle-half reader-api-matches-its-version sdist-runs-its-own-tests wheel-installs-and-runs
 
 # `--no-cache`: ruff keys its cache on file contents and settings, and a tree
 # where files had moved kept answering from it -- 84 import-order errors were
@@ -41,6 +41,11 @@ rules-doc:
 # quadratic for a while and nothing here noticed, because nothing here was
 # watching the clock. Budgets are ratios against a yardstick measured in the
 # same run, so a slow machine does not fail and a slow layer does.
+# The report is an interface, and no test reads a whole one. This one is a file,
+# so a value that changes is a line in a diff rather than a thing nobody sees.
+golden-report:
+	$(PYTHON) tools/golden_report.py --check
+
 time-budget:
 	$(PYTHON) tools/time_budget.py --check
 

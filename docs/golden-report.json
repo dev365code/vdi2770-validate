@@ -1,0 +1,124 @@
+[
+ {
+  "findings": [
+   {
+    "about": "container",
+    "detail": "RefersTo names 456-29201@INFAI, and no document in this delivery declares it",
+    "layer": "metadata",
+    "message": "The main document refers to a document this delivery does not carry",
+    "obligation": "reference",
+    "refCodes": [
+     "D_004"
+    ],
+    "refKeys": [
+     "core:Document_VAL4"
+    ],
+    "remedy": "Add the document container holding the document this relationship names, or remove the DocumentRelationship. A main document is the list a recipient reads to find out what arrived, so a reference into nothing sends them looking for a document that is not there.",
+    "rule": "M11",
+    "severity": "error",
+    "where": {
+     "column": 3,
+     "container": "missingdocuments.zip",
+     "line": 49,
+     "member": "VDI2770_Main.xml",
+     "subject": "456-29201",
+     "xpath": null
+    }
+   },
+   {
+    "about": "container",
+    "detail": "RefersTo names AB393@INFAI, and no document in this delivery declares it",
+    "layer": "metadata",
+    "message": "The main document refers to a document this delivery does not carry",
+    "obligation": "reference",
+    "refCodes": [
+     "D_004"
+    ],
+    "refKeys": [
+     "core:Document_VAL4"
+    ],
+    "remedy": "Add the document container holding the document this relationship names, or remove the DocumentRelationship. A main document is the list a recipient reads to find out what arrived, so a reference into nothing sends them looking for a document that is not there.",
+    "rule": "M11",
+    "severity": "error",
+    "where": {
+     "column": 3,
+     "container": "missingdocuments.zip",
+     "line": 52,
+     "member": "VDI2770_Main.xml",
+     "subject": "AB393",
+     "xpath": null
+    }
+   },
+   {
+    "about": "container",
+    "detail": null,
+    "layer": "container",
+    "message": "The documentation container holds no document containers",
+    "obligation": "ours",
+    "refCodes": [],
+    "refKeys": [],
+    "remedy": "Add the document containers this handover is supposed to deliver. A documentation container with only a main document delivers no documents.",
+    "rule": "Z8",
+    "severity": "warning",
+    "where": {
+     "column": null,
+     "container": "missingdocuments.zip",
+     "line": null,
+     "member": null,
+     "subject": null,
+     "xpath": null
+    }
+   },
+   {
+    "about": "container",
+    "detail": "claims PDF/A-3a \u2014 this tool cannot verify PDF/A conformance. The claim is the first one in the file; PDF/A-3 files carry attachments with XMP packets of their own, and this tool cannot tell one from the other",
+    "layer": "pdf",
+    "message": "The PDF claims a PDF/A level; this tool did not verify the claim",
+    "obligation": "ours",
+    "refCodes": [
+     "REP_015"
+    ],
+    "refKeys": [
+     "processor:REP_MESSAGE_015"
+    ],
+    "remedy": "Run a PDF/A validator such as veraPDF if you need the claim verified. This tool only confirms that a claim is present and well-formed.",
+    "rule": "P4",
+    "severity": "info",
+    "where": {
+     "column": null,
+     "container": "missingdocuments.zip",
+     "line": null,
+     "member": "VDI2770_Main.pdf",
+     "subject": "VDI2770_Main.pdf",
+     "xpath": null
+    }
+   }
+  ],
+  "notListed": [],
+  "path": "corpus/examples/container/missingdocuments.zip",
+  "pdfaNote": "This tool reports PDF/A claims. It does not verify them.",
+  "pdfaVerified": false,
+  "read": {
+   "archives": {
+    "found": 1,
+    "opened": 1
+   },
+   "complete": true,
+   "metadataFiles": {
+    "found": 1,
+    "read": 1
+   },
+   "note": "Counted over the names the archives this read opened list, refusals included; a metadata file inside an archive that was not opened is not among them, and the archive count says so. `complete` is false if anything was declined."
+  },
+  "schemaVersion": 1,
+  "summary": {
+   "error": 2,
+   "info": 1,
+   "warning": 1
+  },
+  "target": "missingdocuments.zip",
+  "tool": "vdi2770-validate",
+  "toolVersion": "<the release that ran it; the version gates hold this>",
+  "vdiSchema": "<the bundled schema's own stamp; a property of the build>"
+ }
+]

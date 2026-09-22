@@ -277,7 +277,8 @@ def test_contributing_counts_the_targets_it_lists():
     makefile = (ROOT / "Makefile").read_text(encoding="utf-8")
     prereqs = re.search(r"^check:\s*(.*)$", makefile, re.M).group(1).split()
     prose = (ROOT / "CONTRIBUTING.md").read_text(encoding="utf-8")
-    words = {6: "six", 7: "seven", 8: "eight", 9: "nine", 10: "ten", 11: "eleven"}
+    words = {6: "six", 7: "seven", 8: "eight", 9: "nine", 10: "ten",
+             11: "eleven", 12: "twelve", 13: "thirteen", 14: "fourteen"}
     assert f"It is {words[len(prereqs)]} targets" in prose, (
         f"`make check` has {len(prereqs)} prerequisites and CONTRIBUTING says otherwise")
     # One of them is a build step, not a gate, and the prose says so. If that
@@ -450,8 +451,14 @@ def test_no_document_cites_a_file_that_is_not_here():
     # which is a repository path and so is checked like the rest.
     # 31 to 32 when the section being written started naming the generated page
     # a rule's prose lives on, so the reader of the entry can go and read it.
-    assert seen == 32, (
-        f"{seen} citations found, not 32. If you added or removed one, say so "
+    # 32 to 33 when the report's contract page started naming the stored report
+    # it is checked against, so a reader can see what the tool actually said
+    # beside what the page promises.
+    # 33 to 35 when the entry for this release named both halves of the report
+    # contract -- the page that states it and the stored report it is checked
+    # against -- so a reader of the changelog can go and read either.
+    assert seen == 35, (
+        f"{seen} citations found, not 35. If you added or removed one, say so "
         f"here; if you did not, some of them just stopped being checked.")
 
 

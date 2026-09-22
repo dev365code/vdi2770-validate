@@ -60,6 +60,12 @@ as from the text.
 }
 ```
 
+The whole of this document, for one committed container, is stored as
+[`docs/golden-report.json`](golden-report.json) and compared on every run of the
+gate. The promises below are what this page says; that file is what the tool
+actually said, so a value that changes without anyone deciding to change it is a
+line in a diff rather than a discovery a consumer makes in production.
+
 ## What `schemaVersion` promises
 
 `schemaVersion` is **1**. While it stays 1:
@@ -96,11 +102,17 @@ and `toolVersion` is what tells you which rule set judged this run.
 
 ### `read` — how much of the delivery this verdict covers
 
-`complete` is `true` only when every archive the run found was opened and every
-metadata file those archives list was read. When it is `false`, the verdict
-covers less than the whole delivery, and the numbers say how much less. A
-delivery whose documents are in folders rather than nested archives reads
-`complete: false` — folders are not opened, which the tool says with `Z13`.
+`complete` is `true` only when three things hold: every archive the run found
+was opened, every metadata file those archives list was read, and nothing was
+declined. The third is the one the four numbers above cannot say — a container
+whose metadata this tool read and could not model has every count full — so it
+is read from the findings instead: any rule that is `about: tool` is this tool
+saying it stopped, and one of those is enough to make `complete` false.
+
+When it is `false`, the verdict covers less than the whole delivery, and the
+numbers say how much less. A delivery whose documents are in folders rather than
+nested archives reads `complete: false` — folders are not opened, which the tool
+says with `Z13`.
 
 This block exists because a report that says "0 errors" over a container it
 could not open is the most expensive sentence this tool could print.

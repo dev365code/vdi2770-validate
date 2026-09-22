@@ -60,6 +60,13 @@ release moves, what a patch does and does not promise, how to pin, and what 1.0
 will mean. Three of this package's four patch releases changed what a pipeline
 sees, and the section names them rather than promising that a patch cannot.
 
+**The report's contract has a stored answer beside it.** `docs/report-schema.md`
+says what the JSON promises; `docs/golden-report.json` is what the tool actually
+says about one container that ships here, compared on every run. The page and
+the tool can now disagree out loud instead of drifting. The page also gained the
+third condition on `read.complete`, which it had been missing: a run that
+declined something is incomplete even when every count is full.
+
 **And the stability list stopped saying something this project's own history
 disproves.** It said a rule that fires today fires tomorrow on the same
 container. `0.7.0` moved `Z6` from warning to error and stopped `F2` and `Z8`
