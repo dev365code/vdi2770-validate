@@ -1513,6 +1513,13 @@ PLATFORM_ROWS = [
      ['tests/test_the_rules_page_shows_where_each_layer_stands.py::test_every_number_in_the_table_is_the_number_in_the_data'],
      'the totals were skipped as sums of the cells above them, so a generator that miscounted them, regenerated, read as a page that matched its catalogue'),
 
+    ('docs/a-claim-about-everyone-else-is-caught',
+     'packages/vdi2770/src/vdi2770/validate/data/rules.json',
+     'that is worth saying even where the reference is silent',
+     'that is worth saying out loud even though nobody else says it',
+     ['tests/test_a_claim_about_others_names_what_it_checked.py::test_no_page_claims_something_about_everyone_else'],
+     'a sentence that quantifies over checkers this project has never run reads as a measurement of them, and prose is the one place nothing else here is reading'),
+
     ('gates/a-crash-beside-the-rule-under-test-is-not-a-verdict',
      'tests/test_rule_pairs.py',
      '    assert "X5" not in ids, (',

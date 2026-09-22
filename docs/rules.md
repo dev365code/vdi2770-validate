@@ -92,7 +92,7 @@ Reference implementation: `processor:REP_MESSAGE_025` (displayed as `REP_025`). 
 
 *warning* · obligation `ours`
 
-Why this is ours: The reference implementation has no rule for this. A documentation container whose only content is its own main document delivers nothing, which is worth saying out loud even though nobody else says it — hence a warning, not an error.
+Why this is ours: The reference implementation has no rule for this, measured against the commit `docs/oracle-sweep.json` pins — the one other checker this project has run. A documentation container whose only content is its own main document delivers nothing, and that is worth saying even where the reference is silent: a warning rather than an error, because the sentence is ours to make and the guideline does not make it.
 
 **Remedy.** Add the document containers this handover is supposed to deliver. A documentation container with only a main document delivers no documents.
 
