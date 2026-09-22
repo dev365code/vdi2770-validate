@@ -1602,6 +1602,13 @@ PLATFORM_ROWS = [
       'test_contributing_is_right_about_who_signed_off'],
      'a total can be raised by whoever meets it red, which absorbs a new unsigned commit into a paragraph about an old lapse; a name has to be written down one commit at a time'),
 
+    ('schema/a-page-count-must-be-positive',
+     'packages/vdi2770/src/vdi2770/validate/data/VDI2770_Schema_2019-08-23.xsd',
+     '<xs:attribute name="NumberOfPages" type="xs:positiveInteger"/>',
+     '<xs:attribute name="NumberOfPages" type="xs:integer"/>',
+     ['tests/test_a_page_count_is_checked_by_the_schema.py'],
+     'the page says this condition is caught without a rule of ours, and the whole of what catches it is one word in the bundled schema -- loosen that word and the page is wrong with nothing else to notice'),
+
     ('report/the-whole-report-is-stored-and-compared',
      'docs/golden-report.json',
      '"rule": "Z8",\n    "severity": "warning"',
@@ -2080,14 +2087,23 @@ def _ran(said: str) -> bool:
 
 
 def apply(tree: Path, row) -> None:
+    """Applied to the file's *bytes*.
+
+    A text round-trip is not the identity on every file here. The vendored VDI
+    schema is stored with CRLF line endings, and reading it as text and writing
+    it back rewrites all 287 lines -- so a row on it would leave the tree dirty
+    after the restore below, and `THIRD_PARTY.md` hashes that file, so the next
+    gate to run would fail for a reason nothing in this harness had done on
+    purpose. Bytes in, bytes out, and the anchor is compared as bytes.
+    """
     _id, rel, old, new, _tests, _why = row
     f = tree / rel
-    text = f.read_text(encoding="utf-8")
-    found = text.count(old)
+    raw = f.read_bytes()
+    found = raw.count(old.encode("utf-8"))
     if found != 1:
         raise SystemExit(f"{_id}: the anchor appears {found} times in {rel}; the table has "
                          f"drifted from the code and the row proves nothing")
-    f.write_text(text.replace(old, new), encoding="utf-8")
+    f.write_bytes(raw.replace(old.encode("utf-8"), new.encode("utf-8")))
     f.touch()
     clear(tree)
 
@@ -2122,7 +2138,7 @@ def main() -> int:
         survivors, broken = [], []
         for row in TABLE:
             _id, rel, old, new, tests, _why = row
-            pristine = (tree / rel).read_text(encoding="utf-8")
+            pristine = (tree / rel).read_bytes()
 
             clear(tree)
             code, said = run(tree, tests)
@@ -2141,7 +2157,7 @@ def main() -> int:
 
             apply(tree, row)
             code, _ = run(tree, tests)
-            (tree / rel).write_text(pristine, encoding="utf-8")
+            (tree / rel).write_bytes(pristine)
             (tree / rel).touch()
             clear(tree)
             # Restoring the source is not restoring the tree. A row whose checks

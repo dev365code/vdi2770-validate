@@ -181,8 +181,12 @@ Java toolchain — so the summaries below are not checkable from a clone:
 
 - `DV_013` fires on `numberOfPages < 0`, though its message says "greater than
   zero" — so `0` passes there. (Checked in the English, German and Chinese
-  bundles; only the English one is vendored here.) This tool has no numberOfPages
-  rule yet; when it gets one it will use the message's meaning.
+  bundles; only the English one is vendored here.) This tool has no
+  `numberOfPages` rule and does not need one: the schema types the attribute
+  `xs:positiveInteger`, so a zero and a negative are both refused as `X2`, with
+  the attribute named and the line given. The basis is the schema VDI publishes
+  rather than a judgement of ours, which is the stronger of the two — and it
+  means this tool refuses the `0` the reference lets through.
 - `MainDocument.validate` throws `IndexOutOfBoundsException` on an empty version
   list, discarding the `MD_001` it had just recorded.
 - `MainDocument` overrides only the two-argument `validate`, so main-document rules
