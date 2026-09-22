@@ -190,6 +190,33 @@ def test_a_folder_is_the_same_folder_however_its_members_are_spelled(meta_name, 
 
 
 
+def test_a_folder_holding_two_reserved_names_is_still_one_folder():
+    """`folders_holding_metadata` returns `(prefix, leaf)` pairs, and one folder
+    can hold both reserved names. Reporting per pair put two findings at one
+    location -- same `member`, same `subject`, differing only in the sentence --
+    which is the deduplication this rule stopped asking the consumer to do,
+    handed straight back.
+
+    Built here because no container in the corpus has this shape, which is why
+    the property went unnoticed: the rule fanned out on a set the corpus never
+    made larger than one per folder.
+    """
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr("VDI2770_Main.xml", DOCN.read("VDI2770_Main.xml"))
+        z.writestr("VDI2770_Main.pdf", DOCN.read("VDI2770_Main.pdf"))
+        z.writestr("plantA/VDI2770_Metadata.xml", META)
+        z.writestr("plantA/VDI2770_Main.xml", DOCN.read("VDI2770_Main.xml"))
+        z.writestr("plantA/B.pdf", DOC.read("B.pdf"))
+
+    found = [f for f in report(buf.getvalue()).findings if f.rule.id == "Z13"]
+    assert len(found) == 1, (
+        f"one folder drew {len(found)} findings: "
+        f"{[(f.where.member, f.detail) for f in found]}")
+    assert "VDI2770_Main.xml" in found[0].detail and "VDI2770_Metadata.xml" in found[0].detail, (
+        f"the one finding should name both reserved names it holds: {found[0].detail!r}")
+
+
 def test_two_rules_name_the_same_folder_the_same_way():
     """`Z9` said `AB393/` and `Z13` said `./AB393/`, in one report.
 
@@ -200,11 +227,34 @@ def test_two_rules_name_the_same_folder_the_same_way():
     because `files.py` matches it against the archive's member names to suppress
     `F2`; it is only the sentence that changes.
     """
-    said = {f.rule.id: f.detail for f in report(foldered("./AB393")).findings
-            if f.rule.id in ("Z9", "Z13")}
-    assert set(said) == {"Z9", "Z13"}, said
-    named = {rid: detail.split(": ", 1)[1] for rid, detail in said.items()}
-    assert named["Z9"] == named["Z13"], named
+    found = [f for f in report(foldered("./AB393")).findings
+             if f.rule.id in ("Z9", "Z13")]
+    assert {f.rule.id for f in found} == {"Z9", "Z13"}, found
+
+    # Both surfaces, and not one of them. `Z13` carries the folder in `where`
+    # now as well as in its sentence, and an earlier version of this test read
+    # only the field -- which let the original defect back in: the sentence said
+    # `./AB393/` while `where` said `AB393/`, one report naming one folder two
+    # ways, and this file stayed green. Each surface is compared against `Z9`,
+    # and the sentence is compared against the field beside it.
+    #
+    # Not keyed by rule id either. `Z13` fires once per folder, and a dictionary
+    # keyed on the id silently keeps the last one.
+    z9 = [f for f in found if f.rule.id == "Z9"]
+    assert len(z9) == 1, z9
+    listed = z9[0].detail.split(": ", 1)[1]
+
+    for f in (f for f in found if f.rule.id == "Z13"):
+        assert f.where.member in listed.split(", "), (
+            f"Z13 locates {f.where.member!r}; Z9 lists {listed!r}")
+        # The token the sentence opens with, compared for equality. `in` was
+        # not enough and read as though it were: `AB393/` is a substring of
+        # `./AB393/`, so containment holds in exactly the case this is meant to
+        # refuse.
+        said = f.detail.split(" holds ", 1)[0]
+        assert said == f.where.member, (
+            f"Z13's sentence opens with {said!r} and its location says "
+            f"{f.where.member!r}; one folder, two spellings, one report")
 
 
 class _Counting(frozenset):

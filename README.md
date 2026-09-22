@@ -14,7 +14,7 @@
 
 ## Ten seconds
 
-<img src="https://raw.githubusercontent.com/dev365code/vdi2770-validate/main/docs/assets/tenseconds.svg?v=802840d4" alt="Real vdi2770-validate output: error F1, a file named in the metadata is not in the container, with the metadata line it is declared on and the remedy; error Z7, the documentation container has no VDI2770_Main.pdf, with its remedy; three errors, one warning." width="100%">
+<img src="https://raw.githubusercontent.com/dev365code/vdi2770-validate/main/docs/assets/tenseconds.svg?v=14164ddf" alt="Real vdi2770-validate output: error F1, a file named in the metadata is not in the container, with the metadata line it is declared on and the remedy; error Z7, the documentation container has no VDI2770_Main.pdf, with its remedy; then a line saying how many findings follow and how many of them are this tool declining to look." width="100%">
 
 ```console
 $ pip install vdi2770-validate
@@ -66,14 +66,19 @@ folders.zip
          per the reference implementation - observed there, not verified against the standard (REP_025)
          -> Add the main document as VDI2770_Main.pdf at the root of the documentation container, next to VDI2770_Main.xml.
   error  Z13  Documents are delivered as folders, which this tool does not open
-         at folders.zip
-         2 folders hold VDI2770_Metadata.xml: 456-29201/, AB393/
+         at folders.zip!/456-29201/
+         456-29201/ holds VDI2770_Metadata.xml, and nothing inside it was read
+         per this tool's own rule
+         -> Nothing here is necessarily wrong with the container. Zip each document folder into its own .zip member if you want this tool to check it, or check those folders with something that reads them.
+  error  Z13  Documents are delivered as folders, which this tool does not open
+         at folders.zip!/AB393/
+         AB393/ holds VDI2770_Metadata.xml, and nothing inside it was read
          per this tool's own rule
          -> Nothing here is necessarily wrong with the container. Zip each document folder into its own .zip member if you want this tool to check it, or check those folders with something that reads them.
 
   … 1 more Z9 warning
 
-  3 error(s), 1 warning(s), 0 note(s) — 1 of the errors is this tool declining to look, not the container
+  4 error(s), 1 warning(s), 0 note(s) — 2 of the errors are this tool declining to look, not the container
   read 1 of 1 archives, 1 of 3 metadata files
 
 This tool does not verify PDF/A conformance. It reports the claim a file makes
