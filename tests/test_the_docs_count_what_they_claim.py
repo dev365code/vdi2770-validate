@@ -448,8 +448,10 @@ def test_no_document_cites_a_file_that_is_not_here():
     # 30 to 31 when `docs/report-schema.md` arrived: the JSON report's contract
     # page points a reader at `docs/rules.md` for the sentence behind a rule id,
     # which is a repository path and so is checked like the rest.
-    assert seen == 31, (
-        f"{seen} citations found, not 31. If you added or removed one, say so "
+    # 31 to 32 when the section being written started naming the generated page
+    # a rule's prose lives on, so the reader of the entry can go and read it.
+    assert seen == 32, (
+        f"{seen} citations found, not 32. If you added or removed one, say so "
         f"here; if you did not, some of them just stopped being checked.")
 
 

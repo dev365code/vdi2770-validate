@@ -5,10 +5,12 @@ Sections through 0.7.0 had their wording tidied after their tags; the text each 
 ## 0.10.0 — unreleased
 
 Who should take this release: anyone who hands over a file whose declared media
-type and file name might not agree, and anyone whose delivery declares what its
-documents are *about*. Two rules read more than they read before, so a delivery
-that passed may now draw a warning — which is why this is a minor release and
-not a patch.
+type and file name might not agree, anyone whose delivery declares what its
+documents are *about*, and anyone reading this project's pages to decide whether
+to depend on it. Two rules read more than they read before, so a delivery that
+passed may now draw a warning — which is why this is a minor release and not a
+patch. Nothing else here moves a verdict: two sentences this repository wrote
+about itself were narrowed to what it has actually measured.
 
 **`F3` knew two media types and now knows fifteen.** The rule asks whether a
 declared `FileFormat` agrees with the file's own name, and it only ever
@@ -43,6 +45,28 @@ settling that would mean reading the guideline text, which this project has not.
 **`ObjectId` is part of the model now**, and exported: `vdi2770.ObjectId`, with
 the objects a document declares on `Document.objects`. It was in the schema and
 nowhere in the model before, which is why nothing could ask this question.
+
+**A rule stopped claiming what other checkers do.** `Z8` explained itself with a
+sentence about the whole field of tools. What this project has measured is one
+other implementation, on 49 containers, and on the single one of those that
+exercises `Z8` the reference reported something of its own — so the sentence
+claimed more than any measurement here can show. It now rests on what the rule
+is: a judgement this tool makes on its own authority, citing no reference key
+and no line of the guideline, which is why it is a warning and not an error.
+`whyOurs` is read only by the generator that writes `docs/rules.md`.
+
+**The page says how releases are numbered.** What 0.x means here, what a minor
+release moves, what a patch does and does not promise, how to pin, and what 1.0
+will mean. Three of this package's four patch releases changed what a pipeline
+sees, and the section names them rather than promising that a patch cannot.
+
+**And the stability list stopped saying something this project's own history
+disproves.** It said a rule that fires today fires tomorrow on the same
+container. `0.7.0` moved `Z6` from warning to error and stopped `F2` and `Z8`
+firing on files inside folders — both announced in that release's section, which
+is the promise that actually holds. The list now says that: verdicts move across
+releases, never quietly, and the CHANGELOG names each one.
+
 
 ## 0.9.1 — 2026-09-22
 

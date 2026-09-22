@@ -92,7 +92,7 @@ Reference implementation: `processor:REP_MESSAGE_025` (displayed as `REP_025`). 
 
 *warning* · obligation `ours`
 
-Why this is ours: The reference implementation has no rule for this. A documentation container whose only content is its own main document delivers nothing, which is worth saying out loud even though nobody else says it — hence a warning, not an error.
+Why this is ours: This rule cites no reference message key and rests on no line of the guideline. A documentation container whose only content is its own main document delivers nothing, which is worth saying out loud. The judgement is this tool's own, which is why it is a warning and not an error.
 
 **Remedy.** Add the document containers this handover is supposed to deliver. A documentation container with only a main document delivers no documents.
 
