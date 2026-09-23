@@ -122,7 +122,7 @@ flowchart LR
 | Terminal | build scripts, people | `vdi2770-validate check handover.zip` |
 | Python | your own tooling | `import vdi2770` / `import vdi2770_validate` |
 | Single file | closed networks, approvals | `python vdi2770.pyz check handover.zip` |
-| GitHub Action | a workflow that blocks a bad delivery | `uses: dev365code/vdi2770-validate@v0.9.1` |
+| GitHub Action | a workflow that blocks a bad delivery | `uses: dev365code/vdi2770-validate@v0.9.2` |
 
 No route to a package index? No pip, no virtual environment, no rights to make
 one? Carry **one file** in instead. It still needs a Python — that is the one
@@ -146,7 +146,7 @@ Exit codes and a versioned JSON report make it a CI gate in one line.
 ### In a workflow
 
 ```yaml
-- uses: dev365code/vdi2770-validate@v0.9.1
+- uses: dev365code/vdi2770-validate@v0.9.2
   with:
     paths: handover.zip nameplate.zip
 ```
@@ -157,7 +157,7 @@ nothing readable at all, `3` the install disagreed with itself, `64` a mistyped
 command line or a `pyz:` that is not there — ask for it:
 
 ```yaml
-- uses: dev365code/vdi2770-validate@v0.9.1
+- uses: dev365code/vdi2770-validate@v0.9.2
   id: vdi
   with:
     paths: handover.zip
@@ -360,7 +360,7 @@ The readers and the rules used to be two distributions that had to match, and
 `vdi2770-validate` named the reader with an exact pin so the pair could not be
 half-moved. They are one distribution now. `vdi2770-validate` is the old import
 name kept working: two lines that make it the same object as `vdi2770.validate`,
-asking for `vdi2770[validate]==0.9.1` — its own version, exactly. A floor
+asking for `vdi2770[validate]==0.9.2` — its own version, exactly. A floor
 would stop an older engine and let a newer one install beside it, and halves
 that disagree about which release they are do not judge.
 (This page follows the working tree, so the number is the release being

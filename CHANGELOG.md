@@ -2,6 +2,43 @@
 
 Sections through 0.7.0 had their wording tidied after their tags; the text each version carried when it was published is in that tag's own `CHANGELOG.md`. From 0.8.0 on, a released section is frozen at its tag and takes only appended `*(Correction ...)*` lines.
 
+## 0.9.2 — 2026-09-23
+
+Who should take this release: anyone on 0.8.0 through 0.9.1 who checks
+deliveries from sources they do not control. This release carries one repair
+and nothing else.
+
+**Asking who declares an identifier read the whole delivery once for every
+document that asked.** `M11` and `M12` ask, for each `DocumentRelationship`,
+whether any document *other than this one* declares the identifier it names.
+The answer was built as a set of every identifier in the delivery with the
+asking document's own taken out — one such set per referring document, and all
+of them kept for as long as the run lasted. Memory and time grew with the
+product of the documents that ask and the identifiers they ask about, and no
+budget in this tool measures that product: `MAX_CONTAINERS` bounds how many
+containers a run opens and `MAX_TOTAL_ELEMENTS` how many elements it parses,
+and both can be raised independently under those caps.
+
+Measured: eight hundred referring documents and eight thousand declared
+identifiers, in a **1.15 MB** archive, made one run hold **1,628 MB**. Two
+archives **thirty-three bytes apart** cost 359 MB and 791 MB, because the cost
+follows the product and not the size of the input. A delivery does not have to
+be malformed to pay it — one whose only findings are informational pays the
+same. And exhaustion here does not arrive as a refusal: the runner turns an
+exception raised inside a check into an `X5` finding at error severity, so a
+delivery that exhausted the machine is reported as a delivery that failed its
+check.
+
+The count is taken once for the whole delivery now, and each document's own
+subtracted from it — counted rather than subtracted as a set, because two
+documents may declare the same identifier and removing one document's own would
+drop an identifier the other still declares. The same inputs hold 22 MB and
+17.5 MB. Every container in the sample corpus reports exactly what it reported
+before, with the same exit code.
+
+Security: [GHSA-f9xw-89gp-x52p](https://github.com/dev365code/vdi2770-validate/security/advisories/GHSA-f9xw-89gp-x52p), affecting `vdi2770` and
+`vdi2770-validate` from 0.8.0 up to 0.9.1; fixed in 0.9.2.
+
 ## 0.9.1 — 2026-09-22
 
 Who should take this release: anyone whose pipeline pins `vdi2770-validate`

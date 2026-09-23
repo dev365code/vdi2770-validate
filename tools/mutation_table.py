@@ -563,7 +563,7 @@ TABLE = [
 
     ("gates/the-pin-names-the-reader-that-was-built",
      "packages/vdi2770/pyproject.toml",
-     'version = "0.9.1"',
+     'version = "0.9.2"',
      'version = "0.7.1"',
      ["tools/check_wheel.py"],
      "the two manifests agree with each other and the artifacts do not: the "
@@ -1011,7 +1011,7 @@ FRONT_DOOR = [
 
     ("gates/the-page-quotes-the-requirement-the-project-declares",
      "README.md",
-     "`vdi2770[validate]==0.9.1`",
+     "`vdi2770[validate]==0.9.2`",
      "`vdi2770[validate]>=0.7.0`",
      ["tests/test_the_front_page_points_at_what_it_shows.py::"
       "test_the_requirement_the_page_quotes_is_the_one_the_project_declares"],
@@ -1104,8 +1104,8 @@ BASIS_ROWS = [
 
     ("rules/a-document-cannot-answer-its-own-reference",
      "packages/vdi2770/src/vdi2770/validate/rules/delivery.py",
-     "for _container, doc in documents if doc is not excluding",
-     "for _container, doc in documents",
+     "declared.get(identity, 0) - (1 if identity in own[id(doc)] else 0) > 0",
+     "declared.get(identity, 0) > 0",
      ["tests/test_a_delivery_carries_the_documents_it_refers_to.py::"
       "test_a_document_does_not_satisfy_its_own_reference"],
      "`ContainerValidator` drops the current document before comparing, so a "

@@ -56,18 +56,34 @@ def _identity(document_id) -> tuple:
             document_id.domain_id.strip().casefold())
 
 
-def known_document_ids(documents, excluding=None) -> set:
-    """Every identifier the delivery declares, excluding one document's own.
+def declarations(documents) -> tuple:
+    """How many documents declare each identifier, and each document's own.
 
     `ContainerValidator` removes the current document from the map before
     comparing, so a relationship naming the identifier of the document it sits
     in is dangling to the reference implementation. It was not to us, and no
     container in the corpus refers to itself -- a divergence with nothing in
     the corpus to expose it, which is the kind that ships.
+
+    Counted once for the delivery rather than built once per document that
+    asks. The first spelling answered the same question with a set of every
+    identity *except one document's own*, which meant one set per referring
+    document, all of them held at once: R*T in time and in memory on a
+    conforming delivery, and no budget in this tool watches that product.
+
+    Counting rather than subtracting, because two documents may declare the
+    same identifier: a single set with one document's own identities removed
+    would drop an identifier that another document still declares, and the
+    relationship naming it would be called dangling. The count, minus your own,
+    is the same question asked in a way that survives repeats.
     """
-    return {_identity(i)
-            for _container, doc in documents if doc is not excluding
-            for i in doc.identifiers}
+    declared, own = {}, {}
+    for _container, doc in documents:
+        mine = {_identity(i) for i in doc.identifiers}
+        own[id(doc)] = mine
+        for identity in mine:
+            declared[identity] = declared.get(identity, 0) + 1
+    return declared, own
 
 
 def refers_to(documents) -> Iterator[tuple]:
@@ -104,13 +120,16 @@ def check(documents, read_everything: bool) -> Iterator[Finding]:
     """
     if not read_everything:
         return
-    # One set per referring document, because each excludes its own
-    # identifiers, and built once per document rather than once per reference.
-    known_to = {}
+    # Counted once for the whole delivery, and only if something asks: a
+    # delivery with no relationships does no work here at all.
+    declared = own = None
     for container, doc, relationship, target in refers_to(documents):
-        if id(doc) not in known_to:
-            known_to[id(doc)] = known_document_ids(documents, excluding=doc)
-        if _identity(target) in known_to[id(doc)]:
+        if declared is None:
+            declared, own = declarations(documents)
+        identity = _identity(target)
+        # "Some document other than this one declares it": the count of the
+        # documents that declare this identity, less your own if you are one.
+        if declared.get(identity, 0) - (1 if identity in own[id(doc)] else 0) > 0:
             continue
         from_main = container.metadata_name == MAIN_XML
         r = rule("M11" if from_main else "M12")
