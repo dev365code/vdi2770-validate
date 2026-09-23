@@ -160,6 +160,34 @@ class Finding:
 # either — the count does.
 MAX_LISTED_PER_RULE = 100
 
+# And a hundred is a count, not a size. Every finding carries the path of the
+# container it is in, a member name may be 65,535 bytes long, and a container
+# that holds others repeats its name in every one of their paths -- so a hundred
+# findings per rule, in each of up to a thousand containers, each printing a
+# name the sender chose, grew with the containers times the length of that name.
+# Ten containers under a 65,531-character name printed 68 MB of JSON and as much
+# again of text from a 144 KB archive; twice the containers printed twice that.
+#
+# So each rule's listing also stops at a size: about how many characters its
+# findings print, counted where they are collected. Counted where they are
+# printed, it would bound the page and not the memory, because every finding
+# would be held until then. Past it a finding is counted and not kept, as past
+# the cap above, and both shapes of the report say where the listing stopped.
+LISTING_BUDGET_PER_RULE = 1_000_000
+
+#: What one finding prints besides its own strings -- keys, the rule's fields,
+#: the basis line -- as a flat allowance, so that a rule firing many times with
+#: short strings reaches the budget too.
+LISTED_ALLOWANCE = 512
+
+
+def listed_size(f) -> int:
+    """About how many characters listing `f` prints."""
+    w = f.where
+    return (LISTED_ALLOWANCE + len(f.message) + len(f.detail or "") + len(f.remedy)
+            + len(w.container or "") + len(w.member or "") + len(w.xpath or "")
+            + len(w.subject or ""))
+
 
 @dataclass
 class Read:
@@ -196,21 +224,44 @@ class Report:
     _suppressed_about: Dict[Tuple[Severity, About], int] = field(
         default_factory=dict, repr=False)
     _suppressed_rule: Dict[Tuple[str, str], Rule] = field(default_factory=dict, repr=False)
+    # rule id -> how many findings the size budget counted but did not keep.
+    over_budget: Dict[str, int] = field(default_factory=dict)
+    _over_budget_rule: Dict[str, Rule] = field(default_factory=dict, repr=False)
+    # rule id -> characters its listing has spent, findings in all, findings kept.
+    _spent: Dict[str, int] = field(default_factory=dict, repr=False)
+    _in_all: Dict[str, int] = field(default_factory=dict, repr=False)
+    _kept: Dict[str, int] = field(default_factory=dict, repr=False)
 
     def add(self, f: Finding) -> None:
-        key = (f.rule.id, f.where.container)
+        rid = f.rule.id
+        self._in_all[rid] = self._in_all.get(rid, 0) + 1
+        key = (rid, f.where.container)
         if self._listed.get(key, 0) >= MAX_LISTED_PER_RULE:
             # Counted, not kept. `count()` still reports every one of them, so
             # the summary and the exit code stay true; only the listing is bounded.
             self.suppressed[key] = self.suppressed.get(key, 0) + 1
             self._suppressed_rule[key] = f.rule
-            self._suppressed_severity[f.severity] = (
-                self._suppressed_severity.get(f.severity, 0) + 1)
-            self._suppressed_about[(f.severity, f.about)] = (
-                self._suppressed_about.get((f.severity, f.about), 0) + 1)
+            self._count_unlisted(f)
             return
+        size = listed_size(f)
+        if rid in self.over_budget or self._spent.get(rid, 0) + size > LISTING_BUDGET_PER_RULE:
+            # Counted, not kept, for the same reason. And once a rule's listing
+            # has stopped it stays stopped: a smaller finding after a larger one
+            # would fit, and "stopped" would then be true of neither.
+            self.over_budget[rid] = self.over_budget.get(rid, 0) + 1
+            self._over_budget_rule[rid] = f.rule
+            self._count_unlisted(f)
+            return
+        self._spent[rid] = self._spent.get(rid, 0) + size
+        self._kept[rid] = self._kept.get(rid, 0) + 1
         self._listed[key] = self._listed.get(key, 0) + 1
         self.findings.append(f)
+
+    def _count_unlisted(self, f: Finding) -> None:
+        self._suppressed_severity[f.severity] = (
+            self._suppressed_severity.get(f.severity, 0) + 1)
+        self._suppressed_about[(f.severity, f.about)] = (
+            self._suppressed_about.get((f.severity, f.about), 0) + 1)
 
     def not_listed(self, show_info: bool = True) -> List[Tuple[str, str, int]]:
         """(rule id, container, how many) for findings counted but not kept.
@@ -221,6 +272,14 @@ class Report:
                 for (rid, container), n in sorted(self.suppressed.items())
                 if show_info
                 or self._suppressed_rule[(rid, container)].severity is not Severity.INFO]
+
+    def stopped(self, show_info: bool = True) -> List[Tuple[str, int, int]]:
+        """(rule id, how many in all, how many listed) for each rule whose
+        listing stopped at its size budget, under the same INFO filter."""
+        return [(rid, self._in_all[rid], self._kept.get(rid, 0))
+                for rid in sorted(self.over_budget)
+                if show_info
+                or self._over_budget_rule[rid].severity is not Severity.INFO]
 
     def sorted(self) -> list:
         return sorted(self.findings, key=lambda f: f.sort_key())

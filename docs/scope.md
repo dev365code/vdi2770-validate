@@ -48,6 +48,12 @@ failure — files that never claimed at all.
   many it withheld (`notListed` in JSON). **The counts and the exit code are not
   capped** — a bounded listing must never become a quieter verdict. Reading past
   the hundredth identical finding tells a user nothing the count does not.
+  And a hundred is a count, not a size: every finding carries its container's
+  path, and a container that holds others repeats its name in every one of their
+  paths, so each rule's listing also stops at a size budget of about a million
+  characters. The report then says how many findings that rule had in all and how
+  many it lists (`listingStopped` in JSON). No input in this repository's suite
+  reaches it.
 
 - **ISO 639**: we accept every ISO 639-1 two-letter code and any three-letter
   alphabetic code. We do not carry the full ISO 639-2 register, so a plausible-looking

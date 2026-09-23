@@ -101,10 +101,22 @@ def _where(location) -> str:
     return str(shown)
 
 
+def stopped_said(rid: str, in_all: int, listed: int) -> str:
+    """Where a rule's listing stopped, in one sentence both shapes print, so
+    that the page and the JSON cannot say two things about one run."""
+    return (f"{in_all} {rid} finding{'' if in_all == 1 else 's'} in all, {listed} "
+            f"listed: the listing stopped at its size budget, and the summary "
+            f"counts every one")
+
+
 def as_text(report: Report, show_info: bool = True) -> str:
     lines: List[str] = [f"{report.target}"]
     findings = [f for f in report.sorted() if show_info or f.severity is not Severity.INFO]
-    if not findings:
+    stopped = report.stopped(show_info)
+    # Not "no findings" over a listing that stopped before its first one: a
+    # finding larger than the budget is counted and not listed, and the line
+    # below says so.
+    if not findings and not stopped:
         # "no findings" over a summary line reading "1 note(s)" is the report
         # contradicting itself, and a test pinned both halves of it.
         # count(), not len(findings): the listing is capped, the count is not,
@@ -132,6 +144,8 @@ def as_text(report: Report, show_info: bool = True) -> str:
         # closed.
         lines.append(f"  ... {n} more {rid} finding{'' if n == 1 else 's'} in "
                      f"{as_written(container)}, counted below but not listed")
+    for rid, in_all, listed in stopped:
+        lines.append(f"  ... {stopped_said(rid, in_all, listed)}")
     counts = {s: report.count(s) for s in Severity}
     lines.append("")
     # And how many of the errors are this tool declining to look rather than
@@ -207,6 +221,11 @@ def as_json(report: Report, show_info: bool = True) -> str:
         # findings serve nobody.
         "notListed": [{"rule": rid, "container": container, "count": n}
                       for rid, container, n in report.not_listed(show_info)],
+        # And the rules whose listing stopped at its size budget, which no
+        # container's count above accounts for.
+        "listingStopped": [{"rule": rid, "inAll": in_all, "listed": listed,
+                            "said": stopped_said(rid, in_all, listed)}
+                           for rid, in_all, listed in report.stopped(show_info)],
         "findings": [
             {
                 "rule": f.rule.id,
