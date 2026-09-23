@@ -408,6 +408,8 @@ resolver error, because 0.6.0 asks for a 0.4.x engine on purpose.
 No verdict moves in this release. A container judged by 0.9.0 is judged the
 same way here; the only difference a report shows is `toolVersion`.
 
+*(Correction 2026-09-24: pinning 0.8.0, 0.8.1, 0.8.2 or 0.9.0 by both names, as advised above, keeps a release inside the range of two security advisories published since, which SECURITY.md lists; move to 0.9.4 or later instead, which pins both halves exactly.)*
+
 ## 0.9.0 — 2026-09-20
 
 Who should take this release: anyone whose CI reads the exit code, anyone whose
