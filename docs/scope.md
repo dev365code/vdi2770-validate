@@ -52,9 +52,12 @@ failure — files that never claimed at all.
   And a hundred is a count, not a size: every finding carries its container's
   path, and a container that holds others repeats its name in every one of their
   paths, so each rule's listing also stops at a size budget of about a million
-  bytes of what its findings print, in whichever shape prints more. The report then says how many findings that rule had in all and how
-  many it lists (`listingStopped` in JSON). No input in this repository's suite
-  reaches it.
+  bytes of what its findings print, in whichever shape prints more. The report
+  then says how many findings that rule had in all and how many it lists
+  (`listingStopped` in JSON). No container in the sample corpus and no fixture
+  the suite builds reaches it. A real delivery can: each finding is charged at
+  least a kilobyte, so a thousand containers with one finding of a rule in each
+  are enough, and the count stays exact.
 
 - **ISO 639**: we accept every ISO 639-1 two-letter code and any three-letter
   alphabetic code. We do not carry the full ISO 639-2 register, so a plausible-looking
