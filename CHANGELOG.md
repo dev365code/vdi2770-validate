@@ -85,7 +85,8 @@ of them narrowed, one of them made to admit more.
   0.11.0 gives an exception raised by this tool's own code while checking a
   file `70` (`EX_SOFTWARE`), wherever it is caught. It does not move a file
   that genuinely cannot be read: a path that does not exist, or one you may not
-  open, keeps `2`, and a mistyped command line keeps `64`. `3`, `64` and `70`
+  open, keeps the code it has now — `2` when nothing in the run could be read,
+  `1` beside a path that could — and a mistyped command line keeps `64`. `3`, `64` and `70`
   are then the codes that are not a verdict about the container. **Nothing about the codes changes in this release.** This is
   the announcement, one release ahead, that one of them will.
 

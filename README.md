@@ -162,10 +162,11 @@ nothing readable at all, `3` the install disagreed with itself, `64` a mistyped
 command line or a `pyz:` that is not there — ask for it:
 
 *Coming in 0.11.0*: an exception raised by this tool's own code while checking
-a file returns `70` (`EX_SOFTWARE`) instead of `1` or `2`, so a gate can tell a
-finding about your delivery from a failure of ours. A file that cannot be read —
-a path that does not exist, one you may not open — keeps `2`, and a mistyped
-command line keeps `64`.
+a file, wherever the tool catches it, returns `70` (`EX_SOFTWARE`) instead of `1`
+or `2`, so a gate can tell a finding about your delivery from a failure of ours.
+A file that cannot be read — a path that does not exist, one you may not open —
+keeps the code it has now: `2` when nothing in the run could be read, `1` beside
+a path that could. A mistyped command line keeps `64`.
 
 ```yaml
 - uses: dev365code/vdi2770-validate@v0.9.3
