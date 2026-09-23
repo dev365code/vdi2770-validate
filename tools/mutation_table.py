@@ -1098,6 +1098,15 @@ FRONT_DOOR = [
      "the paragraph whose whole subject is that the pin is exact quotes a pin "
      "the project does not declare"),
 
+    ("gates/the-page-pypi-shows-quotes-the-requirement-the-project-declares",
+     "README-vdi2770-validate.md",
+     "`vdi2770[validate]==0.10.0`",
+     "`vdi2770[validate]==0.9.1`",
+     ["tests/test_the_front_page_points_at_what_it_shows.py::"
+      "test_the_requirement_the_page_quotes_is_the_one_the_project_declares"],
+     "the page PyPI shows for this package quoted ==0.9.1 through two releases "
+     "after it, because only the front page was read"),
+
     ("gates/the-badge-counts-the-catalogue",
      "README.md",
      "rules-42_each_with_a_remedy",

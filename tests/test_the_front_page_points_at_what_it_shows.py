@@ -163,15 +163,22 @@ def test_the_requirement_the_page_quotes_is_the_one_the_project_declares():
     `pyproject.toml` — so a reader arriving after a version bump would be shown
     something the project no longer declares, in the paragraph whose whole
     subject is which engine you get.
+
+    Both pages that explain it: the front page, and the page PyPI shows for this
+    package, which `readme` in `pyproject.toml` names. Only the first was read,
+    and the second went on quoting `==0.9.1` through two releases after it.
     """
     project = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
     declared = re.search(r'"(vdi2770\[[^"]+)"', project)
     assert declared, "pyproject.toml no longer asks for the engine by name"
-    quoted = re.findall(r"`(vdi2770\[[^`]+)`", README)
-    assert quoted, "the front page no longer quotes the requirement it explains"
-    assert set(quoted) == {declared.group(1)}, (
-        f"the page quotes {sorted(set(quoted))} and pyproject.toml declares "
-        f"{declared.group(1)!r}")
+    shown = re.search(r'^readme = "([^"]+)"', project, re.M)
+    assert shown, "pyproject.toml no longer names the page PyPI shows"
+    for page in sorted({"README.md", shown.group(1)}):
+        quoted = re.findall(r"`(vdi2770\[[^`]+)`", (ROOT / page).read_text(encoding="utf-8"))
+        assert quoted, f"{page} no longer quotes the requirement it explains"
+        assert set(quoted) == {declared.group(1)}, (
+            f"{page} quotes {sorted(set(quoted))} and pyproject.toml declares "
+            f"{declared.group(1)!r}")
 
 
 def test_the_python_versions_on_the_page_are_the_ones_that_are_run():
