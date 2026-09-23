@@ -69,9 +69,10 @@ failure — files that never claimed at all.
   stored beyond what that scan reaches produces `P3`, whose title says exactly what
   happened — *this scan found no PDF/A claim in the file* — rather than the thing it
   would be wrong to say, that the file makes none. Which prefix is bound to the
-  PDF/A namespace no longer matters for the first four a packet declares, which
-  used to be a second way to miss a claim; a packet that binds more than four
-  gets four tries and then this scan stops looking. It cannot
+  PDF/A namespace no longer matters, which used to be a second way to miss a
+  claim; a packet that binds more prefixes than the reader's cap allows gets
+  that many tries and then this scan stops looking. How many that is belongs to
+  the reader, and the reader's README publishes it. It cannot
   be *faked* by writing the words outside an XMP packet; that was possible once and
   is tested against now.
 - **Every byte is read**: to say a member is deliverable we decompress it, the

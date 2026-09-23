@@ -158,6 +158,24 @@ def different_registers(a, b) -> bool:
     return bool(left) and bool(right) and left != right
 
 
+#: How many of a list a finding prints before it says how many there were.
+#: `MAX_LISTED_PER_RULE` bounds how many findings a rule may list; it does not
+#: bound how large one of them is, and `M13` emits one finding per identifier,
+#: so the cap never engages while the sentence grows with what the sender
+#: wrote. Measured: 400 kinds under one identifier made one detail 4,096
+#: characters, and it goes on from there.
+MOST_LISTED = 5
+
+
+def _listed(items) -> str:
+    """The first few, and then how many there were."""
+    items = list(items)
+    if len(items) <= MOST_LISTED:
+        return ", ".join(items)
+    return (", ".join(items[:MOST_LISTED])
+            + f" -- {MOST_LISTED} of {len(items)} shown")
+
+
 def contradicting(claims) -> list:
     """The claims that take part in a contradiction, in the order they were read.
 
@@ -249,8 +267,8 @@ def check(documents, read_everything: bool) -> Iterator[Finding]:
         kinds = {kind for kind, _obj, _c in claims}
         r = rule("M13")
         first = claims[0][1]
-        shown = ", ".join(sorted(kinds))
-        where = ", ".join(sorted({c.path or "the delivery" for _k, _o, c in claims}))
+        shown = _listed(sorted(kinds))
+        where = _listed(sorted({c.path or "the delivery" for _k, _o, c in claims}))
         yield Finding(
             r, r.title, (first.src or claims[0][2].where),
             detail=f"{first.id!r} is declared as {shown} in this delivery "

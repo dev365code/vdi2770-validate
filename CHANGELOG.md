@@ -24,6 +24,18 @@ of them narrowed, one of them made to admit more.
   section below describes it; nothing about it differs here, and a delivery's
   verdict is unchanged either way.
 
+- **One finding stopped growing with whatever the sender wrote.** The report
+  lists at most a hundred findings per rule per container and counts the rest,
+  which bounds every list it prints -- except that `M13` reports *one* finding
+  per identifier, so that cap never engages for it, and the sentence named
+  every kind the identifier had been declared as. Measured: forty thousand
+  kinds under one identifier, in a **211 KB** archive, made a single detail of
+  **320,096 characters**; four hundred of them made it 3,296. It lists five now
+  and says how many there were -- *five of 40001 shown* -- so the count stays
+  exact and the listing is bounded, the way the rest of the report already
+  worked. The containers the finding names are bounded the same way. Under five
+  of either, nothing about the sentence changes.
+
 - **Coming in 0.11.0: a check this tool could not finish stops sharing an exit
   code with a delivery that has findings.** When a check raises, `X5` says so —
   *a check in this tool raised an error and did not finish* — and it is an error

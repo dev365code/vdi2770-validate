@@ -196,12 +196,29 @@ def test_scope_md_states_the_limits_the_code_enforces():
     # is the number next to the word it bounds.
     import re
 
+    # Digits *and* words, because the page writes numbers out. This matched
+    # `4 prefix` and never `four tries`, so the page said the cap three times
+    # over in words while the check that forbids restating it stayed green --
+    # the gate's own reason ("two places to change and only one of them
+    # gated") was live the whole time it was passing. Scoped to the bullet
+    # that describes the scan, because "four" is an ordinary word elsewhere.
+    scan = next(b for b in prose.split("\n- ") if "PDF/A claim can be missed" in b)
+    flat = " ".join(scan.split())
     for name, unit in (("MAX_STREAMS", "stream"), ("MAX_XMP_PACKETS", "packet"),
                        ("MAX_PDFA_PREFIXES", "prefix")):
         value = getattr(pdfread, name)
         assert not re.search(rf"\b{value}\s+{unit}", prose), (
             f"scope.md restates {name} = {value}; that number belongs to the "
             f"reader's README, which has a gate for it")
+        # `spelled` is rebound to a string earlier in this function, so the
+        # helper is taken under its own name rather than the shadowed one.
+        from conftest import spelled as in_words
+
+        word = in_words(value) if value < 100 else None
+        assert not (word and re.search(rf"\b{word}\b", flat)), (
+            f"scope.md writes {name} = {value} out as {word!r} in the bullet "
+            f"about the scan; that number belongs to the reader's README, and "
+            f"a check that reads only digits does not see it")
 
 
 def test_the_divergence_numbers_are_derived_from_the_sweep_and_the_catalogue():

@@ -233,3 +233,28 @@ def test_it_names_only_the_kinds_that_take_part():
     assert set(named.group(1).split(", ")) == {"Type", "Individual"}, (
         f"'Zebra' names a register nothing else names, so it contradicts "
         f"nothing; the finding names {named.group(1)}")
+
+
+def test_one_finding_does_not_grow_without_bound():
+    """`MAX_LISTED_PER_RULE` bounds how many findings a rule may list. It does
+    not bound how large one of them is, and `M13` emits one finding per
+    identifier -- so the cap never engages while the sentence grows with the
+    kinds the sender wrote. Measured before the bound: a 232 KB archive
+    produced one finding whose detail was 8.1 million characters and a report
+    of 8.2 MB, an amplification of thirty-five times, on the one axis the cap
+    does not watch.
+
+    The count stays exact; it is the listing that is bounded, the way every
+    other list this report prints is bounded.
+    """
+    kinds = [f"Kind{i:04d}" for i in range(400)]
+    raw = container_declaring([(k, None) for k in kinds])
+    findings = m13_of(raw)
+    assert len(findings) == 1, f"expected one finding, got {len(findings)}"
+    detail = findings[0].detail or ""
+    assert len(detail) < 600, (
+        f"one finding's detail is {len(detail)} characters for {len(kinds)} "
+        f"kinds; it grows with what the sender wrote")
+    # And it still says how many there were, so the reader is not told less.
+    assert str(len(kinds)) in detail or str(len(kinds) + 1) in detail, (
+        f"the detail no longer says how many kinds were declared: {detail}")
