@@ -38,6 +38,13 @@ GHSA = re.compile(r"(?<![\w-])GHSA-(?:[23456789cfghjmpqrvwx]{4}-){2}"
 #: that nothing happened down there.
 PROMISED_FROM = (0, 8, 0)
 
+#: Which repository an advisory of ours lives on, read from the project's own
+#: metadata rather than written here -- a constant typed into a test is a
+#: second place to change, which is the thing this file keeps finding.
+REPO = re.search(
+    r"Homepage = \"https://github\.com/([^/\"]+/[^/\"]+)\"",
+    (ROOT / "pyproject.toml").read_text(encoding="utf-8")).group(1)
+
 
 def as_number(version):
     return tuple(int(p) for p in version.split("."))
@@ -73,14 +80,20 @@ def listed_advisories():
     """
     out = {}
     section = advisories_section()
-    # The listing runs to the first blank line followed by something that is
-    # not another entry. Stopping at *any* blank line was right while there
-    # was one advisory and wrong the moment there were two: entries are
-    # separated by a blank line, so the bound cut the list after the first
-    # one and the older advisory silently left the comparison.
-    listing = re.match(r"(?s).*?(^- .*?)(?=\n\n(?!- )\S|\Z)", section, re.M)
-    listing = listing.group(1) if listing else ""
-    for para in re.split(r"\n(?=- )", listing):
+    # Every entry in the section, wherever it sits. Two earlier spellings each
+    # bounded "the listing" as one run of bullets: the first stopped at any
+    # blank line, which dropped the older advisory the moment a second was
+    # added; the second stopped at the first blank line not followed by a
+    # bullet, which let an entry written *below* the closing prose escape every
+    # check in this function and the set comparison as well. An entry is a
+    # bullet that names an advisory, and each one is cut at the end of its own
+    # bullet so that prose below it is never read as part of it.
+    entries = []
+    for chunk in re.split(r"\n(?=- )", section):
+        if not chunk.startswith("- ") or not GHSA.search(chunk):
+            continue
+        entries.append(re.split(r"\n\n(?!\s)", chunk)[0])
+    for para in entries:
         ids = set(GHSA.findall(para))
         if not ids:
             continue
@@ -100,6 +113,12 @@ def listed_advisories():
             assert address.rstrip("/").endswith(advisory), (
                 f"the entry for {advisory} links to {address}, which does not "
                 f"end at that advisory")
+            # And on *this* repository, which is what the promise above says.
+            # Ending at the right identifier says nothing about whose advisory
+            # it is: the same id under another owner passed every check here.
+            assert address.startswith(f"https://github.com/{REPO}/security/advisories/"), (
+                f"the entry for {advisory} links to {address}, which is not an "
+                f"advisory on {REPO}; the promise above it says this repository")
         fixed = re.search(r"fixed in (\d+\.\d+\.\d+)", para)
         assert fixed, (
             f"the entry for {advisory} does not say which release fixes it; the "
@@ -111,7 +130,7 @@ def listed_advisories():
         assert reaches, (
             f"the entry for {advisory} does not say which versions it reaches; "
             f"the promise above it undertakes to name those too")
-        out[advisory] = fixed.group(1)
+        out[advisory] = (fixed.group(1), reaches.group(1))
     return out
 
 
@@ -147,17 +166,41 @@ def test_each_advisory_is_cited_by_the_release_that_fixes_it():
     """`fixed in 0.8.1` and a citation under `## 0.8.1` are one claim, and a
     reader who follows either should land on the other."""
     cited = cited_advisories()
-    for advisory, fixed_in in listed_advisories().items():
+    changelog = changelog_sections()
+    for advisory, (fixed_in, reaches) in listed_advisories().items():
         where = cited.get(advisory, set())
         assert fixed_in in where, (
             f"{advisory} says it is fixed in {fixed_in}, but that section does "
             f"not cite it (cited under: {sorted(where) or 'nothing'})")
+        # The *earliest* section citing it, not merely one of them. A later
+        # release that carries the same repair cites the same advisory -- so
+        # once two sections named it, asking only "is `fixed in` among them"
+        # stopped being able to fail, and the page could name a release after
+        # the one that shipped the fix. A reader on the patch release then
+        # reads that they are still exposed.
+        earliest = min(where, key=as_number)
+        assert fixed_in == earliest, (
+            f"{advisory} says it is fixed in {fixed_in}, and the earliest "
+            f"release whose section cites it is {earliest}; the page names a "
+            f"release later than the one that shipped the repair")
+        # And the range has to be the range that release describes. Until now
+        # it was only required to *exist*: the entry could say it reaches any
+        # version at all and stay green, which is the reading that leaves
+        # somebody on an affected version believing they are not.
+        section = changelog.get(fixed_in, "")
+        said = re.search(r"(?:up to|through|before) (\d+\.\d+\.\d+)", section)
+        assert said, (
+            f"the {fixed_in} section does not say which versions {advisory} "
+            f"reaches, so the entry's range is checked against nothing")
+        assert reaches == said.group(1), (
+            f"the advisory page says {advisory} reaches up to {reaches} and the "
+            f"{fixed_in} section says {said.group(1)}")
 
 
 def test_no_advisory_is_claimed_for_a_release_below_the_promise():
     """The promise starts at 0.8.0 because the practice does. An entry for an
     older release would mean the date is wrong rather than that the entry is."""
-    for advisory, fixed_in in listed_advisories().items():
+    for advisory, (fixed_in, _reaches) in listed_advisories().items():
         assert as_number(fixed_in) >= PROMISED_FROM, (
             f"{advisory} is listed as fixed in {fixed_in}, below the release the "
             f"page says the practice starts at")

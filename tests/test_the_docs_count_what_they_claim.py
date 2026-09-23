@@ -480,8 +480,13 @@ def test_no_document_cites_a_file_that_is_not_here():
     # 36 to 37 when the entry about the widened media-type table named the page
     # that had gone on describing the narrow one, `docs/scope.md`, so a reader
     # of the entry can go and see what the page says now.
-    assert seen == 37, (
-        f"{seen} citations found, not 37. If you added or removed one, say so "
+    # 37 to 38 when a figure was corrected by naming the harness that produces
+    # it. A number published without the thing that makes it is a number nobody
+    # can check, which is how "thirty-three bytes" survived into a released
+    # section and an advisory when the pair rebuilds eleven bytes apart. Both
+    # the correction and the entry that carries the figure now cite the test.
+    assert seen == 38, (
+        f"{seen} citations found, not 38. If you added or removed one, say so "
         f"here; if you did not, some of them just stopped being checked.")
 
 

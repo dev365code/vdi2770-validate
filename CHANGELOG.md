@@ -18,8 +18,9 @@ of them narrowed, one of them made to admit more.
 - **The repair that went out as 0.9.2 is in this release too.** Asking who
   declares an identifier read the whole delivery once for every document that
   asked, so memory grew with the product of the two: a 1.15 MB archive made one
-  run hold 1,628 MB, and two archives thirty-three bytes apart cost 359 MB and
-  791 MB. It is [GHSA-f9xw-89gp-x52p](https://github.com/dev365code/vdi2770-validate/security/advisories/GHSA-f9xw-89gp-x52p),
+  run hold 1,628 MB, and two archives eleven bytes apart cost 359 MB and 791 MB
+  — the harness is `tests/test_a_delivery_answers_who_declares_what_once.py`, and
+  a figure without the thing that produced it is a figure nobody can check. It is [GHSA-f9xw-89gp-x52p](https://github.com/dev365code/vdi2770-validate/security/advisories/GHSA-f9xw-89gp-x52p),
   reaching `vdi2770` and `vdi2770-validate` from 0.8.0 up to 0.9.1. The 0.9.2
   section below describes it; nothing about it differs here, and a delivery's
   verdict is unchanged either way.
@@ -247,6 +248,8 @@ before, with the same exit code.
 
 Security: [GHSA-f9xw-89gp-x52p](https://github.com/dev365code/vdi2770-validate/security/advisories/GHSA-f9xw-89gp-x52p), affecting `vdi2770` and
 `vdi2770-validate` from 0.8.0 up to 0.9.1; fixed in 0.9.2.
+
+*(Correction 2026-09-23: the two archives described above as thirty-three bytes apart differ by eleven. The smaller of the two changes size by a few dozen bytes between builds — the archives inside it carry their own timestamps, which changes how the outer one compresses — and the figure was read from a single run rather than a rebuilt pair. Everything else here reproduces: the 1.15 MB archive, the memory figures, and the repair. The harness that builds them is `tests/test_a_delivery_answers_who_declares_what_once.py`, which this section should have named.)*
 
 ## 0.9.1 — 2026-09-22
 
