@@ -142,6 +142,64 @@ def different_registers(a, b) -> bool:
     return bool(left) and bool(right) and left != right
 
 
+def contradicting(claims) -> list:
+    """The claims that take part in a contradiction, in the order they were read.
+
+    Two claims contradict when they disagree about the kind and nothing says
+    they are about different registers. Answering that by building every pair
+    costs the square of the claims, in time and in the list it materialises,
+    and nothing bounds the claims: the reader's caps are on elements and bytes,
+    and a hundred thousand `ObjectId` elements naming one identifier is a
+    conforming document about a hundred kilobytes long. Measured on the first
+    version: 109 KiB of container, 8.3 seconds, the curve rising with the
+    square while the file grew by one kilobyte.
+
+    It does not need the pairs. A claim takes part when some claim of another
+    kind names the same register, or names none, or when this claim names none
+    -- because `different_registers` is true only where *both* sides name a
+    register and the two differ.
+
+    That last clause is why this cannot simply group by register and compare
+    groups: a blank register matches every register, so the relation is not an
+    equivalence and the groups are not disjoint. It is also why the counts
+    below are kept per kind rather than per register alone.
+
+    Kinds are counted rather than iterated. `ObjectType` is an enumeration in
+    the schema, but this rule runs whether or not the metadata conformed, so a
+    document can carry as many distinct kinds as it has elements -- and a scan
+    over the kinds for every claim would be the square again, wearing a
+    different hat.
+    """
+    registers = [_register(obj.ref_type) for _kind, obj, _c in claims]
+
+    kinds = set()
+    blank_kinds = set()
+    kinds_naming = {}
+    for (kind, _obj, _c), register in zip(claims, registers):
+        kinds.add(kind)
+        if register:
+            kinds_naming.setdefault(register, set()).add(kind)
+        else:
+            blank_kinds.add(kind)
+
+    def elsewhere(group, kind) -> bool:
+        """Is `group` non-empty once this claim's own kind is taken out of it."""
+        return len(group) - (1 if kind in group else 0) > 0
+
+    out = []
+    for (kind, obj, container), register in zip(claims, registers):
+        if not register:
+            # A blank register matches every register, so any claim of another
+            # kind contradicts this one.
+            takes_part = elsewhere(kinds, kind)
+        else:
+            takes_part = (elsewhere(blank_kinds, kind)
+                          or elsewhere(kinds_naming.get(register, set()), kind))
+        if takes_part:
+            out.append((kind, obj, container))
+    return out
+
+
 def check(documents, read_everything: bool) -> Iterator[Finding]:
     """`documents` is (container, document) for every document the run modelled.
 
@@ -169,13 +227,10 @@ def check(documents, read_everything: bool) -> Iterator[Finding]:
     for _folded_id, claims in sorted(objects_claimed(documents).items()):
         # Two claims are a contradiction when they disagree about the kind and
         # nothing says they are about different registers.
-        clash = [(a, b) for i, a in enumerate(claims) for b in claims[i + 1:]
-                 if a[0] != b[0] and not different_registers(a[1].ref_type,
-                                                             b[1].ref_type)]
-        if not clash:
+        claims = contradicting(claims)
+        if not claims:
             continue
-        kinds = {kind for pair in clash for kind, _obj, _c in pair}
-        claims = [c for pair in clash for c in pair]
+        kinds = {kind for kind, _obj, _c in claims}
         r = rule("M13")
         first = claims[0][1]
         shown = ", ".join(sorted(kinds))

@@ -285,6 +285,16 @@ TABLE = [
      "so a typo in one of a link's two copies of the id left the set correct "
      "and the published link pointing at nothing"),
 
+    ("reader/a-stated-register-is-not-every-register",
+     "packages/vdi2770/src/vdi2770/validate/rules/delivery.py",
+     """            takes_part = (elsewhere(blank_kinds, kind)
+                          or elsewhere(kinds_naming.get(register, set()), kind))""",
+     "            takes_part = elsewhere(kinds, kind)",
+     ["tests/test_a_contradiction_costs_no_more_than_the_claims.py"],
+     "a stated register contradicts only the same register or a blank one; "
+     "treating every other kind as a contradiction reports a delivery that "
+     "files an article number beside a serial number as contradicting itself"),
+
     ("reader/the-xml-tree-has-a-ceiling",
      "packages/vdi2770/src/vdi2770/xmlread.py",
      "        if built > MAX_ELEMENTS:",
