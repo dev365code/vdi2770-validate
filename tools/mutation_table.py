@@ -2198,6 +2198,15 @@ LISTING_BUDGET_ROWS = [
      "times that name: ten containers under a 65,531-character name printed "
      "68 MB of JSON from a 144 KB archive"),
 
+    ("pages/the-page-follows-a-corrected-fix",
+     "SECURITY.md",
+     "  up to 0.9.3; fixed in 0.9.4.\n",
+     "  up to 0.9.2; fixed in 0.9.3.\n",
+     ["tests/test_an_advisory_and_its_release_name_each_other.py::"
+      "test_each_advisory_is_cited_by_the_release_that_fixes_it"],
+     "0.9.3's own correction says the fix was completed in 0.9.4, and a page "
+     "that still names 0.9.3 tells a reader on it that they are safe"),
+
     ("pages/a-corrected-fix-names-the-release-that-completed-it",
      "CHANGELOG.md",
      "now reaches up to 0.9.3 and is fixed in 0.9.4.)*",

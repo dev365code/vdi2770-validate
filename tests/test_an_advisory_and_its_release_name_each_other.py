@@ -179,13 +179,21 @@ def test_each_advisory_is_cited_by_the_release_that_fixes_it():
         # the one that shipped the fix. A reader on the patch release then
         # reads that they are still exposed.
         # Except a section whose own claim was corrected: an appended line in it
-        # naming the release that completed the fix. 0.9.3 cited
-        # GHSA-6hqr-phm3-chpf as fixed there, bounding by the wrong measure, and
-        # 0.9.4 completed it; the page names 0.9.4, and 0.9.3's section says why.
-        claims = {v for v in where if not re.search(
-            rf"^\*\(Correct.*\bfixed in {re.escape(fixed_in)}\b.*\)\*$",
-            changelog.get(v, ""), re.M)}
-        earliest = min(claims or where, key=as_number)
+        # that names this advisory and a later release it was fixed in. 0.9.3
+        # cited GHSA-6hqr-phm3-chpf as fixed there, bounding by the wrong
+        # measure, and 0.9.4 completed it. The page has to follow the
+        # correction: naming the corrected section as the fix is refused, where
+        # before it passed as long as the page and that section agreed.
+        corrected = {}
+        for v in where:
+            for line in re.findall(r"^\*\(Correct.*\)\*$", changelog.get(v, ""), re.M):
+                later = re.search(r"(?<!not )\bfixed in (\d+\.\d+\.\d+)", line)
+                if advisory in line and later and as_number(later.group(1)) > as_number(v):
+                    corrected[v] = later.group(1)
+        assert fixed_in not in corrected, (
+            f"{advisory} says it is fixed in {fixed_in}, and that section's own "
+            f"correction says the fix was completed in {corrected.get(fixed_in)}")
+        earliest = min((where - set(corrected)) or where, key=as_number)
         assert fixed_in == earliest, (
             f"{advisory} says it is fixed in {fixed_in}, and the earliest "
             f"release whose section cites it is {earliest}; the page names a "
