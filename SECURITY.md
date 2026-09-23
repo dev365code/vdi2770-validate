@@ -42,6 +42,13 @@ other. Whether the advisory is really published is checked when the release
 goes out: nothing in this repository reaches the network to ask, which is the
 same promise the table above makes.
 
+- [GHSA-6hqr-phm3-chpf](https://github.com/dev365code/vdi2770-validate/security/advisories/GHSA-6hqr-phm3-chpf):
+  every finding printed the path of the container it was in, a container
+  holding others repeats its name in every one of their paths, and the listing
+  was bounded by how many findings it held and not by their size, so a 156 KB
+  archive made a report of 136 MB in each of its two shapes. `vdi2770-validate`
+  from 0.1.0 and `vdi2770` from 0.8.0, up to 0.9.2; fixed in 0.9.3.
+
 - [GHSA-f9xw-89gp-x52p](https://github.com/dev365code/vdi2770-validate/security/advisories/GHSA-f9xw-89gp-x52p):
   asking whether any document other than this one declares an identifier built
   one set of the whole delivery's identifiers for every document that asked and
@@ -92,9 +99,10 @@ from 0.8.0 on a pair that disagrees is refused rather than judged. 0.9.1 and
 later pin the pair exactly.
 
 Every one of those four is inside the range of GHSA-f9xw-89gp-x52p, and so is
-0.9.1: a matched pair of any of them is affected, and a mismatched pair is not
-judged at all. Move to **0.9.2** or later, which carries that repair and pins
-both halves exactly. Do not get there by upgrading the reader on its own — the
+0.9.1; every release up to 0.9.2 is inside the range of GHSA-6hqr-phm3-chpf. A
+matched pair of any of them is affected, and a mismatched pair is not judged at
+all. Move to **0.9.3** or later, which carries both repairs and pins both halves
+exactly. Do not get there by upgrading the reader on its own — the
 two halves ship under one number and the tool refuses to judge a pair that
 disagrees with itself, which is exit `3` rather than a verdict about your
 delivery.

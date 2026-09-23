@@ -165,7 +165,7 @@ and no line of the guideline, which is why it is a warning and not an error.
 
 **The page says how releases are numbered.** What 0.x means here, what a minor
 release moves, what a patch does and does not promise, how to pin, and what 1.0
-will mean. Three of this package's five patch releases changed what a pipeline
+will mean. Three of this package's six patch releases changed what a pipeline
 sees, and the section names them rather than promising that a patch cannot.
 
 **`Z13` names the folder it did not open.** A delivery whose documents arrived
@@ -233,6 +233,46 @@ firing on files inside folders — both announced in that release's section, whi
 is the promise that actually holds. The list now says that: verdicts move across
 releases, never quietly, and the CHANGELOG names each one.
 
+
+## 0.9.3 — 2026-09-24
+
+Who should take this release: anyone who checks deliveries from sources they do
+not control, on any earlier release. This release carries one repair, and one
+corrected figure: `SECURITY.md`'s note on the 0.9.2 advisory gave its archive as
+1.15 MB, which came from a different builder; the repository's own makes it
+963 KB.
+
+**A report printed a container's name once for every finding under it, and
+nothing bounded how many findings that was.** Every finding carries the path of
+the container it is in. A member name may be 65,535 bytes long, and a container
+that holds others repeats its name in every one of their paths. The listing kept
+a hundred findings per rule *per container*, so what a report printed grew with
+the number of containers, times a hundred, times the length of a name the sender
+chose. Each of those has a ceiling — a thousand containers, the hundred, 65,535
+bytes a name — and nothing bounded their product.
+
+Measured with the repository's own builder, ten document containers under one
+65,531-character name, each declaring 150 empty `DocumentId`s: a **144 KB**
+archive printed **68 MB** of JSON and as much again of text. Twenty
+containers, in a **156 KB** archive, printed **136 MB** of each. Checking it and
+printing both took under a minute, and then about two: the text walks every
+character of a name once per finding.
+
+Each rule's listing now also stops at a size budget — about a million
+characters of what its findings print — counted where findings are collected,
+so a report does not hold what it will not print. Past it a finding is counted
+and not listed, as past the hundred: the summary and the exit code count every
+one, and both shapes say how many findings the rule had in all and how many are
+listed (`listingStopped` in the JSON, a closing line in the text). The same two
+archives now print 2.1 MB of JSON each, in about a second.
+
+Every container in the sample corpus, and every fixture the test suite builds,
+reports the same findings with the same exit code as before; the JSON gains the
+key `listingStopped`, empty for all of them.
+
+Security: [GHSA-6hqr-phm3-chpf](https://github.com/dev365code/vdi2770-validate/security/advisories/GHSA-6hqr-phm3-chpf), affecting
+`vdi2770-validate` from 0.1.0 and `vdi2770` from 0.8.0, up to 0.9.2; fixed in
+0.9.3.
 
 ## 0.9.2 — 2026-09-23
 
