@@ -141,7 +141,7 @@ def test_the_table_is_never_narrower_than_the_registered_set():
     `mimetypes` answers from the platform, and on Windows that includes the
     registry -- so this property is strictest there, and the Windows job is
     where it first went red. `.dib` for `image/bmp` reached the table that way,
-    after three green platforms had nothing to say about it. If it reddens for a
+    after the three Ubuntu jobs beside it had nothing to say. If it reddens for a
     type you have never heard of, read the extension before widening the entry:
     the question is whether a delivery naming it would be correct, and the
     registry is evidence rather than an answer.

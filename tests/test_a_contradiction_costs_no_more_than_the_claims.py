@@ -67,11 +67,31 @@ def m13_of(raw):
 
 
 def test_the_comparisons_do_not_square_with_the_claims(monkeypatch):
-    """The gate on the defect itself, counted rather than timed."""
+    """The gate on the defect itself, counted rather than timed.
+
+    The first spelling of this counted calls to `different_registers` -- and
+    `contradicting` does not call it. It normalises through `_register` and
+    compares the results, so the counter stayed at nought and the assertion
+    read `0 <= 4800` on every input, for ever. It caught a literal revert to
+    the previous implementation and nothing else: a pairwise scan spelling the
+    register comparison inline passed it while costing 4x per doubling.
+    A cost gate has to count something the code being measured actually runs.
+
+    `_register` is that thing: `contradicting` normalises each claim's register
+    exactly once, so the count is the number of claims. The bound is two-sided
+    on purpose. Too many means the claims are being paired. **Too few means the
+    normalisation was spelled inline** and this gate is measuring nothing again,
+    which is the failure it replaces.
+
+    What it still does not catch: keeping one `_register` per claim and then
+    walking the *kinds* for each of them, which is quadratic only where the
+    kinds grow with the claims -- reachable, because this rule runs on
+    schema-invalid input too. `tools/mutation_table.py` carries that shape.
+    """
     made = []
-    real = delivery.different_registers
-    monkeypatch.setattr(delivery, "different_registers",
-                        lambda a, b: (made.append(1), real(a, b))[1])
+    real = delivery._register
+    monkeypatch.setattr(delivery, "_register",
+                        lambda ref: (made.append(1), real(ref))[1])
 
     n = 600
     raw = container_declaring([("Type" if i % 2 else "Individual", "product type")
@@ -82,8 +102,12 @@ def test_the_comparisons_do_not_square_with_the_claims(monkeypatch):
     # anything that pairs them is far over it, and the gap is three orders of
     # magnitude rather than a margin to argue about.
     assert len(made) <= 8 * n, (
-        f"{len(made)} register comparisons for {n} claims; a pairwise scan "
+        f"{len(made)} register normalisations for {n} claims; a pairwise scan "
         f"would make {n * (n - 1) // 2}, and this is closer to that than to {n}")
+    assert len(made) >= n, (
+        f"{len(made)} register normalisations for {n} claims, fewer than one "
+        f"each: the register is being normalised somewhere this cannot see, so "
+        f"this gate is no longer measuring the cost it names")
 
 
 @pytest.mark.parametrize("seed", range(12))

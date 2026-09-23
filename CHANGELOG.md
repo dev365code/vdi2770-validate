@@ -15,6 +15,39 @@ folders — read that one if a gate of yours reads a number. The rest is this
 repository's pages about itself, corrected against what it has measured — most
 of them narrowed, one of them made to admit more.
 
+- **The repair that went out as 0.9.2 is in this release too.** Asking who
+  declares an identifier read the whole delivery once for every document that
+  asked, so memory grew with the product of the two: a 1.15 MB archive made one
+  run hold 1,628 MB, and two archives thirty-three bytes apart cost 359 MB and
+  791 MB. It is [GHSA-f9xw-89gp-x52p](https://github.com/dev365code/vdi2770-validate/security/advisories/GHSA-f9xw-89gp-x52p),
+  reaching `vdi2770` and `vdi2770-validate` from 0.8.0 up to 0.9.1. The 0.9.2
+  section below describes it; nothing about it differs here, and a delivery's
+  verdict is unchanged either way.
+
+- **Coming in 0.11.0: a check this tool could not finish stops sharing an exit
+  code with a delivery that has findings.** When a check raises, `X5` says so —
+  *a check in this tool raised an error and did not finish* — and it is an error
+  on purpose, because a report that skipped a check in silence would be worse
+  than one that admits it. The report is already careful about whose fault it
+  is: the finding says the container needs no change, the remedy says to read
+  the report as incomplete rather than as a verdict, and the summary line counts
+  it out loud as *this tool declining to look, not the container*. What is not
+  careful is the number. It lands in the same `1` that means the delivery has a
+  finding, so a build gate cannot tell *your handover has a problem* from *our
+  checker fell over on it* — and the second one is our bug, not yours. 0.11.0
+  gives it `70` (`EX_SOFTWARE`), joining `3` and `64` as codes that are not a
+  verdict about the container. **Nothing about the codes changes in this
+  release.** This is the announcement, one release ahead, that one of them will.
+
+- **The security page pointed the one command it gives you at the wrong
+  releases.** It said the reader is a separate distribution *before 0.8.0* and
+  that `pip show vdi2770` names it. The reader has been its own distribution
+  since 0.2.0, and the releases where that command answers something the
+  command's own version cannot are 0.8.0, 0.8.1, 0.8.2 and 0.9.0 — the four that
+  ask for their engine with a floor rather than a pin, which this project's
+  README already said in its own words. So the page excluded exactly the
+  releases that needed it. It names them now.
+
 **`F3` knew two media types and now knows fifteen.** The rule asks whether a
 declared `FileFormat` agrees with the file's own name, and it only ever
 answered for `application/pdf` and `application/zip`; everything else passed
@@ -41,7 +74,7 @@ judgement, and the field has to say so. If you filter findings on
 `.dib` is in the table because a bitmap named `.dib` is a bitmap and Python's
 own table does not say so — a Windows registry does. The table learned it from
 the platform that says so rather than from memory, which is why the platform
-found it and three green ones did not.
+found it and the three Ubuntu jobs beside it did not.
 
 **If your build gates on `--fail-on warning`, this is the paragraph for you.**
 The default does not move: a warning has never failed a run unless you asked it
@@ -51,8 +84,11 @@ exited `0` for you can exit `1` here with nothing about the delivery having
 changed. Measured on the sample containers this repository keeps: seven of the
 nineteen cross that line, six of them on `M13` and one on `F3`, and eight were
 already failing that gate before this release. Nothing else about the codes
-moves — `1` for a finding at or above your threshold, `2` for nothing readable,
-`3` for a mismatched install, `64` for a usage error.
+moves — `1` for a finding at or above your threshold **or for a path that could
+not be read while others could**, `2` for nothing readable at all, `3` for a
+mismatched install, `64` for a usage error. That second meaning of `1` is not
+new, and the README and `--help` both give it; this paragraph — the one
+addressed to whoever gates a build on the number — was where it was missing.
 
 **And the scope page was still describing the old table.** `docs/scope.md`
 gave extension agreement as checked "for `application/pdf` and
@@ -162,6 +198,43 @@ firing on files inside folders — both announced in that release's section, whi
 is the promise that actually holds. The list now says that: verdicts move across
 releases, never quietly, and the CHANGELOG names each one.
 
+
+## 0.9.2 — 2026-09-23
+
+Who should take this release: anyone on 0.8.0 through 0.9.1 who checks
+deliveries from sources they do not control. This release carries one repair
+and nothing else.
+
+**Asking who declares an identifier read the whole delivery once for every
+document that asked.** `M11` and `M12` ask, for each `DocumentRelationship`,
+whether any document *other than this one* declares the identifier it names.
+The answer was built as a set of every identifier in the delivery with the
+asking document's own taken out — one such set per referring document, and all
+of them kept for as long as the run lasted. Memory and time grew with the
+product of the documents that ask and the identifiers they ask about, and no
+budget in this tool measures that product: `MAX_CONTAINERS` bounds how many
+containers a run opens and `MAX_TOTAL_ELEMENTS` how many elements it parses,
+and both can be raised independently under those caps.
+
+Measured: eight hundred referring documents and eight thousand declared
+identifiers, in a **1.15 MB** archive, made one run hold **1,628 MB**. Two
+archives **thirty-three bytes apart** cost 359 MB and 791 MB, because the cost
+follows the product and not the size of the input. A delivery does not have to
+be malformed to pay it — one whose only findings are informational pays the
+same. And exhaustion here does not arrive as a refusal: the runner turns an
+exception raised inside a check into an `X5` finding at error severity, so a
+delivery that exhausted the machine is reported as a delivery that failed its
+check.
+
+The count is taken once for the whole delivery now, and each document's own
+subtracted from it — counted rather than subtracted as a set, because two
+documents may declare the same identifier and removing one document's own would
+drop an identifier the other still declares. The same inputs hold 22 MB and
+17.5 MB. Every container in the sample corpus reports exactly what it reported
+before, with the same exit code.
+
+Security: [GHSA-f9xw-89gp-x52p](https://github.com/dev365code/vdi2770-validate/security/advisories/GHSA-f9xw-89gp-x52p), affecting `vdi2770` and
+`vdi2770-validate` from 0.8.0 up to 0.9.1; fixed in 0.9.2.
 
 ## 0.9.1 — 2026-09-22
 

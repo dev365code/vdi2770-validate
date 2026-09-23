@@ -42,6 +42,13 @@ other. Whether the advisory is really published is checked when the release
 goes out: nothing in this repository reaches the network to ask, which is the
 same promise the table above makes.
 
+- [GHSA-f9xw-89gp-x52p](https://github.com/dev365code/vdi2770-validate/security/advisories/GHSA-f9xw-89gp-x52p):
+  asking whether any document other than this one declares an identifier built
+  one set of the whole delivery's identifiers for every document that asked and
+  kept them all, so memory grew with the product of the two and a 1.15 MB
+  archive made one run hold 1.6 GB. `vdi2770` and `vdi2770-validate` from 0.8.0
+  up to 0.9.1; fixed in 0.9.2.
+
 - [GHSA-xp97-jcmj-h45f](https://github.com/dev365code/vdi2770-validate/security/advisories/GHSA-xp97-jcmj-h45f):
   a container member that lied about its size, or used a compression method
   the reader could not bound, could make the reader allocate far more memory
@@ -67,6 +74,9 @@ one, so installing `vdi2770-validate==0.5.0` into a clean environment
 reproduced the very hang that section describes a fix for. **0.5.1** is the
 release that requires the repaired reader. The defect itself goes back further
 than the section that announces the fix — 0.5.0 says it arrived in 0.4.0. So
-read the section, and then check what you actually installed: before 0.8.0 the
-reader is a separate distribution from the command, and `pip show vdi2770`
-names it.
+read the section, and then check what you actually installed. The reader is a
+separate distribution from the command and has been since 0.2.0, and `pip show
+vdi2770` names it. That check matters most where the command's own version does
+not settle which reader you have: 0.8.0, 0.8.1, 0.8.2 and 0.9.0 ask for their
+engine with a floor rather than a pin, and a floor stops holding the moment a
+newer engine exists. 0.9.1 and later pin the pair exactly.

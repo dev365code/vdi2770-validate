@@ -161,6 +161,11 @@ the *number* instead — `0` clean, `1` a finding or an unreadable path, `2`
 nothing readable at all, `3` the install disagreed with itself, `64` a mistyped
 command line or a `pyz:` that is not there — ask for it:
 
+*Coming in 0.11.0*: a check that raised and did not finish returns `70`
+(`EX_SOFTWARE`) instead of `1`, so a gate can tell a finding about your
+delivery from a failure of ours. `3`, `64` and `70` are the codes that are
+not a verdict about the container.
+
 ```yaml
 - uses: dev365code/vdi2770-validate@v0.9.1
   id: vdi

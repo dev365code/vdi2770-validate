@@ -49,7 +49,7 @@ EXTENSION_FOR = {
     "image/tiff": (".tif", ".tiff"),
     # `.dib` is the same format under its older name, and only a Windows
     # registry lists it -- which is why the sibling test found this and
-    # three green platforms did not. A delivery naming one is correct.
+    # the three Ubuntu jobs beside it did not. A delivery naming one is correct.
     "image/bmp": (".bmp", ".dib"),
 }
 

@@ -73,7 +73,12 @@ def listed_advisories():
     """
     out = {}
     section = advisories_section()
-    listing = re.match(r"(?s).*?(^- .*?)(?=\n\n\S|\Z)", section, re.M)
+    # The listing runs to the first blank line followed by something that is
+    # not another entry. Stopping at *any* blank line was right while there
+    # was one advisory and wrong the moment there were two: entries are
+    # separated by a blank line, so the bound cut the list after the first
+    # one and the older advisory silently left the comparison.
+    listing = re.match(r"(?s).*?(^- .*?)(?=\n\n(?!- )\S|\Z)", section, re.M)
     listing = listing.group(1) if listing else ""
     for para in re.split(r"\n(?=- )", listing):
         ids = set(GHSA.findall(para))
@@ -211,3 +216,77 @@ def test_the_page_says_what_is_below_the_date():
     assert "CHANGELOG" in below, (
         "the section says there are no advisories below 0.8.0 and does not say "
         "where the record of those fixes is; a reader is left with a denial")
+
+
+def floor_pinned_releases():
+    """Releases whose engine is named with a floor, read from the tags.
+
+    A tuple typed here would be the thing this file exists to catch, one file
+    over: the page would be held to a list somebody wrote rather than to what
+    the releases declare. `git show <tag>:pyproject.toml` is the declaration.
+    Returns None where the tags are not available, which is an sdist.
+    """
+    import subprocess
+
+    tags = subprocess.run(["git", "tag", "-l", "v*"], cwd=ROOT,
+                          capture_output=True, text=True)
+    if tags.returncode != 0 or not tags.stdout.strip():
+        return None
+    out = []
+    for tag in sorted(tags.stdout.split(), key=lambda t: as_number(t[1:])):
+        got = subprocess.run(["git", "show", f"{tag}:pyproject.toml"], cwd=ROOT,
+                             capture_output=True, text=True)
+        if got.returncode != 0:
+            continue
+        m = re.search(r'"vdi2770(?:\[[^\]]*\])?\s*(==|~=|>=|>)\s*([\d.]+)"',
+                      got.stdout)
+        if m and m.group(1) in (">=", ">"):
+            out.append(tag[1:])
+    return out
+
+
+def test_the_page_points_the_check_command_at_the_releases_that_need_it():
+    """`pip show vdi2770` is the check, and it was scoped to the wrong range.
+
+    The page said *before 0.8.0*. That is wrong in both directions. It is not
+    true at the bottom -- 0.1.0 has no `packages/` tree and names no reader, so
+    there was nothing for the command to show -- and at the top it excludes the
+    releases that need it most. A release that names its engine with a floor is
+    one whose installed reader is *not* determined by the version of the command:
+    a floor stops holding the moment a newer engine exists, which the README
+    says in its own words. Those are precisely the releases where a reader
+    asking "do I have the fix" cannot answer from the command's version alone.
+
+    So the set is derived from the tags rather than typed here, and the page has
+    to name every release in it.
+    """
+    import pytest
+
+    page = (ROOT / "SECURITY.md").read_text(encoding="utf-8")
+    flat = " ".join(page.split())
+    assert "pip show vdi2770" in flat, (
+        "the page no longer tells a reader how to see which reader they have")
+
+    # A sentence ends at a full stop *followed by a space*, because a version
+    # number is full of full stops: splitting on the bare character lands inside
+    # "0.8.0" and hands back a fragment that no longer contains the scoping this
+    # is here to refuse. The first spelling of this test passed for that reason.
+    at = flat.find("pip show vdi2770")
+    ends = [m.end() for m in re.finditer(r"\.(?:\s|$)", flat)]
+    start = max([e for e in ends if e <= at], default=0)
+    end = min([e for e in ends if e > at], default=len(flat))
+    sentence = flat[start:end]
+    assert "before 0.8.0" not in sentence, (
+        "the sentence carrying `pip show vdi2770` scopes it to before 0.8.0, "
+        "which excludes the floor-pinned releases where the installed reader "
+        "can differ from the command -- the case the command exists for")
+
+    floors = floor_pinned_releases()
+    if floors is None:
+        pytest.skip("not a git checkout; the tags are not available here")
+    assert floors, "no release names its engine with a floor; this test is stale"
+    missing = [v for v in floors if v not in flat]
+    assert not missing, (
+        f"these releases name their engine with a floor and the page does not "
+        f"name them: {missing}. They are the ones where `pip show vdi2770` "
+        f"answers a question the command's own version cannot")

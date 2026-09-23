@@ -1029,3 +1029,28 @@ def test_the_scope_page_counts_the_media_types_the_rule_knows():
     assert m.group(1) == spelled(len(EXTENSION_FOR)), (
         f"scope.md says {m.group(1)} media types and the table has "
         f"{len(EXTENSION_FOR)}")
+
+
+def test_the_cli_counts_the_warnings_the_catalogue_holds():
+    """The comment beside the exit-code decision said nine, and there are ten.
+
+    `M13` made it ten in the release that added it, and the same sentence also
+    said every warning is about the container -- which `M13` is not, because it
+    is about the delivery. A number written beside the code that acts on it is
+    the kind that goes stale quietly: nothing reads it, so nothing contradicts
+    it. This derives it from the catalogue instead.
+    """
+    import json
+
+    catalogue = json.loads(
+        (ROOT / "packages" / "vdi2770" / "src" / "vdi2770" / "validate"
+         / "data" / "rules.json").read_text(encoding="utf-8"))
+    rules = catalogue["rules"] if isinstance(catalogue, dict) else catalogue
+    warnings = [r["id"] for r in rules if r["severity"] == "warning"]
+
+    source = (ROOT / "packages" / "vdi2770" / "src" / "vdi2770" / "validate"
+              / "cli.py").read_text(encoding="utf-8")
+    want = spelled(len(warnings)).capitalize()
+    assert f"{want} rules are warnings" in source, (
+        f"the catalogue holds {len(warnings)} warnings ({', '.join(sorted(warnings))}) "
+        f"and cli.py does not say {want.lower()}")

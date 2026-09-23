@@ -85,10 +85,13 @@ def _cmd_check(args) -> int:
             documents.append({"path": path, **json.loads(rendering.as_json(rep, not args.quiet))})
         else:
             print(rendering.as_text(rep, not args.quiet))
-        # Nine rules are warnings and every one is about the container. They
-        # are warnings on purpose -- `P3` cannot be an error because this tool
-        # does not verify PDF/A -- so the number does not move for them by
-        # default, and an intake gate that wants none of them says so.
+        # Ten rules are warnings. They are warnings on purpose -- `P3` cannot
+        # be an error because this tool does not verify PDF/A -- so the number
+        # does not move for them by default, and an intake gate that wants
+        # none of them says so. The count is checked against the catalogue:
+        # it said nine until the release that made it ten, and the sentence
+        # beside it ("every one is about the container") stopped being true
+        # in the same release, because `M13` is about the delivery.
         if rep.count(Severity.ERROR) or (
                 args.fail_on == "warning" and rep.count(Severity.WARNING)):
             worst = 1
