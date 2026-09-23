@@ -333,3 +333,51 @@ def test_the_count_sits_outside_the_list_it_counts():
         f"the parsed kinds contain something no document declared: {named}")
     assert str(len(kinds) + 1) in (findings[0].detail or ""), (
         "the finding no longer says how many kinds there were")
+
+
+def _peak_bytes(raw, runs=3):
+    """Median peak allocation for one run over `raw`.
+
+    Allocation, not the clock. A stopwatch here has failed under load before
+    and said nothing about the bound it was defending; what this rule must not
+    do is *build* something that grows with the square, and that is exactly
+    what `tracemalloc` counts. The median of three keeps the first run's
+    import traffic out of the answer.
+    """
+    import statistics
+    import tracemalloc
+
+    seen = []
+    for _ in range(runs):
+        tracemalloc.start()
+        m13_of(raw)
+        seen.append(tracemalloc.get_traced_memory()[1])
+        tracemalloc.stop()
+    return statistics.median(seen)
+
+
+def test_the_work_does_not_square_with_the_claims():
+    """Counting `_register` says the registers are normalised once. It does not
+    say the claims are not then paired.
+
+    Precomputing the registers and pairing afterwards calls `_register` exactly
+    once per claim -- 4,003 for 4,000 claims, against a bound of 32,000 -- and
+    is quadratic in everything that matters: 24 MB at n=1,000 and 376 MB at
+    n=4,000, from a container that grows by a few kilobytes. The call counter
+    cannot see it, because the calls really are linear; what is quadratic is
+    the list of pairs.
+
+    So the other half of the same claim is measured directly. Four times the
+    claims should cost about four times the allocation. Measured on this tree:
+    3.7x. The pairing version: 15.6x.
+    """
+    def claims(n):
+        return container_declaring([("Type" if i % 2 else "Individual", "product type")
+                                    for i in range(n)])
+
+    small = _peak_bytes(claims(1000))
+    large = _peak_bytes(claims(4000))
+    assert large < small * 8, (
+        f"four times the claims cost {large / small:.1f}x the allocation "
+        f"({small:,} -> {large:,} bytes). Linear is about 4x and the square is "
+        f"about 16x, so something here is being built for every pair")

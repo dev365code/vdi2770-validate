@@ -144,3 +144,43 @@ def test_an_identifier_two_documents_declare_is_still_declared_by_the_other(
     assert not dangling, (
         f"two documents declare {shared!r} and the relationship naming it was "
         f"still called dangling: {[f.detail for f in dangling]}")
+
+
+def _peak_bytes(path, runs=3):
+    """Median peak allocation for one run over `path`. Allocation, not time:
+    what must not happen here is that a *set per referring document* gets
+    built and kept, and that is a thing `tracemalloc` counts exactly."""
+    import statistics
+    import tracemalloc
+
+    seen = []
+    for _ in range(runs):
+        tracemalloc.start()
+        check_file(path)
+        seen.append(tracemalloc.get_traced_memory()[1])
+        tracemalloc.stop()
+    return statistics.median(seen)
+
+
+def test_the_documents_that_ask_do_not_multiply_what_is_held(tmp_path):
+    """Counting `_identity` says each identity is built once. It does not say
+    they are not then collected into one set per document that asks.
+
+    Normalising the identities up front and *then* restoring the old shape --
+    one set of the delivery's identities per referring document, all held at
+    once -- leaves the call counter untouched (422 calls against a bound of
+    2,880, exactly what the repaired code makes) and puts the memory back: 413
+    MB where the repair holds 17. The counter cannot see it, because the calls
+    really are linear; what is quadratic is what is kept.
+
+    So the other half is measured. Four times the documents that ask, with the
+    same identifiers to ask about, should not cost four times the allocation.
+    Measured on this tree: 1.4x. The set-per-document version: about 4x.
+    """
+    small = _peak_bytes(_delivery(tmp_path / "small.zip", 50, 1500))
+    large = _peak_bytes(_delivery(tmp_path / "large.zip", 200, 1500))
+    assert large < small * 2.5, (
+        f"four times the referring documents cost {large / small:.1f}x the "
+        f"allocation ({small:,} -> {large:,} bytes), and the identifiers they "
+        f"ask about did not change: the delivery is being held once per "
+        f"document that asks")
