@@ -74,7 +74,7 @@ than reported from outside, and each is described in the CHANGELOG section that
 announces it. **If you pin a version below 0.8.0, those sections are the list**
 — read them where you would otherwise be looking for an advisory.
 
-One thing about reading them: below 0.8.0 the reader and the command carried
+One thing about reading them: below 0.7.0 the reader and the command carried
 separate numbers, and a heading does not say which of the two it belongs to. The
 same number was used by both, and at least one heading describes a command
 release that was never published. So do not match your version to a heading by
