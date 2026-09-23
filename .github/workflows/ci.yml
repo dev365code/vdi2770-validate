@@ -9,7 +9,13 @@ on:
     # and on three Linux rows, on the branch, under review, and red the moment
     # they merged -- because a branch never saw the only reader that disagreed.
     # A gate that cannot run before the merge is not a gate on the merge.
-    branches: [main, 'wip/**']
+    # `release/**` too. A patch branch is where a security fix lives before
+    # it is tagged, and it was getting less than a scratch branch: the push
+    # trigger did not name it, so pushing one started nothing, and the
+    # release workflow runs every job on ubuntu -- so a fix could have gone
+    # out without the Windows row ever seeing it. The reason `wip/**` is
+    # here is the reason this belongs here more.
+    branches: [main, 'wip/**', 'release/**']
   pull_request:
   # Also on demand: a platform-specific fix or a change to the test matrix can
   # be run against a branch before it lands, the way the release workflow's dry

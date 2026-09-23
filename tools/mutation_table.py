@@ -1609,7 +1609,7 @@ PLATFORM_ROWS = [
 
     ('gates/a-branch-under-work-is-checked-on-every-platform',
      '.github/workflows/ci.yml',
-     "branches: [main, 'wip/**']",
+     "branches: [main, 'wip/**', 'release/**']",
      'branches: [main]',
      ['tests/test_ci_parity.py::test_the_branches_that_get_checked_include_the_ones_being_written'],
      'the Windows row runs nowhere but this workflow, so a branch that does not trigger it has unknown Windows behaviour until it lands -- which is how two defects reached main in one night'),

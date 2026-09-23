@@ -418,7 +418,7 @@ with it, says so in a paragraph addressed to whoever gates a build on the
 number. That is the paragraph to read before upgrading; it is the one place this
 project undertakes to be exhaustive.
 
-**A patch release repairs — and three of the four patch releases of this package
+**A patch release repairs — and three of the five patch releases of this package
 changed what a pipeline sees:**
 
 - `0.5.1` asked for a fixed reader instead of merely permitting one. Until it,

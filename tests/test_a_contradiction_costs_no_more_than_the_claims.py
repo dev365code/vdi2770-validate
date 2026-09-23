@@ -23,6 +23,7 @@ gate that reports the runner. Counting the comparisons reports the algorithm.
 """
 import io
 import random
+import re
 import zipfile
 
 import pytest
@@ -33,6 +34,11 @@ from vdi2770.validate.rules import delivery
 
 SAMPLE = CORPUS / "container" / "documentcontainer.zip"
 OPEN, CLOSE = "<ReferencedObject>", "</ReferencedObject>"
+
+
+#: The claim the sample container already makes about `BR-01`: a product
+#: type. Every group these fixtures build contains it.
+SAMPLE_CLAIM = ("Type", "product type")
 
 
 def container_declaring(claims, identifier="BR-01"):
@@ -121,7 +127,11 @@ def test_it_reports_exactly_what_a_pairwise_scan_would(seed):
     kind of relation a regrouping gets wrong.
     """
     rng = random.Random(seed)
-    kinds = ["Type", "Individual"]
+    # Three kinds, not two. With two, "reports a kind that does not contradict"
+    # cannot be expressed at all -- every kind in the group is one of the pair
+    # that contradicts -- so a regrouping that named every claim it saw passed
+    # this test while changing what the report said.
+    kinds = ["Type", "Individual", "Zebra"]
     registers = [None, "product type", "serial number", "   "]
     claims = [(rng.choice(kinds), rng.choice(registers))
               for _ in range(rng.randint(2, 6))]
@@ -133,11 +143,17 @@ def test_it_reports_exactly_what_a_pairwise_scan_would(seed):
         left, right = register(a), register(b)
         return bool(left) and bool(right) and left != right
 
-    # The sample container already declares its own object; this rule compares
-    # per identifier, so the claims added here are the only ones under the id.
-    expected_pairs = [(i, j) for i in range(len(claims)) for j in range(i + 1, len(claims))
-                      if claims[i][0] != claims[j][0] and not differ(claims[i][1], claims[j][1])]
-    expected_kinds = {claims[i][0] for pair in expected_pairs for i in pair}
+    # The sample declares `BR-01` itself, as a product type, and
+    # `container_declaring` hangs these claims on *that* identifier -- so the
+    # sample's own claim is in the group and the oracle has to count it. The
+    # comment here used to say the added claims were the only ones under the
+    # id, which was false, and two kinds could not show it: `Type` was the
+    # sample's kind and also one of the two, so an oracle that dropped it
+    # produced the same answer. A third kind made the omission visible.
+    group = [SAMPLE_CLAIM] + list(claims)
+    expected_pairs = [(i, j) for i in range(len(group)) for j in range(i + 1, len(group))
+                      if group[i][0] != group[j][0] and not differ(group[i][1], group[j][1])]
+    expected_kinds = {group[i][0] for pair in expected_pairs for i in pair}
 
     findings = m13_of(container_declaring(claims))
     if not expected_pairs:
@@ -147,8 +163,22 @@ def test_it_reports_exactly_what_a_pairwise_scan_would(seed):
         return
     assert len(findings) == 1, f"{claims} drew {len(findings)} findings"
     detail = findings[0].detail or ""
-    for kind in expected_kinds:
-        assert kind in detail, f"{claims} contradicts as {sorted(expected_kinds)}: {detail}"
+    # The kinds it names, exactly -- not "each expected one appears somewhere".
+    # A one-sided check cannot see an extra: reporting every claim in the group
+    # rather than the ones that take part adds a kind that contradicts nothing,
+    # and each expected kind is still in the string.
+    named = re.search(r"is declared as (.+?) in this delivery", detail)
+    assert named, f"the finding no longer says what it is declared as: {detail}"
+    assert set(named.group(1).split(", ")) == expected_kinds, (
+        f"{claims} contradicts as {sorted(expected_kinds)} and the finding "
+        f"names {named.group(1)}")
+    # The location is the first *participating* claim's, and this test does not
+    # pin it: mapping a claim's index back to a line and column in the built
+    # metadata needs machinery this file does not have. The kind set above
+    # catches the regrouping that moved it -- that one named a third kind as
+    # well -- but a change that moved the location and left the kinds alone
+    # would still pass here. Written down rather than implied.
+    assert findings[0].where is not None, "the finding points nowhere"
 
 
 #: The register relation, as a table rather than as a sentence. Random shapes
@@ -177,3 +207,29 @@ def test_a_register_decides_whether_two_kinds_contradict(why, left, right, contr
     assert bool(findings) == contradicts, (
         f"{why}: RefType {left!r} against {right!r} "
         f"{'drew nothing' if contradicts else 'drew ' + str([f.detail for f in findings])}")
+
+
+def test_it_names_only_the_kinds_that_take_part():
+    """A kind in the group that contradicts nothing must not be named.
+
+    Written by hand, because the random shapes above cannot reach it: in all
+    twelve seeds every kind present takes part, so "reports a kind that
+    contradicts nothing" never arises and a regrouping that named the whole
+    group passed all of them. The same lesson as the register table below --
+    random cases do not promise the case that decides.
+
+    The sample declares `BR-01` as a product type. A second claim on the same
+    register contradicts it. A third naming a *different* stated register
+    contradicts neither, because `different_registers` is true only where both
+    sides name one and they differ. So the finding must name two kinds and not
+    three.
+    """
+    raw = container_declaring([("Individual", "product type"),
+                               ("Zebra", "serial number")])
+    findings = m13_of(raw)
+    assert len(findings) == 1, f"expected one finding, got {len(findings)}"
+    named = re.search(r"is declared as (.+?) in this delivery", findings[0].detail or "")
+    assert named, f"the finding no longer says what it is declared as: {findings[0].detail}"
+    assert set(named.group(1).split(", ")) == {"Type", "Individual"}, (
+        f"'Zebra' names a register nothing else names, so it contradicts "
+        f"nothing; the finding names {named.group(1)}")

@@ -130,7 +130,7 @@ and no line of the guideline, which is why it is a warning and not an error.
 
 **The page says how releases are numbered.** What 0.x means here, what a minor
 release moves, what a patch does and does not promise, how to pin, and what 1.0
-will mean. Three of this package's four patch releases changed what a pipeline
+will mean. Three of this package's five patch releases changed what a pipeline
 sees, and the section names them rather than promising that a patch cannot.
 
 **`Z13` names the folder it did not open.** A delivery whose documents arrived

@@ -193,6 +193,29 @@ def test_a_register_spelled_two_ways_is_one_register(tmp_path):
         "registers, which is an escape hatch a space wide")
 
 
+def test_a_register_spelled_in_another_case_is_one_register(tmp_path):
+    """The other half of the same escape, and it had no test.
+
+    `different_registers` says in its own words that the rule could be switched
+    off "by writing a RefType on one of two contradicting claims and not the
+    other, or by spelling it `serialNumber` on one side". The spacing half is
+    pinned above. The case half was not, and `_register` folds case for exactly
+    this reason -- so removing `.casefold()` from it left every test in this
+    file, in the cost file, in the evasion file and in the reference-corpus file
+    green, fifty of them, while the escape it guards was open again.
+
+    Every `RefType` literal in these fixtures was lower case, which is why no
+    existing case could tell the difference.
+    """
+    p = _delivery_with_axes(tmp_path, "cased.zip", [
+        ("Type", "serialNumber", "4711"),
+        ("Individual", "serialnumber", "4711"),
+    ])
+    assert "M13" in ids(p), (
+        "the same register written in two cases was read as two registers, so "
+        "a contradiction was silenced by capitalising one side")
+
+
 def _delivery_with_axes(tmp_path, name, triples):
     """One document container per (kind, register, identifier)."""
     import re
