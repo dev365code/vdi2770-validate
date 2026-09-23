@@ -29,6 +29,7 @@ failure — files that never claimed at all.
 | **Verifying PDF/A conformance** | Needs a full PDF/A validator. Reporting a claim as a verdict would be a lie. |
 | **Fetching anything while checking** | Nothing is fetched for any input, ever. The one exception is not the checker: the GitHub Action installs the checker it runs, unless you hand it one with `pyz:`. See `SECURITY.md`. |
 | **Which PDF/A level a document class may use** | The reference implementation treats PDF/A-*b* outside the certificate class as an error. This tool does not verify PDF/A at all, so enforcing which level is allowed would be a verdict about a property it never checked. `P4` reports the claim; whether your process requires a particular level is your rule to apply to it, and ours to stay out of. |
+| **Reading what a document says** | A PDF is opened to ask whether it is a PDF, whether it is encrypted, and whether it claims a PDF/A level. What the document *says* is never read: whether the drawing is the right drawing, whether the manual matches the machine, whether the text agrees with the metadata describing it. Those are questions about the content of a delivery, and a container validator cannot answer them — so this one does not try, and does not report on them either way. |
 | **Building containers** | This is a referee, not an authoring tool. |
 | **Fixing anything** | A validator that edits your data is a validator you stop trusting. |
 | **Validating an unpacked directory** | ZIP only, for now. Halves the reader's surface. |
@@ -52,9 +53,12 @@ failure — files that never claimed at all.
 - **ISO 639**: we accept every ISO 639-1 two-letter code and any three-letter
   alphabetic code. We do not carry the full ISO 639-2 register, so a plausible-looking
   but non-existent three-letter code passes. Stated here rather than hidden.
-- **Media types**: extension agreement is checked for `application/pdf` and
-  `application/zip` only. We do not sniff file contents to confirm a declared type,
-  except for PDFs.
+- **Media types**: extension agreement is checked against a table of fifteen
+  media types, and the rule says nothing about a type that is not in it. The
+  table is short on purpose — `text/plain` is honestly carried by `.txt`,
+  `.log`, `.md` and `.csv`, so a rule that guessed there would report a correct
+  delivery. We do not sniff file contents to confirm a declared type, except
+  for PDFs.
 - **Encryption is detected by pattern, not by parsing**: `P2` looks for the indirect
   reference the format requires the trailer to use (`/Encrypt 12 0 R`). That does not
   fire on the word appearing in a comment or a content stream, but it is still a

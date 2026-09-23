@@ -265,6 +265,16 @@ TABLE = [
      "undated the promise covers 0.5.0, 0.6.0 and 0.7.0 as well, and those carry "
      "hardening against hostile input with no advisory written for any of it"),
 
+    ("gates/the-scope-page-counts-the-types-the-rule-knows",
+     "docs/scope.md",
+     "a table of fifteen",
+     "a table of two",
+     ["tests/test_the_docs_count_what_they_claim.py::"
+      "test_the_scope_page_counts_the_media_types_the_rule_knows"],
+     "the page said two while the table held fifteen, in the tree of the release "
+     "that grew it: that number is what tells a reader whether their declared "
+     "type is judged at all"),
+
     ("reader/the-xml-tree-has-a-ceiling",
      "packages/vdi2770/src/vdi2770/xmlread.py",
      "        if built > MAX_ELEMENTS:",

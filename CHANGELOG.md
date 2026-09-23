@@ -33,6 +33,15 @@ One of the fifteen carries an extension only a Windows registry lists: a bitmap
 named `.dib` is a bitmap, and the table learned so from the platform that says
 so rather than from memory.
 
+**And the scope page was still describing the old table.** `docs/scope.md`
+gave extension agreement as checked "for `application/pdf` and
+`application/zip` only" — the sentence somebody reads to find out whether their
+declared type is judged at all, and it was false in the same tree that widened
+the rule. It gives the table's size now, derived from the table rather than
+written beside it. That page also says outright what it had only implied: a PDF
+is opened to ask whether it is a PDF, whether it is encrypted and whether it
+claims a PDF/A level, and what the document *says* is never read.
+
 **`M13`: an identifier names one kind of thing.** `ObjectType` distinguishes a
 product model (`Type`) from the one manufactured item carrying that serial
 (`Individual`). A delivery that files the same identifier under both has

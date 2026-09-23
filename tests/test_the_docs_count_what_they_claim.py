@@ -460,8 +460,11 @@ def test_no_document_cites_a_file_that_is_not_here():
     # 35 to 36 when the entry correcting the page-count sentence named the page
     # it corrects, `docs/divergences.md`: the claim is about what that page says,
     # so a reader who cannot reach the page cannot check the claim.
-    assert seen == 36, (
-        f"{seen} citations found, not 36. If you added or removed one, say so "
+    # 36 to 37 when the entry about the widened media-type table named the page
+    # that had gone on describing the narrow one, `docs/scope.md`, so a reader
+    # of the entry can go and see what the page says now.
+    assert seen == 37, (
+        f"{seen} citations found, not 37. If you added or removed one, say so "
         f"here; if you did not, some of them just stopped being checked.")
 
 
@@ -1002,3 +1005,27 @@ def test_the_claim_reader_prefers_the_newer_of_two_statements(tmp_path,
     heading, match = conftest.latest_changelog_claim(r"it runs (\d+) files")
     assert heading.startswith("## 0.1.0"), heading
     assert match.group(1) == "4", match.group(1)
+
+
+def test_the_scope_page_counts_the_media_types_the_rule_knows():
+    """The page tells a reader which declared types `F3` judges, and the number
+    is the whole of the answer: a type outside the table is not checked at all,
+    and this page is where somebody looks to find that out.
+
+    It said two while the table grew to fifteen -- in the tree of the release
+    that grew it, so the section announcing the change and the page describing
+    the limit disagreed about one rule at the same commit. Derived from the
+    table now, because a number written beside a table is right on the day it
+    is written.
+    """
+    import re
+
+    from vdi2770.validate.rules.files import EXTENSION_FOR
+
+    prose = " ".join((ROOT / "docs" / "scope.md").read_text(encoding="utf-8").split())
+    m = re.search(r"extension agreement is checked against a table of "
+                  r"([a-z-]+) media types", prose)
+    assert m, "the scope page's sentence about media types has been reworded"
+    assert m.group(1) == spelled(len(EXTENSION_FOR)), (
+        f"scope.md says {m.group(1)} media types and the table has "
+        f"{len(EXTENSION_FOR)}")
