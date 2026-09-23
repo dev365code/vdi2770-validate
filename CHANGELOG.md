@@ -59,8 +59,9 @@ of them narrowed, one of them made to admit more.
   paths, so one finding grew with the number of containers times the length of
   that name: forty containers under a 2,000-character name made it 81,177
   characters, and it is 10,270 now. Both lists are recovered
-  the same way, by searching the delivery for the identifier the sentence names;
-  what a reader is owed is the count, and the count is exact.
+  the same way, by searching the delivery for the identifier the sentence names,
+  ignoring case and surrounding spaces as the rule does; what a reader is owed
+  is the count, and the count is exact.
 
   The count also sits outside the list rather than inside it. A marker written
   into a comma-separated run is read back as one of the items: this project's

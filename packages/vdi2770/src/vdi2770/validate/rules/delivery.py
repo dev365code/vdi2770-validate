@@ -169,8 +169,9 @@ def different_registers(a, b) -> bool:
 #: The containers are bounded the same way, by the same function. They were
 #: once listed in full, on the argument that a truncated list of them could not
 #: be recovered while a truncated list of kinds could. Both are recovered the
-#: same way -- by searching the delivery for the identifier the sentence names
-#: -- and the full list had no bound on its *size*: `MAX_CONTAINERS` limits how
+#: same way -- by searching the delivery for the identifier the sentence names,
+#: ignoring case and surrounding spaces as the grouping below does -- and the
+#: full list had no bound on its *size*: `MAX_CONTAINERS` limits how
 #: many containers there are, not how long their paths are, and a long name on a
 #: container that holds others is repeated in every one of their paths. Forty
 #: containers under a 2,000-character name made one detail 81,177 characters;

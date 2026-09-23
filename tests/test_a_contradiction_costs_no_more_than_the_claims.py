@@ -368,7 +368,8 @@ def test_every_container_that_takes_part_is_counted(tmp_path):
     Listing every one in full fixed that and broke something worse (the list had
     no bound on its size). What the reader is owed is not every path but the
     truth about how many there were, so a count they can act on -- by searching
-    the delivery for the identifier -- is what this holds.
+    the delivery for the identifier, ignoring case and surrounding spaces -- is
+    what this holds.
     """
     from vdi2770_validate.runner import check_file
 
