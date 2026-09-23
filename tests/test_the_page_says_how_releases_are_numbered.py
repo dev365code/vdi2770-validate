@@ -93,3 +93,24 @@ def test_the_section_promises_no_support_window():
                            "latest two releases", "last two releases",
                            "security support for") if p in body]
     assert not windows, f"the section promises a support window: {windows}"
+
+
+def test_the_patch_paragraph_accounts_for_every_patch_release():
+    """It says it is the one place this project undertakes to be exhaustive.
+
+    The counts were derived and gated from the start; being *named* was not.
+    So the section could say "three of the five" truthfully, name the three
+    that moved a verdict, add "the fourth, 0.9.1, moved none" -- and leave the
+    fifth unmentioned. The fifth was 0.9.2, the security patch, which is the
+    one a reader is most likely to have come to that paragraph about.
+    """
+    import pytest
+
+    body = section()
+    known = patches()
+    if not known:
+        pytest.skip("not a git checkout; the tags are not available here")
+    missing = sorted(v for v in known if v not in body)
+    assert not missing, (
+        f"the paragraph that undertakes to be exhaustive about patch releases "
+        f"does not name {missing}; it names {sorted(v for v in known if v in body)}")

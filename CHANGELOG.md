@@ -32,7 +32,7 @@ of them narrowed, one of them made to admit more.
   every kind the identifier had been declared as. Measured: forty thousand
   kinds under one identifier, in a **211 KB** archive, made a single detail of
   **320,096 characters**; four hundred of them made it 3,296. It lists five now
-  and says how many there were -- *five of 40001 shown* -- so the count stays
+  and says how many there were -- `-- 5 of 40001 shown` -- so the count stays
   exact and the listing is bounded, the way the rest of the report already
   worked. The containers the finding names are bounded the same way. Under five
   of either, nothing about the sentence changes.
@@ -47,10 +47,14 @@ of them narrowed, one of them made to admit more.
   it out loud as *this tool declining to look, not the container*. What is not
   careful is the number. It lands in the same `1` that means the delivery has a
   finding, so a build gate cannot tell *your handover has a problem* from *our
-  checker fell over on it* — and the second one is our bug, not yours. 0.11.0
-  gives it `70` (`EX_SOFTWARE`), joining `3` and `64` as codes that are not a
-  verdict about the container. **Nothing about the codes changes in this
-  release.** This is the announcement, one release ahead, that one of them will.
+  checker fell over on it* — and the second one is our bug, not yours. There is
+  a second way in: a failure that reaches the command's own handler, rather than
+  the one around each rule, is reported as `cannot read it` and exits `2` — a
+  sentence about your file and a code documented as *nothing could be read*,
+  for something that went wrong in here. 0.11.0 gives **both** paths `70`
+  (`EX_SOFTWARE`), joining `3` and `64` as codes that are not a verdict about
+  the container. **Nothing about the codes changes in this release.** This is
+  the announcement, one release ahead, that one of them will.
 
 - **The security page pointed the one command it gives you at the wrong
   releases.** It said the reader is a separate distribution *before 0.8.0* and

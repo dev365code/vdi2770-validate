@@ -310,24 +310,35 @@ def test_the_page_points_the_check_command_at_the_releases_that_need_it():
     assert "pip show vdi2770" in flat, (
         "the page no longer tells a reader how to see which reader they have")
 
-    # A sentence ends at a full stop *followed by a space*, because a version
-    # number is full of full stops: splitting on the bare character lands inside
-    # "0.8.0" and hands back a fragment that no longer contains the scoping this
-    # is here to refuse. The first spelling of this test passed for that reason.
-    at = flat.find("pip show vdi2770")
-    ends = [m.end() for m in re.finditer(r"\.(?:\s|$)", flat)]
-    start = max([e for e in ends if e <= at], default=0)
-    end = min([e for e in ends if e > at], default=len(flat))
-    sentence = flat[start:end]
-    assert "before 0.8.0" not in sentence, (
-        "the sentence carrying `pip show vdi2770` scopes it to before 0.8.0, "
-        "which excludes the floor-pinned releases where the installed reader "
-        "can differ from the command -- the case the command exists for")
-
+    # The whole paragraph the command sits in, not its sentence. Two narrower
+    # spellings each let the error back in: refusing the literal "before 0.8.0"
+    # let "below 0.8.0" through, and then reading only the sentence carrying
+    # `pip show vdi2770` let the scoping sit in the sentence *after* it, which
+    # reads the same to a person and passed. (A sentence bound also has to end
+    # at a full stop followed by a space, because a version number is full of
+    # full stops -- the first spelling split inside "0.8.0".)
+    # Flattened first: the page is hard-wrapped, so `pip show vdi2770` spans a
+    # line break and is not a substring of any paragraph as it sits on disk.
+    paragraphs = [" ".join(p.split()) for p in
+                  (ROOT / "SECURITY.md").read_text(encoding="utf-8").split("\n\n")]
+    sentence = next(p for p in paragraphs if "pip show vdi2770" in p)
     floors = floor_pinned_releases()
     if floors is None:
         pytest.skip("not a git checkout; the tags are not available here")
     assert floors, "no release names its engine with a floor; this test is stale"
+    highest = max(floors, key=as_number)
+
+    # Any scoping that shuts the floor-pinned releases out, not one spelling of
+    # it. The first version of this refused the literal "before 0.8.0", so
+    # writing "below 0.8.0" -- the same error, one word different -- passed.
+    for m in re.finditer(r"\b(before|below|under|prior to|only.{0,24}?below)\s+"
+                         r"(\d+\.\d+\.\d+)", sentence, re.I):
+        assert as_number(m.group(2)) > as_number(highest), (
+            f"the paragraph carrying `pip show vdi2770` scopes it to "
+            f"{m.group(0)!r}, which shuts out {highest} -- one of the releases "
+            f"whose installed reader is not settled by the command's version, "
+            f"which is the case the command exists for")
+
     missing = [v for v in floors if v not in flat]
     assert not missing, (
         f"these releases name their engine with a floor and the page does not "

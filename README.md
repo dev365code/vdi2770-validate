@@ -161,10 +161,11 @@ the *number* instead — `0` clean, `1` a finding or an unreadable path, `2`
 nothing readable at all, `3` the install disagreed with itself, `64` a mistyped
 command line or a `pyz:` that is not there — ask for it:
 
-*Coming in 0.11.0*: a check that raised and did not finish returns `70`
-(`EX_SOFTWARE`) instead of `1`, so a gate can tell a finding about your
-delivery from a failure of ours. `3`, `64` and `70` are the codes that are
-not a verdict about the container.
+*Coming in 0.11.0*: a failure of this tool's own returns `70` (`EX_SOFTWARE`)
+instead of `1` or `2`, so a gate can tell a finding about your delivery from a
+failure of ours — both where a rule raised and was caught, and where the
+failure reached the command and was reported as an unreadable file. `3`, `64`
+and `70` are the codes that are not a verdict about the container.
 
 ```yaml
 - uses: dev365code/vdi2770-validate@v0.9.1
@@ -430,9 +431,10 @@ changed what a pipeline sees:**
 - `0.8.2` turned a PDF it had silently skipped into an `X5` error, so a
   container that came back clean can come back with a finding against that file.
 
-The fourth, `0.9.1`, moved no verdict at all. A patch is a smaller promise than
-a minor release; it is not a promise that nothing your pipeline reads can
-change.
+The other two moved no verdict at all: `0.9.1`, and `0.9.2`, which repaired what
+a delivery costs to check and left every finding, every location and every exit
+code exactly where they were. A patch is a smaller promise than a minor release;
+it is not a promise that nothing your pipeline reads can change.
 
 **Pin the version you validated against, and pin it exactly.** A rule added is a
 verdict your pipeline has not seen, and the point of a validator is that the

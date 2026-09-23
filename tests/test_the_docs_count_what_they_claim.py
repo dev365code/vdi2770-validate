@@ -1076,3 +1076,20 @@ def test_the_cli_counts_the_warnings_the_catalogue_holds():
     assert f"{want} rules are warnings" in source, (
         f"the catalogue holds {len(warnings)} warnings ({', '.join(sorted(warnings))}) "
         f"and cli.py does not say {want.lower()}")
+
+
+def test_the_changelog_quotes_the_report_string_the_tool_prints():
+    """The entry shows what a bounded listing looks like, so a reader can find
+    it in their own report. It quoted *five of 40001 shown* while the tool
+    prints `-- 5 of 40001 shown` -- a word where there is a digit, and without
+    the dashes that begin it. Somebody grepping their report for the phrase in
+    the release note finds nothing, which is the one thing the quotation is for.
+    """
+    from vdi2770.validate.rules.delivery import MOST_LISTED, _listed
+
+    changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+    shown = _listed([f"K{i}" for i in range(40001)])
+    tail = shown[shown.index(" -- "):].strip()
+    assert tail in changelog, (
+        f"the entry does not quote what the tool prints. It prints {tail!r} for "
+        f"40001 items with MOST_LISTED = {MOST_LISTED}")

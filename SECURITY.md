@@ -67,6 +67,15 @@ than reported from outside, and each is described in the CHANGELOG section that
 announces it. **If you pin a version below 0.8.0, those sections are the list**
 — read them where you would otherwise be looking for an advisory.
 
+Two things about reading them. Below 0.8.0 the two distributions were numbered
+separately and the headings do not say which one they belong to, so `## 0.4.0`
+is the command's 0.4.0 and the reader's 0.4.0 is a different release cut at a
+different time; `## 0.3.1` is the reader's, and there is no command 0.3.1. And
+the reader's **0.6.1 has no section of its own** — what it repaired is described
+in the 0.7.0 section, above its own number rather than below it. So check which
+distribution you are asking about before you pick a heading, and if the version
+you have is the reader's 0.6.0 or 0.6.1, read 0.7.0.
+
 **Announcing a fix and delivering it are not always the same release, and one
 of these is the example.** 0.5.0 announced the scan fix and did not deliver it:
 it asked for the repaired reader with a range that *permitted* the unrepaired
@@ -80,3 +89,9 @@ vdi2770` names it. That check matters most where the command's own version does
 not settle which reader you have: 0.8.0, 0.8.1, 0.8.2 and 0.9.0 ask for their
 engine with a floor rather than a pin, and a floor stops holding the moment a
 newer engine exists. 0.9.1 and later pin the pair exactly.
+
+If that check tells you the reader is the one you want and the command is one of
+those four, do not upgrade the reader on its own: the two halves ship under one
+number and the tool refuses to judge a pair that disagrees with itself, which is
+exit `3` rather than a verdict about your delivery. Pin both names, or move to
+0.9.1 or later, which pins them for you.
