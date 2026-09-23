@@ -7,7 +7,7 @@ from typing import Dict, List
 
 from . import __version__
 from .model import About, Obligation, Report, Severity
-from .names import as_written
+from .names import as_written, on_one_line
 from .resources import schema_stamp
 
 MARK = {Severity.ERROR: "error", Severity.WARNING: "warn ", Severity.INFO: "info "}
@@ -110,7 +110,9 @@ def stopped_said(rid: str, in_all: int, listed: int) -> str:
 
 
 def as_text(report: Report, show_info: bool = True) -> str:
-    lines: List[str] = [f"{report.target}"]
+    # The file's own name, which a drop folder hands over as it was sent: on one
+    # line, like every sentence below it.
+    lines: List[str] = [on_one_line(f"{report.target}")]
     findings = [f for f in report.sorted() if show_info or f.severity is not Severity.INFO]
     stopped = report.stopped(show_info)
     # Not "no findings" over a listing that stopped before its first one: a
@@ -125,10 +127,13 @@ def as_text(report: Report, show_info: bool = True) -> str:
         lines.append(f"  no errors or warnings ({hidden} note(s) not shown)" if hidden
                      else "  no findings")
     for f in findings:
-        lines.append(f"  {MARK[f.severity]}  {f.rule.id}  {f.message}")
+        # A message, a detail and a remedy quote values the sender wrote -- a class
+        # id, a language, the identifier a relationship names -- and each is kept
+        # on its line; `_where` does the same for the names on the `at` line.
+        lines.append(f"  {MARK[f.severity]}  {f.rule.id}  {on_one_line(f.message)}")
         lines.append(f"         at {_where(f.where)}")
         if f.detail:
-            lines.append(f"         {f.detail}")
+            lines.append(f"         {on_one_line(f.detail)}")
         # With the evidence, not with the remedy. The basis answers *why this is
         # being reported* and belongs beside what was observed; the remedy
         # answers *what to do*, and a reader skimming for the fix should not
@@ -136,7 +141,7 @@ def as_text(report: Report, show_info: bool = True) -> str:
         lines.append(f"         {basis(f.rule)}")
         # Every finding carries its remedy. Printing it once per rule saved a few
         # lines and quietly broke the promise the docs make.
-        lines.append(f"         -> {f.remedy}")
+        lines.append(f"         -> {on_one_line(f.remedy)}")
     for rid, container, n in report.not_listed(show_info):
         # `as_written`, like the `at` line above: this string is an archive's
         # own name and an inner container called `a\n\n  0 error(s)…` put a

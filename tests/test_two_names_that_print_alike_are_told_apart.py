@@ -570,3 +570,72 @@ def test_no_archive_controlled_string_can_forge_lines_in_the_report():
         assert "\n  no findings" not in page, (
             f"M13's detail forged a line of the report through "
             f"{'a container name' if container == forged else 'a kind'}")
+
+    # Doors four and five: values the metadata carries, which rules quote in
+    # their messages and details -- a class id (`M2`), a language (`M5`), the
+    # identifier a relationship names (`M11`). And door six, the heading: the
+    # name of the file itself, which a drop folder full of supplier files
+    # hands over as it was sent.
+    meta_name = next(n for n in names if n.endswith("VDI2770_Metadata.xml"))
+    doors = {
+        "a class id": text.replace("<ClassId>02-01</ClassId>",
+                                    f"<ClassId>{forged}</ClassId>", 1),
+        "a language": re.sub(r'(<DocumentDescription[^>]*Language=")[^"]*(")',
+                             lambda m: m.group(1) + forged.replace("\n", "&#10;") + m.group(2),
+                             text, count=1),
+    }
+    for door, declared in doors.items():
+        assert declared != text, f"the premise: {door} is in the sample"
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w") as z:
+            for n in names:
+                z.writestr(n, declared.encode("utf-8") if n == meta_name else data[n])
+        page = as_text(check_bytes(buf.getvalue(), "t.zip"), True)
+        assert len(summaries_of(page)) == 1, (door, summaries_of(page))
+        assert "\n  no findings" not in page, f"{door} forged a line of the report"
+
+    from conftest import FIXTURES
+
+    with zipfile.ZipFile(FIXTURES / "m11-refers-to-a-document-not-delivered.zip") as z:
+        m11 = {n: z.read(n) for n in z.namelist()}
+    main = m11["VDI2770_Main.xml"].decode("utf-8")
+    assert main.count("ts-ddd-999") == 1, "the premise: the fixture names one missing document"
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        for n, d in m11.items():
+            z.writestr(n, main.replace("ts-ddd-999", forged).encode("utf-8")
+                       if n == "VDI2770_Main.xml" else d)
+    page = as_text(check_bytes(buf.getvalue(), "t.zip"), True)
+    assert len(summaries_of(page)) == 1, ("a relationship's target", summaries_of(page))
+    assert "\n  no findings" not in page, "a relationship's target forged a line"
+
+    page = as_text(check_bytes(buf.getvalue(), forged + ".zip"), True)
+    assert len(summaries_of(page)) == 1, ("the file's own name", summaries_of(page))
+    assert "\n  no findings" not in page, "the file's own name forged a line"
+
+
+def test_no_sentence_a_finding_carries_can_leave_its_line():
+    """Whatever a rule puts in a message, a detail or a remedy, the page prints
+    it on the line it belongs to. Held at the renderer for every rule in the
+    catalogue, so a rule written tomorrow that quotes a value the sender chose
+    cannot open a door this file has not listed."""
+    import json
+
+    from vdi2770_validate.catalog import rule
+    from vdi2770_validate.model import Finding, Location, Report
+    from vdi2770_validate.report import as_text
+
+    from conftest import ROOT
+
+    forged = "a\r\n\x1b[2K\x85\u2028  0 error(s), 0 warning(s), 0 note(s)\n  no findings"
+    catalogue = json.loads((ROOT / "packages" / "vdi2770" / "src" / "vdi2770" / "validate"
+                            / "data" / "rules.json").read_text(encoding="utf-8"))
+    report = Report(target="t.zip")
+    for entry in catalogue["rules"]:
+        report.add(Finding(rule(entry["id"]), forged, Location(container="t.zip"),
+                           detail=forged, fix=forged))
+    page = as_text(report, True)
+    for line in page.splitlines():
+        assert not line.startswith("  0 error(s)") and line != "  no findings", line
+    assert not any(c in page for c in "\r\x1b\x85\u2028"), (
+        "a character that moves the cursor or ends a line reached the page")

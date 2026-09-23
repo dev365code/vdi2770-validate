@@ -23,7 +23,7 @@ from vdi2770.model import Defect, Location
 from vdi2770.xmlread import NS, UnsafeXml, XmlTooLarge
 from vdi2770.zipread import MAIN_PDF, MAIN_XML, METADATA_XML, Kind
 
-from .names import as_written
+from .names import as_written, on_one_line
 
 #: An exception that names an object names the address it happened to live at,
 #: because that is what `repr` does. Rendered into a finding, that address makes
@@ -215,7 +215,7 @@ def listed_size(f) -> int:
     located = [_where_bytes(s) for s in (w.container or "", w.member or "")]
     as_json = (sum(_json_bytes(s) for s in said) + sum(j for j, _t in located)
                + _json_bytes(w.xpath or "") + _json_bytes(w.subject or ""))
-    as_page = (sum(len(s.encode("utf-8", "surrogatepass")) for s in said)
+    as_page = (sum(len(on_one_line(s).encode("utf-8", "surrogatepass")) for s in said)
                + sum(t for _j, t in located))
     return LISTED_ALLOWANCE + max(as_json, as_page)
 

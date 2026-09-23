@@ -2217,6 +2217,46 @@ LISTING_BUDGET_ROWS = [
      "naming 0.9.4 lets the page name 0.9.4 without naming a release later than "
      "the one that shipped the repair"),
 
+    ("report/a-message-stays-on-its-line",
+     "packages/vdi2770/src/vdi2770/validate/report.py",
+     '        lines.append(f"  {MARK[f.severity]}  {f.rule.id}  {on_one_line(f.message)}")',
+     '        lines.append(f"  {MARK[f.severity]}  {f.rule.id}  {f.message}")',
+     ["tests/test_two_names_that_print_alike_are_told_apart.py::test_no_archive_controlled_string_can_forge_lines_in_the_report", "tests/test_two_names_that_print_alike_are_told_apart.py::test_no_sentence_a_finding_carries_can_leave_its_line"],
+     "a class id or a language the sender wrote, quoted in a message, put a "
+     "forged summary and a clean verdict on the page"),
+
+    ("report/a-detail-stays-on-its-line",
+     "packages/vdi2770/src/vdi2770/validate/report.py",
+     '            lines.append(f"         {on_one_line(f.detail)}")',
+     '            lines.append(f"         {f.detail}")',
+     ["tests/test_two_names_that_print_alike_are_told_apart.py::test_no_archive_controlled_string_can_forge_lines_in_the_report", "tests/test_two_names_that_print_alike_are_told_apart.py::test_no_sentence_a_finding_carries_can_leave_its_line"],
+     "the identifier a relationship names, quoted in a detail, put a forged "
+     "summary and a clean verdict on the page"),
+
+    ("report/a-remedy-stays-on-its-line",
+     "packages/vdi2770/src/vdi2770/validate/report.py",
+     '        lines.append(f"         -> {on_one_line(f.remedy)}")',
+     '        lines.append(f"         -> {f.remedy}")',
+     ["tests/test_two_names_that_print_alike_are_told_apart.py::test_no_sentence_a_finding_carries_can_leave_its_line"],
+     "a remedy that quotes a value the sender chose is a third place the page "
+     "prints it"),
+
+    ("report/the-heading-stays-on-its-line",
+     "packages/vdi2770/src/vdi2770/validate/report.py",
+     '    lines: List[str] = [on_one_line(f"{report.target}")]',
+     '    lines: List[str] = [f"{report.target}"]',
+     ["tests/test_two_names_that_print_alike_are_told_apart.py::test_no_archive_controlled_string_can_forge_lines_in_the_report"],
+     "the file's own name heads the page, and a drop folder hands it over as "
+     "it was sent"),
+
+    ("report/the-budget-charges-a-sentence-as-the-page-prints-it",
+     "packages/vdi2770/src/vdi2770/validate/model.py",
+     '    as_page = (sum(len(on_one_line(s).encode("utf-8", "surrogatepass")) for s in said)',
+     '    as_page = (sum(len(s.encode("utf-8", "surrogatepass")) for s in said)',
+     ["tests/test_a_long_name_does_not_multiply_the_report.py::test_the_budget_charges_at_least_what_either_shape_prints"],
+     "a sentence full of what draws nothing prints six times its length once it "
+     "is kept on its line, and the budget has to charge that"),
+
     ("report/the-budget-charges-json-as-printed",
      "packages/vdi2770/src/vdi2770/validate/model.py",
      '    return len(json.dumps(s, ensure_ascii=False).encode("utf-8", "surrogatepass")) - 2',
