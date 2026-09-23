@@ -2251,29 +2251,36 @@ LISTING_BUDGET_ROWS = [
 
     ("report/the-budget-charges-a-sentence-as-the-page-prints-it",
      "packages/vdi2770/src/vdi2770/validate/model.py",
-     '    as_page = (sum(len(on_one_line(s).encode("utf-8", "surrogatepass")) for s in said)',
-     '    as_page = (sum(len(s.encode("utf-8", "surrogatepass")) for s in said)',
+     '    as_page = (sum(_page_bytes(on_one_line(s)) for s in said)',
+     '    as_page = (sum(_page_bytes(s) for s in said)',
      ["tests/test_a_long_name_does_not_multiply_the_report.py::test_the_budget_charges_at_least_what_either_shape_prints"],
      "a sentence full of what draws nothing prints six times its length once it "
      "is kept on its line, and the budget has to charge that"),
 
     ("report/the-budget-charges-json-as-printed",
      "packages/vdi2770/src/vdi2770/validate/model.py",
-     '    return len(json.dumps(s, ensure_ascii=False).encode("utf-8", "surrogatepass")) - 2',
+     '    return len(json.dumps(s, ensure_ascii=True)) - 2',
      '    return len(s)',
-     ["tests/test_a_long_name_does_not_multiply_the_report.py::test_the_budget_charges_at_least_what_either_shape_prints",
-      "tests/test_a_long_name_does_not_multiply_the_report.py::test_what_a_report_prints_is_bounded_by_the_budget"],
+     ["tests/test_a_long_name_does_not_multiply_the_report.py::test_the_budget_charges_at_least_what_either_shape_prints"],
      "JSON writes a control character as six, and a budget that counted it as "
      "one let a name made of them print six times what the listing held"),
 
     ("report/the-budget-charges-the-page-as-printed",
      "packages/vdi2770/src/vdi2770/validate/model.py",
-     '    return _json_bytes(s), len(as_written(s).encode("utf-8", "surrogatepass"))',
+     '    return _json_bytes(s), _page_bytes(as_written(s))',
      '    return _json_bytes(s), len(s)',
-     ["tests/test_a_long_name_does_not_multiply_the_report.py::test_the_budget_charges_at_least_what_either_shape_prints",
-      "tests/test_a_long_name_does_not_multiply_the_report.py::test_what_a_report_prints_is_bounded_by_the_budget"],
+     ["tests/test_a_long_name_does_not_multiply_the_report.py::test_the_budget_charges_at_least_what_either_shape_prints"],
      "the page spells an invisible symbol as ten characters, and a budget that "
      "counted it as one let such a name print thirteen times what it held"),
+
+    ("report/the-json-charge-is-for-the-console-that-prints-most",
+     "packages/vdi2770/src/vdi2770/validate/model.py",
+     '    return len(json.dumps(s, ensure_ascii=True)) - 2',
+     '    return len(json.dumps(s, ensure_ascii=False).encode("utf-8", "surrogatepass")) - 2',
+     ["tests/test_a_long_name_does_not_multiply_the_report.py::test_the_budget_charges_at_least_what_either_shape_prints"],
+     "a console that cannot print UTF-8 gets the JSON with every non-ASCII "
+     "character escaped, and a charge counted in UTF-8 let it print three times "
+     "the budget"),
 
     ("report/the-allowance-covers-what-every-rule-prints-around-a-finding",
      "packages/vdi2770/src/vdi2770/validate/model.py",
