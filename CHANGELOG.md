@@ -97,13 +97,13 @@ of them narrowed, one of them made to admit more.
   are then the codes that are not a verdict about the container. **Nothing about the codes changes in this release.** This is
   the announcement, one release ahead, that one of them will.
 
-- **The security page pointed the one command it gives you at the wrong
-  releases.** It said the reader is a separate distribution *before 0.8.0* and
-  that `pip show vdi2770` names it. The reader has been its own distribution
-  since 0.2.0, and the check matters most from 0.2.0 to 0.6.x, which asked for
-  the reader with a range rather than a pin, so a command could run beside an
-  older reader than the one it was written against. From 0.8.0 on, a pair that
-  disagrees is refused rather than judged. The page says which releases pin how.
+- **The security page says which releases the one command it gives you is
+  for.** It said the reader is a separate distribution *before 0.8.0* and that
+  `pip show vdi2770` names it, and not where that matters. It matters most from
+  0.2.0 to 0.6.0, which asked for the reader with a range rather than a pin, so a
+  command could run beside an older reader than the one it was written against;
+  0.7.0 pinned it exactly, and from 0.8.0 on a pair that disagrees is refused
+  rather than judged. The page says which releases pin how.
 
 **`F3` knew two media types and now knows fifteen.** The rule asks whether a
 declared `FileFormat` agrees with the file's own name, and it only ever

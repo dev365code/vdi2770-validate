@@ -98,7 +98,7 @@ reproduced the very hang that section describes a fix for. **0.5.1** is the
 release that requires the repaired reader. The defect itself goes back further
 than the section that announces the fix — 0.5.0 says it arrived in 0.4.0. So
 read the section, and then check what you actually installed: `pip show
-vdi2770` names the reader. It matters most from 0.2.0 to 0.6.x, which asked for
+vdi2770` names the reader. It matters most from 0.2.0 to 0.6.0, which asked for
 the reader with a range rather than a pin, so a command could run beside an
 older reader than the one it was written against — 0.5.0 is that case: it was
 cut beside the repaired reader 0.3.1, and its range, `~=0.3.0`, admits the
