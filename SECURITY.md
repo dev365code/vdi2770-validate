@@ -32,11 +32,27 @@ confusing message". Those are welcome, but as ordinary issues.
 
 ## Advisories
 
-A security fix that shipped in a release has a GitHub security advisory on
-this repository, naming the versions it reaches and the release that fixes it.
+**From 0.8.0 on, a security fix that ships in a release gets a GitHub security
+advisory on this repository, naming the versions it reaches and the release
+that fixes it.** The date is where the practice began rather than where the
+fixes did: the first advisory was written for 0.8.1, and every advisory this
+repository has is listed here. The release that fixes one cites its identifier
+in that release's CHANGELOG section, so the two pages can be read against each
+other.
 
 - [GHSA-xp97-jcmj-h45f](https://github.com/dev365code/vdi2770-validate/security/advisories/GHSA-xp97-jcmj-h45f):
   a container member that lied about its size, or used a compression method
   the reader could not bound, could make the reader allocate far more memory
   than the archive's own size. Every release of `vdi2770` and
   `vdi2770-validate` up to 0.8.0; fixed in 0.8.1.
+
+**Below 0.8.0 there are no advisories, and that is not because there was
+nothing to write one for.** Much of 0.5.0, 0.6.0 and 0.7.0 is hardening against
+hostile input: a scan of a malformed file whose cost squared with its size,
+decompression bounded per member and never across a whole read, every nested
+container's decompressed bytes held at once where one buffer per level of
+nesting would do, a spent budget that silenced a path-traversal member. Each
+was found here, against this project's own corpus and fixtures, and each is
+described in the CHANGELOG section of the release that carries it. **If you pin
+a version below 0.8.0, those sections are the list** — read them where you
+would otherwise be looking for an advisory.

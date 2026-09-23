@@ -246,6 +246,25 @@ TABLE = [
      "the citation check read SECURITY.md and nothing else, so CONTRIBUTING and "
      "docs/licensing.md could point at files that are not here"),
 
+    ("gates/an-advisory-names-the-release-that-fixes-it",
+     "SECURITY.md",
+     "`vdi2770-validate` up to 0.8.0; fixed in 0.8.1.",
+     "`vdi2770-validate` up to 0.8.0; fixed in 0.8.2.",
+     ["tests/test_an_advisory_and_its_release_name_each_other.py::"
+      "test_each_advisory_is_cited_by_the_release_that_fixes_it"],
+     "the security page names the release that fixes an advisory and the "
+     "changelog cites the id under that release; let the two drift and a reader "
+     "following either one lands nowhere"),
+
+    ("gates/the-advisory-promise-keeps-its-date",
+     "SECURITY.md",
+     "**From 0.8.0 on, a security fix that ships in a release gets a GitHub security",
+     "**A security fix that ships in a release gets a GitHub security",
+     ["tests/test_an_advisory_and_its_release_name_each_other.py::"
+      "test_the_promise_carries_the_date_it_was_narrowed_to"],
+     "undated the promise covers 0.5.0, 0.6.0 and 0.7.0 as well, and those carry "
+     "hardening against hostile input with no advisory written for any of it"),
+
     ("reader/the-xml-tree-has-a-ceiling",
      "packages/vdi2770/src/vdi2770/xmlread.py",
      "        if built > MAX_ELEMENTS:",

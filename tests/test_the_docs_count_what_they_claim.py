@@ -457,8 +457,11 @@ def test_no_document_cites_a_file_that_is_not_here():
     # 33 to 35 when the entry for this release named both halves of the report
     # contract -- the page that states it and the stored report it is checked
     # against -- so a reader of the changelog can go and read either.
-    assert seen == 35, (
-        f"{seen} citations found, not 35. If you added or removed one, say so "
+    # 35 to 36 when the entry correcting the page-count sentence named the page
+    # it corrects, `docs/divergences.md`: the claim is about what that page says,
+    # so a reader who cannot reach the page cannot check the claim.
+    assert seen == 36, (
+        f"{seen} citations found, not 36. If you added or removed one, say so "
         f"here; if you did not, some of them just stopped being checked.")
 
 

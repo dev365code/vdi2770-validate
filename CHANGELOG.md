@@ -2,15 +2,17 @@
 
 Sections through 0.7.0 had their wording tidied after their tags; the text each version carried when it was published is in that tag's own `CHANGELOG.md`. From 0.8.0 on, a released section is frozen at its tag and takes only appended `*(Correction ...)*` lines.
 
-## 0.10.0 — unreleased
+## 0.10.0 — 2026-09-23
 
 Who should take this release: anyone who hands over a file whose declared media
 type and file name might not agree, anyone whose delivery declares what its
 documents are *about*, and anyone reading this project's pages to decide whether
-to depend on it. Two rules read more than they read before, so a delivery that
-passed may now draw a warning — which is why this is a minor release and not a
-patch. Nothing else here moves a verdict: two sentences this repository wrote
-about itself were narrowed to what it has actually measured.
+to depend on it. One rule reads more than it read before and one is new, so a
+delivery that passed may now draw a warning — which is why this is a minor
+release and not a patch. Nothing else moves a verdict, though one change below
+moves the error *count* for a delivery whose documents arrived as
+folders — read that one if a gate of yours reads a number. The rest is this
+repository's pages about itself, each narrowed to what it has measured.
 
 **`F3` knew two media types and now knows fifteen.** The rule asks whether a
 declared `FileFormat` agrees with the file's own name, and it only ever
@@ -81,6 +83,30 @@ says about one container that ships here, compared on every run. The page and
 the tool can now disagree out loud instead of drifting. The page also gained the
 third condition on `read.complete`, which it had been missing: a run that
 declined something is incomplete even when every count is full.
+
+**The advisory promise is dated, and what is below the date is named.**
+`SECURITY.md` said that a security fix which shipped in a release has a GitHub
+security advisory on this repository. There is one advisory, written for 0.8.1,
+and much of 0.5.0, 0.6.0 and 0.7.0 is hardening against hostile input with none
+— a scan whose cost squared with the size of a malformed file, decompression
+bounded per member and never across a whole read, a spent budget that silenced
+a path-traversal member. The promise now starts where the practice did, from
+0.8.0 on, and the section says what is below it rather than leaving the
+narrowing to read as though nothing happened down there: if you pin a version
+below 0.8.0, those CHANGELOG sections are the list. A gate holds the two pages
+together — an advisory's identifier is cited in the section of the release that
+fixes it, and the identifiers on the two pages are the same set.
+
+**A page said this tool does not check a page count, when the schema already
+refuses a bad one.** `docs/divergences.md` recorded `numberOfPages` among the
+things the reference implementation checks and this tool does not. No rule here
+reads it, which is what the line meant, but the schema VDI publishes types the
+attribute `xs:positiveInteger`, so `NumberOfPages="0"` and a negative are both
+refused as `X2` — the attribute named, the value quoted and the line given. A
+reader of the old sentence would have concluded the condition goes unreported
+here. It runs the other way too: the reference's own check fires only below
+zero, though its message says "greater than zero", so a declared `0` passes
+there and is refused here.
 
 **And the stability list stopped saying something this project's own history
 disproves.** It said a rule that fires today fires tomorrow on the same
@@ -228,6 +254,8 @@ limit of this reader, not a verdict on the container. One thing remains, and is
 written down rather than hidden: the second read keeps no running total across
 members, so a container may still spend up to the per-member cap on each member
 it hands over, one at a time.
+
+*(Correction 2026-09-23: the fix described above has advisory GHSA-xp97-jcmj-h45f, published after this section was written and reaching every release of both distributions up to 0.8.0.)*
 
 ## 0.8.0 — 2026-09-09
 
