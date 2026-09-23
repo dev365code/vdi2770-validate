@@ -62,8 +62,8 @@ same promise the table above makes.
   than the archive's own size. Every release of `vdi2770` and
   `vdi2770-validate` up to 0.8.0; fixed in 0.8.1.
 
-**Below 0.8.0 there are no advisories, and that is not because there was
-nothing to write one for.** Much of 0.5.0, 0.6.0 and 0.7.0 is hardening against
+**No fix released below 0.8.0 has an advisory of its own, and that is not
+because there was nothing to write one for.** Much of 0.5.0, 0.6.0 and 0.7.0 is hardening against
 hostile input: a scan of a malformed file whose cost squared with its size,
 decompression bounded per member and never across a whole read, every nested
 container's decompressed bytes held at once where one buffer per level of
@@ -72,7 +72,10 @@ whichever the unzip tool wrote last, a spent budget that silenced a
 path-traversal member. Each was found in this repository's own testing rather
 than reported from outside, and each is described in the CHANGELOG section that
 announces it. **If you pin a version below 0.8.0, those sections are the list**
-— read them where you would otherwise be looking for an advisory.
+— read them where you would otherwise be looking for an advisory. Two advisories
+written later reach those releases all the same — GHSA-xp97-jcmj-h45f every
+release up to 0.8.0, and GHSA-6hqr-phm3-chpf every release up to 0.9.2 — so
+the release to move to is 0.9.3 or later.
 
 One thing about reading them: below 0.7.0 the reader and the command carried
 separate numbers, and a heading does not say which of the two it belongs to. The
