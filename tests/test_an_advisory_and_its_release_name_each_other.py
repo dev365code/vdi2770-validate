@@ -288,20 +288,21 @@ def floor_pinned_releases():
     return out
 
 
-def test_the_page_points_the_check_command_at_the_releases_that_need_it():
-    """`pip show vdi2770` is the check, and it was scoped to the wrong range.
+def test_the_page_names_every_release_pinned_with_a_floor():
+    """Every release that asked for its engine with a floor is named on the page.
 
-    The page said *before 0.8.0*. That is wrong in both directions. It is not
-    true at the bottom -- 0.1.0 has no `packages/` tree and names no reader, so
-    there was nothing for the command to show -- and at the top it excludes the
-    releases that need it most. A release that names its engine with a floor is
-    one whose installed reader is *not* determined by the version of the command:
-    a floor stops holding the moment a newer engine exists, which the README
-    says in its own words. Those are precisely the releases where a reader
-    asking "do I have the fix" cannot answer from the command's version alone.
+    Each of them is inside the range of an advisory, and the page tells a reader
+    on one of them to move to the release that fixes it -- so a reader on one
+    has to be able to find their release named. The set is derived from the tags
+    rather than typed here.
 
-    So the set is derived from the tags rather than typed here, and the page has
-    to name every release in it.
+    This test once said the opposite of why. It held that these were the
+    releases where `pip show vdi2770` mattered most, because a floor leaves the
+    installed reader open. From 0.8.0 on, a reader and command that disagree are
+    refused rather than judged, so a floor does not leave a verdict open; the
+    releases where a silently older reader matters are 0.2.0 to 0.6.x, which
+    asked for it with a range. The assertion that enforced the old reason is
+    gone. This one is kept for the reason above.
     """
     import pytest
 
@@ -310,37 +311,19 @@ def test_the_page_points_the_check_command_at_the_releases_that_need_it():
     assert "pip show vdi2770" in flat, (
         "the page no longer tells a reader how to see which reader they have")
 
-    # The whole paragraph the command sits in, not its sentence. Two narrower
-    # spellings each let the error back in: refusing the literal "before 0.8.0"
-    # let "below 0.8.0" through, and then reading only the sentence carrying
-    # `pip show vdi2770` let the scoping sit in the sentence *after* it, which
-    # reads the same to a person and passed. (A sentence bound also has to end
-    # at a full stop followed by a space, because a version number is full of
-    # full stops -- the first spelling split inside "0.8.0".)
-    # Flattened first: the page is hard-wrapped, so `pip show vdi2770` spans a
-    # line break and is not a substring of any paragraph as it sits on disk.
-    paragraphs = [" ".join(p.split()) for p in
-                  (ROOT / "SECURITY.md").read_text(encoding="utf-8").split("\n\n")]
-    sentence = next(p for p in paragraphs if "pip show vdi2770" in p)
     floors = floor_pinned_releases()
     if floors is None:
         pytest.skip("not a git checkout; the tags are not available here")
     assert floors, "no release names its engine with a floor; this test is stale"
-    highest = max(floors, key=as_number)
 
-    # Any scoping that shuts the floor-pinned releases out, not one spelling of
-    # it. The first version of this refused the literal "before 0.8.0", so
-    # writing "below 0.8.0" -- the same error, one word different -- passed.
-    for m in re.finditer(r"\b(before|below|under|prior to|only.{0,24}?below)\s+"
-                         r"(\d+\.\d+\.\d+)", sentence, re.I):
-        assert as_number(m.group(2)) > as_number(highest), (
-            f"the paragraph carrying `pip show vdi2770` scopes it to "
-            f"{m.group(0)!r}, which shuts out {highest} -- one of the releases "
-            f"whose installed reader is not settled by the command's version, "
-            f"which is the case the command exists for")
-
+    # There used to be an assertion here refusing any wording that scoped this
+    # advice below the floor-pinned releases. Its premise was backwards. From
+    # 0.8.0 on, a reader and command that disagree are refused rather than
+    # judged, so the releases where `pip show` matters most are 0.2.0 to 0.6.x,
+    # which asked for the reader with a range -- 0.4.0 and 0.5.0 admitted the
+    # unrepaired 0.3.0. An assertion enforcing the opposite is worse than none.
     missing = [v for v in floors if v not in flat]
     assert not missing, (
         f"these releases name their engine with a floor and the page does not "
-        f"name them: {missing}. They are the ones where `pip show vdi2770` "
-        f"answers a question the command's own version cannot")
+        f"name them: {missing}. Each is inside the range of an advisory, and a "
+        f"reader on one has to find it named to be told where to move")

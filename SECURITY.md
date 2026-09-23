@@ -67,14 +67,13 @@ than reported from outside, and each is described in the CHANGELOG section that
 announces it. **If you pin a version below 0.8.0, those sections are the list**
 — read them where you would otherwise be looking for an advisory.
 
-Two things about reading them. Below 0.8.0 the two distributions were numbered
-separately and the headings do not say which one they belong to, so `## 0.4.0`
-is the command's 0.4.0 and the reader's 0.4.0 is a different release cut at a
-different time; `## 0.3.1` is the reader's, and there is no command 0.3.1. And
-the reader's **0.6.1 has no section of its own** — what it repaired is described
-in the 0.7.0 section, above its own number rather than below it. So check which
-distribution you are asking about before you pick a heading, and if the version
-you have is the reader's 0.6.0 or 0.6.1, read 0.7.0.
+One thing about reading them: below 0.8.0 the reader and the command carried
+separate numbers, and a heading does not say which of the two it belongs to. The
+same number was used by both, and at least one heading describes a command
+release that was never published. So do not match your version to a heading by
+its number. Find the tag of the release you actually have — `sdk-v*` for the
+reader, `v*` for the command — and read the `CHANGELOG.md` that tag carries,
+which is the record of that release as it went out.
 
 **Announcing a fix and delivering it are not always the same release, and one
 of these is the example.** 0.5.0 announced the scan fix and did not deliver it:
@@ -83,12 +82,14 @@ one, so installing `vdi2770-validate==0.5.0` into a clean environment
 reproduced the very hang that section describes a fix for. **0.5.1** is the
 release that requires the repaired reader. The defect itself goes back further
 than the section that announces the fix — 0.5.0 says it arrived in 0.4.0. So
-read the section, and then check what you actually installed. The reader is a
-separate distribution from the command and has been since 0.2.0, and `pip show
-vdi2770` names it. That check matters most where the command's own version does
-not settle which reader you have: 0.8.0, 0.8.1, 0.8.2 and 0.9.0 ask for their
-engine with a floor rather than a pin, and a floor stops holding the moment a
-newer engine exists. 0.9.1 and later pin the pair exactly.
+read the section, and then check what you actually installed: `pip show
+vdi2770` names the reader. It matters most from 0.2.0 to 0.6.x, which asked for
+the reader with a range rather than a pin, so a command could run beside an
+older reader than the one it was written against — 0.4.0 and 0.5.0 are that
+case, because their range, `~=0.3.0`, admits the unrepaired 0.3.0. 0.7.0 pins
+the reader exactly. 0.8.0, 0.8.1, 0.8.2 and 0.9.0 ask for it with a floor, and
+from 0.8.0 on a pair that disagrees is refused rather than judged. 0.9.1 and
+later pin the pair exactly.
 
 Every one of those four is inside the range of GHSA-f9xw-89gp-x52p, and so is
 0.9.1: a matched pair of any of them is affected, and a mismatched pair is not
