@@ -94,9 +94,9 @@ than the section that announces the fix — 0.5.0 says it arrived in 0.4.0. So
 read the section, and then check what you actually installed: `pip show
 vdi2770` names the reader. It matters most from 0.2.0 to 0.6.x, which asked for
 the reader with a range rather than a pin, so a command could run beside an
-older reader than the one it was written against — 0.4.0 and 0.5.0 are that
-case, because their range, `~=0.3.0`, admits the unrepaired 0.3.0. 0.7.0 pins
-the reader exactly. 0.8.0, 0.8.1, 0.8.2 and 0.9.0 ask for it with a floor, and
+older reader than the one it was written against — 0.5.0 is that case: it was
+cut beside the repaired reader 0.3.1, and its range, `~=0.3.0`, admits the
+unrepaired 0.3.0. 0.7.0 pins the reader exactly. 0.8.0, 0.8.1, 0.8.2 and 0.9.0 ask for it with a floor, and
 from 0.8.0 on a pair that disagrees is refused rather than judged. 0.9.1 and
 later pin the pair exactly.
 
