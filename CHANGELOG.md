@@ -2,6 +2,46 @@
 
 Sections through 0.7.0 had their wording tidied after their tags; the text each version carried when it was published is in that tag's own `CHANGELOG.md`. From 0.8.0 on, a released section is frozen at its tag and takes only appended `*(Correction ...)*` lines.
 
+## 0.9.5 — 2026-09-24
+
+Who should take this release: anyone who checks deliveries from sources they do
+not control, on any earlier release, and anyone who reads the text report -- in
+a terminal or a CI log -- rather than only the exit code or the JSON. This
+release carries two repairs and nothing else.
+
+**A value the sender wrote could start a line of its own in the text report.**
+Several findings quote what the delivery says -- a class id, a language, the
+identifier a relationship names -- and the page is headed with the name of the
+file itself, which a folder of supplier files hands over as it was sent. A value
+carrying line breaks put a second summary, reading no errors, and a clean
+verdict for another delivery on the page above the real ones. The exit code and
+the JSON were true throughout. Measured with archives built the way the
+repository's test builds them
+(`tests/test_two_names_that_print_alike_are_told_apart.py`): the file's name
+does this in every release from 0.1.0, a class id and a language from 0.7.0, and
+a relationship's target from 0.8.0. The heading and every message, detail and
+remedy on the page now keep to their line: what draws nothing is spelled out,
+and an ordinary sentence prints as it did.
+
+**0.9.4's size budget counted what a report prints as UTF-8.** A console that
+cannot print UTF-8 -- a Windows pipe or redirect, cp1252 or cp932 -- gets the
+JSON with every non-ASCII character escaped and the page with backslash
+escapes, and a name of printable characters outside ASCII printed up to three
+times the budget. With the repository's own builder
+(`tests/test_a_long_name_does_not_multiply_the_report.py`), twenty containers
+under a name of 16,000 U+1D400 characters, in a 153 KB archive, printed 2.01 MB
+of JSON as UTF-8 and 5.98 MB on an ASCII console, and 2.00 and 4.97 MB of text.
+Each finding is now charged what the console that prints most receives; the
+same archive prints 0.71 and 2.12 MB of JSON and 0.71 and 1.77 MB of text. On a
+UTF-8 console a name outside ASCII now reaches the budget sooner.
+
+Every container in the sample corpus, and every fixture the test suite builds,
+reports the same findings with the same exit code as in 0.9.4.
+
+Security: [GHSA-6hqr-phm3-chpf](https://github.com/dev365code/vdi2770-validate/security/advisories/GHSA-6hqr-phm3-chpf), which now
+reaches `vdi2770-validate` from 0.1.0 and `vdi2770` from 0.8.0 up to 0.9.4;
+fixed in 0.9.5.
+
 ## 0.9.4 — 2026-09-24
 
 Who should take this release: anyone on 0.9.3, or on any earlier release, who

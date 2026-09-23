@@ -62,6 +62,23 @@ def _draws_nothing(c: str) -> bool:
     return not c.isprintable() or any(lo <= ord(c) <= hi for lo, hi in _INVISIBLE)
 
 
+def on_one_line(text: str) -> str:
+    """`text` with everything that draws nothing spelled out, so that a string
+    the sender wrote stays on the line it is printed on.
+
+    `as_written` does this for names, and also spells out a backslash and
+    whitespace at an edge, which is what makes a name exact. A sentence does not
+    need that and should not pay for it. This spells out only what draws nothing
+    -- a line break, a carriage return, an escape sequence, an invisible
+    character -- which is every way a value quoted in a message or a detail
+    could start a line of its own and put a summary and a clean verdict on the
+    page as though this tool had written them.
+    """
+    if text.isascii() and text.isprintable():
+        return text
+    return "".join(_spelled(c) if _draws_nothing(c) else c for c in text)
+
+
 def _spelled(c: str) -> str:
     """`c` as the escape a reader can type back.
 

@@ -563,7 +563,7 @@ TABLE = [
 
     ("gates/the-pin-names-the-reader-that-was-built",
      "packages/vdi2770/pyproject.toml",
-     'version = "0.9.4"',
+     'version = "0.9.5"',
      'version = "0.7.1"',
      ["tools/check_wheel.py"],
      "the two manifests agree with each other and the artifacts do not: the "
@@ -1011,7 +1011,7 @@ FRONT_DOOR = [
 
     ("gates/the-page-quotes-the-requirement-the-project-declares",
      "README.md",
-     "`vdi2770[validate]==0.9.4`",
+     "`vdi2770[validate]==0.9.5`",
      "`vdi2770[validate]>=0.7.0`",
      ["tests/test_the_front_page_points_at_what_it_shows.py::"
       "test_the_requirement_the_page_quotes_is_the_one_the_project_declares"],
@@ -1905,23 +1905,70 @@ LISTING_BUDGET_ROWS = [
      "times that name: ten containers under a 65,531-character name printed "
      "68 MB of JSON from a 144 KB archive"),
 
+    ("report/a-message-stays-on-its-line",
+     "packages/vdi2770/src/vdi2770/validate/report.py",
+     '        lines.append(f"  {MARK[f.severity]}  {f.rule.id}  {on_one_line(f.message)}")',
+     '        lines.append(f"  {MARK[f.severity]}  {f.rule.id}  {f.message}")',
+     ["tests/test_two_names_that_print_alike_are_told_apart.py::test_no_archive_controlled_string_can_forge_lines_in_the_report", "tests/test_two_names_that_print_alike_are_told_apart.py::test_no_sentence_a_finding_carries_can_leave_its_line"],
+     "a class id or a language the sender wrote, quoted in a message, put a "
+     "forged summary and a clean verdict on the page"),
+
+    ("report/a-detail-stays-on-its-line",
+     "packages/vdi2770/src/vdi2770/validate/report.py",
+     '            lines.append(f"         {on_one_line(f.detail)}")',
+     '            lines.append(f"         {f.detail}")',
+     ["tests/test_two_names_that_print_alike_are_told_apart.py::test_no_archive_controlled_string_can_forge_lines_in_the_report", "tests/test_two_names_that_print_alike_are_told_apart.py::test_no_sentence_a_finding_carries_can_leave_its_line"],
+     "the identifier a relationship names, quoted in a detail, put a forged "
+     "summary and a clean verdict on the page"),
+
+    ("report/a-remedy-stays-on-its-line",
+     "packages/vdi2770/src/vdi2770/validate/report.py",
+     '        lines.append(f"         -> {on_one_line(f.remedy)}")',
+     '        lines.append(f"         -> {f.remedy}")',
+     ["tests/test_two_names_that_print_alike_are_told_apart.py::test_no_sentence_a_finding_carries_can_leave_its_line"],
+     "a remedy that quotes a value the sender chose is a third place the page "
+     "prints it"),
+
+    ("report/the-heading-stays-on-its-line",
+     "packages/vdi2770/src/vdi2770/validate/report.py",
+     '    lines: List[str] = [on_one_line(f"{report.target}")]',
+     '    lines: List[str] = [f"{report.target}"]',
+     ["tests/test_two_names_that_print_alike_are_told_apart.py::test_no_archive_controlled_string_can_forge_lines_in_the_report"],
+     "the file's own name heads the page, and a drop folder hands it over as "
+     "it was sent"),
+
+    ("report/the-budget-charges-a-sentence-as-the-page-prints-it",
+     "packages/vdi2770/src/vdi2770/validate/model.py",
+     '    as_page = (sum(_page_bytes(on_one_line(s)) for s in said)',
+     '    as_page = (sum(_page_bytes(s) for s in said)',
+     ["tests/test_a_long_name_does_not_multiply_the_report.py::test_the_budget_charges_at_least_what_either_shape_prints"],
+     "a sentence full of what draws nothing prints six times its length once it "
+     "is kept on its line, and the budget has to charge that"),
+
     ("report/the-budget-charges-json-as-printed",
      "packages/vdi2770/src/vdi2770/validate/model.py",
-     '    return len(json.dumps(s, ensure_ascii=False).encode("utf-8", "surrogatepass")) - 2',
+     '    return len(json.dumps(s, ensure_ascii=True)) - 2',
      '    return len(s)',
-     ["tests/test_a_long_name_does_not_multiply_the_report.py::test_the_budget_charges_at_least_what_either_shape_prints",
-      "tests/test_a_long_name_does_not_multiply_the_report.py::test_what_a_report_prints_is_bounded_by_the_budget"],
+     ["tests/test_a_long_name_does_not_multiply_the_report.py::test_the_budget_charges_at_least_what_either_shape_prints"],
      "JSON writes a control character as six, and a budget that counted it as "
      "one let a name made of them print six times what the listing held"),
 
     ("report/the-budget-charges-the-page-as-printed",
      "packages/vdi2770/src/vdi2770/validate/model.py",
-     '    return _json_bytes(s), len(as_written(s).encode("utf-8", "surrogatepass"))',
+     '    return _json_bytes(s), _page_bytes(as_written(s))',
      '    return _json_bytes(s), len(s)',
-     ["tests/test_a_long_name_does_not_multiply_the_report.py::test_the_budget_charges_at_least_what_either_shape_prints",
-      "tests/test_a_long_name_does_not_multiply_the_report.py::test_what_a_report_prints_is_bounded_by_the_budget"],
+     ["tests/test_a_long_name_does_not_multiply_the_report.py::test_the_budget_charges_at_least_what_either_shape_prints"],
      "the page spells an invisible symbol as ten characters, and a budget that "
      "counted it as one let such a name print thirteen times what it held"),
+
+    ("report/the-json-charge-is-for-the-console-that-prints-most",
+     "packages/vdi2770/src/vdi2770/validate/model.py",
+     '    return len(json.dumps(s, ensure_ascii=True)) - 2',
+     '    return len(json.dumps(s, ensure_ascii=False).encode("utf-8", "surrogatepass")) - 2',
+     ["tests/test_a_long_name_does_not_multiply_the_report.py::test_the_budget_charges_at_least_what_either_shape_prints"],
+     "a console that cannot print UTF-8 gets the JSON with every non-ASCII "
+     "character escaped, and a charge counted in UTF-8 let it print three times "
+     "the budget"),
 
     ("report/the-allowance-covers-what-every-rule-prints-around-a-finding",
      "packages/vdi2770/src/vdi2770/validate/model.py",

@@ -231,6 +231,7 @@ HOSTILE = {
     "invisible": "\U000E0041\u200b" * 40,
     "quoted": '"\\' * 60,
     "wide": "설명서_Prüfbericht" * 20,
+    "astral": "\U0001D400" * 60,
     "long": "M" * 4_000,
 }
 
@@ -243,7 +244,12 @@ def test_the_budget_charges_at_least_what_either_shape_prints(kind):
     them printed six to thirteen times what the listing held. For every rule in
     the catalogue, one finding whose every string is `kind` takes no more bytes
     in either shape than the budget charges for it: its strings as printed, and
-    the allowance for the keys, the rule's fields and the basis line."""
+    the allowance for the keys, the rule's fields and the basis line.
+
+    And on either console. One that cannot print UTF-8 -- a Windows pipe or
+    redirect, cp1252 or cp932 -- gets the JSON with every non-ASCII character
+    escaped and the page with backslash escapes, which is what the command
+    writes there; a budget charged in UTF-8 let that print three times it."""
     import json as _json
 
     from vdi2770_validate.catalog import rule
@@ -260,11 +266,22 @@ def test_the_budget_charges_at_least_what_either_shape_prints(kind):
         for where, f in (("every field", Finding(r, s, Location(container=s, member=s, xpath=s,
                                                                    subject=s), detail=s, fix=s)),
                          ("the location", Finding(r, "m", Location(container=s * 10,
-                                                                   member=s * 10)))):
+                                                                   member=s * 10))),
+                         # And only its sentences, which the page keeps on their line by
+                         # spelling out what JSON writes in two characters.
+                         ("the sentences", Finding(r, s * 10, Location(container="t.zip"),
+                                                   detail=s * 10, fix=s * 10))):
             empty, one = Report(target="t.zip"), Report(target="t.zip")
             one.add(f)
-            for shape, render in (("JSON", as_json), ("text", as_text)):
-                printed = len(render(one).encode("utf-8")) - len(render(empty).encode("utf-8"))
+            for shape, printed_as in (
+                    ("JSON", lambda r: as_json(r).encode("utf-8")),
+                    ("text", lambda r: as_text(r).encode("utf-8")),
+                    ("JSON on an ASCII console",
+                     lambda r: _json.dumps(_json.loads(as_json(r)), ensure_ascii=True,
+                                           indent=2).encode("ascii")),
+                    ("text on an ASCII console",
+                     lambda r: as_text(r).encode("ascii", "backslashreplace"))):
+                printed = len(printed_as(one)) - len(printed_as(empty))
                 if printed > listed_size(f):
                     over.append(f"{entry['id']}, {kind} in {where}, {shape}: {printed:,} "
                                 f"printed, {listed_size(f):,} charged")

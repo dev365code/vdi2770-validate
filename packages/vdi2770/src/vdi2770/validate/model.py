@@ -23,7 +23,7 @@ from vdi2770.model import Defect, Location
 from vdi2770.xmlread import NS, UnsafeXml, XmlTooLarge
 from vdi2770.zipread import MAIN_PDF, MAIN_XML, METADATA_XML, Kind
 
-from .names import as_written
+from .names import as_written, on_one_line
 
 #: An exception that names an object names the address it happened to live at,
 #: because that is what `repr` does. Rendered into a finding, that address makes
@@ -191,15 +191,25 @@ LISTED_ALLOWANCE = 1_024
 
 
 def _json_bytes(s: str) -> int:
-    """Bytes `s` takes as a string in the JSON shape, its quotes left out."""
-    return len(json.dumps(s, ensure_ascii=False).encode("utf-8", "surrogatepass")) - 2
+    """Bytes `s` takes as a string in the JSON shape, its quotes left out, on
+    any console. One that cannot print UTF-8 gets the JSON with every non-ASCII
+    character escaped -- six bytes, twelve above the BMP -- which is the most
+    `s` can take."""
+    return len(json.dumps(s, ensure_ascii=True)) - 2
+
+
+def _page_bytes(s: str) -> int:
+    """Bytes `s` takes on the page, on any console. One that cannot print a
+    character gets a backslash escape for it -- up to ten bytes -- which is the
+    most `s` can take."""
+    return len(s.encode("ascii", "backslashreplace"))
 
 
 @lru_cache(maxsize=1024)
 def _where_bytes(s: str) -> Tuple[int, int]:
     """(JSON, page) bytes of a location string. Cached, because every finding
     in a container carries that container's path: the same string each time."""
-    return _json_bytes(s), len(as_written(s).encode("utf-8", "surrogatepass"))
+    return _json_bytes(s), _page_bytes(as_written(s))
 
 
 def listed_size(f) -> int:
@@ -209,13 +219,17 @@ def listed_size(f) -> int:
     characters; the page writes one as six and an invisible symbol as ten, and
     spells out names on the `at` line only. A count of characters as stored let
     a name made of either print six to thirteen times what the listing held.
+
+    And on whichever console prints more: the command writes the JSON escaped
+    and the page with backslash escapes where the console cannot print UTF-8,
+    and a charge counted in UTF-8 let that print three times the budget.
     """
     w = f.where
     said = (f.message, f.detail or "", f.remedy)
     located = [_where_bytes(s) for s in (w.container or "", w.member or "")]
     as_json = (sum(_json_bytes(s) for s in said) + sum(j for j, _t in located)
                + _json_bytes(w.xpath or "") + _json_bytes(w.subject or ""))
-    as_page = (sum(len(s.encode("utf-8", "surrogatepass")) for s in said)
+    as_page = (sum(_page_bytes(on_one_line(s)) for s in said)
                + sum(t for _j, t in located))
     return LISTED_ALLOWANCE + max(as_json, as_page)
 
