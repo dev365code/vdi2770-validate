@@ -13,13 +13,17 @@ had no opinion about that.
 from __future__ import annotations
 
 import enum
+import json
 import re
 from dataclasses import dataclass, field
+from functools import lru_cache
 from typing import Dict, List, Optional, Tuple
 
 from vdi2770.model import Defect, Location
 from vdi2770.xmlread import NS, UnsafeXml, XmlTooLarge
 from vdi2770.zipread import MAIN_PDF, MAIN_XML, METADATA_XML, Kind
+
+from .names import as_written
 
 #: An exception that names an object names the address it happened to live at,
 #: because that is what `repr` does. Rendered into a finding, that address makes
@@ -168,25 +172,52 @@ MAX_LISTED_PER_RULE = 100
 # Ten containers under a 65,531-character name printed 68 MB of JSON and as much
 # again of text from a 144 KB archive; twice the containers printed twice that.
 #
-# So each rule's listing also stops at a size: about how many characters its
-# findings print, counted where they are collected. Counted where they are
+# So each rule's listing also stops at a size: about how many bytes its findings
+# print, in whichever shape prints more, counted where they are collected --
+# as printed, not as stored, because both shapes spell some characters out and
+# a name made of them printed six to thirteen times what a count of characters
+# let through. Counted where they are
 # printed, it would bound the page and not the memory, because every finding
 # would be held until then. Past it a finding is counted and not kept, as past
 # the cap above, and both shapes of the report say where the listing stopped.
 LISTING_BUDGET_PER_RULE = 1_000_000
 
-#: What one finding prints besides its own strings -- keys, the rule's fields,
-#: the basis line -- as a flat allowance, so that a rule firing many times with
-#: short strings reaches the budget too.
-LISTED_ALLOWANCE = 512
+#: What one finding prints besides its own strings -- keys and indentation, the
+#: rule's fields, the basis line -- as a flat allowance, so that a rule firing
+#: many times with short strings reaches the budget too. The most any rule in
+#: the catalogue takes is about 550 bytes, in JSON, and a test holds every rule
+#: to this figure.
+LISTED_ALLOWANCE = 1_024
+
+
+def _json_bytes(s: str) -> int:
+    """Bytes `s` takes as a string in the JSON shape, its quotes left out."""
+    return len(json.dumps(s, ensure_ascii=False).encode("utf-8", "surrogatepass")) - 2
+
+
+@lru_cache(maxsize=1024)
+def _where_bytes(s: str) -> Tuple[int, int]:
+    """(JSON, page) bytes of a location string. Cached, because every finding
+    in a container carries that container's path: the same string each time."""
+    return _json_bytes(s), len(as_written(s).encode("utf-8", "surrogatepass"))
 
 
 def listed_size(f) -> int:
-    """About how many characters listing `f` prints."""
+    """About how many bytes listing `f` prints, in whichever shape prints more.
+
+    As printed rather than as stored. JSON writes a control character as six
+    characters; the page writes one as six and an invisible symbol as ten, and
+    spells out names on the `at` line only. A count of characters as stored let
+    a name made of either print six to thirteen times what the listing held.
+    """
     w = f.where
-    return (LISTED_ALLOWANCE + len(f.message) + len(f.detail or "") + len(f.remedy)
-            + len(w.container or "") + len(w.member or "") + len(w.xpath or "")
-            + len(w.subject or ""))
+    said = (f.message, f.detail or "", f.remedy)
+    located = [_where_bytes(s) for s in (w.container or "", w.member or "")]
+    as_json = (sum(_json_bytes(s) for s in said) + sum(j for j, _t in located)
+               + _json_bytes(w.xpath or "") + _json_bytes(w.subject or ""))
+    as_page = (sum(len(s.encode("utf-8", "surrogatepass")) for s in said)
+               + sum(t for _j, t in located))
+    return LISTED_ALLOWANCE + max(as_json, as_page)
 
 
 @dataclass
@@ -243,7 +274,8 @@ class Report:
             self._suppressed_rule[key] = f.rule
             self._count_unlisted(f)
             return
-        size = listed_size(f)
+        # Not sized once the listing has stopped: nothing it would say is kept.
+        size = 0 if rid in self.over_budget else listed_size(f)
         if rid in self.over_budget or self._spent.get(rid, 0) + size > LISTING_BUDGET_PER_RULE:
             # Counted, not kept, for the same reason. And once a rule's listing
             # has stopped it stays stopped: a smaller finding after a larger one

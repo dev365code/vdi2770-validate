@@ -52,7 +52,7 @@ failure — files that never claimed at all.
   And a hundred is a count, not a size: every finding carries its container's
   path, and a container that holds others repeats its name in every one of their
   paths, so each rule's listing also stops at a size budget of about a million
-  characters. The report then says how many findings that rule had in all and how
+  bytes of what its findings print, in whichever shape prints more. The report then says how many findings that rule had in all and how
   many it lists (`listingStopped` in JSON). No input in this repository's suite
   reaches it.
 

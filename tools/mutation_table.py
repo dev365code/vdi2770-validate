@@ -2198,6 +2198,32 @@ LISTING_BUDGET_ROWS = [
      "times that name: ten containers under a 65,531-character name printed "
      "68 MB of JSON from a 144 KB archive"),
 
+    ("report/the-budget-charges-json-as-printed",
+     "packages/vdi2770/src/vdi2770/validate/model.py",
+     '    return len(json.dumps(s, ensure_ascii=False).encode("utf-8", "surrogatepass")) - 2',
+     '    return len(s)',
+     ["tests/test_a_long_name_does_not_multiply_the_report.py::test_the_budget_charges_at_least_what_either_shape_prints",
+      "tests/test_a_long_name_does_not_multiply_the_report.py::test_what_a_report_prints_is_bounded_by_the_budget"],
+     "JSON writes a control character as six, and a budget that counted it as "
+     "one let a name made of them print six times what the listing held"),
+
+    ("report/the-budget-charges-the-page-as-printed",
+     "packages/vdi2770/src/vdi2770/validate/model.py",
+     '    return _json_bytes(s), len(as_written(s).encode("utf-8", "surrogatepass"))',
+     '    return _json_bytes(s), len(s)',
+     ["tests/test_a_long_name_does_not_multiply_the_report.py::test_the_budget_charges_at_least_what_either_shape_prints",
+      "tests/test_a_long_name_does_not_multiply_the_report.py::test_what_a_report_prints_is_bounded_by_the_budget"],
+     "the page spells an invisible symbol as ten characters, and a budget that "
+     "counted it as one let such a name print thirteen times what it held"),
+
+    ("report/the-allowance-covers-what-every-rule-prints-around-a-finding",
+     "packages/vdi2770/src/vdi2770/validate/model.py",
+     "LISTED_ALLOWANCE = 1_024\n",
+     "LISTED_ALLOWANCE = 512\n",
+     ["tests/test_a_long_name_does_not_multiply_the_report.py::test_the_budget_charges_at_least_what_either_shape_prints"],
+     "the keys, the rule's fields and the basis line of one finding take up to "
+     "about 550 bytes, more than an allowance of 512 charged"),
+
     ("report/a-stopped-listing-stays-stopped",
      "packages/vdi2770/src/vdi2770/validate/model.py",
      '        if rid in self.over_budget or self._spent.get(rid, 0) + size > LISTING_BUDGET_PER_RULE:\n',
