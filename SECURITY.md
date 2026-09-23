@@ -103,8 +103,8 @@ unrepaired 0.3.0. 0.7.0 pins the reader exactly. 0.8.0, 0.8.1, 0.8.2 and 0.9.0 a
 from 0.8.0 on a pair that disagrees is refused rather than judged. 0.9.1 and
 later pin the pair exactly.
 
-Every one of those four is inside the range of GHSA-f9xw-89gp-x52p, and so is
-0.9.1; every release up to 0.9.2 is inside the range of GHSA-6hqr-phm3-chpf. A
+Every one of those four — 0.8.0, 0.8.1, 0.8.2 and 0.9.0 — is inside the range
+of GHSA-f9xw-89gp-x52p, and so is 0.9.1; every release up to 0.9.2 is inside the range of GHSA-6hqr-phm3-chpf. A
 matched pair of any of them is affected, and a mismatched pair is not judged at
 all. Move to **0.9.3** or later, which carries both repairs and pins both halves
 exactly. Do not get there by upgrading the reader on its own — the

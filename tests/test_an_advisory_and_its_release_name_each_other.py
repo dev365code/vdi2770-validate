@@ -289,12 +289,15 @@ def floor_pinned_releases():
 
 
 def test_the_page_names_every_release_pinned_with_a_floor():
-    """Every release that asked for its engine with a floor is named on the page.
+    """The paragraph that tells a reader where to move names every release that
+    asked for its engine with a floor.
 
-    Each of them is inside the range of an advisory, and the page tells a reader
-    on one of them to move to the release that fixes it -- so a reader on one
-    has to be able to find their release named. The set is derived from the tags
-    rather than typed here.
+    Each of them is inside the range of an advisory, and that paragraph is where
+    a reader on one is told to move -- so it is where their release has to be
+    named, not anywhere on the page: 0.8.0 appears there eight times for other
+    reasons, and a search of the whole page passed with it gone from the one
+    sentence that mattered. The set is derived from the tags rather than typed
+    here.
 
     This test once said the opposite of why. It held that these were the
     releases where `pip show vdi2770` mattered most, because a floor leaves the
@@ -320,10 +323,14 @@ def test_the_page_names_every_release_pinned_with_a_floor():
     # advice below the floor-pinned releases. Its premise was backwards. From
     # 0.8.0 on, a reader and command that disagree are refused rather than
     # judged, so the releases where `pip show` matters most are 0.2.0 to 0.6.x,
-    # which asked for the reader with a range -- 0.4.0 and 0.5.0 admitted the
-    # unrepaired 0.3.0. An assertion enforcing the opposite is worse than none.
-    missing = [v for v in floors if v not in flat]
+    # which asked for the reader with a range. An assertion enforcing the
+    # opposite is worse than none.
+    move = [" ".join(p.split()) for p in re.split(r"\n\s*\n", page)
+            if re.search(r"Move to \*\*\d+\.\d+\.\d+\*\*", p)]
+    assert len(move) == 1, (
+        f"expected one paragraph telling a reader where to move, found {len(move)}")
+    missing = [v for v in floors
+               if not re.search(rf"(?<![\d.]){re.escape(v)}(?!\.?\d)", move[0])]
     assert not missing, (
-        f"these releases name their engine with a floor and the page does not "
-        f"name them: {missing}. Each is inside the range of an advisory, and a "
-        f"reader on one has to find it named to be told where to move")
+        f"these releases name their engine with a floor and the paragraph that "
+        f"says where to move does not name them: {missing}")
