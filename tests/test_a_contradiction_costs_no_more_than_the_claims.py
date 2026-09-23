@@ -258,3 +258,78 @@ def test_one_finding_does_not_grow_without_bound():
     # And it still says how many there were, so the reader is not told less.
     assert str(len(kinds)) in detail or str(len(kinds) + 1) in detail, (
         f"the detail no longer says how many kinds were declared: {detail}")
+
+
+def _across_containers(tmp_path, kinds, identifier="SHARED"):
+    """One document container per claim, all claiming the same identifier.
+
+    `container_declaring` puts every claim in a single container, so a test
+    written on it can never see the container list grow -- which is how the
+    first spelling of the test below passed against the very behaviour it was
+    written to catch.
+    """
+    with zipfile.ZipFile(SAMPLE) as z:
+        names = z.namelist()
+        data = {n: z.read(n) for n in names}
+    meta = next(n for n in names if n.endswith("VDI2770_Metadata.xml"))
+    text = data[meta].decode("utf-8")
+    inner = []
+    for i, kind in enumerate(kinds):
+        one = text.replace(
+            CLOSE, f'<ObjectId ObjectType="{kind}">{identifier}</ObjectId>' + CLOSE, 1)
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z2:
+            for n in names:
+                z2.writestr(n, one.encode("utf-8") if n == meta else data[n])
+        inner.append((f"doc{i:02d}.zip", buf.getvalue()))
+    out = io.BytesIO()
+    with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as o:
+        for n, d in inner:
+            o.writestr(n, d)
+    path = tmp_path / "across.zip"
+    path.write_bytes(out.getvalue())
+    return str(path)
+
+
+def test_every_container_that_takes_part_is_named(tmp_path):
+    """The kinds may be cut short; the containers may not.
+
+    Bounding both looked symmetrical and was not. A reader can recover a
+    truncated list of kinds -- the identifier is right there in the sentence --
+    but the containers *are* the places to go and look, and past the bound they
+    appeared in no field of the report at all: not in `detail`, not in `where`,
+    and `M13` emits one finding per identifier so there is no second row. Seven
+    of twelve went missing, and because the list is sorted it was always the
+    same seven. `MAX_CONTAINERS` already bounds how many there can be.
+    """
+    from vdi2770_validate.runner import check_file
+
+    n = 12
+    path = _across_containers(tmp_path, ["Type" if i % 2 else "Individual"
+                                         for i in range(n)])
+    findings = [f for f in check_file(path).findings if f.rule.id == "M13"]
+    assert len(findings) == 1, f"expected one finding, got {len(findings)}"
+    detail = findings[0].detail or ""
+    named = set(re.findall(r"doc\d\d", detail))
+    missing = sorted({f"doc{i:02d}" for i in range(n)} - named)
+    assert not missing, (
+        f"{len(missing)} of {n} containers that take part are named nowhere in "
+        f"the report: {missing}")
+
+
+def test_the_count_sits_outside_the_list_it_counts():
+    """A marker inside a comma-separated run is read back as one of the items.
+
+    The project's own way of reading this sentence is
+    `is declared as (.+?) in this delivery`, and with the marker inside the run
+    it returned `Kind04 -- 5 of 6 shown` as the name of a kind -- a value no
+    sender wrote -- while the kind sorting after it vanished from the report.
+    """
+    kinds = [f"Kind{i:02d}" for i in range(6)]
+    findings = m13_of(container_declaring([(k, None) for k in kinds]))
+    named = re.search(r"is declared as (.+?) in this delivery",
+                      findings[0].detail or "").group(1).split(", ")
+    assert all(k in kinds or k == "Type" for k in named), (
+        f"the parsed kinds contain something no document declared: {named}")
+    assert str(len(kinds) + 1) in (findings[0].detail or ""), (
+        "the finding no longer says how many kinds there were")

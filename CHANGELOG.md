@@ -25,17 +25,29 @@ of them narrowed, one of them made to admit more.
   section below describes it; nothing about it differs here, and a delivery's
   verdict is unchanged either way.
 
-- **One finding stopped growing with whatever the sender wrote.** The report
-  lists at most a hundred findings per rule per container and counts the rest,
-  which bounds every list it prints -- except that `M13` reports *one* finding
-  per identifier, so that cap never engages for it, and the sentence named
-  every kind the identifier had been declared as. Measured: forty thousand
-  kinds under one identifier, in a **211 KB** archive, made a single detail of
-  **320,096 characters**; four hundred of them made it 3,296. It lists five now
-  and says how many there were -- `-- 5 of 40001 shown` -- so the count stays
-  exact and the listing is bounded, the way the rest of the report already
-  worked. The containers the finding names are bounded the same way. Under five
-  of either, nothing about the sentence changes.
+- **One finding stopped growing with whatever the sender wrote — and the part
+  of it you need stopped being thrown away.** The report lists at most a hundred
+  findings per rule per container and counts the rest, which bounds every list
+  it prints; `M13` reports *one* finding per identifier, so that cap never
+  engages for it, and the sentence named every kind the identifier had been
+  declared as. Measured with the harness that holds this rule
+  (`tests/test_a_contradiction_costs_no_more_than_the_claims.py`): four hundred
+  kinds made one detail **4,096** characters, and forty thousand of them, in a
+  **211 KB** archive, made it **430,096**. It names five now and says how many
+  there were — `40001 kinds in all, 5 of them here` — so the count stays exact
+  while the listing is bounded.
+
+  The **containers are not bounded that way and must not be**. They are where a
+  reader has to go and look; `MAX_CONTAINERS` already bounds how many there can
+  be; and a truncated list of them cannot be recovered from anywhere else in the
+  report — past the bound they appeared in no field at all, not in `detail`, not
+  in `where`, and there is no second finding carrying them. Every container that
+  takes part is named.
+
+  The count also sits outside the list rather than inside it. A marker written
+  into a comma-separated run is read back as one of the items: this project's
+  own way of reading the sentence returned `Kind04 -- 5 of 6 shown` as though it
+  were the name of a kind, and the kind that sorted after it disappeared.
 
 - **Coming in 0.11.0: a check this tool could not finish stops sharing an exit
   code with a delivery that has findings.** When a check raises, `X5` says so —

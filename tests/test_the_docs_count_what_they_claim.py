@@ -485,8 +485,15 @@ def test_no_document_cites_a_file_that_is_not_here():
     # can check, which is how "thirty-three bytes" survived into a released
     # section and an advisory when the pair rebuilds eleven bytes apart. Both
     # the correction and the entry that carries the figure now cite the test.
-    assert seen == 38, (
-        f"{seen} citations found, not 38. If you added or removed one, say so "
+    # 38 to 39 when the entry about the bounded listing named the harness that
+    # produces its figures. It had to: the numbers first published there were
+    # measured with an ad-hoc script whose kind names were six characters, and
+    # the repository's own fixture spells them `Kind{i:04d}` -- eight characters
+    # below ten thousand and nine above -- so the same measurement gives 4,096
+    # and 430,096 rather than 3,296 and 320,096. Naming the harness is what made
+    # the two disagree out loud.
+    assert seen == 39, (
+        f"{seen} citations found, not 39. If you added or removed one, say so "
         f"here; if you did not, some of them just stopped being checked.")
 
 
@@ -1085,11 +1092,10 @@ def test_the_changelog_quotes_the_report_string_the_tool_prints():
     the dashes that begin it. Somebody grepping their report for the phrase in
     the release note finds nothing, which is the one thing the quotation is for.
     """
-    from vdi2770.validate.rules.delivery import MOST_LISTED, _listed
+    from vdi2770.validate.rules.delivery import MOST_LISTED, _first_few
 
     changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
-    shown = _listed([f"K{i}" for i in range(40001)])
-    tail = shown[shown.index(" -- "):].strip()
-    assert tail in changelog, (
-        f"the entry does not quote what the tool prints. It prints {tail!r} for "
-        f"40001 items with MOST_LISTED = {MOST_LISTED}")
+    _shown, in_all = _first_few([f"K{i}" for i in range(40001)])
+    assert in_all.strip().rstrip(";") in changelog, (
+        f"the entry does not quote what the tool prints. It prints "
+        f"{in_all.strip()!r} for 40001 items with MOST_LISTED = {MOST_LISTED}")

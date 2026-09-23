@@ -158,22 +158,37 @@ def different_registers(a, b) -> bool:
     return bool(left) and bool(right) and left != right
 
 
-#: How many of a list a finding prints before it says how many there were.
+#: How many kinds a finding prints before it says how many there were.
 #: `MAX_LISTED_PER_RULE` bounds how many findings a rule may list; it does not
 #: bound how large one of them is, and `M13` emits one finding per identifier,
 #: so the cap never engages while the sentence grows with what the sender
 #: wrote. Measured: 400 kinds under one identifier made one detail 4,096
-#: characters, and it goes on from there.
+#: characters, and 40,000 made it 430,096.
+#:
+#: The containers are *not* bounded this way and must not be. They are the
+#: places a reader has to go and look, they are already bounded by
+#: `MAX_CONTAINERS`, and a truncated list of them is unrecoverable: the ones
+#: past the bound appeared in no field of the report at all -- not in `detail`,
+#: not in `where`, and there is no second finding to carry them. A truncated
+#: list of *kinds* is recoverable, because the identifier is in the sentence.
 MOST_LISTED = 5
 
 
-def _listed(items) -> str:
-    """The first few, and then how many there were."""
+def _first_few(items) -> tuple:
+    """The first few, and the clause that says how many there were.
+
+    The count is returned separately rather than appended to the list, because
+    a marker inside a comma-separated run is read as one of the items. The
+    project's own way of reading this sentence --
+    `is declared as (.+?) in this delivery` -- returned `Kind04 -- 5 of 6
+    shown` as though it were the name of a kind, and the kind that sorted after
+    it vanished. A truncated list has to stay a list.
+    """
     items = list(items)
     if len(items) <= MOST_LISTED:
-        return ", ".join(items)
-    return (", ".join(items[:MOST_LISTED])
-            + f" -- {MOST_LISTED} of {len(items)} shown")
+        return ", ".join(items), ""
+    return (", ".join(items[:MOST_LISTED]),
+            f" {len(items)} kinds in all, {MOST_LISTED} of them here;")
 
 
 def contradicting(claims) -> list:
@@ -267,12 +282,12 @@ def check(documents, read_everything: bool) -> Iterator[Finding]:
         kinds = {kind for kind, _obj, _c in claims}
         r = rule("M13")
         first = claims[0][1]
-        shown = _listed(sorted(kinds))
-        where = _listed(sorted({c.path or "the delivery" for _k, _o, c in claims}))
+        shown, in_all = _first_few(sorted(kinds))
+        where = ", ".join(sorted({c.path or "the delivery" for _k, _o, c in claims}))
         yield Finding(
             r, r.title, (first.src or claims[0][2].where),
             detail=f"{first.id!r} is declared as {shown} in this delivery "
-                   f"({where}); an identifier names one kind of thing")
+                   f"({where});{in_all} an identifier names one kind of thing")
 
     if not read_everything:
         return
