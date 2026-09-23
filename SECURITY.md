@@ -78,9 +78,11 @@ One thing about reading them: below 0.7.0 the reader and the command carried
 separate numbers, and a heading does not say which of the two it belongs to. The
 same number was used by both, and at least one heading describes a command
 release that was never published. So do not match your version to a heading by
-its number. Find the tag of the release you actually have — `sdk-v*` for the
-reader, `v*` for the command — and read the `CHANGELOG.md` that tag carries,
-which is the record of that release as it went out.
+its number. Find the `v*` tag of the command release you actually have and
+read the `CHANGELOG.md` that tag carries: its first section is that release as
+it went out. The reader's `sdk-v*` tags do not work that way — five of the seven
+are the same commit as a command release, and the other two carry no section of
+their own.
 
 **Announcing a fix and delivering it are not always the same release, and one
 of these is the example.** 0.5.0 announced the scan fix and did not deliver it:
