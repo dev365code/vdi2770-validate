@@ -2072,23 +2072,23 @@ TABLE += LOCATION_ROWS
 DELIVERY_REGRESSION_ROWS = [
     ("rules/every-container-that-takes-part-is-named",
      "packages/vdi2770/src/vdi2770/validate/rules/delivery.py",
-     '        where = ", ".join(sorted({c.path or "the delivery" for _k, _o, c in claims}))',
-     '        where = ", ".join(sorted({c.path or "the delivery" for _k, _o, c in claims})[:MOST_LISTED])',
+     '            sorted({c.path or "the delivery" for _k, _o, c in claims}), "containers")',
+     '            sorted({c.path or "the delivery" for _k, _o, c in claims}), "containers")\n        where_all = ""',
      ["tests/test_a_contradiction_costs_no_more_than_the_claims.py::test_every_container_that_takes_part_is_named"],
-     "the containers are where a reader has to go and look, and past the bound "
-     "they appeared in no field of the report at all"),
+     "a bound on the containers that does not say how many there were loses "
+     "them silently: past it they appeared in no field of the report at all"),
 
     ("rules/the-count-sits-outside-the-list-it-counts",
      "packages/vdi2770/src/vdi2770/validate/rules/delivery.py",
-     "        shown, in_all = _first_few(sorted(kinds))",
-     "        shown, in_all = (lambda s, c: (s + c, ''))(*_first_few(sorted(kinds)))",
+     '        shown, in_all = _first_few(sorted(kinds), "kinds")',
+     '        shown, in_all = (lambda s, c: (s + c, ""))(*_first_few(sorted(kinds), "kinds"))',
      ["tests/test_a_contradiction_costs_no_more_than_the_claims.py::test_the_count_sits_outside_the_list_it_counts"],
      "a count written into a comma-separated run is read back as one of its "
      "items, and a kind nobody declared appears in the report"),
 
     ("rules/one-finding-does-not-grow-with-what-the-sender-wrote",
      "packages/vdi2770/src/vdi2770/validate/rules/delivery.py",
-     "        shown, in_all = _first_few(sorted(kinds))",
+     '        shown, in_all = _first_few(sorted(kinds), "kinds")',
      "        shown, in_all = ', '.join(sorted(kinds)), ''",
      ["tests/test_a_contradiction_costs_no_more_than_the_claims.py::test_one_finding_does_not_grow_without_bound"],
      "the per-rule cap bounds how many findings there are, not how large one "
@@ -2118,6 +2118,18 @@ DELIVERY_REGRESSION_ROWS = [
      ["tests/test_one_identifier_is_one_kind_of_thing.py::test_an_identifier_spelled_in_another_case_is_one_identifier"],
      "one identifier in two cases becomes two, and a contradiction a sender "
      "can silence with one keystroke goes unreported"),
+
+    ("rules/a-long-name-is-not-repeated-once-per-container",
+     "packages/vdi2770/src/vdi2770/validate/rules/delivery.py",
+     '        where, where_all = _first_few(\n'
+     '            sorted({c.path or "the delivery" for _k, _o, c in claims}), "containers")',
+     '        where, where_all = ", ".join(sorted({c.path or "the delivery" '
+     'for _k, _o, c in claims})), ""',
+     ["tests/test_a_contradiction_costs_no_more_than_the_claims.py::"
+      "test_a_long_name_is_not_repeated_once_per_container"],
+     "MAX_CONTAINERS limits how many containers there are, not how long their "
+     "paths are; listed in full, a long name on a container holding others is "
+     "printed once per child, and a 0.32 MB archive made one finding 200 MB"),
 
     ("rules/a-register-is-compared-without-case",
      "packages/vdi2770/src/vdi2770/validate/rules/delivery.py",

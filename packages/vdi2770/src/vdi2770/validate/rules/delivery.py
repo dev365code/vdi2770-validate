@@ -164,16 +164,19 @@ def different_registers(a, b) -> bool:
 #: wrote. Measured: 400 kinds under one identifier made one detail 4,096
 #: characters, and 40,000 made it 430,096.
 #:
-#: The containers are *not* bounded this way and must not be. They are the
-#: places a reader has to go and look, they are already bounded by
-#: `MAX_CONTAINERS`, and a truncated list of them is unrecoverable: the ones
-#: past the bound appeared in no field of the report at all -- not in `detail`,
-#: not in `where`, and there is no second finding to carry them. A truncated
-#: list of *kinds* is recoverable, because the identifier is in the sentence.
+#: The containers are bounded the same way, by the same function. They were
+#: once listed in full, on the argument that a truncated list of them could not
+#: be recovered while a truncated list of kinds could. Both are recovered the
+#: same way -- by searching the delivery for the identifier the sentence names
+#: -- and the full list had no bound on its *size*: `MAX_CONTAINERS` limits how
+#: many containers there are, not how long their paths are, and a long name on a
+#: container that holds others is repeated in every one of their paths. A
+#: 0.32 MB archive made one finding 200 MB. What was wrong with the first
+#: truncation was that it was silent. The count now says how many there were.
 MOST_LISTED = 5
 
 
-def _first_few(items) -> tuple:
+def _first_few(items, noun) -> tuple:
     """The first few, and the clause that says how many there were.
 
     The count is returned separately rather than appended to the list, because
@@ -187,7 +190,7 @@ def _first_few(items) -> tuple:
     if len(items) <= MOST_LISTED:
         return ", ".join(items), ""
     return (", ".join(items[:MOST_LISTED]),
-            f" {len(items)} kinds in all, {MOST_LISTED} of them here;")
+            f" {len(items)} {noun} in all, {MOST_LISTED} of them here;")
 
 
 def contradicting(claims) -> list:
@@ -281,12 +284,14 @@ def check(documents, read_everything: bool) -> Iterator[Finding]:
         kinds = {kind for kind, _obj, _c in claims}
         r = rule("M13")
         first = claims[0][1]
-        shown, in_all = _first_few(sorted(kinds))
-        where = ", ".join(sorted({c.path or "the delivery" for _k, _o, c in claims}))
+        shown, in_all = _first_few(sorted(kinds), "kinds")
+        where, where_all = _first_few(
+            sorted({c.path or "the delivery" for _k, _o, c in claims}), "containers")
         yield Finding(
             r, r.title, (first.src or claims[0][2].where),
             detail=f"{first.id!r} is declared as {shown} in this delivery "
-                   f"({where});{in_all} an identifier names one kind of thing")
+                   f"({where});{in_all}{where_all} an identifier names one kind "
+                   f"of thing")
 
     if not read_everything:
         return

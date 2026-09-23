@@ -351,15 +351,14 @@ def test_one_finding_does_not_grow_without_bound():
 
 
 def test_every_container_that_takes_part_is_named(tmp_path):
-    """The kinds may be cut short; the containers may not.
+    """No container that takes part may go missing without the report saying so.
 
-    Bounding both looked symmetrical and was not. A reader can recover a
-    truncated list of kinds -- the identifier is right there in the sentence --
-    but the containers *are* the places to go and look, and past the bound they
-    appeared in no field of the report at all: not in `detail`, not in `where`,
-    and `M13` emits one finding per identifier so there is no second row. Seven
-    of twelve went missing, and because the list is sorted it was always the
-    same seven. `MAX_CONTAINERS` already bounds how many there can be.
+    The first bound on this list was silent: seven of twelve containers
+    appeared in no field of the report and nothing said there had been more.
+    Listing every one in full fixed that and broke something worse (the list had
+    no bound on its size). What the reader is owed is not every path but the
+    truth about how many there were, so a count they can act on -- by searching
+    the delivery for the identifier -- is what this holds.
     """
     from vdi2770_validate.runner import check_file
 
@@ -369,11 +368,11 @@ def test_every_container_that_takes_part_is_named(tmp_path):
     findings = [f for f in check_file(path).findings if f.rule.id == "M13"]
     assert len(findings) == 1, f"expected one finding, got {len(findings)}"
     detail = findings[0].detail or ""
-    named = set(re.findall(r"doc\d\d", detail))
-    missing = sorted({f"doc{i:02d}" for i in range(n)} - named)
-    assert not missing, (
-        f"{len(missing)} of {n} containers that take part are named nowhere in "
-        f"the report: {missing}")
+    assert f"{n} containers in all" in detail, (
+        f"{n} containers take part and the finding does not say so: {detail}")
+    listed = re.search(r"in this delivery \(([^)]*)\)", detail).group(1).split(", ")
+    assert all(re.fullmatch(r"\S+\.zip", p) for p in listed), (
+        f"the container list carries something that is not a path: {listed}")
 
 
 
@@ -394,3 +393,48 @@ def test_the_count_sits_outside_the_list_it_counts():
     assert str(len(kinds) + 1) in (findings[0].detail or ""), (
         "the finding no longer says how many kinds there were")
 
+
+
+def _under_a_long_name(tmp_path, n, name_len):
+    """`n` document containers inside one container whose name is `name_len`
+    characters long, each claiming the same identifier as alternating kinds.
+
+    A member name may be tens of thousands of characters long, and a container
+    holding others repeats its own name in every one of their paths -- so the
+    length of the list of paths is n times name_len, whatever MAX_CONTAINERS
+    says about n."""
+    import pathlib
+
+    inner = io.BytesIO()
+    src = pathlib.Path(_across_containers(tmp_path, ["Type" if i % 2 else "Individual"
+                                                     for i in range(n)]))
+    with zipfile.ZipFile(src) as z, zipfile.ZipFile(inner, "w", zipfile.ZIP_DEFLATED) as o:
+        for name in z.namelist():
+            o.writestr(name, z.read(name))
+    outer = io.BytesIO()
+    with zipfile.ZipFile(outer, "w", zipfile.ZIP_DEFLATED) as o:
+        o.writestr("M" * name_len + ".zip", inner.getvalue())
+    path = tmp_path / "long.zip"
+    path.write_bytes(outer.getvalue())
+    return str(path)
+
+
+def test_a_long_name_is_not_repeated_once_per_container(tmp_path):
+    """The list of containers is bounded by count *and* so by size.
+
+    Naming every container in full, a long name on the container that holds
+    them is paid for once in the archive and then printed once per child: a
+    0.32 MB archive made one finding 200 MB. Bounded to a few paths, the same
+    input costs a few times the name, not forty.
+    """
+    from vdi2770_validate.runner import check_file
+
+    n, name_len = 40, 2000
+    findings = [f for f in check_file(_under_a_long_name(tmp_path, n, name_len)).findings
+                if f.rule.id == "M13"]
+    assert len(findings) == 1, f"expected one finding, got {len(findings)}"
+    detail = findings[0].detail or ""
+    assert len(detail) < 8 * name_len, (
+        f"one finding is {len(detail):,} characters for {n} containers under a "
+        f"{name_len}-character name: the name is being repeated once per container")
+    assert f"{n} containers in all" in detail, "the finding no longer says how many"

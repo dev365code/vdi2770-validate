@@ -1095,7 +1095,7 @@ def test_the_changelog_quotes_the_report_string_the_tool_prints():
     from vdi2770.validate.rules.delivery import MOST_LISTED, _first_few
 
     changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
-    _shown, in_all = _first_few([f"K{i}" for i in range(40001)])
+    _shown, in_all = _first_few([f"K{i}" for i in range(40001)], "kinds")
     assert in_all.strip().rstrip(";") in changelog, (
         f"the entry does not quote what the tool prints. It prints "
         f"{in_all.strip()!r} for 40001 items with MOST_LISTED = {MOST_LISTED}")

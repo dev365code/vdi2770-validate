@@ -37,12 +37,15 @@ of them narrowed, one of them made to admit more.
   there were — `40001 kinds in all, 5 of them here` — so the count stays exact
   while the listing is bounded.
 
-  The **containers are not bounded that way and must not be**. They are where a
-  reader has to go and look; `MAX_CONTAINERS` already bounds how many there can
-  be; and a truncated list of them cannot be recovered from anywhere else in the
-  report — past the bound they appeared in no field at all, not in `detail`, not
-  in `where`, and there is no second finding carrying them. Every container that
-  takes part is named.
+  The **containers it names are bounded the same way, with the same clause** —
+  `12 containers in all, 5 of them here`. An earlier bound on them was silent,
+  so the ones past it appeared in no field of the report at all; listing every
+  one in full fixed that and broke something worse, because `MAX_CONTAINERS`
+  limits how many containers there are and not how long their paths are, and a
+  long name on a container holding others is repeated in every one of their
+  paths — a 0.32 MB archive made one finding 200 MB. Both lists are recovered
+  the same way, by searching the delivery for the identifier the sentence names;
+  what a reader is owed is the count, and the count is exact.
 
   The count also sits outside the list rather than inside it. A marker written
   into a comma-separated run is read back as one of the items: this project's
