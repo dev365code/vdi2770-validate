@@ -45,7 +45,7 @@ same promise the table above makes.
 - [GHSA-f9xw-89gp-x52p](https://github.com/dev365code/vdi2770-validate/security/advisories/GHSA-f9xw-89gp-x52p):
   asking whether any document other than this one declares an identifier built
   one set of the whole delivery's identifiers for every document that asked and
-  kept them all, so memory grew with the product of the two and a 1.15 MB
+  kept them all, so memory grew with the product of the two and a 963 KB
   archive made one run hold 1.6 GB. `vdi2770` and `vdi2770-validate` from 0.8.0
   up to 0.9.1; fixed in 0.9.2.
 
