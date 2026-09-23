@@ -127,7 +127,7 @@ flowchart LR
 | Terminal | build scripts, people | `vdi2770-validate check handover.zip` |
 | Python | your own tooling | `import vdi2770` / `import vdi2770_validate` |
 | Single file | closed networks, approvals | `python vdi2770.pyz check handover.zip` |
-| GitHub Action | a workflow that blocks a bad delivery | `uses: dev365code/vdi2770-validate@v0.9.1` |
+| GitHub Action | a workflow that blocks a bad delivery | `uses: dev365code/vdi2770-validate@v0.9.2` |
 
 No route to a package index? No pip, no virtual environment, no rights to make
 one? Carry **one file** in instead. It still needs a Python — that is the one
@@ -151,7 +151,7 @@ Exit codes and a versioned JSON report make it a CI gate in one line.
 ### In a workflow
 
 ```yaml
-- uses: dev365code/vdi2770-validate@v0.9.1
+- uses: dev365code/vdi2770-validate@v0.9.2
   with:
     paths: handover.zip nameplate.zip
 ```
@@ -168,7 +168,7 @@ a path that does not exist, one you may not open — keeps `2`, and a mistyped
 command line keeps `64`.
 
 ```yaml
-- uses: dev365code/vdi2770-validate@v0.9.1
+- uses: dev365code/vdi2770-validate@v0.9.2
   id: vdi
   with:
     paths: handover.zip
@@ -185,7 +185,7 @@ on to whatever reads the number; with the default you would add
 | Input | What it is |
 |---|---|
 | `paths` | the containers to check, separated by spaces |
-| `version` | which release to install. Left empty it is the ref you pinned — `@v0.9.1` installs 0.9.1 — falling back to the version the action's own checkout publishes, so `@main` may name a version not on the index yet. **The rules travel with the engine**: an older `version` is an older rule set and may return a different verdict. Four releases cannot be asked for at all: 0.8.0, 0.8.1, 0.8.2 and 0.9.0 name their engine with a floor, so installing one brings a newer engine beside it and the tool refuses to judge a pair that disagrees with itself (exit 3). Pin both names, or ask for 0.9.1 or later |
+| `version` | which release to install. Left empty it is the ref you pinned — `@v0.9.2` installs 0.9.2 — falling back to the version the action's own checkout publishes, so `@main` may name a version not on the index yet. **The rules travel with the engine**: an older `version` is an older rule set and may return a different verdict. Four releases cannot be asked for at all: 0.8.0, 0.8.1, 0.8.2 and 0.9.0 name their engine with a floor, so installing one brings a newer engine beside it and the tool refuses to judge a pair that disagrees with itself (exit 3). Ask for 0.9.2 or later: every release from 0.8.0 to 0.9.1 is inside the range of GHSA-f9xw-89gp-x52p |
 | `pyz` | a `vdi2770.pyz` you already have. Given, **this action installs nothing and fetches nothing** |
 | `sha256` | the hash `pyz` must have. For a file carried into a closed network; the default path does not need it, because `pip` checks the index's own hashes |
 | `args` | anything else for `check`, such as `--json` |
@@ -440,7 +440,7 @@ it is not a promise that nothing your pipeline reads can change.
 verdict your pipeline has not seen, and the point of a validator is that the
 answer it gives today is the answer it gave when you signed off on it. From
 0.9.1 this package names the engine it was built with exactly, so
-`vdi2770-validate==0.9.1` installs one matching pair.
+`vdi2770-validate==0.9.2` installs one matching pair.
 
 Four releases cannot be pinned that way: 0.8.0, 0.8.1, 0.8.2 and 0.9.0 name
 their engine with a floor, and a floor stops holding the moment a newer engine
