@@ -12,7 +12,8 @@ delivery that passed may now draw a warning — which is why this is a minor
 release and not a patch. Nothing else moves a verdict, though one change below
 moves the error *count* for a delivery whose documents arrived as
 folders — read that one if a gate of yours reads a number. The rest is this
-repository's pages about itself, each narrowed to what it has measured.
+repository's pages about itself, corrected against what it has measured — most
+of them narrowed, one of them made to admit more.
 
 **`F3` knew two media types and now knows fifteen.** The rule asks whether a
 declared `FileFormat` agrees with the file's own name, and it only ever
@@ -29,9 +30,29 @@ than one honest extension the rule accepts all of them — an inspection form as
 The finding now names the extensions the declared type is carried by, because
 "disagrees with the file name" on its own is not something a sender can act on.
 
-One of the fifteen carries an extension only a Windows registry lists: a bitmap
-named `.dib` is a bitmap, and the table learned so from the platform that says
-so rather than from memory.
+**`F3`'s `obligation` moves with it, from `reference` to `ours`**, and that is a
+field in every report it appears in. The rule cites the same two reference keys
+as before, but what was observed there is one disagreement; which other media
+types have an extension that is not a matter of taste is this project's
+judgement, and the field has to say so. If you filter findings on
+`obligation == "reference"`, `F3` leaves that filter in this release. Its
+`remedy` is rewritten for the same reason: it named `.pdf` and `.zip`.
+
+`.dib` is in the table because a bitmap named `.dib` is a bitmap and Python's
+own table does not say so — a Windows registry does. The table learned it from
+the platform that says so rather than from memory, which is why the platform
+found it and three green ones did not.
+
+**If your build gates on `--fail-on warning`, this is the paragraph for you.**
+The default does not move: a warning has never failed a run unless you asked it
+to, and `--fail-on error` sees nothing new here. With `--fail-on warning` it is
+different, because both readings above produce warnings — a delivery that
+exited `0` for you can exit `1` here with nothing about the delivery having
+changed. Measured on the sample containers this repository keeps: seven of the
+nineteen cross that line, six of them on `M13` and one on `F3`, and eight were
+already failing that gate before this release. Nothing else about the codes
+moves — `1` for a finding at or above your threshold, `2` for nothing readable,
+`3` for a mismatched install, `64` for a usage error.
 
 **And the scope page was still describing the old table.** `docs/scope.md`
 gave extension agreement as checked "for `application/pdf` and
@@ -47,11 +68,16 @@ product model (`Type`) from the one manufactured item carrying that serial
 (`Individual`). A delivery that files the same identifier under both has
 contradicted itself, and a recipient's system has to guess which was meant.
 
-The comparison is per register. An article number and a serial number are
-different things that may be spelled the same, so identifiers are only compared
-against others issued on the same `RefType`. The rule does not ask whether a
-documentation container and the documents it bundles name the same object;
-settling that would mean reading the guideline text, which this project has not.
+A stated register can stop the comparison, and only a stated one. An article
+number and a serial number are different things that may be spelled the same,
+so two claims that *both* name a `RefType` and name different ones are left
+alone. A claim that names no register is compared against everything: keyed the
+other way, the rule could be switched off by writing a `RefType` on one of two
+contradicting claims and not the other, and a rule a sender can silence by
+adding a word is worse than the false positive it avoids. The rule does not ask
+whether a documentation container and the documents it bundles name the same
+object; settling that would mean reading the guideline text, which this project
+has not.
 
 **`ObjectId` is part of the model now**, and exported: `vdi2770.ObjectId`, with
 the objects a document declares on `Document.objects`. It was in the schema and
@@ -76,8 +102,11 @@ as folders drew one finding listing them all, with the names in the sentence and
 nothing in the location — readable by a person, invisible to anything filtering
 a report by where a problem is. It reports one folder per finding now, each
 naming that folder in `where`, so the count of `Z13` findings is the number of
-folders rather than one. Nothing new is diagnosed, no container changes verdict
-and no exit code moves.
+folders rather than one — up to the hundred any rule is listed, past which the
+rest are counted rather than printed, as below. Nothing new is diagnosed, no
+container changes verdict and no exit code moves. One string does follow: `Z9`
+points at the findings beside it, and it says "findings" now where it said
+"finding".
 
 **The totals move with it, and that is the part to read if a gate of yours
 reads a number.** A delivery of a hundred and fifty folders reported one error
@@ -89,9 +118,11 @@ hundred are listed and the rest are counted in `notListed`.
 **The report's contract has a stored answer beside it.** `docs/report-schema.md`
 says what the JSON promises; `docs/golden-report.json` is what the tool actually
 says about one container that ships here, compared on every run. The page and
-the tool can now disagree out loud instead of drifting. The page also gained the
-third condition on `read.complete`, which it had been missing: a run that
-declined something is incomplete even when every count is full.
+the tool can now disagree out loud instead of drifting. Both are new here, so
+there is nothing to diff them against yet; what they are for is the next
+release. The page states all three conditions on `read.complete`, including the
+one easiest to leave out: a run that declined something is incomplete even when
+every count is full.
 
 **The advisory promise is dated, and what is below the date is named.**
 `SECURITY.md` said that a security fix which shipped in a release has a GitHub
