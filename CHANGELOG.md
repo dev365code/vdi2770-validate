@@ -92,11 +92,10 @@ of them narrowed, one of them made to admit more.
 - **The security page pointed the one command it gives you at the wrong
   releases.** It said the reader is a separate distribution *before 0.8.0* and
   that `pip show vdi2770` names it. The reader has been its own distribution
-  since 0.2.0, and the releases where that command answers something the
-  command's own version cannot are 0.8.0, 0.8.1, 0.8.2 and 0.9.0 — the four that
-  ask for their engine with a floor rather than a pin, which this project's
-  README already said in its own words. So the page excluded exactly the
-  releases that needed it. It names them now.
+  since 0.2.0, and the check matters most from 0.2.0 to 0.6.x, which asked for
+  the reader with a range rather than a pin, so a command could run beside an
+  older reader than the one it was written against. From 0.8.0 on, a pair that
+  disagrees is refused rather than judged. The page says which releases pin how.
 
 **`F3` knew two media types and now knows fifteen.** The rule asks whether a
 declared `FileFormat` agrees with the file's own name, and it only ever
