@@ -492,8 +492,12 @@ def test_no_document_cites_a_file_that_is_not_here():
     # below ten thousand and nine above -- so the same measurement gives 4,096
     # and 430,096 rather than 3,296 and 320,096. Naming the harness is what made
     # the two disagree out loud.
-    assert seen == 39, (
-        f"{seen} citations found, not 39. If you added or removed one, say so "
+    # 39 to 40 when the entry carrying the 0.9.3 repair into this release named
+    # the harness its figures come from. The section 0.9.3 went out with says
+    # only "the repository's own builder", and that section is frozen; this is
+    # where a reader of the changelog is told which file that is.
+    assert seen == 40, (
+        f"{seen} citations found, not 40. If you added or removed one, say so "
         f"here; if you did not, some of them just stopped being checked.")
 
 

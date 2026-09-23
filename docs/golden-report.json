@@ -94,6 +94,7 @@
     }
    }
   ],
+  "listingStopped": [],
   "notListed": [],
   "path": "corpus/examples/container/missingdocuments.zip",
   "pdfaNote": "This tool reports PDF/A claims. It does not verify them.",

@@ -2144,6 +2144,84 @@ TABLE += GUARDED_ROWS
 
 TABLE += DELIVERY_REGRESSION_ROWS
 
+LISTING_BUDGET_ROWS = [
+    ("report/the-listing-stops-at-a-size-budget",
+     "packages/vdi2770/src/vdi2770/validate/model.py",
+     '        if rid in self.over_budget or self._spent.get(rid, 0) + size > LISTING_BUDGET_PER_RULE:\n',
+     "        if False:\n",
+     ["tests/test_a_long_name_does_not_multiply_the_report.py::test_what_a_report_prints_is_bounded_by_the_budget",
+      "tests/test_a_long_name_does_not_multiply_the_report.py::test_what_a_report_keeps_is_within_the_budget_for_every_rule",
+      "tests/test_a_long_name_does_not_multiply_the_report.py::test_the_peak_does_not_grow_with_the_length_of_the_name",
+      "tests/test_a_long_name_does_not_multiply_the_report.py::test_what_m13_keeps_is_within_the_same_budget",
+      "tests/test_a_long_name_does_not_multiply_the_report.py::test_the_peak_of_m13_does_not_grow_with_the_length_of_the_name"],
+     "a hundred findings per rule per container, each carrying a container "
+     "path that repeats a name the sender chose, grew with the containers "
+     "times that name: ten containers under a 65,531-character name printed "
+     "68 MB of JSON from a 144 KB archive"),
+
+    ("report/a-stopped-listing-stays-stopped",
+     "packages/vdi2770/src/vdi2770/validate/model.py",
+     '        if rid in self.over_budget or self._spent.get(rid, 0) + size > LISTING_BUDGET_PER_RULE:\n',
+     "        if self._spent.get(rid, 0) + size > LISTING_BUDGET_PER_RULE:\n",
+     ["tests/test_a_long_name_does_not_multiply_the_report.py::test_the_listing_stops_rather_than_skipping"],
+     "a smaller finding after a larger one would fit, and a listing that "
+     "resumes after saying it stopped makes the sentence false"),
+
+    ("report/what-the-budget-holds-back-is-still-counted",
+     "packages/vdi2770/src/vdi2770/validate/model.py",
+     "            self._over_budget_rule[rid] = f.rule\n"
+     "            self._count_unlisted(f)\n",
+     "            self._over_budget_rule[rid] = f.rule\n",
+     ["tests/test_a_long_name_does_not_multiply_the_report.py::test_the_budget_changes_the_listing_and_nothing_else",
+      "tests/test_a_long_name_does_not_multiply_the_report.py::test_both_shapes_say_how_many_there_were_and_how_many_are_listed"],
+     "a bounded listing must not become a quieter verdict: the summary and "
+     "the exit code count what the budget turned away"),
+
+    ("report/a-quiet-run-does-not-announce-notes-the-budget-held-back",
+     "packages/vdi2770/src/vdi2770/validate/model.py",
+     "                or self._over_budget_rule[rid].severity is not Severity.INFO]\n",
+     "                or True]\n",
+     ["tests/test_a_long_name_does_not_multiply_the_report.py::test_a_quiet_run_does_not_announce_notes_the_budget_held_back"],
+     "--quiet hides notes, and announcing notes it is not printing is the "
+     "report contradicting itself"),
+
+    ("report/the-budget-leaves-ordinary-reports-whole",
+     "packages/vdi2770/src/vdi2770/validate/model.py",
+     "LISTING_BUDGET_PER_RULE = 1_000_000\n",
+     "LISTING_BUDGET_PER_RULE = 1_000\n",
+     ["tests/test_a_long_name_does_not_multiply_the_report.py::test_no_input_the_repository_holds_reaches_the_budget"],
+     "a budget that engaged on an ordinary delivery would take findings out "
+     "of reports nobody needed shortened"),
+
+    ("report/the-json-says-where-the-listing-stopped",
+     "packages/vdi2770/src/vdi2770/validate/report.py",
+     "                           for rid, in_all, listed in report.stopped(show_info)],\n",
+     "                           for rid, in_all, listed in []],\n",
+     ["tests/test_a_long_name_does_not_multiply_the_report.py::test_both_shapes_say_how_many_there_were_and_how_many_are_listed",
+      "tests/test_a_long_name_does_not_multiply_the_report.py::test_a_quiet_run_does_not_announce_notes_the_budget_held_back"],
+     "a listing that stops without saying so is the silent truncation that "
+     "made findings appear in no field of the report at all"),
+
+    ("report/the-page-says-where-the-listing-stopped",
+     "packages/vdi2770/src/vdi2770/validate/report.py",
+     '        lines.append(f"  ... {stopped_said(rid, in_all, listed)}")\n',
+     "        pass\n",
+     ["tests/test_a_long_name_does_not_multiply_the_report.py::test_both_shapes_say_how_many_there_were_and_how_many_are_listed",
+      "tests/test_a_long_name_does_not_multiply_the_report.py::test_a_rule_with_nothing_listed_does_not_read_as_no_findings"],
+     "the page is what people read, and the JSON saying where the listing "
+     "stopped does not help a reader of the page"),
+
+    ("report/a-listing-that-stopped-first-is-not-no-findings",
+     "packages/vdi2770/src/vdi2770/validate/report.py",
+     "    if not findings and not stopped:\n",
+     "    if not findings:\n",
+     ["tests/test_a_long_name_does_not_multiply_the_report.py::test_a_rule_with_nothing_listed_does_not_read_as_no_findings"],
+     "a finding larger than the budget is counted and not listed, and \"no "
+     "findings\" over a summary of one error is the report contradicting itself"),
+]
+
+TABLE += LISTING_BUDGET_ROWS
+
 TABLE += WORKFLOW_ROWS
 
 TABLE += DECLARED_ROWS

@@ -25,6 +25,19 @@ of them narrowed, one of them made to admit more.
   section below describes it; nothing about it differs here, and a delivery's
   verdict is unchanged either way.
 
+- **The repair that went out as 0.9.3 is in this release too.** A report
+  printed a container's name once for every finding under it, and the listing
+  was bounded by how many findings it held and not by their size: ten
+  containers under a 65,531-character name, in a 144 KB archive, printed 68 MB
+  of JSON and as much again of text — the harness is
+  `tests/test_a_long_name_does_not_multiply_the_report.py`. It is
+  [GHSA-6hqr-phm3-chpf](https://github.com/dev365code/vdi2770-validate/security/advisories/GHSA-6hqr-phm3-chpf),
+  reaching `vdi2770-validate` from 0.1.0 and `vdi2770` from 0.8.0 up to 0.9.2.
+  `M13`, new in this release, reports one finding per identifier and names up
+  to five containers by path in it; it is held to the same budget. The 0.9.3
+  section below describes the rest, and a delivery's verdict is unchanged
+  either way.
+
 - **One finding stopped growing with whatever the sender wrote — and the part
   of it you need stopped being thrown away.** The report lists at most a hundred
   findings per rule per container and counts the rest, which bounds every list
