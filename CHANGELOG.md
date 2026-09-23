@@ -27,9 +27,9 @@ of them narrowed, one of them made to admit more.
 
 - **The repair that went out as 0.9.3 is in this release too.** A report
   printed a container's name once for every finding under it, and the listing
-  was bounded by how many findings it held and not by their size: ten
-  containers under a 65,531-character name, in a 144 KB archive, printed 68 MB
-  of JSON and as much again of text — the harness is
+  was bounded, from 0.7.0, by how many findings it held and never by their
+  size: ten containers under a 65,531-character name, in a 144 KB archive,
+  printed 68 MB of JSON and as much again of text — the harness is
   `tests/test_a_long_name_does_not_multiply_the_report.py`. It is
   [GHSA-6hqr-phm3-chpf](https://github.com/dev365code/vdi2770-validate/security/advisories/GHSA-6hqr-phm3-chpf),
   reaching `vdi2770-validate` from 0.1.0 and `vdi2770` from 0.8.0 up to 0.9.3.
