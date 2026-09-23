@@ -2119,6 +2119,27 @@ DELIVERY_REGRESSION_ROWS = [
      "one identifier in two cases becomes two, and a contradiction a sender "
      "can silence with one keystroke goes unreported"),
 
+    ("rules/the-containers-counted-are-containers-not-claims",
+     "packages/vdi2770/src/vdi2770/validate/rules/delivery.py",
+     '            sorted({c.path or "the delivery" for _k, _o, c in claims}), "containers")',
+     '            sorted([c.path or "the delivery" for _k, _o, c in claims]), "containers")',
+     ["tests/test_a_contradiction_costs_no_more_than_the_claims.py::"
+      "test_every_container_that_takes_part_is_counted"],
+     "a container holding two claims is counted twice and listed twice, and the "
+     "sentence then promises more containers than the delivery has"),
+
+    ("rules/the-paths-listed-are-as-many-as-the-count-says",
+     "packages/vdi2770/src/vdi2770/validate/rules/delivery.py",
+     '        where, where_all = _first_few(\n'
+     '            sorted({c.path or "the delivery" for _k, _o, c in claims}), "containers")\n',
+     '        where, where_all = _first_few(\n'
+     '            sorted({c.path or "the delivery" for _k, _o, c in claims}), "containers")\n'
+     '        where = where.split(", ")[0]\n',
+     ["tests/test_a_contradiction_costs_no_more_than_the_claims.py::"
+      "test_every_container_that_takes_part_is_counted"],
+     "a list shorter than the count clause says it is sends the reader looking "
+     "for containers the sentence claims to name"),
+
     ("rules/a-long-name-is-not-repeated-once-per-container",
      "packages/vdi2770/src/vdi2770/validate/rules/delivery.py",
      '        where, where_all = _first_few(\n'

@@ -300,7 +300,8 @@ def test_the_work_does_not_square_with_the_claims():
 
 
 def _across_containers(tmp_path, kinds, identifier="SHARED"):
-    """One document container per claim, all claiming the same identifier.
+    """One document container per entry of `kinds`, all claiming the same
+    identifier. An entry that is a tuple is several claims in one container.
 
     `container_declaring` puts every claim in a single container, so a test
     written on it can never see the container list grow -- which is how the
@@ -314,8 +315,10 @@ def _across_containers(tmp_path, kinds, identifier="SHARED"):
     text = data[meta].decode("utf-8")
     inner = []
     for i, kind in enumerate(kinds):
+        claims = kind if isinstance(kind, tuple) else (kind,)
         one = text.replace(
-            CLOSE, f'<ObjectId ObjectType="{kind}">{identifier}</ObjectId>' + CLOSE, 1)
+            CLOSE, "".join(f'<ObjectId ObjectType="{k}">{identifier}</ObjectId>'
+                           for k in claims) + CLOSE, 1)
         buf = io.BytesIO()
         with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z2:
             for n in names:
@@ -370,8 +373,12 @@ def test_every_container_that_takes_part_is_counted(tmp_path):
     from vdi2770_validate.runner import check_file
 
     n = 12
-    path = _across_containers(tmp_path, ["Type" if i % 2 else "Individual"
-                                         for i in range(n)])
+    # The first container claims the identifier twice, as two kinds: thirteen
+    # claims in twelve containers, so counting claims reads 13, and a list built
+    # from claims names the first container twice.
+    kinds = [("Individual", "Type")] + ["Type" if i % 2 else "Individual"
+                                        for i in range(1, n)]
+    path = _across_containers(tmp_path, kinds)
     findings = [f for f in check_file(path).findings if f.rule.id == "M13"]
     assert len(findings) == 1, f"expected one finding, got {len(findings)}"
     detail = findings[0].detail or ""
@@ -380,6 +387,8 @@ def test_every_container_that_takes_part_is_counted(tmp_path):
     listed = re.search(r"in this delivery \(([^)]*)\)", detail).group(1).split(", ")
     assert all(re.fullmatch(r"\S+\.zip", p) for p in listed), (
         f"the container list carries something that is not a path: {listed}")
+    assert len(listed) == len(set(listed)) == delivery.MOST_LISTED, (
+        f"the finding says {delivery.MOST_LISTED} of them are here and lists {listed}")
 
 
 
