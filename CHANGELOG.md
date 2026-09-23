@@ -5,8 +5,10 @@ Sections through 0.7.0 had their wording tidied after their tags; the text each 
 ## 0.9.3 — 2026-09-24
 
 Who should take this release: anyone who checks deliveries from sources they do
-not control, on any earlier release. This release carries one repair and
-nothing else.
+not control, on any earlier release. This release carries one repair, and one
+corrected figure: `SECURITY.md`'s note on the 0.9.2 advisory gave its archive as
+1.15 MB, which came from a different builder; the repository's own makes it
+963 KB.
 
 **A report printed a container's name once for every finding under it, and
 nothing bounded how many findings that was.** Every finding carries the path of
@@ -21,7 +23,7 @@ Measured with the repository's own builder, ten document containers under one
 65,531-character name, each declaring 150 empty `DocumentId`s: a **144 KB**
 archive printed **68 MB** of JSON and as much again of text. Twenty
 containers, in a **156 KB** archive, printed **136 MB** of each. Checking it and
-printing both took about a minute, and then about two: the text walks every
+printing both took under a minute, and then about two: the text walks every
 character of a name once per finding.
 
 Each rule's listing now also stops at a size budget — about a million
@@ -35,6 +37,10 @@ archives now print 2.1 MB of JSON each, in about a second.
 Every container in the sample corpus, and every fixture the test suite builds,
 reports the same findings with the same exit code as before; the JSON gains the
 key `listingStopped`, empty for all of them.
+
+Security: [GHSA-6hqr-phm3-chpf](https://github.com/dev365code/vdi2770-validate/security/advisories/GHSA-6hqr-phm3-chpf), affecting
+`vdi2770-validate` from 0.1.0 and `vdi2770` from 0.8.0, up to 0.9.2; fixed in
+0.9.3.
 
 ## 0.9.2 — 2026-09-23
 
