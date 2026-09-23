@@ -357,7 +357,7 @@ def test_one_finding_does_not_grow_without_bound():
 
 
 
-def test_every_container_that_takes_part_is_named(tmp_path):
+def test_every_container_that_takes_part_is_counted(tmp_path):
     """No container that takes part may go missing without the report saying so.
 
     The first bound on this list was silent: seven of twelve containers

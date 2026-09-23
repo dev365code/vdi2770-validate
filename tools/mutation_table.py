@@ -2070,11 +2070,11 @@ TABLE += LOCATION_ROWS
 #: green, because none of them was named by a row. The one gate that watches
 #: for exactly that only watches what it is shown.
 DELIVERY_REGRESSION_ROWS = [
-    ("rules/every-container-that-takes-part-is-named",
+    ("rules/every-container-that-takes-part-is-counted",
      "packages/vdi2770/src/vdi2770/validate/rules/delivery.py",
      '            sorted({c.path or "the delivery" for _k, _o, c in claims}), "containers")',
      '            sorted({c.path or "the delivery" for _k, _o, c in claims}), "containers")\n        where_all = ""',
-     ["tests/test_a_contradiction_costs_no_more_than_the_claims.py::test_every_container_that_takes_part_is_named"],
+     ["tests/test_a_contradiction_costs_no_more_than_the_claims.py::test_every_container_that_takes_part_is_counted"],
      "a bound on the containers that does not say how many there were loses "
      "them silently: past it they appeared in no field of the report at all"),
 
