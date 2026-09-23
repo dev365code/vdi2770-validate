@@ -297,3 +297,22 @@ def test_the_corpus_uniqueness_flags_are_read_as_written():
     assert False in stated, (
         f"the corpus states IsGloballyBiUnique=\"false\" and the parse never "
         f"produced False: {stated}")
+
+
+def test_an_identifier_spelled_in_another_case_is_one_identifier(tmp_path):
+    """The claims are grouped on the identifier folded for case, and nothing
+    held that either.
+
+    Drop the fold and `ABC1223` declared as a type no longer meets `abc1223`
+    declared as an individual: they become two identifiers, neither of which
+    contradicts anything, and the rule goes quiet. That is a rule a sender
+    silences with one keystroke -- the shape `different_registers`' own
+    docstring exists to warn about, on the other axis.
+    """
+    p = _delivery_with_axes(tmp_path, "cased-id.zip", [
+        ("Type", "product type", "ABC1223"),
+        ("Individual", "product type", "abc1223"),
+    ])
+    assert "M13" in ids(p), (
+        "one identifier written in two cases was read as two identifiers, so "
+        "the contradiction between them went unreported")

@@ -10,11 +10,15 @@ all of them at once: cost R*T in time and in memory, on a conforming delivery,
 with no budget watching that axis. `MAX_CONTAINERS` bounds R and
 `MAX_TOTAL_ELEMENTS` bounds elements; nothing bounds their product.
 
-Measured before the repair: 403 MB peak at R=400, T=4,000, and 834 MB at
-R=400, T=8,000 -- the same 43.6 MB archive, sixty-eight bytes apart. And
-exhaustion here does not merely take time: the runner turns an exception out of
-a check into `X5`, so a clean delivery comes back as an error against the
-sender.
+Measured before the repair, with `_delivery` below -- this file's own harness:
+373 MB peak at R=400, T=4,000 and 790 MB at R=400, T=8,000, from two archives of
+483 KB that are eleven bytes apart. (The figures first written here, 403 and
+834 MB from "the same 43.6 MB archive, sixty-eight bytes apart", came from a
+different script that also packed a PDF into every container; they could not be
+reproduced from anything in this repository, which is the one thing a figure in
+a test has to allow.) And exhaustion here does not merely take time: the runner
+turns an exception out of a check into `X5`, so a clean delivery comes back as
+an error against the sender.
 
 The count is the thing to assert, not the clock: a stopwatch here has failed
 under load before and said nothing about the bound it was defending. Every
@@ -184,3 +188,36 @@ def test_the_documents_that_ask_do_not_multiply_what_is_held(tmp_path):
         f"allocation ({small:,} -> {large:,} bytes), and the identifiers they "
         f"ask about did not change: the delivery is being held once per "
         f"document that asks")
+
+
+def test_the_domain_is_compared_the_way_the_reference_compares_it(tmp_path):
+    """`_identity` folds case on both halves, and only one half was held.
+
+    The reference compares `id + "@" + domainId` with `equalsIgnoreCase`, and
+    `_identity`'s own docstring says both halves matter and both are easy to
+    get wrong *in the expensive direction*. The id half has a test. The domain
+    half did not, so folding could be dropped there and every test in this
+    repository stayed green -- while a delivery that declares `BSP-OEM` and
+    refers to `bsp-oem` was told the document it carries is not there. That is
+    an error raised against a sender who did nothing wrong.
+    """
+    declared = _ids(META, ["SHARED"]).replace('DomainId="BSP-OEM"',
+                                              'DomainId="BSP-OEM"')
+    asking = _refers_to(_ids(META, ["ASKER"]), "SHARED").replace(
+        'DomainId="BSP-OEM"', 'DomainId="bsp-oem"')
+    entries = [("VDI2770_Main.xml", MAIN.encode()),
+               ("has.zip", _container(declared)),
+               ("asks.zip", _container(asking))]
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        for name, data in entries:
+            z.writestr(name, data)
+    path = tmp_path / "cased.zip"
+    path.write_bytes(buf.getvalue())
+
+    dangling = [f for f in check_file(str(path)).findings
+                if f.rule.id in ("M11", "M12") and "SHARED" in (f.detail or "")]
+    assert not dangling, (
+        "a delivery declaring `SHARED@BSP-OEM` and referring to it as "
+        f"`SHARED@bsp-oem` was told it carries no such document: "
+        f"{[f.detail for f in dangling]}")

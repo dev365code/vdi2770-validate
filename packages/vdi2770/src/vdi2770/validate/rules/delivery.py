@@ -103,21 +103,20 @@ def refers_to(documents) -> Iterator[tuple]:
 def objects_claimed(documents) -> dict:
     """Each object identifier, and every kind it was filed under, with where.
 
-    Keyed on the identifier *and the axis it was issued on*, both folded for
-    case. The axis is the half that was missing and it is not a nicety: an
-    article number and a serial number are different registers, and this corpus
-    pairs them inside one document -- `Individual/serial number/U1-99999` beside
-    `Type/article number/U1`. The day a manufacturer's article number equals
-    somebody's serial, a comparison on the bare string calls a correct delivery
-    a contradiction. This module already argues the same point against itself
-    fifty lines up, where `_identity` says comparing a bare id "accepts a
-    delivery that carries a different document under a coincidentally equal
-    number".
+    Keyed on the identifier alone, folded for case -- *not* on the identifier
+    and the register it was issued in. An earlier version keyed on both, and
+    that had to go: a claim that names no register matches every register, so
+    grouping by register splits claims that do contradict each other and the
+    rule goes quiet for the blank one. The register is decided per claim in
+    `contradicting`, where "these two are about different registers" can be
+    asked of a pair without pretending the relation partitions anything.
 
-    `RefType` is an open string in the schema, so this groups what senders
-    actually wrote rather than a vocabulary. Two claims with no `RefType` at all
-    share the empty axis, which is right: they were issued with nothing to tell
-    them apart.
+    It still matters, and it is still the half that was once missing: an
+    article number and a serial number are different registers, and this
+    corpus pairs them inside one document -- `Individual/serial number/U1-99999`
+    beside `Type/article number/U1`. The day a manufacturer's article number
+    equals somebody's serial, a comparison on the bare string calls a correct
+    delivery a contradiction. `different_registers` is what prevents that.
 
     `globally_unique` is deliberately not consulted. It says whether an
     identifier may be compared *outside* this delivery, and every comparison

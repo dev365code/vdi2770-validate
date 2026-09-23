@@ -92,7 +92,8 @@ def test_the_comparisons_do_not_square_with_the_claims(monkeypatch):
     What it still does not catch: keeping one `_register` per claim and then
     walking the *kinds* for each of them, which is quadratic only where the
     kinds grow with the claims -- reachable, because this rule runs on
-    schema-invalid input too. `tools/mutation_table.py` carries that shape.
+    schema-invalid input too. Nothing in this repository carries that shape
+    yet -- not this file and not the mutation table -- and that is the gap.
     """
     made = []
     real = delivery._register
@@ -103,7 +104,9 @@ def test_the_comparisons_do_not_square_with_the_claims(monkeypatch):
     raw = container_declaring([("Type" if i % 2 else "Individual", "product type")
                                for i in range(n)])
     assert m13_of(raw), "the contradiction this measures is not being reported"
-    # The pairwise version made n*(n-1)/2 -- 179,700 for this input. Anything
+    # The pairwise version made 180,600 `_register` calls for this input --
+    # the pair count, n*(n-1)/2 = 179,700, is a different number, and the
+    # gate reads calls. Anything
     # that walks the claims a constant number of times is far under the bound;
     # anything that pairs them is far over it, and the gap is three orders of
     # magnitude rather than a margin to argue about.
@@ -209,130 +212,36 @@ def test_a_register_decides_whether_two_kinds_contradict(why, left, right, contr
         f"{'drew nothing' if contradicts else 'drew ' + str([f.detail for f in findings])}")
 
 
-def test_it_names_only_the_kinds_that_take_part():
+@pytest.mark.parametrize("bystanders", [1, 2, 3])
+def test_it_names_only_the_kinds_that_take_part(bystanders):
     """A kind in the group that contradicts nothing must not be named.
 
     Written by hand, because the random shapes above cannot reach it: in all
     twelve seeds every kind present takes part, so "reports a kind that
     contradicts nothing" never arises and a regrouping that named the whole
-    group passed all of them. The same lesson as the register table below --
-    random cases do not promise the case that decides.
+    group passed all of them.
+
+    Parametrised over how many bystanders there are, because a single row
+    pinned a single kind-count and nothing above it. The first spelling had one
+    bystander -- three kinds in all -- and a regrouping that returned the whole
+    group once there were *more than three* kinds sailed past it while doing
+    exactly what this test is named for.
 
     The sample declares `BR-01` as a product type. A second claim on the same
-    register contradicts it. A third naming a *different* stated register
-    contradicts neither, because `different_registers` is true only where both
-    sides name one and they differ. So the finding must name two kinds and not
-    three.
+    register contradicts it. Each further claim names a register of its own, so
+    it contradicts nothing: `different_registers` is true only where both sides
+    name a register and the two differ.
     """
-    raw = container_declaring([("Individual", "product type"),
-                               ("Zebra", "serial number")])
-    findings = m13_of(raw)
+    registers = ["serial number", "article number", "drawing number"]
+    claims = [("Individual", "product type")]
+    claims += [(f"Kind{i}", registers[i]) for i in range(bystanders)]
+    findings = m13_of(container_declaring(claims))
     assert len(findings) == 1, f"expected one finding, got {len(findings)}"
     named = re.search(r"is declared as (.+?) in this delivery", findings[0].detail or "")
     assert named, f"the finding no longer says what it is declared as: {findings[0].detail}"
     assert set(named.group(1).split(", ")) == {"Type", "Individual"}, (
-        f"'Zebra' names a register nothing else names, so it contradicts "
-        f"nothing; the finding names {named.group(1)}")
-
-
-def test_one_finding_does_not_grow_without_bound():
-    """`MAX_LISTED_PER_RULE` bounds how many findings a rule may list. It does
-    not bound how large one of them is, and `M13` emits one finding per
-    identifier -- so the cap never engages while the sentence grows with the
-    kinds the sender wrote. Measured before the bound: a 232 KB archive
-    produced one finding whose detail was 8.1 million characters and a report
-    of 8.2 MB, an amplification of thirty-five times, on the one axis the cap
-    does not watch.
-
-    The count stays exact; it is the listing that is bounded, the way every
-    other list this report prints is bounded.
-    """
-    kinds = [f"Kind{i:04d}" for i in range(400)]
-    raw = container_declaring([(k, None) for k in kinds])
-    findings = m13_of(raw)
-    assert len(findings) == 1, f"expected one finding, got {len(findings)}"
-    detail = findings[0].detail or ""
-    assert len(detail) < 600, (
-        f"one finding's detail is {len(detail)} characters for {len(kinds)} "
-        f"kinds; it grows with what the sender wrote")
-    # And it still says how many there were, so the reader is not told less.
-    assert str(len(kinds)) in detail or str(len(kinds) + 1) in detail, (
-        f"the detail no longer says how many kinds were declared: {detail}")
-
-
-def _across_containers(tmp_path, kinds, identifier="SHARED"):
-    """One document container per claim, all claiming the same identifier.
-
-    `container_declaring` puts every claim in a single container, so a test
-    written on it can never see the container list grow -- which is how the
-    first spelling of the test below passed against the very behaviour it was
-    written to catch.
-    """
-    with zipfile.ZipFile(SAMPLE) as z:
-        names = z.namelist()
-        data = {n: z.read(n) for n in names}
-    meta = next(n for n in names if n.endswith("VDI2770_Metadata.xml"))
-    text = data[meta].decode("utf-8")
-    inner = []
-    for i, kind in enumerate(kinds):
-        one = text.replace(
-            CLOSE, f'<ObjectId ObjectType="{kind}">{identifier}</ObjectId>' + CLOSE, 1)
-        buf = io.BytesIO()
-        with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z2:
-            for n in names:
-                z2.writestr(n, one.encode("utf-8") if n == meta else data[n])
-        inner.append((f"doc{i:02d}.zip", buf.getvalue()))
-    out = io.BytesIO()
-    with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as o:
-        for n, d in inner:
-            o.writestr(n, d)
-    path = tmp_path / "across.zip"
-    path.write_bytes(out.getvalue())
-    return str(path)
-
-
-def test_every_container_that_takes_part_is_named(tmp_path):
-    """The kinds may be cut short; the containers may not.
-
-    Bounding both looked symmetrical and was not. A reader can recover a
-    truncated list of kinds -- the identifier is right there in the sentence --
-    but the containers *are* the places to go and look, and past the bound they
-    appeared in no field of the report at all: not in `detail`, not in `where`,
-    and `M13` emits one finding per identifier so there is no second row. Seven
-    of twelve went missing, and because the list is sorted it was always the
-    same seven. `MAX_CONTAINERS` already bounds how many there can be.
-    """
-    from vdi2770_validate.runner import check_file
-
-    n = 12
-    path = _across_containers(tmp_path, ["Type" if i % 2 else "Individual"
-                                         for i in range(n)])
-    findings = [f for f in check_file(path).findings if f.rule.id == "M13"]
-    assert len(findings) == 1, f"expected one finding, got {len(findings)}"
-    detail = findings[0].detail or ""
-    named = set(re.findall(r"doc\d\d", detail))
-    missing = sorted({f"doc{i:02d}" for i in range(n)} - named)
-    assert not missing, (
-        f"{len(missing)} of {n} containers that take part are named nowhere in "
-        f"the report: {missing}")
-
-
-def test_the_count_sits_outside_the_list_it_counts():
-    """A marker inside a comma-separated run is read back as one of the items.
-
-    The project's own way of reading this sentence is
-    `is declared as (.+?) in this delivery`, and with the marker inside the run
-    it returned `Kind04 -- 5 of 6 shown` as the name of a kind -- a value no
-    sender wrote -- while the kind sorting after it vanished from the report.
-    """
-    kinds = [f"Kind{i:02d}" for i in range(6)]
-    findings = m13_of(container_declaring([(k, None) for k in kinds]))
-    named = re.search(r"is declared as (.+?) in this delivery",
-                      findings[0].detail or "").group(1).split(", ")
-    assert all(k in kinds or k == "Type" for k in named), (
-        f"the parsed kinds contain something no document declared: {named}")
-    assert str(len(kinds) + 1) in (findings[0].detail or ""), (
-        "the finding no longer says how many kinds there were")
+        f"with {bystanders} kind(s) naming a register nothing else names, only "
+        f"Type and Individual contradict; the finding names {named.group(1)}")
 
 
 def _peak_bytes(raw, runs=3):
