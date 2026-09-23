@@ -18,7 +18,7 @@ of them narrowed, one of them made to admit more.
 - **The repair that went out as 0.9.2 is in this release too.** Asking who
   declares an identifier read the whole delivery once for every document that
   asked, so memory grew with the product of the two: a 963 KB archive made one
-  run hold 1,626 MB, and two 483 KB archives a few bytes apart cost 359 MB and 790 MB
+  run hold 1,626 MB, and two 483 KB archives cost 359 MB and 790 MB
   — the harness is `tests/test_a_delivery_answers_who_declares_what_once.py`, and
   a figure without the thing that produced it is a figure nobody can check. It is [GHSA-f9xw-89gp-x52p](https://github.com/dev365code/vdi2770-validate/security/advisories/GHSA-f9xw-89gp-x52p),
   reaching `vdi2770` and `vdi2770-validate` from 0.8.0 up to 0.9.1. The 0.9.2
@@ -329,7 +329,7 @@ Security: [GHSA-f9xw-89gp-x52p](https://github.com/dev365code/vdi2770-validate/s
 
 *(Correction 2026-09-23: the two archives described above as thirty-three bytes apart differ by eleven. The smaller of the two changes size by a few dozen bytes between builds — the archives inside it carry their own timestamps, which changes how the outer one compresses — and the figure was read from a single run rather than a rebuilt pair. Everything else here reproduces: the 1.15 MB archive, the memory figures, and the repair. The harness that builds them is `tests/test_a_delivery_answers_who_declares_what_once.py`, which this section should have named.)*
 
-*(Correction 2026-09-24: the correction above is itself imprecise. Measured with the harness it names — the builder in `tests/test_a_delivery_answers_who_declares_what_once.py`, peak allocation taken as the median of three runs — eight hundred referring documents make a 963 KB archive, not 1.15 MB, which came from a different builder; that archive holds 1,626 MB before this repair and 20 MB after. The two 483 KB archives differ by a few bytes, by an amount that changes from build to build and can change sign, rather than by a fixed eleven; they hold 359 MB and 790 MB before this repair, and the second holds 17.3 MB after it, not 17.5 MB.)*
+*(Correction 2026-09-24: the correction above is itself imprecise. Measured with the harness it names — the builder in `tests/test_a_delivery_answers_who_declares_what_once.py`, peak allocation taken as the median of three runs — eight hundred referring documents make a 963 KB archive, not 1.15 MB, which came from a different builder; that archive holds 1,626 MB before this repair and 20 MB after. The two 483 KB archives are not a fixed number of bytes apart: their exact size varies from build to build, because the archives inside carry the time they were built. They hold 359 MB and 790 MB before this repair, and the second holds 17.3 MB after it, not 17.5 MB.)*
 
 ## 0.9.1 — 2026-09-22
 

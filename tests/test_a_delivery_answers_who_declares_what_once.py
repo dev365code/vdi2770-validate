@@ -13,7 +13,7 @@ with no budget watching that axis. `MAX_CONTAINERS` bounds R and
 Measured before the repair, with `_delivery` below -- this file's own harness:
 359 MB peak at R=400, T=4,000 and 790 MB at R=400, T=8,000 -- the median of three
 runs, since the first run in a process also carries its imports and reads 373 --
-from two archives of 483 KB that differ by a few bytes depending on the build. (The figures first written here, 403 and
+from two archives of 483 KB whose exact size varies from build to build. (The figures first written here, 403 and
 834 MB from "the same 43.6 MB archive, sixty-eight bytes apart", came from a
 different script that also packed a PDF into every container; they could not be
 reproduced from anything in this repository, which is the one thing a figure in
