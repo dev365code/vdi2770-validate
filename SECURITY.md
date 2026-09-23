@@ -45,9 +45,12 @@ same promise the table above makes.
 - [GHSA-6hqr-phm3-chpf](https://github.com/dev365code/vdi2770-validate/security/advisories/GHSA-6hqr-phm3-chpf):
   every finding printed the path of the container it was in, a container
   holding others repeats its name in every one of their paths, and the listing
-  was bounded by how many findings it held and not by their size, so a 156 KB
-  archive made a report of 136 MB in each of its two shapes. `vdi2770-validate`
-  from 0.1.0 and `vdi2770` from 0.8.0, up to 0.9.2; fixed in 0.9.3.
+  was bounded, from 0.7.0, by how many findings it held and never by their
+  size, so a 156 KB archive made a report of 136 MB in each of its two shapes.
+  0.9.3 bounded each rule's listing by the characters its findings stored, and
+  a name made of characters the report spells out still printed six to
+  thirteen times that. `vdi2770-validate` from 0.1.0 and `vdi2770` from 0.8.0,
+  up to 0.9.3; fixed in 0.9.4.
 
 - [GHSA-f9xw-89gp-x52p](https://github.com/dev365code/vdi2770-validate/security/advisories/GHSA-f9xw-89gp-x52p):
   asking whether any document other than this one declares an identifier built
@@ -74,8 +77,8 @@ than reported from outside, and each is described in the CHANGELOG section that
 announces it. **If you pin a version below 0.8.0, those sections are the list**
 — read them where you would otherwise be looking for an advisory. Two advisories
 written later reach those releases all the same — GHSA-xp97-jcmj-h45f every
-release up to 0.8.0, and GHSA-6hqr-phm3-chpf every release up to 0.9.2 — so
-the release to move to is 0.9.3 or later.
+release of both up to 0.8.0, and GHSA-6hqr-phm3-chpf every release of the
+command up to 0.9.3 — so the release to move to is 0.9.4 or later.
 
 One thing about reading them: below 0.7.0 the reader and the command carried
 separate numbers, and a heading does not say which of the two it belongs to. The
@@ -104,9 +107,10 @@ from 0.8.0 on a pair that disagrees is refused rather than judged. 0.9.1 and
 later pin the pair exactly.
 
 Every one of those four — 0.8.0, 0.8.1, 0.8.2 and 0.9.0 — is inside the range
-of GHSA-f9xw-89gp-x52p, and so is 0.9.1; every release up to 0.9.2 is inside the range of GHSA-6hqr-phm3-chpf. A
-matched pair of any of them is affected, and a mismatched pair is not judged at
-all. Move to **0.9.3** or later, which carries both repairs and pins both halves
+of GHSA-f9xw-89gp-x52p, and so is 0.9.1: a matched pair of any of them is
+affected, and a mismatched pair is not judged at all. Every release of the
+command up to 0.9.3 is inside the range of GHSA-6hqr-phm3-chpf as well.
+Move to **0.9.4** or later, which carries both repairs and pins both halves
 exactly. Do not get there by upgrading the reader on its own — the
 two halves ship under one number and the tool refuses to judge a pair that
 disagrees with itself, which is exit `3` rather than a verdict about your

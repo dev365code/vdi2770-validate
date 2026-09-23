@@ -2198,6 +2198,16 @@ LISTING_BUDGET_ROWS = [
      "times that name: ten containers under a 65,531-character name printed "
      "68 MB of JSON from a 144 KB archive"),
 
+    ("pages/a-corrected-fix-names-the-release-that-completed-it",
+     "CHANGELOG.md",
+     "now reaches up to 0.9.3 and is fixed in 0.9.4.)*",
+     "now reaches up to 0.9.3.)*",
+     ["tests/test_an_advisory_and_its_release_name_each_other.py::"
+      "test_each_advisory_is_cited_by_the_release_that_fixes_it"],
+     "0.9.3 cited the advisory as fixed there; only its appended correction "
+     "naming 0.9.4 lets the page name 0.9.4 without naming a release later than "
+     "the one that shipped the repair"),
+
     ("report/the-budget-charges-json-as-printed",
      "packages/vdi2770/src/vdi2770/validate/model.py",
      '    return len(json.dumps(s, ensure_ascii=False).encode("utf-8", "surrogatepass")) - 2',

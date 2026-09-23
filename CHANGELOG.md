@@ -32,11 +32,17 @@ of them narrowed, one of them made to admit more.
   of JSON and as much again of text — the harness is
   `tests/test_a_long_name_does_not_multiply_the_report.py`. It is
   [GHSA-6hqr-phm3-chpf](https://github.com/dev365code/vdi2770-validate/security/advisories/GHSA-6hqr-phm3-chpf),
-  reaching `vdi2770-validate` from 0.1.0 and `vdi2770` from 0.8.0 up to 0.9.2.
+  reaching `vdi2770-validate` from 0.1.0 and `vdi2770` from 0.8.0 up to 0.9.3.
   `M13`, new in this release, reports one finding per identifier and names up
   to five containers by path in it; it is held to the same budget. The 0.9.3
   section below describes the rest, and a delivery's verdict is unchanged
   either way.
+
+- **The repair that went out as 0.9.4 is in this release too.** The size budget
+  0.9.3 put on each rule's listing counted characters as stored, and a name
+  the report spells out printed up to about thirteen times it; each finding is
+  charged what it prints now. It completes the same advisory, which now reaches
+  up to 0.9.3; the 0.9.4 section below describes it.
 
 - **One finding stopped growing with whatever the sender wrote — and the part
   of it you need stopped being thrown away.** The report lists at most a hundred
@@ -181,7 +187,7 @@ and no line of the guideline, which is why it is a warning and not an error.
 
 **The page says how releases are numbered.** What 0.x means here, what a minor
 release moves, what a patch does and does not promise, how to pin, and what 1.0
-will mean. Three of this package's six patch releases changed what a pipeline
+will mean. Three of this package's seven patch releases changed what a pipeline
 sees, and the section names them rather than promising that a patch cannot.
 
 **`Z13` names the folder it did not open.** A delivery whose documents arrived
@@ -250,6 +256,38 @@ is the promise that actually holds. The list now says that: verdicts move across
 releases, never quietly, and the CHANGELOG names each one.
 
 
+## 0.9.4 — 2026-09-24
+
+Who should take this release: anyone on 0.9.3, or on any earlier release, who
+checks deliveries from sources they do not control. This release carries one
+repair; its only other change is that the page PyPI shows for
+`vdi2770-validate` names the engine it asks for as 0.9.4, where it had gone on
+saying 0.9.1.
+
+**The size budget 0.9.3 put on each rule's listing counted characters as
+stored, and the report spells some characters out.** JSON writes a control
+character as six characters; the page writes one as six and an invisible
+symbol as ten. So a container name made of them printed several times what the
+listing held. Measured with the repository's own builder
+(`tests/test_a_long_name_does_not_multiply_the_report.py`), ten document
+containers under one name of about 65,530 bytes, in a 143 KB archive, printed
+2.06 MB of JSON with the name spelled in `M`, 12.2 MB of JSON and of text with
+it spelled in U+0001, and 13.0 MB of text with it spelled in U+E0041. The report
+stayed bounded -- it did not grow with the containers -- but the bound was six
+to thirteen times the one 0.9.3 described.
+
+Each finding is now charged the bytes it prints in whichever shape prints more,
+with a flat allowance for the keys, the rule's fields and the basis line that
+covers every rule in the catalogue. The same three archives print 1.92, 1.97
+and 0.86 MB of JSON and 1.91, 1.97 and 2.14 MB of text.
+
+Every container in the sample corpus, and every fixture the test suite builds,
+reports the same findings with the same exit code as in 0.9.3.
+
+Security: [GHSA-6hqr-phm3-chpf](https://github.com/dev365code/vdi2770-validate/security/advisories/GHSA-6hqr-phm3-chpf), which now
+reaches `vdi2770-validate` from 0.1.0 and `vdi2770` from 0.8.0 up to 0.9.3;
+fixed in 0.9.4.
+
 ## 0.9.3 — 2026-09-24
 
 Who should take this release: anyone who checks deliveries from sources they do
@@ -289,6 +327,8 @@ key `listingStopped`, empty for all of them.
 Security: [GHSA-6hqr-phm3-chpf](https://github.com/dev365code/vdi2770-validate/security/advisories/GHSA-6hqr-phm3-chpf), affecting
 `vdi2770-validate` from 0.1.0 and `vdi2770` from 0.8.0, up to 0.9.2; fixed in
 0.9.3.
+
+*(Correction 2026-09-24: the budget described above counted characters as stored, and a name the report spells out printed up to about thirteen times it; 0.9.4 counts what is printed, and GHSA-6hqr-phm3-chpf now reaches up to 0.9.3 and is fixed in 0.9.4.)*
 
 ## 0.9.2 — 2026-09-23
 

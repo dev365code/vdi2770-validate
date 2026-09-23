@@ -178,7 +178,14 @@ def test_each_advisory_is_cited_by_the_release_that_fixes_it():
         # stopped being able to fail, and the page could name a release after
         # the one that shipped the fix. A reader on the patch release then
         # reads that they are still exposed.
-        earliest = min(where, key=as_number)
+        # Except a section whose own claim was corrected: an appended line in it
+        # naming the release that completed the fix. 0.9.3 cited
+        # GHSA-6hqr-phm3-chpf as fixed there, bounding by the wrong measure, and
+        # 0.9.4 completed it; the page names 0.9.4, and 0.9.3's section says why.
+        claims = {v for v in where if not re.search(
+            rf"^\*\(Correct.*\bfixed in {re.escape(fixed_in)}\b.*\)\*$",
+            changelog.get(v, ""), re.M)}
+        earliest = min(claims or where, key=as_number)
         assert fixed_in == earliest, (
             f"{advisory} says it is fixed in {fixed_in}, and the earliest "
             f"release whose section cites it is {earliest}; the page names a "

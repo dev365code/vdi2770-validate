@@ -127,7 +127,7 @@ flowchart LR
 | Terminal | build scripts, people | `vdi2770-validate check handover.zip` |
 | Python | your own tooling | `import vdi2770` / `import vdi2770_validate` |
 | Single file | closed networks, approvals | `python vdi2770.pyz check handover.zip` |
-| GitHub Action | a workflow that blocks a bad delivery | `uses: dev365code/vdi2770-validate@v0.9.3` |
+| GitHub Action | a workflow that blocks a bad delivery | `uses: dev365code/vdi2770-validate@v0.9.4` |
 
 No route to a package index? No pip, no virtual environment, no rights to make
 one? Carry **one file** in instead. It still needs a Python — that is the one
@@ -151,7 +151,7 @@ Exit codes and a versioned JSON report make it a CI gate in one line.
 ### In a workflow
 
 ```yaml
-- uses: dev365code/vdi2770-validate@v0.9.3
+- uses: dev365code/vdi2770-validate@v0.9.4
   with:
     paths: handover.zip nameplate.zip
 ```
@@ -169,7 +169,7 @@ keeps the code it has now: `2` when nothing in the run could be read, `1` beside
 a path that could. A mistyped command line keeps `64`.
 
 ```yaml
-- uses: dev365code/vdi2770-validate@v0.9.3
+- uses: dev365code/vdi2770-validate@v0.9.4
   id: vdi
   with:
     paths: handover.zip
@@ -186,7 +186,7 @@ on to whatever reads the number; with the default you would add
 | Input | What it is |
 |---|---|
 | `paths` | the containers to check, separated by spaces |
-| `version` | which release to install. Left empty it is the ref you pinned — `@v0.9.3` installs 0.9.3 — falling back to the version the action's own checkout publishes, so `@main` may name a version not on the index yet. **The rules travel with the engine**: an older `version` is an older rule set and may return a different verdict. Four releases cannot be asked for at all: 0.8.0, 0.8.1, 0.8.2 and 0.9.0 name their engine with a floor, so installing one brings a newer engine beside it and the tool refuses to judge a pair that disagrees with itself (exit 3). Ask for 0.9.3 or later: every earlier release is inside the range of GHSA-6hqr-phm3-chpf |
+| `version` | which release to install. Left empty it is the ref you pinned — `@v0.9.4` installs 0.9.4 — falling back to the version the action's own checkout publishes, so `@main` may name a version not on the index yet. **The rules travel with the engine**: an older `version` is an older rule set and may return a different verdict. Four releases cannot be asked for at all: 0.8.0, 0.8.1, 0.8.2 and 0.9.0 name their engine with a floor, so installing one brings a newer engine beside it and the tool refuses to judge a pair that disagrees with itself (exit 3). Ask for 0.9.4 or later: every earlier release is inside the range of GHSA-6hqr-phm3-chpf |
 | `pyz` | a `vdi2770.pyz` you already have. Given, **this action installs nothing and fetches nothing** |
 | `sha256` | the hash `pyz` must have. For a file carried into a closed network; the default path does not need it, because `pip` checks the index's own hashes |
 | `args` | anything else for `check`, such as `--json` |
@@ -421,7 +421,7 @@ with it, says so in a paragraph addressed to whoever gates a build on the
 number. That is the paragraph to read before upgrading; it is the one place this
 project undertakes to be exhaustive.
 
-**A patch release repairs — and three of the six patch releases of this package
+**A patch release repairs — and three of the seven patch releases of this package
 changed what a pipeline sees:**
 
 - `0.5.1` asked for a fixed reader instead of merely permitting one. Until it,
@@ -433,11 +433,13 @@ changed what a pipeline sees:**
 - `0.8.2` turned a PDF it had silently skipped into an `X5` error, so a
   container that came back clean can come back with a finding against that file.
 
-The other three moved no verdict at all: `0.9.1`; `0.9.2`, which repaired what
+The other four moved no verdict at all: `0.9.1`; `0.9.2`, which repaired what
 a delivery costs to check and left every finding, every location and every exit
-code exactly where they were; and `0.9.3`, which bounded how large a report can
-grow. Every count and exit code stayed where it was, and the JSON gained one
-key, `listingStopped`, empty unless a rule's listing reached its size budget.
+code exactly where they were; `0.9.3`, which bounded how large a report can
+grow, leaving every summary count and exit code where it was and adding one
+key to the JSON, `listingStopped`, empty unless a rule's listing reached its
+size budget; and `0.9.4`, which counts that budget in what a report prints
+rather than in the characters it stores.
 A patch is a smaller promise than a minor release;
 it is not a promise that nothing your pipeline reads can change.
 
@@ -445,22 +447,22 @@ it is not a promise that nothing your pipeline reads can change.
 verdict your pipeline has not seen, and the point of a validator is that the
 answer it gives today is the answer it gave when you signed off on it. From
 0.9.1 this package names the engine it was built with exactly, so
-`vdi2770-validate==0.9.3` installs one matching pair.
+`vdi2770-validate==0.9.4` installs one matching pair.
 
 Four releases cannot be pinned that way: 0.8.0, 0.8.1, 0.8.2 and 0.9.0 name
 their engine with a floor, and a floor stops holding the moment a newer engine
-exists. Move to 0.9.3 or later, which pins both halves exactly — and pinning
+exists. Move to 0.9.4 or later, which pins both halves exactly — and pinning
 one of those four by both names is not a way to stay put, because every release
 from 0.8.0 to 0.9.1 is inside the range of GHSA-f9xw-89gp-x52p:
 
 ```
-pip install "vdi2770-validate==0.9.3"
+pip install "vdi2770-validate==0.9.4"
 ```
 
-Move there from any release, not only those four. Every release up to 0.9.2
-is inside GHSA-6hqr-phm3-chpf, and every one but 0.9.2 is inside a second
+Move there from any release, not only those four. Every release up to 0.9.3
+is inside GHSA-6hqr-phm3-chpf, and every one before 0.9.2 is inside a second
 advisory as well — GHSA-xp97-jcmj-h45f reaches every release up to 0.8.0, and
-GHSA-f9xw-89gp-x52p every release from 0.8.0 to 0.9.1 — so 0.9.3 is the first
+GHSA-f9xw-89gp-x52p every release from 0.8.0 to 0.9.1 — so 0.9.4 is the first
 release outside all three. The pin runs one way: the engine does not
 name this package back, so upgrading the engine alone beside an older command
 leaves a mismatched pair, and a command from 0.8.0 on refuses that pair rather
