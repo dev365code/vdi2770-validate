@@ -2060,7 +2060,77 @@ TABLE += UPGRADE_BODY_ROWS
 
 TABLE += LOCATION_ROWS
 
+
+#: Every row here binds a regression test to the defect it was written for.
+#: That is not only so `make mutations` proves each one can fail. It is so
+#: `test_every_row_names_a_test_that_exists` notices if one disappears. A test
+#: that is deleted cannot fail, and three of these were deleted from `main`
+#: within an hour of being written -- an edit replacing one test by cutting up
+#: to the next definition took four others with it -- and every gate stayed
+#: green, because none of them was named by a row. The one gate that watches
+#: for exactly that only watches what it is shown.
+DELIVERY_REGRESSION_ROWS = [
+    ("rules/every-container-that-takes-part-is-named",
+     "packages/vdi2770/src/vdi2770/validate/rules/delivery.py",
+     '        where = ", ".join(sorted({c.path or "the delivery" for _k, _o, c in claims}))',
+     '        where = ", ".join(sorted({c.path or "the delivery" for _k, _o, c in claims})[:MOST_LISTED])',
+     ["tests/test_a_contradiction_costs_no_more_than_the_claims.py::test_every_container_that_takes_part_is_named"],
+     "the containers are where a reader has to go and look, and past the bound "
+     "they appeared in no field of the report at all"),
+
+    ("rules/the-count-sits-outside-the-list-it-counts",
+     "packages/vdi2770/src/vdi2770/validate/rules/delivery.py",
+     "        shown, in_all = _first_few(sorted(kinds))",
+     "        shown, in_all = (lambda s, c: (s + c, ''))(*_first_few(sorted(kinds)))",
+     ["tests/test_a_contradiction_costs_no_more_than_the_claims.py::test_the_count_sits_outside_the_list_it_counts"],
+     "a count written into a comma-separated run is read back as one of its "
+     "items, and a kind nobody declared appears in the report"),
+
+    ("rules/one-finding-does-not-grow-with-what-the-sender-wrote",
+     "packages/vdi2770/src/vdi2770/validate/rules/delivery.py",
+     "        shown, in_all = _first_few(sorted(kinds))",
+     "        shown, in_all = ', '.join(sorted(kinds)), ''",
+     ["tests/test_a_contradiction_costs_no_more_than_the_claims.py::test_one_finding_does_not_grow_without_bound"],
+     "the per-rule cap bounds how many findings there are, not how large one "
+     "is, and this rule makes one per identifier"),
+
+    ("rules/an-identifier-two-documents-declare-stays-declared",
+     "packages/vdi2770/src/vdi2770/validate/rules/delivery.py",
+     "        if declared.get(identity, 0) - (1 if identity in own[id(doc)] else 0) > 0:",
+     "        if identity in ({k for k in declared} - own[id(doc)]):",
+     ["tests/test_a_delivery_answers_who_declares_what_once.py::test_an_identifier_two_documents_declare_is_still_declared_by_the_other"],
+     "subtracting one document's identifiers from a set drops an identifier "
+     "another document still declares, and a resolved relationship is called "
+     "dangling"),
+
+    ("rules/the-domain-is-compared-without-case",
+     "packages/vdi2770/src/vdi2770/validate/rules/delivery.py",
+     "            document_id.domain_id.strip().casefold())",
+     "            document_id.domain_id.strip())",
+     ["tests/test_a_delivery_answers_who_declares_what_once.py::test_the_domain_is_compared_the_way_the_reference_compares_it"],
+     "a delivery declaring `BSP-OEM` and referring to `bsp-oem` is told it "
+     "does not carry a document it carries"),
+
+    ("rules/an-identifier-is-grouped-without-case",
+     "packages/vdi2770/src/vdi2770/validate/rules/delivery.py",
+     "            seen.setdefault(obj.id.strip().casefold(), []).append(",
+     "            seen.setdefault(obj.id.strip(), []).append(",
+     ["tests/test_one_identifier_is_one_kind_of_thing.py::test_an_identifier_spelled_in_another_case_is_one_identifier"],
+     "one identifier in two cases becomes two, and a contradiction a sender "
+     "can silence with one keystroke goes unreported"),
+
+    ("rules/a-register-is-compared-without-case",
+     "packages/vdi2770/src/vdi2770/validate/rules/delivery.py",
+     '    return " ".join(str(ref_type or "").split()).casefold()',
+     '    return " ".join(str(ref_type or "").split())',
+     ["tests/test_one_identifier_is_one_kind_of_thing.py::test_a_register_spelled_in_another_case_is_one_register"],
+     "`serialNumber` on one side and `serialnumber` on the other read as two "
+     "registers, and the rule is switched off by capitalising one of them"),
+]
+
 TABLE += GUARDED_ROWS
+
+TABLE += DELIVERY_REGRESSION_ROWS
 
 TABLE += WORKFLOW_ROWS
 
