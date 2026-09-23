@@ -90,8 +90,10 @@ not settle which reader you have: 0.8.0, 0.8.1, 0.8.2 and 0.9.0 ask for their
 engine with a floor rather than a pin, and a floor stops holding the moment a
 newer engine exists. 0.9.1 and later pin the pair exactly.
 
-If that check tells you the reader is the one you want and the command is one of
-those four, do not upgrade the reader on its own: the two halves ship under one
-number and the tool refuses to judge a pair that disagrees with itself, which is
-exit `3` rather than a verdict about your delivery. Pin both names, or move to
-0.9.1 or later, which pins them for you.
+Every one of those four is inside the range of GHSA-f9xw-89gp-x52p, and so is
+0.9.1: a matched pair of any of them is affected, and a mismatched pair is not
+judged at all. Move to **0.9.2** or later, which carries that repair and pins
+both halves exactly. Do not get there by upgrading the reader on its own — the
+two halves ship under one number and the tool refuses to judge a pair that
+disagrees with itself, which is exit `3` rather than a verdict about your
+delivery.

@@ -444,10 +444,12 @@ answer it gives today is the answer it gave when you signed off on it. From
 
 Four releases cannot be pinned that way: 0.8.0, 0.8.1, 0.8.2 and 0.9.0 name
 their engine with a floor, and a floor stops holding the moment a newer engine
-exists. Pin both names, or move to 0.9.1 or later:
+exists. Move to 0.9.2 or later, which pins both halves exactly — and pinning
+one of those four by both names is not a way to stay put, because every release
+from 0.8.0 to 0.9.1 is inside the range of GHSA-f9xw-89gp-x52p:
 
 ```
-pip install "vdi2770-validate==0.9.0" "vdi2770==0.9.0"
+pip install "vdi2770-validate==0.9.2"
 ```
 
 Do not do that for 0.7.0 or earlier — those releases already name the engine
