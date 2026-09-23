@@ -452,11 +452,13 @@ from 0.8.0 to 0.9.1 is inside the range of GHSA-f9xw-89gp-x52p:
 pip install "vdi2770-validate==0.9.2"
 ```
 
-Do not do that for 0.7.0 or earlier — those releases already name the engine
-they were built with, and asking for a different one contradicts them. And note
-the pin only runs in this direction: the engine does not name this package back,
-so `pip install vdi2770==0.9.1` beside an older command is still a mismatched
-pair, and the tool refuses it rather than judging (exit `3`).
+Move there from any release, not only those four. Every release up to 0.9.1
+is inside at least one advisory — GHSA-xp97-jcmj-h45f reaches every release up
+to 0.8.0, and GHSA-f9xw-89gp-x52p every release from 0.8.0 to 0.9.1 — so 0.9.2
+is the first release outside both. The pin runs one way: the engine does not
+name this package back, so upgrading the engine alone beside an older command
+leaves a mismatched pair, and a command from 0.8.0 on refuses that pair rather
+than judging with it (exit `3`).
 
 **1.0 means one thing that is not true yet.** This page will say which parts of
 VDI 2770 are checked and to what depth, so that "checks VDI 2770 containers"
