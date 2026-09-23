@@ -364,9 +364,10 @@ path names the new modules, and no aliasing carries that across.
 
 ### What changed in 0.8, and what it means for an installation you already have
 
-The readers and the rules used to be two distributions that had to match, and
-`vdi2770-validate` named the reader with an exact pin so the pair could not be
-half-moved. They are one distribution now. `vdi2770-validate` is the old import
+The readers and the rules used to be two distributions that had to match. From
+0.2.0 to 0.6.0 `vdi2770-validate` asked for the reader with a range, which let
+the pair be half-moved, and 0.7.0 pinned it exactly. They are one distribution
+now. `vdi2770-validate` is the old import
 name kept working: two lines that make it the same object as `vdi2770.validate`,
 asking for `vdi2770[validate]==0.10.0` — its own version, exactly. A floor
 would stop an older engine and let a newer one install beside it, and halves
