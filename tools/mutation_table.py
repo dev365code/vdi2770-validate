@@ -275,6 +275,16 @@ TABLE = [
      "that grew it: that number is what tells a reader whether their declared "
      "type is judged at all"),
 
+    ("gates/an-advisory-link-points-where-it-reads",
+     "SECURITY.md",
+     "advisories/GHSA-xp97-jcmj-h45f)",
+     "advisories/GHSA-xp97-jcmj-h45fq)",
+     ["tests/test_an_advisory_and_its_release_name_each_other.py::"
+      "test_each_advisory_is_cited_by_the_release_that_fixes_it"],
+     "the identifier pattern was unanchored and the ids were gathered as a set, "
+     "so a typo in one of a link's two copies of the id left the set correct "
+     "and the published link pointing at nothing"),
+
     ("reader/the-xml-tree-has-a-ceiling",
      "packages/vdi2770/src/vdi2770/xmlread.py",
      "        if built > MAX_ELEMENTS:",

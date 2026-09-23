@@ -38,7 +38,9 @@ that fixes it.** The date is where the practice began rather than where the
 fixes did: the first advisory was written for 0.8.1, and every advisory this
 repository has is listed here. The release that fixes one cites its identifier
 in that release's CHANGELOG section, so the two pages can be read against each
-other.
+other. Whether the advisory is really published is checked when the release
+goes out: nothing in this repository reaches the network to ask, which is the
+same promise the table above makes.
 
 - [GHSA-xp97-jcmj-h45f](https://github.com/dev365code/vdi2770-validate/security/advisories/GHSA-xp97-jcmj-h45f):
   a container member that lied about its size, or used a compression method
@@ -51,8 +53,20 @@ nothing to write one for.** Much of 0.5.0, 0.6.0 and 0.7.0 is hardening against
 hostile input: a scan of a malformed file whose cost squared with its size,
 decompression bounded per member and never across a whole read, every nested
 container's decompressed bytes held at once where one buffer per level of
-nesting would do, a spent budget that silenced a path-traversal member. Each
-was found here, against this project's own corpus and fixtures, and each is
-described in the CHANGELOG section of the release that carries it. **If you pin
-a version below 0.8.0, those sections are the list** — read them where you
-would otherwise be looking for an advisory.
+nesting would do, an archive holding two spellings of one name judged by
+whichever the unzip tool wrote last, a spent budget that silenced a
+path-traversal member. Each was found in this repository's own testing rather
+than reported from outside, and each is described in the CHANGELOG section that
+announces it. **If you pin a version below 0.8.0, those sections are the list**
+— read them where you would otherwise be looking for an advisory.
+
+**Announcing a fix and delivering it are not always the same release, and one
+of these is the example.** 0.5.0 announced the scan fix and did not deliver it:
+it asked for the repaired reader with a range that *permitted* the unrepaired
+one, so installing `vdi2770-validate==0.5.0` into a clean environment
+reproduced the very hang that section describes a fix for. **0.5.1** is the
+release that requires the repaired reader. The defect itself goes back further
+than the section that announces the fix — 0.5.0 says it arrived in 0.4.0. So
+read the section, and then check what you actually installed: before 0.8.0 the
+reader is a separate distribution from the command, and `pip show vdi2770`
+names it.

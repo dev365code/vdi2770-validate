@@ -25,10 +25,13 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 
-#: GitHub's identifier shape. Four-character groups, lowercase base32 without
-#: the ambiguous letters -- pinned here so a typo is a mismatch rather than a
-#: second "id" that happens to be cited nowhere.
-GHSA = re.compile(r"GHSA-[0-9a-hj-km-np-z]{4}-[0-9a-hj-km-np-z]{4}-[0-9a-hj-km-np-z]{4}")
+#: GitHub's identifier shape: three four-character groups. The bounds matter
+#: more than the alphabet. Unanchored, this matched the correct id *inside* a
+#: wrong one -- `GHSA-xp97-jcmj-h45f9` and `XGHSA-xp97-jcmj-h45f` both came back
+#: as the right identifier, so a page could carry a link that 404s and every
+#: test here would stay green. The alphabet is the one GitHub actually emits.
+GHSA = re.compile(r"(?<![\w-])GHSA-(?:[23456789cfghjmpqrvwx]{4}-){2}"
+                  r"[23456789cfghjmpqrvwx]{4}(?![\w-])")
 
 #: Where the promise starts. Below this the CHANGELOG is the record, and the
 #: Advisories section says so in prose rather than leaving a reader to infer
@@ -60,18 +63,50 @@ def advisories_section():
 
 
 def listed_advisories():
-    """Advisory id -> the release the page says fixes it."""
+    """Advisory id -> the release the page says fixes it, and the range it reaches.
+
+    An entry ends where the next one begins *or* where the list does. Splitting
+    only on the next bullet let the last entry's text run to the end of the
+    section, so `fixed in 0.8.1` in a paragraph fifteen lines below was read as
+    that entry naming its release -- the entry could stop naming one and the
+    parser would go on reporting that it did.
+    """
     out = {}
-    for para in re.split(r"\n(?=- )", advisories_section()):
+    section = advisories_section()
+    listing = re.match(r"(?s).*?(^- .*?)(?=\n\n\S|\Z)", section, re.M)
+    listing = listing.group(1) if listing else ""
+    for para in re.split(r"\n(?=- )", listing):
         ids = set(GHSA.findall(para))
         if not ids:
             continue
         assert len(ids) == 1, f"one entry names more than one advisory: {sorted(ids)}"
+        advisory = ids.pop()
+        # The entry is a link, and a link has the identifier twice: once as the
+        # text a reader sees and once in the address they land on. Collecting
+        # ids as a *set* cannot see a typo in one of the two -- the other copy
+        # still matches, the set is still right, and the link still 404s. So
+        # the two copies are compared to each other, not only to the changelog.
+        link = re.search(r"\[([^\]]+)\]\((https?://[^)]+)\)", " ".join(para.split()))
+        if link:
+            shown, address = link.group(1), link.group(2)
+            assert shown.strip() == advisory, (
+                f"the entry's link reads {shown.strip()!r} and the identifier in "
+                f"it is {advisory}")
+            assert address.rstrip("/").endswith(advisory), (
+                f"the entry for {advisory} links to {address}, which does not "
+                f"end at that advisory")
         fixed = re.search(r"fixed in (\d+\.\d+\.\d+)", para)
         assert fixed, (
-            f"the entry for {ids.pop()} does not say which release fixes it; the "
+            f"the entry for {advisory} does not say which release fixes it; the "
             f"promise above it undertakes to name that release")
-        out[ids.pop()] = fixed.group(1)
+        # The promise has two halves -- "naming the versions it reaches **and**
+        # the release that fixes it" -- and only the second was checked, so an
+        # entry could drop the range it reaches and stay green.
+        reaches = re.search(r"(?:up to|through|before) (\d+\.\d+\.\d+)", para)
+        assert reaches, (
+            f"the entry for {advisory} does not say which versions it reaches; "
+            f"the promise above it undertakes to name those too")
+        out[advisory] = fixed.group(1)
     return out
 
 
@@ -130,18 +165,49 @@ def test_the_promise_carries_the_date_it_was_narrowed_to():
     advisory on this repository" -- true of 0.8.1 and of nothing before it.
     """
     section = advisories_section()
-    assert "From 0.8.0 on" in section, (
+    promise = re.search(r"(?s)\*\*(.*?a security fix that ships in a release.*?)\*\*",
+                        section, re.I)
+    assert promise, (
+        "the Advisories section no longer opens with the bolded promise this "
+        "file is here to keep; reword it and this gate stops reading anything")
+    # Not `in section`. The first version of this searched the whole section,
+    # so undating the promise and putting the phrase in any other sentence --
+    # a sentence about the CHANGELOG, say -- left it green. The date has to be
+    # inside the promise it dates.
+    assert "From 0.8.0 on" in " ".join(promise.group(1).split()), (
         "the advisory promise no longer says where it starts; undated, it claims "
         "0.5.0, 0.6.0 and 0.7.0 too, and those have no advisories")
-    assert "A security fix that shipped in a release has" not in section, (
-        "the undated promise is back on the page")
 
 
 def test_the_page_says_what_is_below_the_date():
     """A date on the promise is only honest if the reader is told what the date
     excludes; otherwise the narrowing reads as there having been nothing."""
     section = advisories_section()
-    for release in ("0.5.0", "0.6.0", "0.7.0"):
+    for release in ("0.5.0", "0.5.1", "0.6.0", "0.7.0"):
         assert release in section, (
-            f"the section names no hardening in {release}, so a reader pinning "
-            f"below 0.8.0 is told only that there are no advisories")
+            f"the section does not name {release}, so a reader pinning below "
+            f"0.8.0 is told only that there are no advisories")
+    # 0.5.1 is on that list for a reason that is easy to lose: 0.5.0 *describes*
+    # the scan fix and did not deliver it -- it asked for the fixed reader with
+    # a range that permitted the unfixed one -- so a reader who pins 0.5.0 and
+    # does what this page says (read that section) concludes they are safe and
+    # is not. The page has to say which release delivers, not only which
+    # describes.
+    changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+    assert "0.5.0 did not deliver its own fix" in changelog, (
+        "the 0.5.1 section no longer says that 0.5.0 did not deliver its fix, "
+        "and the Advisories section sends readers there for exactly that")
+    # And the page has to send them somewhere. Replacing this whole paragraph
+    # with "there are no advisories for 0.5.0, 0.5.1, 0.6.0 or 0.7.0" satisfies
+    # every assertion above -- it names all four -- and is the narrowing read
+    # as though nothing happened, which is what this test is against.
+    #
+    # Saying candidly what is below the date is not something a gate can check.
+    # Pointing a reader at the record is, and a denial that also points at the
+    # record has stopped being a bare denial.
+    listed = section.rfind("- [")
+    assert listed != -1, "the Advisories section lists no advisory at all"
+    below = section[listed:]
+    assert "CHANGELOG" in below, (
+        "the section says there are no advisories below 0.8.0 and does not say "
+        "where the record of those fixes is; a reader is left with a denial")

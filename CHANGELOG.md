@@ -102,9 +102,16 @@ bounded per member and never across a whole read, a spent budget that silenced
 a path-traversal member. The promise now starts where the practice did, from
 0.8.0 on, and the section says what is below it rather than leaving the
 narrowing to read as though nothing happened down there: if you pin a version
-below 0.8.0, those CHANGELOG sections are the list. A gate holds the two pages
-together — an advisory's identifier is cited in the section of the release that
-fixes it, and the identifiers on the two pages are the same set.
+below 0.8.0, those CHANGELOG sections are the list. It names 0.5.1 too, because
+0.5.0 *announced* a fix that its own dependency range did not *deliver* — so
+reading the section a version points you at is not the same as having the fix,
+and the page now says how to check which you have.
+
+A gate holds the two pages to each other: an advisory's identifier is cited in
+the section of the release that fixes it, the entry names the versions it
+reaches as well as the release that fixes them, and the identifiers on the two
+pages are one set. What no gate can do is notice that a fix nobody called a
+security fix was one; that judgement is made when the release is written.
 
 **A page said this tool does not check a page count, when the schema already
 refuses a bad one.** `docs/divergences.md` recorded `numberOfPages` among the
