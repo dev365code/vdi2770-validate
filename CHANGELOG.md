@@ -56,7 +56,9 @@ of them narrowed, one of them made to admit more.
   one in full fixed that and broke something worse, because `MAX_CONTAINERS`
   limits how many containers there are and not how long their paths are, and a
   long name on a container holding others is repeated in every one of their
-  paths — a 0.32 MB archive made one finding 200 MB. Both lists are recovered
+  paths, so one finding grew with the number of containers times the length of
+  that name: forty containers under a 2,000-character name made it 81,177
+  characters, and it is 10,270 now. Both lists are recovered
   the same way, by searching the delivery for the identifier the sentence names;
   what a reader is owed is the count, and the count is exact.
 

@@ -430,9 +430,9 @@ def test_a_long_name_is_not_repeated_once_per_container(tmp_path):
     """The list of containers is bounded by count *and* so by size.
 
     Naming every container in full, a long name on the container that holds
-    them is paid for once in the archive and then printed once per child: a
-    0.32 MB archive made one finding 200 MB. Bounded to a few paths, the same
-    input costs a few times the name, not forty.
+    them is paid for once in the archive and then printed once per child: this
+    input made one finding 81,177 characters. Bounded to a few paths, the same
+    input costs a few times the name, not forty -- 10,270 characters.
     """
     from vdi2770_validate.runner import check_file
 

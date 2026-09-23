@@ -2129,7 +2129,8 @@ DELIVERY_REGRESSION_ROWS = [
       "test_a_long_name_is_not_repeated_once_per_container"],
      "MAX_CONTAINERS limits how many containers there are, not how long their "
      "paths are; listed in full, a long name on a container holding others is "
-     "printed once per child, and a 0.32 MB archive made one finding 200 MB"),
+     "printed once per child, and forty children under a 2,000-character name "
+     "made one finding 81,177 characters"),
 
     ("rules/a-register-is-compared-without-case",
      "packages/vdi2770/src/vdi2770/validate/rules/delivery.py",

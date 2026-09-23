@@ -172,9 +172,10 @@ def different_registers(a, b) -> bool:
 #: same way -- by searching the delivery for the identifier the sentence names
 #: -- and the full list had no bound on its *size*: `MAX_CONTAINERS` limits how
 #: many containers there are, not how long their paths are, and a long name on a
-#: container that holds others is repeated in every one of their paths. A
-#: 0.32 MB archive made one finding 200 MB. What was wrong with the first
-#: truncation was that it was silent. The count now says how many there were.
+#: container that holds others is repeated in every one of their paths. Forty
+#: containers under a 2,000-character name made one detail 81,177 characters;
+#: listing five makes it 10,270. What was wrong with the first truncation was
+#: that it was silent. The count now says how many there were.
 MOST_LISTED = 5
 
 
