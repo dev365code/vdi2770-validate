@@ -35,6 +35,14 @@ confusing message". Those are welcome, but as ordinary issues.
 A security fix that shipped in a release has a GitHub security advisory on
 this repository, naming the versions it reaches and the release that fixes it.
 
+- [GHSA-3pfq-57fx-w4q5](https://github.com/dev365code/vdi2770-validate/security/advisories/GHSA-3pfq-57fx-w4q5):
+  a value the sender wrote -- a class id, a language, the identifier a
+  relationship names, or the name of the file itself -- could start a line of
+  its own in the text report and put a summary and a verdict this tool did not
+  write above the real ones; the exit code and the JSON were not affected.
+  `vdi2770-validate` from 0.1.0 and `vdi2770` from 0.8.0, up to 0.9.4;
+  fixed in 0.9.5.
+
 - [GHSA-6hqr-phm3-chpf](https://github.com/dev365code/vdi2770-validate/security/advisories/GHSA-6hqr-phm3-chpf):
   every finding printed the path of the container it was in, a container
   holding others repeats its name in every one of their paths, and the listing

@@ -42,6 +42,10 @@ Security: [GHSA-6hqr-phm3-chpf](https://github.com/dev365code/vdi2770-validate/s
 reaches `vdi2770-validate` from 0.1.0 and `vdi2770` from 0.8.0 up to 0.9.4;
 fixed in 0.9.5.
 
+Security: [GHSA-3pfq-57fx-w4q5](https://github.com/dev365code/vdi2770-validate/security/advisories/GHSA-3pfq-57fx-w4q5), for the text
+report, reaching `vdi2770-validate` from 0.1.0 and `vdi2770` from 0.8.0
+up to 0.9.4; fixed in 0.9.5.
+
 ## 0.9.4 — 2026-09-24
 
 Who should take this release: anyone on 0.9.3, or on any earlier release, who
