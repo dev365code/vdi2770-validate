@@ -2152,9 +2152,8 @@ LISTING_BUDGET_ROWS = [
      "        if False:\n",
      ["tests/test_a_long_name_does_not_multiply_the_report.py::test_what_a_report_prints_is_bounded_by_the_budget",
       "tests/test_a_long_name_does_not_multiply_the_report.py::test_what_a_report_keeps_is_within_the_budget_for_every_rule",
-      "tests/test_a_long_name_does_not_multiply_the_report.py::test_the_peak_does_not_grow_with_the_length_of_the_name",
-      "tests/test_a_long_name_does_not_multiply_the_report.py::test_what_m13_keeps_is_within_the_same_budget",
-      "tests/test_a_long_name_does_not_multiply_the_report.py::test_the_peak_of_m13_does_not_grow_with_the_length_of_the_name"],
+      "tests/test_a_long_name_does_not_multiply_the_report.py::test_a_stopped_listing_holds_its_budget_and_no_more",
+      "tests/test_a_long_name_does_not_multiply_the_report.py::test_m13_holds_the_same_budget_and_no_more"],
      "a hundred findings per rule per container, each carrying a container "
      "path that repeats a name the sender chose, grew with the containers "
      "times that name: ten containers under a 65,531-character name printed "

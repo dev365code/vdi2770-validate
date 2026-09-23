@@ -57,7 +57,7 @@ def _under_a_long_name(directory, containers, name_len, empties):
     assert text.count(ANCHOR) == 1, "the sample no longer declares the anchor once"
     declared = text.replace(
         ANCHOR, ANCHOR + '<DocumentId DomainId="BSP-OEM"></DocumentId>' * empties)
-    assert declared != text
+    assert (declared != text) == bool(empties)
 
     def child():
         b = io.BytesIO()
@@ -113,7 +113,13 @@ def test_what_a_report_keeps_is_within_the_budget_for_every_rule(tmp_path):
 
 
 def _peak_bytes(path, runs=3):
-    """Median peak allocation for checking `path` and printing both shapes."""
+    """Median peak allocation for checking `path` and printing both shapes.
+
+    Not asserted on. An allocation peak moved by about a megabyte between two
+    runs of one interpreter here, and further between interpreters, so the
+    gates below count what the budget counts instead. The figures in
+    GHSA-6hqr-phm3-chpf were measured with this, as the median of three runs.
+    """
     import statistics
     import tracemalloc
 
@@ -126,21 +132,27 @@ def _peak_bytes(path, runs=3):
     return statistics.median(seen)
 
 
-def test_the_peak_does_not_grow_with_the_length_of_the_name(tmp_path):
-    """The name's length rather than the number of containers, because reading
-    twice the containers legitimately costs more, and a name twice as long is
-    stored once and costs the reading nothing.
+def _held(report, rid):
+    """Characters of listing a report holds for one rule, counted the way the
+    budget counts them -- the same on every interpreter, as a peak is not."""
+    return sum(listed_size(f) for f in report.findings if f.rule.id == rid)
 
-    What this does not catch: the budget applied where the report is printed
-    rather than where findings are collected. The findings here share their
-    container's path, so holding every one of them costs little and the peak is
-    the printing. The test that sees what is held is the one above.
-    """
-    small = _peak_bytes(_under_a_long_name(tmp_path / "a", 10, NAME, 150))
-    large = _peak_bytes(_under_a_long_name(tmp_path / "b", 10, 2 * NAME, 150))
-    assert large < small * 1.25, (
-        f"a name twice as long cost {large / small:.1f}x the allocation "
-        f"({small:,} -> {large:,} bytes): it is being printed once per finding")
+
+def test_a_stopped_listing_holds_its_budget_and_no_more(tmp_path):
+    """Upper and lower, at two sizes of the input. The listing the budget
+    stopped holds at most the budget and less than two findings short of it,
+    with ten containers under the long name and with twenty. A budget applied
+    when printing holds every finding and fails the first bound; one that stops
+    early fails the second."""
+    for containers in (10, 20):
+        report = check_file(
+            _under_a_long_name(tmp_path / f"c{containers}", containers, NAME, 150))
+        kept = [f for f in report.findings if f.rule.id == "M10"]
+        one = max(listed_size(f) for f in kept)
+        held = _held(report, "M10")
+        assert LISTING_BUDGET_PER_RULE - 2 * one < held <= LISTING_BUDGET_PER_RULE, (
+            f"{containers} containers: M10 holds {held:,} characters against a "
+            f"budget of {LISTING_BUDGET_PER_RULE:,}, in findings of {one:,}")
 
 
 def test_the_budget_changes_the_listing_and_nothing_else(tmp_path, monkeypatch):
@@ -254,7 +266,7 @@ def _identifiers_under_a_long_name(directory, containers, name_len, per_window, 
         ids = "".join(f'<ObjectId ObjectType="{kind}">G{j}_{k}</ObjectId>'
                       for j in runs for k in range(per_window))
         declared = text.replace(OBJECT, OBJECT + ids, 1)
-        assert declared != text
+        assert (declared != text) == bool(ids)
         b = io.BytesIO()
         with zipfile.ZipFile(b, "w", zipfile.ZIP_DEFLATED) as z:
             z.writestr(meta, declared.encode("utf-8"))
@@ -273,22 +285,20 @@ def _identifiers_under_a_long_name(directory, containers, name_len, per_window, 
     return str(path)
 
 
-def test_what_m13_keeps_is_within_the_same_budget(tmp_path):
-    """`M13` prints one finding per identifier, each naming up to five
+def test_m13_holds_the_same_budget_and_no_more(tmp_path):
+    """`M13` reports one finding per identifier, each naming up to five
     containers by path, and every path begins with the long name: each finding
-    is several times the name, and none of them is a string another holds."""
-    report = check_file(_identifiers_under_a_long_name(tmp_path, 10, NAME, 100))
-    held = sum(listed_size(f) for f in report.findings if f.rule.id == "M13")
-    assert held <= LISTING_BUDGET_PER_RULE, f"M13 holds {held:,} characters"
-    assert "M13" in {rid for rid, _n, _k in report.stopped()}, "the premise"
-
-
-def test_the_peak_of_m13_does_not_grow_with_the_length_of_the_name(tmp_path):
-    """Here each finding's detail is its own string, so holding findings is what
-    costs: a budget applied where the report is printed would keep every one
-    of them until then, and this is the test that sees it."""
-    small = _peak_bytes(_identifiers_under_a_long_name(tmp_path / "a", 10, NAME, 100))
-    large = _peak_bytes(_identifiers_under_a_long_name(tmp_path / "b", 10, 2 * NAME, 100))
-    assert large < small * 1.25, (
-        f"a name twice as long cost {large / small:.1f}x the allocation "
-        f"({small:,} -> {large:,} bytes): M13's details are being held in full")
+    is several times the name, and none of them is a string another holds, so
+    holding them is what costs. At two lengths of the name, what `M13` holds is
+    at most the budget and less than two findings short of it."""
+    for mult in (1, 2):
+        report = check_file(
+            _identifiers_under_a_long_name(tmp_path / f"n{mult}", 10, mult * NAME, 100))
+        kept = [f for f in report.findings if f.rule.id == "M13"]
+        assert kept, "the premise: this input must list M13 findings"
+        one = max(listed_size(f) for f in kept)
+        held = _held(report, "M13")
+        assert LISTING_BUDGET_PER_RULE - 2 * one < held <= LISTING_BUDGET_PER_RULE, (
+            f"a name of {mult * NAME:,}: M13 holds {held:,} characters against a "
+            f"budget of {LISTING_BUDGET_PER_RULE:,}, in findings of {one:,}")
+        assert "M13" in {r for r, _n, _k in report.stopped()}, "and say that it stopped"
