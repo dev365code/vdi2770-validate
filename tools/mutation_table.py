@@ -2107,7 +2107,7 @@ DELIVERY_REGRESSION_ROWS = [
      "packages/vdi2770/src/vdi2770/validate/rules/delivery.py",
      "            document_id.domain_id.strip().casefold())",
      "            document_id.domain_id.strip())",
-     ["tests/test_a_delivery_answers_who_declares_what_once.py::test_the_domain_is_compared_the_way_the_reference_compares_it"],
+     ["tests/test_a_delivery_answers_who_declares_what_once.py::test_the_domain_is_compared_without_ascii_case"],
      "a delivery declaring `BSP-OEM` and referring to `bsp-oem` is told it "
      "does not carry a document it carries"),
 

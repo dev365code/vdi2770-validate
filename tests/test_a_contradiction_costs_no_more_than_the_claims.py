@@ -111,8 +111,8 @@ def test_the_comparisons_do_not_square_with_the_claims(monkeypatch):
     # anything that pairs them is far over it, and the gap is three orders of
     # magnitude rather than a margin to argue about.
     assert len(made) <= 8 * n, (
-        f"{len(made)} register normalisations for {n} claims; a pairwise scan "
-        f"would make {n * (n - 1) // 2}, and this is closer to that than to {n}")
+        f"{len(made)} register normalisations for {n} claims; a scan that pairs "
+        f"them makes on the order of n*n/2, and this is closer to that than to {n}")
     assert len(made) >= n, (
         f"{len(made)} register normalisations for {n} claims, fewer than one "
         f"each: the register is being normalised somewhere this cannot see, so "
@@ -277,8 +277,15 @@ def test_the_work_does_not_square_with_the_claims():
     the list of pairs.
 
     So the other half of the same claim is measured directly. Four times the
-    claims should cost about four times the allocation. Measured on this tree:
-    3.7x. The pairing version: 15.6x.
+    claims should cost about four times the allocation, and the pairing version
+    costs about sixteen. (The exact ratio moves a little with what else ran in
+    the process first: 3.6x in a fresh interpreter, nearer 4x inside the suite.)
+
+    What this does not catch: pairs streamed through a generator. That is
+    quadratic in time and flat in allocation, and it passes both this and the
+    call counter above -- at 16,000 claims it takes seconds where the repair
+    takes milliseconds. Catching it needs a measure of work done rather than
+    of memory held, and there is not one here yet.
     """
     def claims(n):
         return container_declaring([("Type" if i % 2 else "Individual", "product type")

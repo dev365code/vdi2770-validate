@@ -107,16 +107,18 @@ def objects_claimed(documents) -> dict:
     and the register it was issued in. An earlier version keyed on both, and
     that had to go: a claim that names no register matches every register, so
     grouping by register splits claims that do contradict each other and the
-    rule goes quiet for the blank one. The register is decided per claim in
-    `contradicting`, where "these two are about different registers" can be
-    asked of a pair without pretending the relation partitions anything.
+    rule goes quiet for the blank one. The register is decided in
+    `contradicting`, which never builds the pairs: a claim that states a
+    register takes part only when a claim of another kind states the same one
+    or states none.
 
     It still matters, and it is still the half that was once missing: an
     article number and a serial number are different registers, and this
     corpus pairs them inside one document -- `Individual/serial number/U1-99999`
     beside `Type/article number/U1`. The day a manufacturer's article number
     equals somebody's serial, a comparison on the bare string calls a correct
-    delivery a contradiction. `different_registers` is what prevents that.
+    delivery a contradiction. What prevents that is `contradicting` keeping the
+    stated registers apart, so an article number and a serial number never meet.
 
     `globally_unique` is deliberately not consulted. It says whether an
     identifier may be compared *outside* this delivery, and every comparison

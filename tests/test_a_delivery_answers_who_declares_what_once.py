@@ -180,7 +180,11 @@ def test_the_documents_that_ask_do_not_multiply_what_is_held(tmp_path):
 
     So the other half is measured. Four times the documents that ask, with the
     same identifiers to ask about, should not cost four times the allocation.
-    Measured on this tree: 1.4x. The set-per-document version: about 4x.
+    Measured on this tree: about 1.4x. A set per document: about 3x.
+
+    What this does not catch: a leaner structure per document -- a list rather
+    than a set -- stays under the threshold, and so does work that is repeated
+    without being kept. Both are cost the delivery pays and this does not see.
     """
     small = _peak_bytes(_delivery(tmp_path / "small.zip", 50, 1500))
     large = _peak_bytes(_delivery(tmp_path / "large.zip", 200, 1500))
@@ -191,16 +195,22 @@ def test_the_documents_that_ask_do_not_multiply_what_is_held(tmp_path):
         f"document that asks")
 
 
-def test_the_domain_is_compared_the_way_the_reference_compares_it(tmp_path):
+def test_the_domain_is_compared_without_ascii_case(tmp_path):
     """`_identity` folds case on both halves, and only one half was held.
 
-    The reference compares `id + "@" + domainId` with `equalsIgnoreCase`, and
-    `_identity`'s own docstring says both halves matter and both are easy to
-    get wrong *in the expensive direction*. The id half has a test. The domain
-    half did not, so folding could be dropped there and every test in this
-    repository stayed green -- while a delivery that declares `BSP-OEM` and
-    refers to `bsp-oem` was told the document it carries is not there. That is
-    an error raised against a sender who did nothing wrong.
+    `_identity`'s own docstring says both halves matter and both are easy to get
+    wrong *in the expensive direction*. The id half has a test. The domain half
+    did not, so folding could be dropped there and every test in this repository
+    stayed green -- while a delivery that declares `BSP-OEM` and refers to
+    `bsp-oem` was told the document it carries is not there. That is an error
+    raised against a sender who did nothing wrong.
+
+    This holds ASCII case only. It was first named for comparing "the way the
+    reference compares", and that is not what it holds: Python's `casefold()`
+    and Java's `equalsIgnoreCase` disagree outside ASCII -- `MASSBLATT` and
+    `Maßblatt` are equal here and not there, `İD` and `id` the other way round.
+    Whether to follow the reference on those is a change in what the rule
+    decides, and is not made here.
     """
     declared = _ids(META, ["SHARED"]).replace('DomainId="BSP-OEM"',
                                               'DomainId="BSP-OEM"')
