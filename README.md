@@ -161,11 +161,11 @@ the *number* instead — `0` clean, `1` a finding or an unreadable path, `2`
 nothing readable at all, `3` the install disagreed with itself, `64` a mistyped
 command line or a `pyz:` that is not there — ask for it:
 
-*Coming in 0.11.0*: a failure of this tool's own returns `70` (`EX_SOFTWARE`)
-instead of `1` or `2`, so a gate can tell a finding about your delivery from a
-failure of ours — both where a rule raised and was caught, and where the
-failure reached the command and was reported as an unreadable file. `3`, `64`
-and `70` are the codes that are not a verdict about the container.
+*Coming in 0.11.0*: an exception raised by this tool's own code while checking
+a file returns `70` (`EX_SOFTWARE`) instead of `1` or `2`, so a gate can tell a
+finding about your delivery from a failure of ours. A file that cannot be read —
+a path that does not exist, one you may not open — keeps `2`, and a mistyped
+command line keeps `64`.
 
 ```yaml
 - uses: dev365code/vdi2770-validate@v0.9.1

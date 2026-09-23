@@ -63,12 +63,15 @@ of them narrowed, one of them made to admit more.
   careful is the number. It lands in the same `1` that means the delivery has a
   finding, so a build gate cannot tell *your handover has a problem* from *our
   checker fell over on it* — and the second one is our bug, not yours. There is
-  a second way in: a failure that reaches the command's own handler, rather than
-  the one around each rule, is reported as `cannot read it` and exits `2` — a
-  sentence about your file and a code documented as *nothing could be read*,
-  for something that went wrong in here. 0.11.0 gives **both** paths `70`
-  (`EX_SOFTWARE`), joining `3` and `64` as codes that are not a verdict about
-  the container. **Nothing about the codes changes in this release.** This is
+  a second way in: an exception from this tool's own code that reaches the
+  command's handler, rather than the one around each rule, is reported as
+  `cannot read it` and exits `2` (`1` when other paths in the same run were
+  read) — a sentence about your file, for something that went wrong in here.
+  0.11.0 gives an exception raised by this tool's own code while checking a
+  file `70` (`EX_SOFTWARE`), wherever it is caught. It does not move a file
+  that genuinely cannot be read: a path that does not exist, or one you may not
+  open, keeps `2`, and a mistyped command line keeps `64`. `3`, `64` and `70`
+  are then the codes that are not a verdict about the container. **Nothing about the codes changes in this release.** This is
   the announcement, one release ahead, that one of them will.
 
 - **The security page pointed the one command it gives you at the wrong
