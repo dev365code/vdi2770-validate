@@ -41,6 +41,7 @@ from typing import Iterator
 
 from ..catalog import rule
 from ..model import MAIN_XML, Finding
+from ..names import as_written
 
 
 def _identity(document_id) -> tuple:
@@ -189,8 +190,13 @@ def _first_few(items, noun) -> tuple:
     `is declared as (.+?) in this delivery` -- returned `Kind04 -- 5 of 6
     shown` as though it were the name of a kind, and the kind that sorted after
     it vanished. A truncated list has to stay a list.
+
+    Each item is shown as written, with what draws nothing spelled out: every
+    item here is a name or a kind the sender wrote, and a newline in a
+    container's name put a forged summary and a clean verdict on the page, as
+    the location line was once made not to.
     """
-    items = list(items)
+    items = [as_written(i) for i in items]
     if len(items) <= MOST_LISTED:
         return ", ".join(items), ""
     return (", ".join(items[:MOST_LISTED]),

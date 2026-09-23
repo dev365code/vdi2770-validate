@@ -537,3 +537,36 @@ def test_no_archive_controlled_string_can_forge_lines_in_the_report():
     assert len(summaries_of(page)) == 1, summaries_of(page)
     assert "\n  no findings" not in page, (
         "an inner container's name forged a line of the report")
+
+    # Door three: `M13`'s detail, which names the containers an identifier is
+    # declared in and the kinds it is declared as -- both written by the sender.
+    from conftest import CORPUS
+
+    obj = '<ObjectId RefType="product type" ObjectType="Type">BR-01</ObjectId>'
+    with zipfile.ZipFile(CORPUS / "container" / "documentcontainer.zip") as z:
+        names = z.namelist()
+        data = {n: z.read(n) for n in names}
+    meta = next(n for n in names if n.endswith("VDI2770_Metadata.xml"))
+    text = data[meta].decode("utf-8")
+    assert text.count(obj) == 1, "the sample no longer declares its object once"
+
+    def claiming(kind):
+        declared = text.replace(
+            obj, obj + f'<ObjectId ObjectType="{kind}">SHARED</ObjectId>', 1)
+        b = io.BytesIO()
+        with zipfile.ZipFile(b, "w") as z:
+            for n in names:
+                z.writestr(n, declared.encode("utf-8") if n == meta else data[n])
+        return b.getvalue()
+
+    for container, kind in ((forged, "Type"), ("b", forged.replace("\n", "&#10;"))):
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w") as z:
+            z.writestr(container + ".zip", claiming("Individual"))
+            z.writestr("other.zip", claiming(kind))
+        page = as_text(check_bytes(buf.getvalue(), "t.zip"), True)
+        assert "  M13  " in page, "the premise: one identifier declared as two kinds"
+        assert len(summaries_of(page)) == 1, summaries_of(page)
+        assert "\n  no findings" not in page, (
+            f"M13's detail forged a line of the report through "
+            f"{'a container name' if container == forged else 'a kind'}")

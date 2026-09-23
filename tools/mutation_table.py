@@ -2149,6 +2149,15 @@ DELIVERY_REGRESSION_ROWS = [
      "a list shorter than the count clause says it is sends the reader looking "
      "for containers the sentence claims to name"),
 
+    ("rules/what-m13-lists-is-shown-as-written",
+     "packages/vdi2770/src/vdi2770/validate/rules/delivery.py",
+     "    items = [as_written(i) for i in items]",
+     "    items = list(items)",
+     ["tests/test_two_names_that_print_alike_are_told_apart.py::"
+      "test_no_archive_controlled_string_can_forge_lines_in_the_report"],
+     "a newline in a container's name or a kind put a forged summary and a "
+     "clean verdict on the page through M13's detail"),
+
     ("rules/a-long-name-is-not-repeated-once-per-container",
      "packages/vdi2770/src/vdi2770/validate/rules/delivery.py",
      '        where, where_all = _first_few(\n'
