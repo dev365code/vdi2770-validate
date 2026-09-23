@@ -442,8 +442,10 @@ def test_no_document_cites_a_file_that_is_not_here():
     # 29 to 30 when the GitHub Action arrived: SECURITY.md now discloses that the
     # action downloads the file it runs -- which the checker never does -- and
     # cites the test that holds the action to admitting it.
-    assert seen == 30, (
-        f"{seen} citations found, not 30. If you added or removed one, say so "
+    # 30 to 31 when the 0.9.4 section named the builder its figures come from,
+    # so a reader can rebuild the three archives it measures.
+    assert seen == 31, (
+        f"{seen} citations found, not 31. If you added or removed one, say so "
         f"here; if you did not, some of them just stopped being checked.")
 
 

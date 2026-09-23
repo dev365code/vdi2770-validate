@@ -2,6 +2,38 @@
 
 Sections through 0.7.0 had their wording tidied after their tags; the text each version carried when it was published is in that tag's own `CHANGELOG.md`. From 0.8.0 on, a released section is frozen at its tag and takes only appended `*(Correction ...)*` lines.
 
+## 0.9.4 — 2026-09-24
+
+Who should take this release: anyone on 0.9.3, or on any earlier release, who
+checks deliveries from sources they do not control. This release carries one
+repair; its only other change is that the page PyPI shows for
+`vdi2770-validate` names the engine it asks for as 0.9.4, where it had gone on
+saying 0.9.1.
+
+**The size budget 0.9.3 put on each rule's listing counted characters as
+stored, and the report spells some characters out.** JSON writes a control
+character as six characters; the page writes one as six and an invisible
+symbol as ten. So a container name made of them printed several times what the
+listing held. Measured with the repository's own builder
+(`tests/test_a_long_name_does_not_multiply_the_report.py`), ten document
+containers under one name of about 65,530 bytes, in a 143 KB archive, printed
+2.06 MB of JSON with the name spelled in `M`, 12.2 MB of JSON and of text with
+it spelled in U+0001, and 13.0 MB of text with it spelled in U+E0041. The report
+stayed bounded -- it did not grow with the containers -- but the bound was six
+to thirteen times the one 0.9.3 described.
+
+Each finding is now charged the bytes it prints in whichever shape prints more,
+with a flat allowance for the keys, the rule's fields and the basis line that
+covers every rule in the catalogue. The same three archives print 1.92, 1.97
+and 0.86 MB of JSON and 1.91, 1.97 and 2.14 MB of text.
+
+Every container in the sample corpus, and every fixture the test suite builds,
+reports the same findings with the same exit code as in 0.9.3.
+
+Security: [GHSA-6hqr-phm3-chpf](https://github.com/dev365code/vdi2770-validate/security/advisories/GHSA-6hqr-phm3-chpf), which now
+reaches `vdi2770-validate` from 0.1.0 and `vdi2770` from 0.8.0 up to 0.9.3;
+fixed in 0.9.4.
+
 ## 0.9.3 — 2026-09-24
 
 Who should take this release: anyone who checks deliveries from sources they do

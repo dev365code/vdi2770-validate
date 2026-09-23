@@ -31,7 +31,7 @@ from vdi2770_validate.report import as_json, as_text
 from vdi2770_validate.runner import check_file
 
 import vdi2770.validate.model as model
-from conftest import CORPUS, FIXTURES, counts_line
+from conftest import CORPUS, FIXTURES, ROOT, counts_line
 
 #: As long as a member name can be, less the `.zip` it ends in.
 LONG = 65_531
@@ -44,7 +44,7 @@ NAME = 8_000
 ANCHOR = '<DocumentId DomainId="BSP-OEM">data-sheet-br-01-26</DocumentId>'
 
 
-def _under_a_long_name(directory, containers, name_len, empties):
+def _under_a_long_name(directory, containers, name_len, empties, char="M"):
     """`containers` document containers inside one container whose name is
     `name_len` characters long, each declaring `empties` empty `DocumentId`s.
 
@@ -72,7 +72,7 @@ def _under_a_long_name(directory, containers, name_len, empties):
             z.writestr(f"c{i:04d}.zip", one)
     outer = io.BytesIO()
     with zipfile.ZipFile(outer, "w", zipfile.ZIP_STORED) as z:
-        z.writestr("M" * name_len + ".zip", middle.getvalue())
+        z.writestr(char * name_len + ".zip", middle.getvalue())
     directory.mkdir(parents=True, exist_ok=True)
     path = directory / f"long-{containers}.zip"
     path.write_bytes(outer.getvalue())
@@ -85,12 +85,18 @@ def _printed(report):
             len(as_text(report).encode("utf-8")))
 
 
-def test_what_a_report_prints_is_bounded_by_the_budget(tmp_path):
-    """Twice the budget for each rule that lists anything: the budget counts
-    characters and allows a flat amount for what surrounds each finding, and
-    the JSON's keys and indentation cost about that much again. Unbounded, this
-    input prints eight times the budget for one rule."""
-    report = check_file(_under_a_long_name(tmp_path, 20, NAME, 150))
+@pytest.mark.parametrize("char, name_len", [("M", NAME), ("\x01", NAME),
+                                            ("\U000E0041", NAME // 4)],
+                         ids=["plain", "control", "invisible"])
+def test_what_a_report_prints_is_bounded_by_the_budget(tmp_path, char, name_len):
+    """Twice the budget for each rule that lists anything. The budget charges
+    each finding the bytes it prints in whichever shape prints more, so this is
+    margin, not slack. The name is spelled three ways: a control character
+    prints as six in JSON and on the page, an invisible symbol as ten on the
+    page, and a budget that counted characters as stored let either print six
+    to thirteen times what it held. Unbounded, the plain name prints seventeen
+    times the budget for one rule."""
+    report = check_file(_under_a_long_name(tmp_path, 20, name_len, 150, char))
     rules = {f.rule.id for f in report.findings} | {r for r, _n, _k in report.stopped()}
     bound = 2 * LISTING_BUDGET_PER_RULE * len(rules)
     for shape, size in zip(("JSON", "text"), _printed(report)):
@@ -217,6 +223,52 @@ def test_a_quiet_run_does_not_announce_notes_the_budget_held_back():
     assert "P4 findings in all" not in as_text(report, False)
     assert json.loads(as_json(report, False))["listingStopped"] == []
     assert json.loads(as_json(report, True))["listingStopped"] != []
+
+
+HOSTILE = {
+    "plain": "report.pdf",
+    "controls": "\x01\x02\n\t" * 40,
+    "invisible": "\U000E0041\u200b" * 40,
+    "quoted": '"\\' * 60,
+    "wide": "설명서_Prüfbericht" * 20,
+    "long": "M" * 4_000,
+}
+
+
+@pytest.mark.parametrize("kind", sorted(HOSTILE))
+def test_the_budget_charges_at_least_what_either_shape_prints(kind):
+    """The budget is a bound only if it charges what is printed. It charged
+    characters as stored, and both shapes spell some out -- a control character
+    as six in JSON, an invisible symbol as ten on the page -- so a name made of
+    them printed six to thirteen times what the listing held. For every rule in
+    the catalogue, one finding whose every string is `kind` takes no more bytes
+    in either shape than the budget charges for it: its strings as printed, and
+    the allowance for the keys, the rule's fields and the basis line."""
+    import json as _json
+
+    from vdi2770_validate.catalog import rule
+
+    catalogue = _json.loads((ROOT / "packages" / "vdi2770" / "src" / "vdi2770" / "validate"
+                             / "data" / "rules.json").read_text(encoding="utf-8"))
+    s = HOSTILE[kind]
+    over = []
+    for entry in catalogue["rules"]:
+        r = rule(entry["id"])
+        # Every string the finding carries, and then only its location, which is
+        # what a long container name is: printed once per finding, and spelled
+        # out on the page where JSON prints it as it is.
+        for where, f in (("every field", Finding(r, s, Location(container=s, member=s, xpath=s,
+                                                                   subject=s), detail=s, fix=s)),
+                         ("the location", Finding(r, "m", Location(container=s * 10,
+                                                                   member=s * 10)))):
+            empty, one = Report(target="t.zip"), Report(target="t.zip")
+            one.add(f)
+            for shape, render in (("JSON", as_json), ("text", as_text)):
+                printed = len(render(one).encode("utf-8")) - len(render(empty).encode("utf-8"))
+                if printed > listed_size(f):
+                    over.append(f"{entry['id']}, {kind} in {where}, {shape}: {printed:,} "
+                                f"printed, {listed_size(f):,} charged")
+    assert not over, over[:5]
 
 
 def _every_input_the_repository_holds():

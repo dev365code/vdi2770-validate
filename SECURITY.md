@@ -39,9 +39,11 @@ this repository, naming the versions it reaches and the release that fixes it.
   every finding printed the path of the container it was in, a container
   holding others repeats its name in every one of their paths, and the listing
   was bounded by how many findings it held and not by their size, so a 156 KB
-  archive made a report of 136 MB in each of its two shapes.
-  `vdi2770-validate` from 0.1.0 and `vdi2770` from 0.8.0, up to 0.9.2; fixed
-  in 0.9.3.
+  archive made a report of 136 MB in each of its two shapes. 0.9.3 bounded each
+  rule's listing by the characters its findings stored, and a name made of
+  characters the report spells out still printed six to thirteen times that.
+  `vdi2770-validate` from 0.1.0 and `vdi2770` from 0.8.0, up to 0.9.3;
+  fixed in 0.9.4.
 
 - [GHSA-f9xw-89gp-x52p](https://github.com/dev365code/vdi2770-validate/security/advisories/GHSA-f9xw-89gp-x52p):
   asking whether any document other than this one declares an identifier built
