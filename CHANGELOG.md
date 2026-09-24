@@ -288,6 +288,8 @@ firing on files inside folders — both announced in that release's section, whi
 is the promise that actually holds. The list now says that: verdicts move across
 releases, never quietly, and the CHANGELOG names each one.
 
+*(Correction 2026-09-25: the line on stderr that now prints a path as it was typed prints a backslash as itself too, so a path holding a line break and a path holding the six characters `\u000a` print the same there, where 0.9.6 told them apart.)*
+
 
 ## 0.9.7 — 2026-09-25
 
