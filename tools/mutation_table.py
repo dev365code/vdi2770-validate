@@ -2227,8 +2227,35 @@ LISTING_BUDGET_ROWS = [
      "move to 0.9.6 or later instead, which pins both halves exactly.)*",
      ["tests/test_an_advisory_and_its_release_name_each_other.py::"
       "test_every_release_a_page_sends_a_reader_to_is_past_every_advisory"],
-     "two advisories published after 0.9.1 reach 0.9.4, and a correction that "
+     "one release earlier is inside an advisory's range, and a correction that "
      "sends a reader there moves them onto an affected release"),
+
+    ("pages/a-pin-a-reader-runs-is-past-every-advisory",
+     "README.md",
+     'pip install "vdi2770-validate==0.9.7"',
+     'pip install "vdi2770-validate==0.9.6"',
+     ["tests/test_an_advisory_and_its_release_name_each_other.py::"
+      "test_every_pin_a_page_hands_a_reader_is_past_every_advisory"],
+     "the command the page hands a reader installs a release inside an "
+     "advisory's range, and no sentence says 'or later' about it"),
+
+    ("pages/an-action-ref-a-reader-copies-is-past-every-advisory",
+     "README.md",
+     "| `uses: dev365code/vdi2770-validate@v0.9.7` |",
+     "| `uses: dev365code/vdi2770-validate@v0.9.6` |",
+     ["tests/test_an_advisory_and_its_release_name_each_other.py::"
+      "test_every_pin_a_page_hands_a_reader_is_past_every_advisory"],
+     "the ref the page gives for the action runs a release inside an "
+     "advisory's range"),
+
+    ("pages/a-pin-in-a-sentence-is-past-every-advisory",
+     "README.md",
+     "`vdi2770-validate==0.9.7` installs one matching pair.",
+     "`vdi2770-validate==0.9.6` installs one matching pair.",
+     ["tests/test_an_advisory_and_its_release_name_each_other.py::"
+      "test_every_pin_a_page_hands_a_reader_is_past_every_advisory"],
+     "a sentence recommends an exact pin inside an advisory's range, with no "
+     "command around it to read it as one"),
 
     ("pages/an-open-advisory-names-no-fix",
      "SECURITY.md",

@@ -419,19 +419,11 @@ def test_the_page_names_every_release_pinned_with_a_floor():
         f"says where to move does not name them: {missing}")
 
 
-def test_every_release_a_page_sends_a_reader_to_is_past_every_advisory():
-    """Wherever a page tells a reader which release to move to, no advisory the
-    security page lists reaches that release.
-
-    The advice is written once and the advisories keep arriving. The correction
-    appended to 0.9.1 told a reader to move to 0.9.4 or later, and three
-    advisories now reach 0.9.4 -- the sentence written to move a reader off an
-    affected release moved them onto one. What this reads is what
-    a reader is told now: the front pages, the page PyPI shows for each
-    distribution, the security page, and the corrections appended to the
-    changelog. A released section is the record of its tag and is not asked to
-    know what came after it.
-    """
+def what_a_reader_is_told():
+    """The pages a reader is told things by now: the front pages, the page PyPI
+    shows for each distribution, the security page, and the corrections appended
+    to the changelog. A released section is the record of its tag and is not
+    asked to know what came after it."""
     pages = {"README.md", "SECURITY.md"}
     for home in ("", "packages/vdi2770/"):
         meta = (ROOT / home / "pyproject.toml").read_text(encoding="utf-8")
@@ -442,6 +434,19 @@ def test_every_release_a_page_sends_a_reader_to_is_past_every_advisory():
     told["a correction in CHANGELOG.md"] = "\n".join(re.findall(
         r"^\*\(Correct.*\)\*$", (ROOT / "CHANGELOG.md").read_text(encoding="utf-8"),
         re.M))
+    return told
+
+
+def test_every_release_a_page_sends_a_reader_to_is_past_every_advisory():
+    """Wherever a page tells a reader which release to move to, no advisory the
+    security page lists reaches that release.
+
+    The advice is written once and the advisories keep arriving. The correction
+    appended to 0.9.1 told a reader to move to 0.9.4 or later, and three
+    advisories now reach 0.9.4 -- the sentence written to move a reader off an
+    affected release moved them onto one.
+    """
+    told = what_a_reader_is_told()
     sent = [(page, v) for page, text in told.items()
             for v in re.findall(r"(\d+\.\d+\.\d+)\**\s+or later", text)]
     assert sent, "no page says which release to move to; this test reads nothing"
@@ -450,5 +455,50 @@ def test_every_release_a_page_sends_a_reader_to_is_past_every_advisory():
     reach = {a: r for a, (fixed, r) in listed_advisories().items() if fixed}
     inside = [f"{page} sends a reader to {v}, and {a} reaches up to {r}"
               for page, v in sent for a, r in sorted(reach.items())
+              if as_number(v) <= as_number(r)]
+    assert not inside, inside
+
+
+#: An exact pin a page can hand a reader: either distribution by name, extras
+#: and all (`vdi2770[validate]==0.10.0`), or this repository's action by its
+#: ref, written out in full or as the ref alone in a code span (`@v0.9.7`).
+#: The trailing guard keeps `0.9.7` from being read out of `0.9.71` or
+#: `0.9.7.1`, which name some other release or none.
+PIN = re.compile(
+    r"(?:(?<![\w-])vdi2770(?:-validate)?(?:\[[^\]\s]*\])?==(?P<dist>\d+\.\d+\.\d+)"
+    r"|" + re.escape(REPO) + r"@v(?P<ref>\d+\.\d+\.\d+)"
+    r"|`@v(?P<bare>\d+\.\d+\.\d+))(?![\d.]*\d)")
+
+
+def test_every_pin_a_page_hands_a_reader_is_past_every_advisory():
+    """A pin is advice with the words taken out, and it gets copied rather than
+    read. The test above reads "x.y.z or later" and nothing else, so every
+    `pip install "vdi2770-validate==..."`, every `uses: ...@v...` and every
+    "`==...` installs one matching pair" on the front page could be moved into
+    an advisory's range with this whole file green.
+
+    Two kinds of pin are held here. One a reader copies whole -- the action's
+    ref, and a pin on a line that runs `pip install` -- whatever release it
+    names. And any exact pin from the release the advisory promise starts at
+    on, however it is phrased. A pin below that release is left to the page:
+    the ones there are the record of what an early release did (0.5.0 installed
+    beside the reader it had not fixed), and the promise the advisories keep
+    does not reach down there -- the page sends a reader past it in words,
+    which the test above holds.
+    """
+    handed = []
+    for page, text in what_a_reader_is_told().items():
+        for line in text.splitlines():
+            for m in PIN.finditer(line):
+                release = m.group("dist") or m.group("ref") or m.group("bare")
+                copied = m.group("dist") is None or "pip install" in line
+                handed.append((page, release, copied))
+    assert any(copied for _, _, copied in handed), (
+        "no page hands a reader a pin to copy; this test reads nothing")
+    reach = {a: r for a, (fixed, r) in listed_advisories().items() if fixed}
+    inside = [f"{page} hands a reader {v}, and {a} reaches up to {r}"
+              for page, v, copied in handed
+              if copied or as_number(v) >= PROMISED_FROM
+              for a, r in sorted(reach.items())
               if as_number(v) <= as_number(r)]
     assert not inside, inside
