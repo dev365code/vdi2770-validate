@@ -337,6 +337,38 @@ def read(data: bytes, path: str, depth: int = 0, _budget: Optional[_Budget] = No
         c.defects.append(Defect("not-a-zip", c.where, str(e)))
         return c
 
+    # From the start of the file. The library finds an archive by its end
+    # record, searching back from the end of the file, and counts whatever comes
+    # before that archive as a prefix to skip, the way a self-extracting archive
+    # is read. A container that stores a document container without compressing
+    # it, cut short in transit, can end in that document container -- and was
+    # read, and passed, as that one: a verdict on a file nobody delivered.
+    #
+    # How far in the library went to reach it: where it found the central
+    # directory, less where the end record says the directory is -- zero for an
+    # archive that is the file. Taken from where the library found it rather
+    # than worked out again, because how the end record's own position is
+    # reported for zip64 differs between patch releases of the library.
+    skipped = zf.start_dir - zipfile._EndRecData(io.BytesIO(data))[zipfile._ECD_OFFSET]
+    # And the file begins with the archive. A split archive small enough to be
+    # one file begins with a marker (APPNOTE 8.5.3 and 8.5.4; `zip -s` writes
+    # one) whose four bytes its offsets count as its own; an archive with
+    # nothing in it may begin with its zip64 end record.
+    lead = 4 if data[:4] in (b"PK\x07\x08", b"PK00") else 0
+    starts = min((i.header_offset for i in zf.infolist()), default=lead)
+    begins = data[lead:lead + 4] in (b"PK\x03\x04", b"PK\x05\x06", b"PK\x06\x06")
+    if skipped or starts != lead or not begins:
+        c.kind = Kind.UNREADABLE
+        c.defects.append(Defect("not-a-zip", c.where, (
+            f"the archive its end record describes begins {skipped:,} bytes into the "
+            "file, and what comes before it is not part of it" if skipped > 0 else
+            f"the archive's end record places its central directory {-skipped:,} "
+            "bytes past where it is" if skipped < 0 else
+            f"the archive's first entry begins {starts:,} bytes into the file, and "
+            "the file does not begin with it" if starts != lead else
+            "the file does not begin with a ZIP record")))
+        return c
+
     infos = zf.infolist()
     # An entry whose name is the empty string, before anything asks it a
     # question. `ZipInfo.is_dir()` on Python 3.9 is `filename[-1] == "/"`, which
