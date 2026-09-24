@@ -35,6 +35,14 @@ confusing message". Those are welcome, but as ordinary issues.
 A security fix that shipped in a release has a GitHub security advisory on
 this repository, naming the versions it reaches and the release that fixes it.
 
+- [GHSA-h676-59p4-6632](https://github.com/dev365code/vdi2770-validate/security/advisories/GHSA-h676-59p4-6632):
+  a file cut short on the way, or with bytes in front of it, could be read as
+  an archive it held and pass: a documentation container stores its document
+  containers without compressing them, and cut short at the right length it
+  was read as one of them, with no error and exit 0.
+  `vdi2770-validate` and `vdi2770` from 0.1.0, up to 0.9.6;
+  fixed in 0.9.7.
+
 - [GHSA-62p8-4642-mwfp](https://github.com/dev365code/vdi2770-validate/security/advisories/GHSA-62p8-4642-mwfp):
   the heading of the text report, a detail line, and the line on stderr
   saying a path could not be read began with a value the sender wrote --

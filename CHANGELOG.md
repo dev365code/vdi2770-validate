@@ -25,6 +25,10 @@ archive, and the check exits `1`. The cases are in
 Every container in the sample corpus, and every fixture the test suite builds,
 reports the same findings with the same exit code as in 0.9.6.
 
+Security: [GHSA-h676-59p4-6632](https://github.com/dev365code/vdi2770-validate/security/advisories/GHSA-h676-59p4-6632), for a file cut
+short or with bytes in front of it, reaching `vdi2770-validate` and `vdi2770`
+from 0.1.0 up to 0.9.6; fixed in 0.9.7.
+
 ## 0.9.6 — 2026-09-24
 
 Who should take this release: anyone who reads the text report in a CI log,
