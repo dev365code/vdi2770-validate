@@ -2004,8 +2004,8 @@ LISTING_BUDGET_ROWS = [
 
     ("reader/an-archive-starts-where-the-file-does",
      "packages/vdi2770/src/vdi2770/zipread.py",
-     r'    if starts or data[:4] not in (b"PK\x03\x04", b"PK\x05\x06"):',
-     r'    if data[:4] not in (b"PK\x03\x04", b"PK\x05\x06"):',
+     r'    if starts != lead or not begins:',
+     r'    if not begins:',
      ["tests/test_a_file_cut_short_is_not_read_as_what_it_held.py::"
       "test_a_documentation_container_cut_short_is_not_the_container_it_holds"],
      "a documentation container cut short in transit ends in a document "
@@ -2013,12 +2013,30 @@ LISTING_BUDGET_ROWS = [
 
     ("reader/a-file-begins-with-a-zip-record",
      "packages/vdi2770/src/vdi2770/zipread.py",
-     r'    if starts or data[:4] not in (b"PK\x03\x04", b"PK\x05\x06"):',
-     r'    if starts:',
+     r'    if starts != lead or not begins:',
+     r'    if starts != lead:',
      ["tests/test_a_file_cut_short_is_not_read_as_what_it_held.py::"
       "test_bytes_in_front_of_an_archive_with_nothing_in_it_are_not_skipped"],
      "an archive with no entries says nothing about where it starts, and "
      "bytes in front of it are skipped as a prefix"),
+
+    ("reader/a-split-archive-in-one-file-is-read-from-its-marker",
+     "packages/vdi2770/src/vdi2770/zipread.py",
+     r'    lead = 4 if data[:4] in (b"PK\x07\x08", b"PK00") else 0',
+     r'    lead = 0',
+     ["tests/test_a_file_cut_short_is_not_read_as_what_it_held.py::"
+      "test_a_split_archive_small_enough_to_be_one_file_is_read_as_it_is"],
+     "the marker a one-file split archive begins with is part of it, and "
+     "reading it as bytes in front refuses an archive zip -s writes"),
+
+    ("reader/an-empty-archive-may-begin-with-its-zip64-record",
+     "packages/vdi2770/src/vdi2770/zipread.py",
+     r'    begins = data[lead:lead + 4] in (b"PK\x03\x04", b"PK\x05\x06", b"PK\x06\x06")',
+     r'    begins = data[lead:lead + 4] in (b"PK\x03\x04", b"PK\x05\x06")',
+     ["tests/test_a_file_cut_short_is_not_read_as_what_it_held.py::"
+      "test_an_empty_archive_may_begin_with_its_zip64_record"],
+     "an empty archive written as zip64 begins with that record, and is not a "
+     "file that fails to begin with one"),
 
     ("report/a-finding-too-long-to-fit-is-not-measured",
      "packages/vdi2770/src/vdi2770/validate/model.py",

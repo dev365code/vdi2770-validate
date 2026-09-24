@@ -17,8 +17,9 @@ container when it is cut short at the right length -- and was read, and passed,
 as that one: a clean verdict on a file nobody delivered. The sample corpus's documentation container, cut to
 150,084 of its 300,169 bytes, reported no error and exited `0` on every release
 from 0.1.0; bytes put in front of a whole archive were skipped the same way. An
-archive is now read from the file's first byte: one that begins later, or a
-file that does not begin with a ZIP record, is `Z1`, not a readable ZIP
+archive is now read from the start of the file -- after the marker a split
+archive small enough to be one file begins with -- and one that begins later,
+or a file that does not begin with a ZIP record, is `Z1`, not a readable ZIP
 archive, and the check exits `1`. The cases are in
 `tests/test_a_file_cut_short_is_not_read_as_what_it_held.py`.
 

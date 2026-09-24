@@ -337,18 +337,25 @@ def read(data: bytes, path: str, depth: int = 0, _budget: Optional[_Budget] = No
         c.defects.append(Defect("not-a-zip", c.where, str(e)))
         return c
 
-    # From the file's first byte. The library finds an archive by its end
+    # From the start of the file. The library finds an archive by its end
     # record, searching back from the end of the file, and counts whatever comes
     # before that archive as a prefix to skip, the way a self-extracting archive
     # is read. A container that stores a document container without compressing
     # it, cut short in transit, can end in that document container -- and was
-    # read, and passed, as that one: a verdict on a file nobody delivered. The archive this reads is the file, from byte 0.
-    starts = min((i.header_offset for i in zf.infolist()), default=0)
-    if starts or data[:4] not in (b"PK\x03\x04", b"PK\x05\x06"):
+    # read, and passed, as that one: a verdict on a file nobody delivered.
+    #
+    # The start is after the marker a split archive small enough to be one file
+    # begins with (APPNOTE 8.5.3 and 8.5.4; `zip -s` writes one): those four
+    # bytes are the archive's own. An archive with nothing in it may begin with
+    # its zip64 end record.
+    lead = 4 if data[:4] in (b"PK\x07\x08", b"PK00") else 0
+    starts = min((i.header_offset for i in zf.infolist()), default=lead)
+    begins = data[lead:lead + 4] in (b"PK\x03\x04", b"PK\x05\x06", b"PK\x06\x06")
+    if starts != lead or not begins:
         c.kind = Kind.UNREADABLE
         c.defects.append(Defect("not-a-zip", c.where, (
             f"the archive its end record describes begins {starts:,} bytes into the "
-            "file, and what comes before it is not part of it" if starts else
+            "file, and what comes before it is not part of it" if starts != lead else
             "the file does not begin with a ZIP record")))
         return c
 
