@@ -35,6 +35,15 @@ confusing message". Those are welcome, but as ordinary issues.
 A security fix that shipped in a release has a GitHub security advisory on
 this repository, naming the versions it reaches and the release that fixes it.
 
+- [GHSA-62p8-4642-mwfp](https://github.com/dev365code/vdi2770-validate/security/advisories/GHSA-62p8-4642-mwfp):
+  the heading of the text report, a detail line, and the line on stderr
+  saying a path could not be read began with a value the sender wrote --
+  the name of the file itself, the type a relationship names -- and a CI
+  runner reads a line that begins in its own command syntax as an
+  instruction rather than as text; the exit code and the JSON were not
+  affected. `vdi2770-validate` from 0.1.0 and `vdi2770` from 0.8.0, up to
+  0.9.5; fixed in 0.9.6.
+
 - [GHSA-3pfq-57fx-w4q5](https://github.com/dev365code/vdi2770-validate/security/advisories/GHSA-3pfq-57fx-w4q5):
   a value the sender wrote -- a class id, a language, the identifier a
   relationship names, or the name of the file itself -- could start a line of
