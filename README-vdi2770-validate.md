@@ -25,7 +25,7 @@ It answers to the new name, though. A module imported through the old path
 reports `__name__` as `vdi2770.validate.…`, so that is what a traceback, a log
 line and a pickle will say.
 
-It asks for `vdi2770[validate]==0.10.0` — its own version, exactly. A floor
+It asks for `vdi2770[validate]==0.10.1` — its own version, exactly. A floor
 would stop an engine older than this one and let a newer one install beside
 it, and halves that disagree about which release they are do not judge.
 
@@ -33,9 +33,10 @@ it, and halves that disagree about which release they are do not judge.
 
 The readers and the rules were two distributions that had to match. From 0.2.0
 to 0.6.0 this one asked for the reader with a range, which let the pair be
-half-moved, and 0.7.0 pinned it exactly. They are one distribution now. The pin stayed, and 0.8.0 through 0.9.0 replaced it with a
-floor -- which held only against an older engine, never against a newer one. It
-is an exact pin again from 0.9.1.
+half-moved, and 0.7.0 pinned it exactly. They are one distribution now, and
+this package still asks for it: 0.8.0 through 0.9.0 with a floor -- which held
+only against an older engine, never against a newer one -- and from 0.9.1 with
+an exact pin again.
 
 **`pip install -U vdi2770-validate` is the upgrade, and it is now an ordinary
 one.** On an installation of 0.7 that same command used to leave a tool that

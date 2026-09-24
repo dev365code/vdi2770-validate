@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "vdi2770-validate"
-version = "0.10.0"
+version = "0.10.1"
 # What this distribution is, rather than what it brings. It brings the whole
 # tool -- that is the point of it -- but a page describing a conformance checker
 # for a package containing two lines of alias is the kind of near-truth this
@@ -39,7 +39,7 @@ classifiers = [
 # newer engine beside it and the tool refused to judge a pair that disagreed
 # with itself. 0.9.1 went back to naming it exactly and it has stayed that way;
 # the four that cannot be pinned through this name are on the security page.
-dependencies = ["vdi2770[validate]==0.10.0"]
+dependencies = ["vdi2770[validate]==0.10.1"]
 
 [project.urls]
 Homepage = "https://github.com/dev365code/vdi2770-validate"

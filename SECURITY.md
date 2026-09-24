@@ -57,7 +57,7 @@ same promise the table above makes.
   runner reads a line that begins in its own command syntax as an
   instruction rather than as text; the exit code and the JSON were not
   affected. `vdi2770-validate` from 0.1.0 and `vdi2770` from 0.8.0,
-  up to 0.10.0. 0.9.6 closed the newer form of the runner's command syntax;
+  up to 0.10.1. 0.9.6 closed the newer form of the runner's command syntax;
   the older form, which the runner reads anywhere in a line, is not yet closed
   by any release.
 

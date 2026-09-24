@@ -111,7 +111,7 @@ lists all of them.
 ## Where it stands
 
 <a href="https://github.com/dev365code/vdi2770-validate/blob/main/docs/what-it-catches.md">
-<img src="https://raw.githubusercontent.com/dev365code/vdi2770-validate/main/docs/capabilities.svg?v=d6cd8afa" alt="Coverage: 28 of 42 rules have a fixture pair; Explanation: what is wrong, evidence, remedy, source; Report contract: schemaVersion, golden, exit codes, schema; Entrances: command line, library, single file, Action; Input safety: read budgets, advisory, own mutations; Upstream: pinned by commit" width="100%">
+<img src="https://raw.githubusercontent.com/dev365code/vdi2770-validate/main/docs/capabilities.svg?v=1a477baa" alt="Coverage: 28 of 42 rules have a fixture pair; Explanation: what is wrong, evidence, remedy, source; Report contract: schemaVersion, golden, exit codes, schema; Entrances: command line, library, single file, Action; Input safety: read budgets, advisory, own mutations; Upstream: pinned by commit" width="100%">
 </a>
 
 *Six things this tool holds itself to, measured on the code this page describes, against the conditions it has set for 1.0. The picture is drawn from [`docs/capabilities.json`](https://github.com/dev365code/vdi2770-validate/blob/main/docs/capabilities.json), and every item it marks done names a file in this repository that says so; the cases behind each axis are in [`docs/what-it-catches.md`](https://github.com/dev365code/vdi2770-validate/blob/main/docs/what-it-catches.md).*
@@ -378,7 +378,7 @@ The readers and the rules used to be two distributions that had to match. From
 the pair be half-moved, and 0.7.0 pinned it exactly. They are one distribution
 now. `vdi2770-validate` is the old import
 name kept working: two lines that make it the same object as `vdi2770.validate`,
-asking for `vdi2770[validate]==0.10.0` — its own version, exactly. A floor
+asking for `vdi2770[validate]==0.10.1` — its own version, exactly. A floor
 would stop an older engine and let a newer one install beside it, and halves
 that disagree about which release they are do not judge.
 (This page follows the working tree, so the number is the release being
@@ -429,7 +429,7 @@ with it, says so in a paragraph addressed to whoever gates a build on the
 number. That is the paragraph to read before upgrading; it is the one place this
 project undertakes to be exhaustive.
 
-**A patch release repairs — and four of the ten patch releases of this package
+**A patch release repairs — and four of the eleven patch releases of this package
 changed what a pipeline sees:**
 
 - `0.5.1` asked for a fixed reader instead of merely permitting one. Until it,
@@ -444,7 +444,7 @@ changed what a pipeline sees:**
   or with bytes in front of it, which was read as an archive it held and passed,
   is now `Z1`, not a readable ZIP archive.
 
-The other six moved no verdict at all: `0.9.1`; `0.9.2`, which repaired what
+The other seven moved no verdict at all: `0.9.1`; `0.9.2`, which repaired what
 a delivery costs to check and left every finding, every location and every exit
 code exactly where they were; `0.9.3`, which bounded how large a report can
 grow, leaving every summary count and exit code where it was and adding one
@@ -452,8 +452,9 @@ key to the JSON, `listingStopped`, empty unless a rule's listing reached its
 size budget; `0.9.4`, which counts that budget in what a report prints
 rather than in the characters it stores; `0.9.5`, which keeps every
 sentence of the text report on its own line and charges the budget for the
-console that prints most; and `0.9.6`, which keeps a value the sender wrote
-from deciding how a line begins and measures only a finding that can fit.
+console that prints most; `0.9.6`, which keeps a value the sender wrote
+from deciding how a line begins and measures only a finding that can fit;
+and `0.10.1`, which carried only this project's pages about itself.
 A patch is a smaller promise than a minor release;
 it is not a promise that nothing your pipeline reads can change.
 

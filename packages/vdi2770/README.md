@@ -4,11 +4,11 @@ Read a VDI 2770 handover-documentation container and get back a typed model —
 without extracting anything to disk, without opening a socket, and without
 importing anything outside the standard library.
 
-That last part is a property of the package, not a promise: a test reads every
-import in it and fails on anything the standard library does not provide. It is
-what makes this worth installing on its own — the rule set that judges what this
-reads is a separate distribution, released beside it under the same version, and
-nothing here reaches it.
+That last part is a property of the reader, not a promise: a test reads every
+import in its modules and fails on anything the standard library does not
+provide. It is what makes this worth installing on its own. The rule set that
+judges what this reads ships in the same distribution, as `vdi2770.validate`,
+and the one parser it needs comes only with the `validate` extra.
 
 ```bash
 pip install vdi2770

@@ -16,13 +16,17 @@ import re
 import subprocess
 
 from conftest import ROOT
+from vdi2770_validate import __version__
 
 HEADING = "## Releases and version numbers"
 
 #: Only as far as the paragraph counts. Written out because prose writes them
 #: out, and a number spelled as a digit in this section would read as a version.
 COUNT = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5,
-         "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10}
+         "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10,
+         "eleven": 11, "twelve": 12, "thirteen": 13, "fourteen": 14,
+         "fifteen": 15, "sixteen": 16, "seventeen": 17, "eighteen": 18,
+         "nineteen": 19, "twenty": 20}
 
 
 def section() -> str:
@@ -34,13 +38,26 @@ def section() -> str:
 
 
 def published():
-    """Every release of *this package*, from the tags rather than from prose."""
+    """Every release of *this package*, from the tags rather than from prose --
+    and the one being written.
+
+    A patch cut from this branch is named in its own tree, the one its tag will
+    point at, and until the tag exists the tags cannot say it. Read from the
+    tags alone, the section could not name the release being written before
+    its tag and had to name it the moment the tag existed, so no tree could be
+    right on both sides of tagging. `__version__` is the one exception, and it
+    is the release this tree is.
+    """
     done = subprocess.run(["git", "tag", "--list", "v*"], cwd=ROOT,
                           capture_output=True, text=True)
     if done.returncode != 0 or not done.stdout.split():
         import pytest
         pytest.skip("no tag history here; this reads the tags to know what shipped")
-    return {t[1:] for t in done.stdout.split() if re.fullmatch(r"v\d+\.\d+\.\d+", t)}
+    tags = {t[1:] for t in done.stdout.split() if re.fullmatch(r"v\d+\.\d+\.\d+", t)}
+    # Only a release number: a development or candidate version between
+    # releases (`0.8.1.dev0` has been one) is not a release anybody can pin.
+    being_written = {__version__} if re.fullmatch(r"\d+\.\d+\.\d+", __version__) else set()
+    return tags | being_written
 
 
 def patches():

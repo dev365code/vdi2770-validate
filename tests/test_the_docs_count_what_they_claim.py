@@ -500,8 +500,10 @@ def test_no_document_cites_a_file_that_is_not_here():
     # under the picture names its data and the page behind it (two), that page
     # cites five files for its cases and limits, and the table generated beside
     # the picture cites the seven files its items point at as evidence.
-    assert seen == 54, (
-        f"{seen} citations found, not 54. If you added or removed one, say so "
+    # 54 to 47 when 0.10.1 became the newest section: the eight citations in
+    # the 0.10.0 section left with it, and the new section cites one.
+    assert seen == 47, (
+        f"{seen} citations found, not 47. If you added or removed one, say so "
         f"here; if you did not, some of them just stopped being checked.")
 
 

@@ -2,6 +2,34 @@
 
 Sections through 0.7.0 had their wording tidied after their tags; the text each version carried when it was published is in that tag's own `CHANGELOG.md`. From 0.8.0 on, a released section is frozen at its tag and takes only appended `*(Correction ...)*` lines.
 
+## 0.10.1 — 2026-09-25
+
+Who should take this release: nobody for what it judges. No rule, verdict, exit
+code or report field moves. It corrects three sentences on the pages PyPI shows,
+and carries this project's pages about itself on GitHub.
+
+- **The page PyPI shows for `vdi2770` says where the rules are.** It said the
+  rule set is a separate distribution, which it has not been since 0.8.0: it
+  ships in the same one, as `vdi2770.validate`, and the one parser it needs
+  comes only with the `validate` extra. It also said a test reads every import
+  in the package, where the test reads the reader's own modules, and it now
+  says so. The page for `vdi2770-validate` said the pin to the engine stayed
+  and was replaced in one sentence; it now says the pin was a floor from 0.8.0
+  through 0.9.0 and is exact from 0.9.1.
+- **The front page says where the project stands.** A section after *What it
+  catches* draws six things this tool holds itself to — coverage, explanation,
+  the report as a contract, the entrances, input safety, upstream — as they
+  stand in the code the page describes, against the conditions it sets itself
+  before 1.0. `docs/what-it-catches.md` gives a case for each, reproducible from
+  a clone, and the README states the 1.0 conditions in words.
+- **The pins the front page hands a reader to copy name 0.10.0** — the action
+  refs, the install command, and the sentence about one matching pair. The
+  advice is unchanged: 0.9.7 or later.
+- **GHSA-62p8-4642-mwfp is still not closed in full**: it reaches
+  `vdi2770-validate` from 0.1.0 and `vdi2770` from 0.8.0 up to 0.10.1, and the
+  older form of the runner's command syntax, which the runner reads anywhere in
+  a line, is not yet closed by any release.
+
 ## 0.10.0 — 2026-09-25
 
 Who should take this release: anyone who hands over a file whose declared media

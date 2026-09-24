@@ -643,7 +643,7 @@ TABLE = [
 
     ("gates/the-pin-names-the-reader-that-was-built",
      "packages/vdi2770/pyproject.toml",
-     'version = "0.10.0"',
+     'version = "0.10.1"',
      'version = "0.7.1"',
      ["tools/check_wheel.py"],
      "the two manifests agree with each other and the artifacts do not: the "
@@ -1091,7 +1091,7 @@ FRONT_DOOR = [
 
     ("gates/the-page-quotes-the-requirement-the-project-declares",
      "README.md",
-     "`vdi2770[validate]==0.10.0`",
+     "`vdi2770[validate]==0.10.1`",
      "`vdi2770[validate]>=0.7.0`",
      ["tests/test_the_front_page_points_at_what_it_shows.py::"
       "test_the_requirement_the_page_quotes_is_the_one_the_project_declares"],
@@ -1100,7 +1100,7 @@ FRONT_DOOR = [
 
     ("gates/the-page-pypi-shows-quotes-the-requirement-the-project-declares",
      "README-vdi2770-validate.md",
-     "`vdi2770[validate]==0.10.0`",
+     "`vdi2770[validate]==0.10.1`",
      "`vdi2770[validate]==0.9.1`",
      ["tests/test_the_front_page_points_at_what_it_shows.py::"
       "test_the_requirement_the_page_quotes_is_the_one_the_project_declares"],
@@ -2259,8 +2259,8 @@ LISTING_BUDGET_ROWS = [
 
     ("pages/an-open-advisory-names-no-fix",
      "SECURITY.md",
-     "  up to 0.10.0. 0.9.6 closed the newer form",
-     "  up to 0.10.0; fixed in 0.9.6. 0.9.6 closed the newer form",
+     "  up to 0.10.1. 0.9.6 closed the newer form",
+     "  up to 0.10.1; fixed in 0.9.6. 0.9.6 closed the newer form",
      ["tests/test_an_advisory_and_its_release_name_each_other.py::"
       "test_the_two_pages_name_the_same_advisories"],
      "an entry that names a fix and says no release closes it yet tells a "
@@ -2268,8 +2268,8 @@ LISTING_BUDGET_ROWS = [
 
     ("pages/an-open-range-reaches-the-release-not-before-it",
      "SECURITY.md",
-     "  up to 0.10.0. 0.9.6 closed the newer form",
-     "  before 0.10.0. 0.9.6 closed the newer form",
+     "  up to 0.10.1. 0.9.6 closed the newer form",
+     "  before 0.10.1. 0.9.6 closed the newer form",
      ["tests/test_an_advisory_and_its_release_name_each_other.py::"
       "test_each_advisory_is_cited_by_the_release_that_fixes_it"],
      "a range that stops before the release being written leaves it out of an "
@@ -2278,7 +2278,7 @@ LISTING_BUDGET_ROWS = [
     ("pages/a-closed-advisory-is-not-listed-as-open",
      "SECURITY.md",
      "  `vdi2770-validate` and `vdi2770` from 0.1.0, up to 0.9.6;\n  fixed in 0.9.7.",
-     "  `vdi2770-validate` and `vdi2770` from 0.1.0, up to 0.10.0;\n  not yet closed by any release.",
+     "  `vdi2770-validate` and `vdi2770` from 0.1.0, up to 0.10.1;\n  not yet closed by any release.",
      ["tests/test_an_advisory_and_its_release_name_each_other.py::"
       "test_each_advisory_is_cited_by_the_release_that_fixes_it"],
      "an advisory the changelog says a release fixed, listed as open, escapes "
@@ -2286,7 +2286,7 @@ LISTING_BUDGET_ROWS = [
 
     ("pages/a-fix-a-correction-took-back-is-not-named",
      "SECURITY.md",
-     "  up to 0.10.0. 0.9.6 closed the newer form of the runner's command syntax;\n"
+     "  up to 0.10.1. 0.9.6 closed the newer form of the runner's command syntax;\n"
      "  the older form, which the runner reads anywhere in a line, is not yet closed\n"
      "  by any release.\n",
      "  up to 0.9.5; fixed in 0.9.6.\n",
@@ -2298,7 +2298,7 @@ LISTING_BUDGET_ROWS = [
 
     ("pages/an-advisory-no-release-closes-reaches-the-one-being-written",
      "SECURITY.md",
-     "  up to 0.10.0. 0.9.6 closed the newer form",
+     "  up to 0.10.1. 0.9.6 closed the newer form",
      "  up to 0.9.7. 0.9.6 closed the newer form",
      ["tests/test_an_advisory_and_its_release_name_each_other.py::"
       "test_each_advisory_is_cited_by_the_release_that_fixes_it"],
