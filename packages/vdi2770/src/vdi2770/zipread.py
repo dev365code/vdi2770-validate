@@ -340,10 +340,9 @@ def read(data: bytes, path: str, depth: int = 0, _budget: Optional[_Budget] = No
     # From the file's first byte. The library finds an archive by its end
     # record, searching back from the end of the file, and counts whatever comes
     # before that archive as a prefix to skip, the way a self-extracting archive
-    # is read. A documentation container stores its document containers without
-    # compressing them, so one cut short in transit can end in a document
-    # container it held -- and was read, and passed, as that one: a verdict on a
-    # file nobody delivered. The archive this reads is the file, from byte 0.
+    # is read. A container that stores a document container without compressing
+    # it, cut short in transit, can end in that document container -- and was
+    # read, and passed, as that one: a verdict on a file nobody delivered. The archive this reads is the file, from byte 0.
     starts = min((i.header_offset for i in zf.infolist()), default=0)
     if starts or data[:4] not in (b"PK\x03\x04", b"PK\x05\x06"):
         c.kind = Kind.UNREADABLE

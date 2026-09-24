@@ -11,10 +11,10 @@ This release carries one repair and nothing else.
 **A file cut short could be read as an archive it happened to hold, and pass.**
 The archive library finds an archive by its end record, searching back from the
 end of the file, and counts whatever comes before that archive as a prefix to
-skip. A documentation container stores its document containers without
-compressing them, so one cut short at the right length ends in a document
-container it held -- and was read, and passed, as that one: a clean verdict on a
-file nobody delivered. The sample corpus's documentation container, cut to
+skip. A container that stores a document container without compressing it, as
+the sample corpus's documentation container does, ends in that document
+container when it is cut short at the right length -- and was read, and passed,
+as that one: a clean verdict on a file nobody delivered. The sample corpus's documentation container, cut to
 150,084 of its 300,169 bytes, reported no error and exited `0` on every release
 from 0.1.0; bytes put in front of a whole archive were skipped the same way. An
 archive is now read from the file's first byte: one that begins later, or a

@@ -2,10 +2,11 @@
 
 The archive library finds an archive by its end record, searching back from the
 end of the file, and counts whatever comes before that archive as a prefix to
-skip -- the way a self-extracting archive is read. A documentation container
-stores its document containers without compressing them, so cut short at the
-right length it ends in one of them, and it was read, and passed, as that
-document container: a clean verdict on a file nobody delivered. Bytes put in
+skip -- the way a self-extracting archive is read. A container that stores a
+document container without compressing it, as the sample corpus's documentation
+container does, ends in that document container when it is cut short at the
+right length, and it was read, and passed, as that document container: a clean
+verdict on a file nobody delivered. Bytes put in
 front of a whole archive were skipped the same way.
 """
 import pytest
