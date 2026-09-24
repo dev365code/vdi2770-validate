@@ -143,6 +143,25 @@ def cited_advisories():
     return out
 
 
+def corrections(advisory, where, changelog):
+    """Section -> the latest release that section's own appended corrections say
+    fixed `advisory`, for each section in `where` that has one after itself.
+
+    Every `fixed in` on a line is read, not the first: a correction may name
+    what the section claimed before what is true, and then the first is the
+    section's own release.
+    """
+    corrected = {}
+    for v in where:
+        for line in re.findall(r"^\*\(Correct.*\)\*$", changelog.get(v, ""), re.M):
+            if advisory not in line:
+                continue
+            for x in re.findall(r"(?<!not )\bfixed in (\d+\.\d+\.\d+)", line):
+                if as_number(x) > as_number(corrected.get(v, v)):
+                    corrected[v] = x
+    return corrected
+
+
 def test_an_advisory_is_cited_somewhere_at_all():
     """The guard that keeps the three below from passing on empty sets.
 
@@ -181,15 +200,10 @@ def test_each_advisory_is_cited_by_the_release_that_fixes_it():
         # Except a section whose own claim was corrected: an appended line in it
         # that names this advisory and a later release it was fixed in. 0.9.3
         # cited GHSA-6hqr-phm3-chpf as fixed there, bounding by the wrong
-        # measure, and 0.9.4 completed it. The page has to follow the
+        # measure, and 0.9.5 completed it. The page has to follow the
         # correction: naming the corrected section as the fix is refused, where
         # before it passed as long as the page and that section agreed.
-        corrected = {}
-        for v in where:
-            for line in re.findall(r"^\*\(Correct.*\)\*$", changelog.get(v, ""), re.M):
-                later = re.search(r"(?<!not )\bfixed in (\d+\.\d+\.\d+)", line)
-                if advisory in line and later and as_number(later.group(1)) > as_number(v):
-                    corrected[v] = later.group(1)
+        corrected = corrections(advisory, where, changelog)
         assert fixed_in not in corrected, (
             f"{advisory} says it is fixed in {fixed_in}, and that section's own "
             f"correction says the fix was completed in {corrected.get(fixed_in)}")
@@ -210,6 +224,19 @@ def test_each_advisory_is_cited_by_the_release_that_fixes_it():
         assert reaches == said.group(1), (
             f"the advisory page says {advisory} reaches up to {reaches} and the "
             f"{fixed_in} section says {said.group(1)}")
+
+
+def test_a_correction_that_names_the_old_release_first_still_counts():
+    """A correction says most naturally what the section claimed and then what
+    is true: "this section said it was fixed in 0.9.4; it is fixed in 0.9.5".
+    Reading only the first `fixed in` took that line for no correction at all,
+    and then a page naming 0.9.5, which is true, went red, and a page naming
+    0.9.4, which is not, went green."""
+    line = ("*(Correction 2026-09-24: this section said GHSA-6hqr-phm3-chpf was "
+            "fixed in 0.9.4; it is fixed in 0.9.5.)*")
+    section = f"\nWhat went out.\n\n{line}\n"
+    assert corrections("GHSA-6hqr-phm3-chpf", {"0.9.4"}, {"0.9.4": section}) == {
+        "0.9.4": "0.9.5"}
 
 
 def test_no_advisory_is_claimed_for_a_release_below_the_promise():
@@ -349,3 +376,36 @@ def test_the_page_names_every_release_pinned_with_a_floor():
     assert not missing, (
         f"these releases name their engine with a floor and the paragraph that "
         f"says where to move does not name them: {missing}")
+
+
+def test_every_release_a_page_sends_a_reader_to_is_past_every_advisory():
+    """Wherever a page tells a reader which release to move to, no advisory the
+    security page lists reaches that release.
+
+    The advice is written once and the advisories keep arriving. The correction
+    appended to 0.9.1 told a reader to move to 0.9.4 or later, and two
+    advisories now reach 0.9.4 -- the sentence written to move a reader off an
+    affected release moved them onto one. What this reads is what
+    a reader is told now: the front pages, the page PyPI shows for each
+    distribution, the security page, and the corrections appended to the
+    changelog. A released section is the record of its tag and is not asked to
+    know what came after it.
+    """
+    pages = {"README.md", "SECURITY.md"}
+    for home in ("", "packages/vdi2770/"):
+        meta = (ROOT / home / "pyproject.toml").read_text(encoding="utf-8")
+        shown = re.search(r'^readme = "([^"]+)"', meta, re.M)
+        assert shown, f"{home}pyproject.toml no longer names the page PyPI shows"
+        pages.add(home + shown.group(1))
+    told = {page: (ROOT / page).read_text(encoding="utf-8") for page in sorted(pages)}
+    told["a correction in CHANGELOG.md"] = "\n".join(re.findall(
+        r"^\*\(Correct.*\)\*$", (ROOT / "CHANGELOG.md").read_text(encoding="utf-8"),
+        re.M))
+    sent = [(page, v) for page, text in told.items()
+            for v in re.findall(r"(\d+\.\d+\.\d+)\**\s+or later", text)]
+    assert sent, "no page says which release to move to; this test reads nothing"
+    reach = {a: r for a, (_fixed, r) in listed_advisories().items()}
+    inside = [f"{page} sends a reader to {v}, and {a} reaches up to {r}"
+              for page, v in sent for a, r in sorted(reach.items())
+              if as_number(v) <= as_number(r)]
+    assert not inside, inside

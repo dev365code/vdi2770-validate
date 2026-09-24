@@ -2221,6 +2221,25 @@ LISTING_BUDGET_ROWS = [
      "naming 0.9.5 lets the page name 0.9.5 without naming a release later than "
      "the one that shipped the repair"),
 
+    ("pages/a-correction-sends-a-reader-past-every-advisory",
+     "CHANGELOG.md",
+     "move to 0.9.5 or later instead, which pins both halves exactly.)*",
+     "move to 0.9.4 or later instead, which pins both halves exactly.)*",
+     ["tests/test_an_advisory_and_its_release_name_each_other.py::"
+      "test_every_release_a_page_sends_a_reader_to_is_past_every_advisory"],
+     "two advisories published after 0.9.1 reach 0.9.4, and a correction that "
+     "sends a reader there moves them onto an affected release"),
+
+    ("gates/a-correction-is-read-past-the-release-it-corrects",
+     "tests/test_an_advisory_and_its_release_name_each_other.py",
+     r'            for x in re.findall(r"(?<!not )\bfixed in (\d+\.\d+\.\d+)", line):',
+     r'            for x in re.findall(r"(?<!not )\bfixed in (\d+\.\d+\.\d+)", line)[:1]:',
+     ["tests/test_an_advisory_and_its_release_name_each_other.py::"
+      "test_a_correction_that_names_the_old_release_first_still_counts"],
+     "a correction that names the section's own release before the one that "
+     "fixed it would read as no correction: the page naming the release that "
+     "shipped the repair goes red, and one naming the corrected release green"),
+
     ("report/a-message-stays-on-its-line",
      "packages/vdi2770/src/vdi2770/validate/report.py",
      '        lines.append(f"  {MARK[f.severity]}  {f.rule.id}  {on_one_line(f.message)}")',
