@@ -42,13 +42,23 @@ other. Whether the advisory is really published is checked when the release
 goes out: nothing in this repository reaches the network to ask, which is the
 same promise the table above makes.
 
+- [GHSA-62p8-4642-mwfp](https://github.com/dev365code/vdi2770-validate/security/advisories/GHSA-62p8-4642-mwfp):
+  the heading of the text report, a detail line, and the line on stderr
+  saying a path could not be read began with a value the sender wrote --
+  the name of the file itself, the type a relationship names -- and a CI
+  runner reads a line that begins in its own command syntax as an
+  instruction rather than as text; the exit code and the JSON were not
+  affected. `vdi2770-validate` from 0.1.0 and `vdi2770` from 0.8.0,
+  up to 0.9.5; fixed in 0.9.6.
+
 - [GHSA-3pfq-57fx-w4q5](https://github.com/dev365code/vdi2770-validate/security/advisories/GHSA-3pfq-57fx-w4q5):
   a value the sender wrote -- a class id, a language, the identifier a
   relationship names, or the name of the file itself -- could start a line of
   its own in the text report and put a summary and a verdict this tool did not
   write above the real ones; the exit code and the JSON were not affected.
-  `vdi2770-validate` from 0.1.0 and `vdi2770` from 0.8.0, up to 0.9.4;
-  fixed in 0.9.5.
+  0.9.5 kept every value to its line, and a file named with two spaces and
+  the counts was still the summary line. `vdi2770-validate` from 0.1.0 and
+  `vdi2770` from 0.8.0, up to 0.9.5; fixed in 0.9.6.
 
 - [GHSA-6hqr-phm3-chpf](https://github.com/dev365code/vdi2770-validate/security/advisories/GHSA-6hqr-phm3-chpf):
   every finding printed the path of the container it was in, a container
@@ -85,11 +95,12 @@ whichever the unzip tool wrote last, a spent budget that silenced a
 path-traversal member. Each was found in this repository's own testing rather
 than reported from outside, and each is described in the CHANGELOG section that
 announces it. **If you pin a version below 0.8.0, those sections are the list**
-— read them where you would otherwise be looking for an advisory. Three
+— read them where you would otherwise be looking for an advisory. Four
 advisories written later reach those releases all the same —
-GHSA-xp97-jcmj-h45f every release of both up to 0.8.0, and GHSA-6hqr-phm3-chpf
-and GHSA-3pfq-57fx-w4q5 every release of the command up to 0.9.4 — so the
-release to move to is 0.9.5 or later.
+GHSA-xp97-jcmj-h45f every release of both up to 0.8.0, GHSA-6hqr-phm3-chpf
+every release of the command up to 0.9.4, and GHSA-3pfq-57fx-w4q5 and
+GHSA-62p8-4642-mwfp every release of the command up to 0.9.5 — so the release
+to move to is 0.9.6 or later.
 
 One thing about reading them: below 0.7.0 the reader and the command carried
 separate numbers, and a heading does not say which of the two it belongs to. The
@@ -120,9 +131,9 @@ later pin the pair exactly.
 Every one of those four — 0.8.0, 0.8.1, 0.8.2 and 0.9.0 — is inside the range
 of GHSA-f9xw-89gp-x52p, and so is 0.9.1: a matched pair of any of them is
 affected, and a mismatched pair is not judged at all. Every release of the
-command up to 0.9.4 is inside the ranges of GHSA-6hqr-phm3-chpf and
-GHSA-3pfq-57fx-w4q5 as well.
-Move to **0.9.5** or later, which carries every repair and pins both halves
+command up to 0.9.4 is inside the range of GHSA-6hqr-phm3-chpf, and every one
+up to 0.9.5 inside those of GHSA-3pfq-57fx-w4q5 and GHSA-62p8-4642-mwfp, as well.
+Move to **0.9.6** or later, which carries every repair and pins both halves
 exactly. Do not get there by upgrading the reader on its own — the
 two halves ship under one number and the tool refuses to judge a pair that
 disagrees with itself, which is exit `3` rather than a verdict about your

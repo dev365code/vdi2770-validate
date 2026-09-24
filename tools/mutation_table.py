@@ -2223,8 +2223,8 @@ LISTING_BUDGET_ROWS = [
 
     ("pages/a-correction-sends-a-reader-past-every-advisory",
      "CHANGELOG.md",
+     "move to 0.9.6 or later instead, which pins both halves exactly.)*",
      "move to 0.9.5 or later instead, which pins both halves exactly.)*",
-     "move to 0.9.4 or later instead, which pins both halves exactly.)*",
      ["tests/test_an_advisory_and_its_release_name_each_other.py::"
       "test_every_release_a_page_sends_a_reader_to_is_past_every_advisory"],
      "two advisories published after 0.9.1 reach 0.9.4, and a correction that "
