@@ -49,8 +49,9 @@ this repository, naming the versions it reaches and the release that fixes it.
   the name of the file itself, the type a relationship names -- and a CI
   runner reads a line that begins in its own command syntax as an
   instruction rather than as text; the exit code and the JSON were not
-  affected. `vdi2770-validate` from 0.1.0 and `vdi2770` from 0.8.0, up to
-  0.9.5; fixed in 0.9.6.
+  affected. `vdi2770-validate` from 0.1.0 and `vdi2770` from 0.8.0, up to 0.9.7.
+  0.9.6 closed the newer form of the runner's command syntax; the older form,
+  which the runner reads anywhere in a line, is not yet closed by any release.
 
 - [GHSA-3pfq-57fx-w4q5](https://github.com/dev365code/vdi2770-validate/security/advisories/GHSA-3pfq-57fx-w4q5):
   a value the sender wrote -- a class id, a language, the identifier a

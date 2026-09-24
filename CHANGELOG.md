@@ -67,6 +67,8 @@ Security: [GHSA-62p8-4642-mwfp](https://github.com/dev365code/vdi2770-validate/s
 runner reads as a command, reaching `vdi2770-validate` from 0.1.0 and
 `vdi2770` from 0.8.0 up to 0.9.5; fixed in 0.9.6.
 
+*(Correction 2026-09-25: 0.9.6 closed the newer form of the runner's command syntax; the older form, which the runner reads anywhere in a line, is not yet closed by any release, and GHSA-62p8-4642-mwfp now reaches up to 0.9.7.)*
+
 ## 0.9.5 — 2026-09-24
 
 Who should take this release: anyone who checks deliveries from sources they do
