@@ -2004,21 +2004,30 @@ LISTING_BUDGET_ROWS = [
 
     ("reader/an-archive-starts-where-the-file-does",
      "packages/vdi2770/src/vdi2770/zipread.py",
+     r'    if skipped or starts != lead or not begins:',
      r'    if starts != lead or not begins:',
-     r'    if not begins:',
      ["tests/test_a_file_cut_short_is_not_read_as_what_it_held.py::"
-      "test_a_documentation_container_cut_short_is_not_the_container_it_holds"],
-     "a documentation container cut short in transit ends in a document "
-     "container it stored, and passes as that one"),
+      "test_a_split_marker_put_in_front_of_an_archive_is_not_its_own"],
+     "a split marker put in front of an archive that does not count it is "
+     "taken for the archive's own, and the archive passes as the file"),
 
     ("reader/a-file-begins-with-a-zip-record",
      "packages/vdi2770/src/vdi2770/zipread.py",
-     r'    if starts != lead or not begins:',
-     r'    if starts != lead:',
+     r'    if skipped or starts != lead or not begins:',
+     r'    if skipped or starts != lead:',
      ["tests/test_a_file_cut_short_is_not_read_as_what_it_held.py::"
       "test_bytes_in_front_of_an_archive_with_nothing_in_it_are_not_skipped"],
      "an archive with no entries says nothing about where it starts, and "
      "bytes in front of it are skipped as a prefix"),
+
+    ("reader/an-archive-begins-with-its-first-entry",
+     "packages/vdi2770/src/vdi2770/zipread.py",
+     r'    if skipped or starts != lead or not begins:',
+     r'    if skipped or not begins:',
+     ["tests/test_a_file_cut_short_is_not_read_as_what_it_held.py::"
+      "test_an_archive_after_another_that_it_counts_as_its_own_is_not_the_file"],
+     "a file that begins with one archive and ends with another is read as the "
+     "second, and nothing says the file is not what was read"),
 
     ("reader/a-split-archive-in-one-file-is-read-from-its-marker",
      "packages/vdi2770/src/vdi2770/zipread.py",

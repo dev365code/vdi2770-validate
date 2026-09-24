@@ -34,18 +34,62 @@ def test_bytes_in_front_of_an_archive_are_not_skipped(tmp_path):
 
 def test_bytes_in_front_of_an_archive_with_nothing_in_it_are_not_skipped(tmp_path):
     """No entry to say where the archive starts: the file has to begin with a
-    ZIP record of its own."""
+    ZIP record of its own, whether or not the archive counts what comes first."""
     empty = b"PK\x05\x06" + b"\x00" * 18
-    assert "Z1" in _fired(tmp_path, b"not part of any archive. " + empty)
+    front = b"not part of any archive. "
+    assert "Z1" in _fired(tmp_path, front + empty)
+    assert "Z1" in _fired(tmp_path, _owning(front, empty))
+
+
+def _owning(front, archive):
+    """`archive` with `front` before it and every offset it records moved past
+    `front`, so the archive counts those bytes as its own -- the way `zip -s`
+    writes a split archive that fits in one file, and `zip -A` a stub."""
+    import struct
+
+    data = bytearray(front + archive)
+    end = data.rindex(b"PK\x05\x06")
+    count, _size, offset = struct.unpack("<HII", data[end + 10:end + 20])
+    struct.pack_into("<I", data, end + 16, offset + len(front))
+    at = offset + len(front)
+    for _ in range(count):
+        assert data[at:at + 4] == b"PK\x01\x02"
+        (header,) = struct.unpack("<I", data[at + 42:at + 46])
+        struct.pack_into("<I", data, at + 42, header + len(front))
+        name, extra, comment = struct.unpack("<HHH", data[at + 28:at + 34])
+        at += 46 + name + extra + comment
+    return bytes(data)
 
 
 @pytest.mark.parametrize("marker", [b"PK\x07\x08", b"PK00"])
 def test_a_split_archive_small_enough_to_be_one_file_is_read_as_it_is(tmp_path, marker):
     """A split archive that fits in one file begins with a marker before its
-    first entry (APPNOTE 8.5.3 and 8.5.4) -- `zip -s` writes one. Those four
-    bytes are part of the archive, not something in front of it."""
+    first entry (APPNOTE 8.5.3 and 8.5.4), and `zip -s` writes one: the
+    offsets it records count those four bytes, which are the archive's own."""
     whole = _fired(tmp_path, CLEAN_DOCUMENT.read_bytes())
-    assert _fired(tmp_path, marker + CLEAN_DOCUMENT.read_bytes()) == whole
+    assert _fired(tmp_path, _owning(marker, CLEAN_DOCUMENT.read_bytes())) == whole
+
+
+@pytest.mark.parametrize("marker", [b"PK\x07\x08", b"PK00"])
+def test_a_split_marker_put_in_front_of_an_archive_is_not_its_own(tmp_path, marker):
+    """The same four bytes in front of an archive that does not count them are
+    bytes in front of it, like any others."""
+    assert "Z1" in _fired(tmp_path, marker + CLEAN_DOCUMENT.read_bytes())
+
+
+def test_an_archive_after_another_that_it_counts_as_its_own_is_not_the_file(tmp_path):
+    """A file that begins with one archive and ends with another, which counts
+    the first as its own: what is read is the second, and the file does not
+    begin with its first entry."""
+    first = CLEAN_DOCUMENT.read_bytes()
+    assert "Z1" in _fired(tmp_path, _owning(first, CLEAN_DOCUMENT.read_bytes()))
+
+
+def test_an_archive_that_counts_a_stub_in_front_as_its_own_is_not_a_zip(tmp_path):
+    """A self-extracting stub, even one the archive's offsets count: the file
+    does not begin with the archive, and what is delivered is not a ZIP."""
+    stub = b"#!/bin/sh\nexit 0\n" * 4
+    assert "Z1" in _fired(tmp_path, _owning(stub, CLEAN_DOCUMENT.read_bytes()))
 
 
 def test_an_empty_archive_may_begin_with_its_zip64_record(tmp_path):
