@@ -2331,6 +2331,24 @@ LISTING_BUDGET_ROWS = [
      "an entrance drawn as done on the strength of a file that does not say "
      "what it is cited for"),
 
+    ("gates/the-page-behind-the-picture-marks-each-item-as-drawn",
+     "docs/what-it-catches.md",
+     "- browser, nothing installed — not yet",
+     "- browser, nothing installed — done",
+     ["tests/test_the_front_door_pictures_are_true.py::"
+      "test_the_page_behind_the_picture_marks_what_the_picture_draws"],
+     "the page a reader follows the picture to marks done an entrance the "
+     "picture draws as not yet there"),
+
+    ("gates/the-page-behind-the-picture-counts-what-it-draws",
+     "docs/what-it-catches.md",
+     "**Now.** 28 of 42 rules have a minimal fixture pair",
+     "**Now.** 29 of 42 rules have a minimal fixture pair",
+     ["tests/test_the_front_door_pictures_are_true.py::"
+      "test_the_page_behind_the_picture_marks_what_the_picture_draws"],
+     "the page behind the picture counts one more rule with a pair than the "
+     "picture draws"),
+
     ("gates/the-readme-states-every-1-0-condition",
      "README.md",
      "this project asks of itself",

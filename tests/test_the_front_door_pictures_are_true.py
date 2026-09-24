@@ -374,3 +374,38 @@ def test_the_capabilities_picture_is_embedded_once_as_its_generator_checks_it():
     embeds = [(alt, src) for alt, src in _pictures(shown) if "capabilities.svg" in src]
     assert len(embeds) == 1, f"the page shows the capabilities picture {len(embeds)} times"
     assert embeds[0][0] == gen.summary_line(gen.load(str(ROOT / "docs" / "capabilities.json")))
+
+
+def test_the_page_behind_the_picture_marks_what_the_picture_draws():
+    """The picture links to `docs/what-it-catches.md`, and that page says, axis
+    by axis, what stands now: the count the picture draws, or a checklist with
+    each item marked done or not yet, and then what 1.0 asks. The picture is
+    drawn from the data and held to it. The page was written beside it and held
+    to nothing, so an item could be marked done there while the picture drew it
+    undone -- and the page is where a reader goes to check the picture."""
+    import json
+
+    data = json.loads((ROOT / "docs" / "capabilities.json").read_text(encoding="utf-8"))
+    page = (ROOT / "docs" / "what-it-catches.md").read_text(encoding="utf-8")
+    sections = {m.group(1).strip(): m.group(2)
+                for m in re.finditer(r"(?ms)^## (.+?)$(.*?)(?=^## |\Z)", page)}
+    for axis in data["axes"]:
+        body = sections.get(axis["label"])
+        assert body is not None, f"the page has no section for {axis['label']!r}"
+        now = re.search(r"(?s)\*\*Now\.\*\*(.*?)\*\*1\.0\.\*\*(.*)", body)
+        assert now, f"the {axis['label']} section no longer says what stands now and what 1.0 asks"
+        if "items" in axis:
+            marked = re.findall(r"^- (.+?) — (done|not yet)\b", now.group(1), re.M)
+            drawn = [(item["text"], "done" if item["done"] else "not yet")
+                     for item in axis["items"]]
+            assert marked == drawn, (
+                f"the {axis['label']} section marks {marked}; the picture draws {drawn}")
+        else:
+            said_now = re.match(r"\s*(\d+) of \d+", now.group(1))
+            said_target = re.match(r"\s*(\d+) of \d+", now.group(2))
+            assert said_now and int(said_now.group(1)) == axis["now"], (
+                f"the {axis['label']} section's count is not the {axis['now']} the "
+                f"picture draws")
+            assert said_target and int(said_target.group(1)) == axis["target"], (
+                f"the {axis['label']} section's 1.0 count is not the {axis['target']} "
+                f"the picture draws")
