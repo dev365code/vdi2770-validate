@@ -2,6 +2,29 @@
 
 Sections through 0.7.0 had their wording tidied after their tags; the text each version carried when it was published is in that tag's own `CHANGELOG.md`. From 0.8.0 on, a released section is frozen at its tag and takes only appended `*(Correction ...)*` lines.
 
+## 0.9.7 — 2026-09-25
+
+Who should take this release: anyone who checks deliveries that arrive over a
+network or through a drop folder, where a file can be cut short on the way.
+This release carries one repair and nothing else.
+
+**A file cut short could be read as an archive it happened to hold, and pass.**
+The archive library finds an archive by its end record, searching back from the
+end of the file, and counts whatever comes before that archive as a prefix to
+skip. A documentation container stores its document containers without
+compressing them, so one cut short at the right length ends in a document
+container it held -- and was read, and passed, as that one: a clean verdict on a
+file nobody delivered. The sample corpus's documentation container, cut to
+150,084 of its 300,169 bytes, reported no error and exited `0` on every release
+from 0.1.0; bytes put in front of a whole archive were skipped the same way. An
+archive is now read from the file's first byte: one that begins later, or a
+file that does not begin with a ZIP record, is `Z1`, not a readable ZIP
+archive, and the check exits `1`. The cases are in
+`tests/test_a_file_cut_short_is_not_read_as_what_it_held.py`.
+
+Every container in the sample corpus, and every fixture the test suite builds,
+reports the same findings with the same exit code as in 0.9.6.
+
 ## 0.9.6 — 2026-09-24
 
 Who should take this release: anyone who reads the text report in a CI log,

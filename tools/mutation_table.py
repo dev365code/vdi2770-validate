@@ -563,7 +563,7 @@ TABLE = [
 
     ("gates/the-pin-names-the-reader-that-was-built",
      "packages/vdi2770/pyproject.toml",
-     'version = "0.9.6"',
+     'version = "0.9.7"',
      'version = "0.7.1"',
      ["tools/check_wheel.py"],
      "the two manifests agree with each other and the artifacts do not: the "
@@ -1011,7 +1011,7 @@ FRONT_DOOR = [
 
     ("gates/the-page-quotes-the-requirement-the-project-declares",
      "README.md",
-     "`vdi2770[validate]==0.9.6`",
+     "`vdi2770[validate]==0.9.7`",
      "`vdi2770[validate]>=0.7.0`",
      ["tests/test_the_front_page_points_at_what_it_shows.py::"
       "test_the_requirement_the_page_quotes_is_the_one_the_project_declares"],
@@ -2001,6 +2001,24 @@ LISTING_BUDGET_ROWS = [
      "a console that cannot print UTF-8 gets the JSON with every non-ASCII "
      "character escaped, and a charge counted in UTF-8 let it print three times "
      "the budget"),
+
+    ("reader/an-archive-starts-where-the-file-does",
+     "packages/vdi2770/src/vdi2770/zipread.py",
+     r'    if starts or data[:4] not in (b"PK\x03\x04", b"PK\x05\x06"):',
+     r'    if data[:4] not in (b"PK\x03\x04", b"PK\x05\x06"):',
+     ["tests/test_a_file_cut_short_is_not_read_as_what_it_held.py::"
+      "test_a_documentation_container_cut_short_is_not_the_container_it_holds"],
+     "a documentation container cut short in transit ends in a document "
+     "container it stored, and passes as that one"),
+
+    ("reader/a-file-begins-with-a-zip-record",
+     "packages/vdi2770/src/vdi2770/zipread.py",
+     r'    if starts or data[:4] not in (b"PK\x03\x04", b"PK\x05\x06"):',
+     r'    if starts:',
+     ["tests/test_a_file_cut_short_is_not_read_as_what_it_held.py::"
+      "test_bytes_in_front_of_an_archive_with_nothing_in_it_are_not_skipped"],
+     "an archive with no entries says nothing about where it starts, and "
+     "bytes in front of it are skipped as a prefix"),
 
     ("report/a-finding-too-long-to-fit-is-not-measured",
      "packages/vdi2770/src/vdi2770/validate/model.py",
