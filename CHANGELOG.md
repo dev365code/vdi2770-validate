@@ -60,8 +60,10 @@ of them narrowed, one of them made to admit more.
   It is [GHSA-62p8-4642-mwfp](https://github.com/dev365code/vdi2770-validate/security/advisories/GHSA-62p8-4642-mwfp),
   reaching `vdi2770-validate` from 0.1.0 and `vdi2770` from 0.8.0 up to 0.9.5,
   and GHSA-3pfq-57fx-w4q5 now reaches up to 0.9.5 too. And a finding that could
-  not fit the listing is no longer measured first. The 0.9.6 section below
-  describes both.
+  not fit the listing is no longer measured first. One thing differs from
+  0.9.6: the line on stderr saying a path could not be read prints the path as
+  it was typed, where 0.9.6 spelled out a Windows path's backslashes. The
+  0.9.6 section below describes both.
 
 - **One finding stopped growing with whatever the sender wrote — and the part
   of it you need stopped being thrown away.** The report lists at most a hundred
@@ -311,6 +313,8 @@ fixed in 0.9.6.
 Security: [GHSA-62p8-4642-mwfp](https://github.com/dev365code/vdi2770-validate/security/advisories/GHSA-62p8-4642-mwfp), for a line a CI
 runner reads as a command, reaching `vdi2770-validate` from 0.1.0 and
 `vdi2770` from 0.8.0 up to 0.9.5; fixed in 0.9.6.
+
+*(Correction 2026-09-24: the line on stderr saying a path could not be read wrote the path the way a name inside an archive is written, so a Windows path came back with each backslash spelled out as `\u005c`; 0.10.0 prints the path as it was typed. And the class id measured above is 8.3 million tabs between two letters.)*
 
 ## 0.9.5 — 2026-09-24
 

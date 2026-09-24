@@ -2298,7 +2298,7 @@ LISTING_BUDGET_ROWS = [
 
     ("cli/an-unreadable-path-is-not-a-command",
      "packages/vdi2770/src/vdi2770/validate/cli.py",
-     '            print(not_a_command(f"{as_written(path)}: cannot read it — {on_one_line(why)}"),',
+     '            print(not_a_command(f"{on_one_line(path)}: cannot read it — {on_one_line(why)}"),',
      '            print((f"{path}: cannot read it — {why}"),',
      ["tests/test_cli.py::test_a_path_that_cannot_be_read_is_not_a_command_on_stderr"],
      "the line on stderr begins with the path, and a runner reads stderr for "

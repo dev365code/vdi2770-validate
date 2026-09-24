@@ -95,6 +95,14 @@ def test_a_path_that_cannot_be_read_is_not_a_command_on_stderr(capsys):
             assert not line.lstrip().startswith(("::", "##")), line
 
 
+def test_a_path_that_cannot_be_read_is_printed_as_it_was_typed(capsys):
+    """A backslash is how Windows separates a path, and the line saying the path
+    could not be read is where a reader looks for it. Written the way a name
+    inside an archive is written, `C:\\drop\\x.zip` came back with every
+    separator spelled out."""
+    assert main(["check", "C:\\drop\\missing.zip"]) == 2
+    assert "C:\\drop\\missing.zip: cannot read it" in capsys.readouterr().err
+
 def test_one_unreadable_path_does_not_stop_the_rest(capsys):
     """A CI job sweeping a supplier drop folder must not stop at the first dud."""
     code = main(["check", "no-such-file.zip", str(CLEAN_DOCUMENT)])

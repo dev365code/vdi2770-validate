@@ -383,7 +383,7 @@ def test_every_release_a_page_sends_a_reader_to_is_past_every_advisory():
     security page lists reaches that release.
 
     The advice is written once and the advisories keep arriving. The correction
-    appended to 0.9.1 told a reader to move to 0.9.4 or later, and two
+    appended to 0.9.1 told a reader to move to 0.9.4 or later, and three
     advisories now reach 0.9.4 -- the sentence written to move a reader off an
     affected release moved them onto one. What this reads is what
     a reader is told now: the front pages, the page PyPI shows for each
