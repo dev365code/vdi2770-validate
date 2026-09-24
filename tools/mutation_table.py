@@ -2233,20 +2233,31 @@ LISTING_BUDGET_ROWS = [
     ("pages/a-pin-a-reader-runs-is-past-every-advisory",
      "README.md",
      'pip install "vdi2770-validate==0.10.0"',
-     'pip install "vdi2770-validate==0.9.6"',
+     'pip install "vdi2770-validate==0.7.0"',
      ["tests/test_an_advisory_and_its_release_name_each_other.py::"
       "test_every_pin_a_page_hands_a_reader_is_past_every_advisory"],
      "the command the page hands a reader installs a release inside an "
-     "advisory's range, and no sentence says 'or later' about it"),
+     "advisory's range and below the promise's date, so only its being a "
+     "command makes it read"),
 
     ("pages/an-action-ref-a-reader-copies-is-past-every-advisory",
      "README.md",
      "| `uses: dev365code/vdi2770-validate@v0.10.0` |",
-     "| `uses: dev365code/vdi2770-validate@v0.9.6` |",
+     "| `uses: dev365code/vdi2770-validate@v0.7.0` |",
      ["tests/test_an_advisory_and_its_release_name_each_other.py::"
       "test_every_pin_a_page_hands_a_reader_is_past_every_advisory"],
      "the ref the page gives for the action runs a release inside an "
-     "advisory's range"),
+     "advisory's range and below the promise's date, so only its being a "
+     "ref makes it read"),
+
+    ("pages/a-ref-written-alone-is-past-every-advisory",
+     "README.md",
+     "`@v0.10.0` installs 0.10.0",
+     "`@v0.7.0` installs 0.7.0",
+     ["tests/test_an_advisory_and_its_release_name_each_other.py::"
+      "test_every_pin_a_page_hands_a_reader_is_past_every_advisory"],
+     "the action's ref written alone, as the inputs table writes it, names a "
+     "release inside an advisory's range"),
 
     ("pages/a-pin-in-a-sentence-is-past-every-advisory",
      "README.md",
