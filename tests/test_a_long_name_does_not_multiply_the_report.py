@@ -25,6 +25,7 @@ from vdi2770_validate.model import (
     Report,
     Rule,
     Severity,
+    least_size,
     listed_size,
 )
 from vdi2770_validate.report import as_json, as_text
@@ -225,6 +226,26 @@ def test_a_quiet_run_does_not_announce_notes_the_budget_held_back():
     assert json.loads(as_json(report, True))["listingStopped"] != []
 
 
+def test_a_finding_that_cannot_fit_is_turned_away_before_it_is_measured(monkeypatch):
+    """Every character a finding carries prints as a byte at least, in either
+    shape and on any console, so a finding with more characters than the budget
+    has room for cannot fit, and its length says so. Measuring it anyway walked
+    every character to spell it out: a delivery of 8 KB whose detail grew to a
+    hundred million characters spent a minute and a half there, for a finding
+    that was never going to be listed."""
+    walked = []
+    for name in ("on_one_line", "_json_bytes", "_page_bytes"):
+        real = getattr(model, name)
+        monkeypatch.setattr(model, name,
+                            lambda s, real=real: walked.append(len(s)) or real(s))
+    report = Report(target="x.zip")
+    report.add(Finding(_rule(), "large", Location(container="x.zip"),
+                       detail="\u00e9" * (LISTING_BUDGET_PER_RULE + 1)))
+    assert report.stopped() == [("M10", 1, 0)]
+    assert max(walked, default=0) <= LISTING_BUDGET_PER_RULE, (
+        f"a string of {max(walked):,} characters was walked to size a finding "
+        f"that could not fit")
+
 HOSTILE = {
     "plain": "report.pdf",
     "controls": "\x01\x02\n\t" * 40,
@@ -271,6 +292,9 @@ def test_the_budget_charges_at_least_what_either_shape_prints(kind):
                          # spelling out what JSON writes in two characters.
                          ("the sentences", Finding(r, s * 10, Location(container="t.zip"),
                                                    detail=s * 10, fix=s * 10))):
+            if least_size(f) > listed_size(f):
+                over.append(f"{entry['id']}, {kind} in {where}: {least_size(f):,} counted "
+                            f"by length, {listed_size(f):,} charged")
             empty, one = Report(target="t.zip"), Report(target="t.zip")
             one.add(f)
             for shape, printed_as in (

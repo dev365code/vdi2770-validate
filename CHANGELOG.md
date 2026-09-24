@@ -2,6 +2,39 @@
 
 Sections through 0.7.0 had their wording tidied after their tags; the text each version carried when it was published is in that tag's own `CHANGELOG.md`. From 0.8.0 on, a released section is frozen at its tag and takes only appended `*(Correction ...)*` lines.
 
+## 0.9.6 — 2026-09-24
+
+Who should take this release: anyone who reads the text report in a CI log,
+and anyone on 0.9.5 who checks deliveries from sources they do not control.
+This release carries two repairs and nothing else.
+
+**A value the sender wrote could still decide how a line of the text report
+begins.** 0.9.5 kept every value on its own line and did not look at how a line
+starts. The page is headed with the file's name as given, so a file named with
+two spaces and the counts printed a summary this tool did not write above the
+real one. And the heading, a detail line, and the line on stderr saying a path
+could not be read all begin with what the sender wrote, where a CI runner reads
+a line in its own command syntax as an instruction rather than as text. The
+heading is now written the way the `at` line writes the same path, its edges
+spelled out, and a line that would begin in a runner's command syntax has its
+first character spelled out.
+
+**0.9.5 measured a finding before asking whether it could fit.** Sizing a
+finding walks every character it carries, and one that could not fit the
+listing was sized all the same. With the builder in
+`tests/test_the_metadata_layer_quotes_the_senders_bytes.py`, an 8.4 MB archive
+whose class id is 8.3 million tabs took 5.9 s and 791 MB to check on 0.9.5,
+against 1.3 s and 202 MB on 0.9.4. A finding with more characters than the
+budget has room for is now turned away on its length, since every character
+prints as a byte at least; the same archive takes 1.2 s and 168 MB.
+
+Every container in the sample corpus, and every fixture the test suite builds,
+reports the same findings with the same exit code as in 0.9.5.
+
+Security: [GHSA-3pfq-57fx-w4q5](https://github.com/dev365code/vdi2770-validate/security/advisories/GHSA-3pfq-57fx-w4q5), which now
+reaches `vdi2770-validate` from 0.1.0 and `vdi2770` from 0.8.0 up to 0.9.5;
+fixed in 0.9.6.
+
 ## 0.9.5 — 2026-09-24
 
 Who should take this release: anyone who checks deliveries from sources they do
@@ -45,6 +78,8 @@ fixed in 0.9.5.
 Security: [GHSA-3pfq-57fx-w4q5](https://github.com/dev365code/vdi2770-validate/security/advisories/GHSA-3pfq-57fx-w4q5), for the text
 report, reaching `vdi2770-validate` from 0.1.0 and `vdi2770` from 0.8.0
 up to 0.9.4; fixed in 0.9.5.
+
+*(Correction 2026-09-24: 0.9.5 kept every value to its line, and a file named with two spaces and the counts still printed as the summary line above the real one; GHSA-3pfq-57fx-w4q5 now reaches up to 0.9.5 and is fixed in 0.9.6.)*
 
 ## 0.9.4 — 2026-09-24
 

@@ -83,6 +83,18 @@ def test_a_missing_file_is_reported_not_a_traceback(capsys):
     assert "cannot read it" in capsys.readouterr().err
 
 
+def test_a_path_that_cannot_be_read_is_not_a_command_on_stderr(capsys):
+    """The line saying a path could not be read begins with the path, and a CI
+    runner takes commands from what a step writes to stderr as it does from
+    stdout. A line break in the path would have begun a line of its own."""
+    for path in ("::add-mask::no-such-file.zip", "no-such\n##[error]file.zip"):
+        assert main(["check", path]) == 2
+        err = capsys.readouterr().err
+        assert "cannot read it" in err
+        for line in err.splitlines():
+            assert not line.lstrip().startswith(("::", "##")), line
+
+
 def test_one_unreadable_path_does_not_stop_the_rest(capsys):
     """A CI job sweeping a supplier drop folder must not stop at the first dud."""
     code = main(["check", "no-such-file.zip", str(CLEAN_DOCUMENT)])

@@ -28,6 +28,7 @@ from . import report as rendering
 from .agreement import MARKER, InstallationDisagrees, refuse_if_disagreeing
 from .catalog import document_classes, rules
 from .model import Severity, without_addresses
+from .names import as_written, not_a_command, on_one_line
 from .runner import check_file
 
 
@@ -73,7 +74,8 @@ def _cmd_check(args) -> int:
             # the machine-readable one, so a consumer diffing two runs of one
             # drop folder sees a change that is not about their files.
             why = getattr(e, "strerror", None) or without_addresses(str(e))
-            print(f"{path}: cannot read it — {why}", file=sys.stderr)
+            print(not_a_command(f"{as_written(path)}: cannot read it — {on_one_line(why)}"),
+                  file=sys.stderr)
             unreadable += 1
             # And it appears in the JSON. Skipping it gave a consumer N-1
             # documents for N paths, with the difference explained only in prose
