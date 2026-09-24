@@ -121,11 +121,14 @@ def listed_advisories():
             assert address.startswith(f"https://github.com/{REPO}/security/advisories/"), (
                 f"the entry for {advisory} links to {address}, which is not an "
                 f"advisory on {REPO}; the promise above it says this repository")
-        fixed = re.search(r"fixed in (\d+\.\d+\.\d+)", para)
+        fixed = re.search(r"(?<!not )\bfixed in (\d+\.\d+\.\d+)", para)
         # Or it says in so many words that no release closes it yet: an advisory
         # whose repair was found to close only part of it. Such an entry names no
         # release as the fix, and the range it gives reaches the one being written.
         still_open = "not yet closed by any release" in " ".join(para.split())
+        assert not (fixed and still_open), (
+            f"the entry for {advisory} names a release that fixes it and says no "
+            f"release closes it yet")
         assert fixed or still_open, (
             f"the entry for {advisory} does not say which release fixes it, nor "
             f"that no release closes it yet; the promise above it undertakes to "
@@ -133,7 +136,10 @@ def listed_advisories():
         # The promise has two halves -- "naming the versions it reaches **and**
         # the release that fixes it" -- and only the second was checked, so an
         # entry could drop the range it reaches and stay green.
-        reaches = re.search(r"(?:up to|through|before) (\d+\.\d+\.\d+)", para)
+        # An open advisory's range takes in the release being written, so it
+        # says "up to" or "through" it; "before" would leave that one out.
+        reaches = re.search(r"(?:up to|through) (\d+\.\d+\.\d+)" if still_open
+                            else r"(?:up to|through|before) (\d+\.\d+\.\d+)", para)
         assert reaches, (
             f"the entry for {advisory} does not say which versions it reaches; "
             f"the promise above it undertakes to name those too")
@@ -194,14 +200,34 @@ def test_each_advisory_is_cited_by_the_release_that_fixes_it():
     cited = cited_advisories()
     changelog = changelog_sections()
     for advisory, (fixed_in, reaches) in listed_advisories().items():
+        where = cited.get(advisory, set())
+        corrected = corrections(advisory, where, changelog)
+        # A section whose own correction says no release closes it yet, where no
+        # later correction names a release that did.
+        reopened = sorted(v for v in where if v not in corrected and any(
+            advisory in line and "not yet closed by any release" in line
+            for line in re.findall(r"^\*\(Correct.*\)\*$", changelog.get(v, ""), re.M)))
         if fixed_in is None:
             # No release closes it: there is no fix to cite, and every release so
             # far is inside it, up to the one being written.
             assert reaches == __version__, (
                 f"{advisory} is not yet closed by any release, and the page says it "
                 f"reaches up to {reaches}; the release being written is {__version__}")
+            # And no section still says a release fixed it, unless a correction
+            # appended to it takes that back: a fixed advisory written up as open
+            # would otherwise escape every check a fixed one is held to.
+            for v in sorted(where):
+                said_fixed = [part for part in re.split(r"\n\s*\n", changelog.get(v, ""))
+                              if advisory in part
+                              and re.search(r"(?<!not )\bfixed in \d", part)]
+                assert not said_fixed or v in reopened, (
+                    f"{advisory} is listed as not yet closed by any release, and the "
+                    f"{v} section says a release fixed it, with no correction saying "
+                    f"otherwise")
             continue
-        where = cited.get(advisory, set())
+        assert not reopened, (
+            f"{advisory} is listed as fixed in {fixed_in}, and the correction "
+            f"appended to {reopened} says no release closes it yet")
         assert fixed_in in where, (
             f"{advisory} says it is fixed in {fixed_in}, but that section does "
             f"not cite it (cited under: {sorted(where) or 'nothing'})")
@@ -217,7 +243,6 @@ def test_each_advisory_is_cited_by_the_release_that_fixes_it():
         # measure, and 0.9.5 completed it. The page has to follow the
         # correction: naming the corrected section as the fix is refused, where
         # before it passed as long as the page and that section agreed.
-        corrected = corrections(advisory, where, changelog)
         assert fixed_in not in corrected, (
             f"{advisory} says it is fixed in {fixed_in}, and that section's own "
             f"correction says the fix was completed in {corrected.get(fixed_in)}")

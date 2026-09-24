@@ -9,8 +9,10 @@ type and file name might not agree, anyone whose delivery declares what its
 documents are *about*, and anyone reading this project's pages to decide whether
 to depend on it. One rule reads more than it read before and one is new, so a
 delivery that passed may now draw a warning — which is why this is a minor
-release and not a patch. Nothing else moves a verdict, though one change below
-moves the error *count* for a delivery whose documents arrived as
+release and not a patch. Nothing else moves a verdict, except that a file cut
+short or with bytes in front of it, which releases before 0.9.7 passed, is
+refused -- the repair that went out as 0.9.7, carried here -- and one change
+below moves the error *count* for a delivery whose documents arrived as
 folders — read that one if a gate of yours reads a number. The rest is this
 repository's pages about itself, corrected against what it has measured — most
 of them narrowed, one of them made to admit more.

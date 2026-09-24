@@ -2230,6 +2230,45 @@ LISTING_BUDGET_ROWS = [
      "two advisories published after 0.9.1 reach 0.9.4, and a correction that "
      "sends a reader there moves them onto an affected release"),
 
+    ("pages/an-open-advisory-names-no-fix",
+     "SECURITY.md",
+     "  up to 0.10.0. 0.9.6 closed the newer form",
+     "  up to 0.10.0; fixed in 0.9.6. 0.9.6 closed the newer form",
+     ["tests/test_an_advisory_and_its_release_name_each_other.py::"
+      "test_the_two_pages_name_the_same_advisories"],
+     "an entry that names a fix and says no release closes it yet tells a "
+     "reader both"),
+
+    ("pages/an-open-range-reaches-the-release-not-before-it",
+     "SECURITY.md",
+     "  up to 0.10.0. 0.9.6 closed the newer form",
+     "  before 0.10.0. 0.9.6 closed the newer form",
+     ["tests/test_an_advisory_and_its_release_name_each_other.py::"
+      "test_each_advisory_is_cited_by_the_release_that_fixes_it"],
+     "a range that stops before the release being written leaves it out of an "
+     "advisory no release closes"),
+
+    ("pages/a-closed-advisory-is-not-listed-as-open",
+     "SECURITY.md",
+     "  `vdi2770-validate` and `vdi2770` from 0.1.0, up to 0.9.6;\n  fixed in 0.9.7.",
+     "  `vdi2770-validate` and `vdi2770` from 0.1.0, up to 0.10.0;\n  not yet closed by any release.",
+     ["tests/test_an_advisory_and_its_release_name_each_other.py::"
+      "test_each_advisory_is_cited_by_the_release_that_fixes_it"],
+     "an advisory the changelog says a release fixed, listed as open, escapes "
+     "every check a fixed one is held to"),
+
+    ("pages/a-fix-a-correction-took-back-is-not-named",
+     "SECURITY.md",
+     "  up to 0.10.0. 0.9.6 closed the newer form of the runner's command syntax;\n"
+     "  the older form, which the runner reads anywhere in a line, is not yet closed\n"
+     "  by any release.\n",
+     "  up to 0.9.5; fixed in 0.9.6.\n",
+     ["tests/test_an_advisory_and_its_release_name_each_other.py::"
+      "test_each_advisory_is_cited_by_the_release_that_fixes_it"],
+     "the section that shipped part of a repair carries a correction saying no "
+     "release closes the rest, and a page naming that release as the fix "
+     "contradicts it"),
+
     ("pages/an-advisory-no-release-closes-reaches-the-one-being-written",
      "SECURITY.md",
      "  up to 0.10.0. 0.9.6 closed the newer form",
