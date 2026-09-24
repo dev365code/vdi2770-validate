@@ -49,8 +49,9 @@ of them narrowed, one of them made to admit more.
   report and put a summary and a verdict this tool did not write above the
   real ones; every sentence on the page keeps to its line now. It is
   [GHSA-3pfq-57fx-w4q5](https://github.com/dev365code/vdi2770-validate/security/advisories/GHSA-3pfq-57fx-w4q5),
-  reaching `vdi2770-validate` from 0.1.0 and `vdi2770` from 0.8.0 up to 0.9.4.
-  And the size budget is charged for the console that prints most, which
+  reaching `vdi2770-validate` from 0.1.0 and `vdi2770` from 0.8.0 up to 0.9.5,
+  since 0.9.6 completed it. And the size budget is charged for the console
+  that prints most, which
   0.9.4's was not. The 0.9.5 section below describes both.
 
 - **The repairs that went out as 0.9.6 are in this release too.** A value the
