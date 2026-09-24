@@ -32,7 +32,7 @@ of them narrowed, one of them made to admit more.
   printed 68 MB of JSON and as much again of text — the harness is
   `tests/test_a_long_name_does_not_multiply_the_report.py`. It is
   [GHSA-6hqr-phm3-chpf](https://github.com/dev365code/vdi2770-validate/security/advisories/GHSA-6hqr-phm3-chpf),
-  reaching `vdi2770-validate` from 0.1.0 and `vdi2770` from 0.8.0 up to 0.9.3.
+  reaching `vdi2770-validate` from 0.1.0 and `vdi2770` from 0.8.0 up to 0.9.4.
   `M13`, new in this release, reports one finding per identifier and names up
   to five containers by path in it; it is held to the same budget. The 0.9.3
   section below describes the rest, and a delivery's verdict is unchanged
@@ -41,8 +41,17 @@ of them narrowed, one of them made to admit more.
 - **The repair that went out as 0.9.4 is in this release too.** The size budget
   0.9.3 put on each rule's listing counted characters as stored, and a name
   the report spells out printed up to about thirteen times it; each finding is
-  charged what it prints now. It completes the same advisory, which now reaches
-  up to 0.9.3; the 0.9.4 section below describes it.
+  charged what it prints now. The 0.9.4 section below describes it.
+
+- **The repairs that went out as 0.9.5 are in this release too.** A value the
+  sender wrote -- a class id, a language, the identifier a relationship names,
+  the name of the file itself -- could start a line of its own in the text
+  report and put a summary and a verdict this tool did not write above the
+  real ones; every sentence on the page keeps to its line now. It is
+  [GHSA-3pfq-57fx-w4q5](https://github.com/dev365code/vdi2770-validate/security/advisories/GHSA-3pfq-57fx-w4q5),
+  reaching `vdi2770-validate` from 0.1.0 and `vdi2770` from 0.8.0 up to 0.9.4.
+  And the size budget is charged for the console that prints most, which
+  0.9.4's was not. The 0.9.5 section below describes both.
 
 - **One finding stopped growing with whatever the sender wrote — and the part
   of it you need stopped being thrown away.** The report lists at most a hundred
@@ -187,7 +196,7 @@ and no line of the guideline, which is why it is a warning and not an error.
 
 **The page says how releases are numbered.** What 0.x means here, what a minor
 release moves, what a patch does and does not promise, how to pin, and what 1.0
-will mean. Three of this package's seven patch releases changed what a pipeline
+will mean. Three of this package's eight patch releases changed what a pipeline
 sees, and the section names them rather than promising that a patch cannot.
 
 **`Z13` names the folder it did not open.** A delivery whose documents arrived
@@ -256,6 +265,50 @@ is the promise that actually holds. The list now says that: verdicts move across
 releases, never quietly, and the CHANGELOG names each one.
 
 
+## 0.9.5 — 2026-09-24
+
+Who should take this release: anyone who checks deliveries from sources they do
+not control, on any earlier release, and anyone who reads the text report -- in
+a terminal or a CI log -- rather than only the exit code or the JSON. This
+release carries two repairs and nothing else.
+
+**A value the sender wrote could start a line of its own in the text report.**
+Several findings quote what the delivery says -- a class id, a language, the
+identifier a relationship names -- and the page is headed with the name of the
+file itself, which a folder of supplier files hands over as it was sent. A value
+carrying line breaks put a second summary, reading no errors, and a clean
+verdict for another delivery on the page above the real ones. The exit code and
+the JSON were true throughout. Measured with archives built the way the
+repository's test builds them
+(`tests/test_two_names_that_print_alike_are_told_apart.py`): the file's name
+does this in every release from 0.1.0, a class id and a language from 0.7.0, and
+a relationship's target from 0.8.0. The heading and every message, detail and
+remedy on the page now keep to their line: what draws nothing is spelled out,
+and an ordinary sentence prints as it did.
+
+**0.9.4's size budget counted what a report prints as UTF-8.** A console that
+cannot print UTF-8 -- a Windows pipe or redirect, cp1252 or cp932 -- gets the
+JSON with every non-ASCII character escaped and the page with backslash
+escapes, and a name of printable characters outside ASCII printed up to three
+times the budget. With the repository's own builder
+(`tests/test_a_long_name_does_not_multiply_the_report.py`), twenty containers
+under a name of 16,000 U+1D400 characters, in a 153 KB archive, printed 2.01 MB
+of JSON as UTF-8 and 5.98 MB on an ASCII console, and 2.00 and 4.97 MB of text.
+Each finding is now charged what the console that prints most receives; the
+same archive prints 0.71 and 2.12 MB of JSON and 0.71 and 1.77 MB of text. On a
+UTF-8 console a name outside ASCII now reaches the budget sooner.
+
+Every container in the sample corpus, and every fixture the test suite builds,
+reports the same findings with the same exit code as in 0.9.4.
+
+Security: [GHSA-6hqr-phm3-chpf](https://github.com/dev365code/vdi2770-validate/security/advisories/GHSA-6hqr-phm3-chpf), which now
+reaches `vdi2770-validate` from 0.1.0 and `vdi2770` from 0.8.0 up to 0.9.4;
+fixed in 0.9.5.
+
+Security: [GHSA-3pfq-57fx-w4q5](https://github.com/dev365code/vdi2770-validate/security/advisories/GHSA-3pfq-57fx-w4q5), for the text
+report, reaching `vdi2770-validate` from 0.1.0 and `vdi2770` from 0.8.0
+up to 0.9.4; fixed in 0.9.5.
+
 ## 0.9.4 — 2026-09-24
 
 Who should take this release: anyone on 0.9.3, or on any earlier release, who
@@ -287,6 +340,8 @@ reports the same findings with the same exit code as in 0.9.3.
 Security: [GHSA-6hqr-phm3-chpf](https://github.com/dev365code/vdi2770-validate/security/advisories/GHSA-6hqr-phm3-chpf), which now
 reaches `vdi2770-validate` from 0.1.0 and `vdi2770` from 0.8.0 up to 0.9.3;
 fixed in 0.9.4.
+
+*(Correction 2026-09-24: the charge described above counted what a report prints as UTF-8, and a console that cannot print UTF-8 received up to about three times the budget; 0.9.5 counts what the console that prints most receives, and GHSA-6hqr-phm3-chpf now reaches up to 0.9.4 and is fixed in 0.9.5.)*
 
 ## 0.9.3 — 2026-09-24
 
@@ -329,6 +384,8 @@ Security: [GHSA-6hqr-phm3-chpf](https://github.com/dev365code/vdi2770-validate/s
 0.9.3.
 
 *(Correction 2026-09-24: the budget described above counted characters as stored, and a name the report spells out printed up to about thirteen times it; 0.9.4 counts what is printed, and GHSA-6hqr-phm3-chpf now reaches up to 0.9.3 and is fixed in 0.9.4.)*
+
+*(Correction 2026-09-24: 0.9.4 did not complete the fix either, as its own section's correction says; GHSA-6hqr-phm3-chpf now reaches up to 0.9.4 and is fixed in 0.9.5.)*
 
 ## 0.9.2 — 2026-09-23
 

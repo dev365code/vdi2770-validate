@@ -2200,21 +2200,25 @@ LISTING_BUDGET_ROWS = [
 
     ("pages/the-page-follows-a-corrected-fix",
      "SECURITY.md",
-     "  up to 0.9.3; fixed in 0.9.4.\n",
-     "  up to 0.9.2; fixed in 0.9.3.\n",
+     "  that cannot print UTF-8 received up to three times the budget.\n"
+     "  `vdi2770-validate` from 0.1.0 and `vdi2770` from 0.8.0, up to 0.9.4;\n"
+     "  fixed in 0.9.5.\n",
+     "  that cannot print UTF-8 received up to three times the budget.\n"
+     "  `vdi2770-validate` from 0.1.0 and `vdi2770` from 0.8.0, up to 0.9.3;\n"
+     "  fixed in 0.9.4.\n",
      ["tests/test_an_advisory_and_its_release_name_each_other.py::"
       "test_each_advisory_is_cited_by_the_release_that_fixes_it"],
-     "0.9.3's own correction says the fix was completed in 0.9.4, and a page "
-     "that still names 0.9.3 tells a reader on it that they are safe"),
+     "0.9.4's own correction says the fix was completed in 0.9.5, and a page "
+     "that still names 0.9.4 tells a reader on it that they are safe"),
 
     ("pages/a-corrected-fix-names-the-release-that-completed-it",
      "CHANGELOG.md",
-     "now reaches up to 0.9.3 and is fixed in 0.9.4.)*",
-     "now reaches up to 0.9.3.)*",
+     "console that prints most receives, and GHSA-6hqr-phm3-chpf now reaches up to 0.9.4 and is fixed in 0.9.5.)*",
+     "console that prints most receives, and GHSA-6hqr-phm3-chpf now reaches up to 0.9.4.)*",
      ["tests/test_an_advisory_and_its_release_name_each_other.py::"
       "test_each_advisory_is_cited_by_the_release_that_fixes_it"],
-     "0.9.3 cited the advisory as fixed there; only its appended correction "
-     "naming 0.9.4 lets the page name 0.9.4 without naming a release later than "
+     "0.9.4 cited the advisory as fixed there; only its appended correction "
+     "naming 0.9.5 lets the page name 0.9.5 without naming a release later than "
      "the one that shipped the repair"),
 
     ("report/a-message-stays-on-its-line",
