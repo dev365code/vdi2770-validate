@@ -2223,12 +2223,21 @@ LISTING_BUDGET_ROWS = [
 
     ("pages/a-correction-sends-a-reader-past-every-advisory",
      "CHANGELOG.md",
+     "move to 0.9.7 or later instead, which pins both halves exactly.)*",
      "move to 0.9.6 or later instead, which pins both halves exactly.)*",
-     "move to 0.9.5 or later instead, which pins both halves exactly.)*",
      ["tests/test_an_advisory_and_its_release_name_each_other.py::"
       "test_every_release_a_page_sends_a_reader_to_is_past_every_advisory"],
      "two advisories published after 0.9.1 reach 0.9.4, and a correction that "
      "sends a reader there moves them onto an affected release"),
+
+    ("pages/an-advisory-no-release-closes-reaches-the-one-being-written",
+     "SECURITY.md",
+     "  up to 0.10.0. 0.9.6 closed the newer form",
+     "  up to 0.9.7. 0.9.6 closed the newer form",
+     ["tests/test_an_advisory_and_its_release_name_each_other.py::"
+      "test_each_advisory_is_cited_by_the_release_that_fixes_it"],
+     "an advisory no release closes reaches every release so far, and a range "
+     "that stops short tells a reader on the newest one they are clear of it"),
 
     ("gates/a-correction-is-read-past-the-release-it-corrects",
      "tests/test_an_advisory_and_its_release_name_each_other.py",

@@ -23,6 +23,8 @@ publishing.
 import re
 from pathlib import Path
 
+from vdi2770_validate import __version__
+
 ROOT = Path(__file__).resolve().parent.parent
 
 #: GitHub's identifier shape: three four-character groups. The bounds matter
@@ -120,9 +122,14 @@ def listed_advisories():
                 f"the entry for {advisory} links to {address}, which is not an "
                 f"advisory on {REPO}; the promise above it says this repository")
         fixed = re.search(r"fixed in (\d+\.\d+\.\d+)", para)
-        assert fixed, (
-            f"the entry for {advisory} does not say which release fixes it; the "
-            f"promise above it undertakes to name that release")
+        # Or it says in so many words that no release closes it yet: an advisory
+        # whose repair was found to close only part of it. Such an entry names no
+        # release as the fix, and the range it gives reaches the one being written.
+        still_open = "not yet closed by any release" in " ".join(para.split())
+        assert fixed or still_open, (
+            f"the entry for {advisory} does not say which release fixes it, nor "
+            f"that no release closes it yet; the promise above it undertakes to "
+            f"name that release")
         # The promise has two halves -- "naming the versions it reaches **and**
         # the release that fixes it" -- and only the second was checked, so an
         # entry could drop the range it reaches and stay green.
@@ -130,7 +137,7 @@ def listed_advisories():
         assert reaches, (
             f"the entry for {advisory} does not say which versions it reaches; "
             f"the promise above it undertakes to name those too")
-        out[advisory] = (fixed.group(1), reaches.group(1))
+        out[advisory] = (fixed.group(1) if fixed else None, reaches.group(1))
     return out
 
 
@@ -187,6 +194,13 @@ def test_each_advisory_is_cited_by_the_release_that_fixes_it():
     cited = cited_advisories()
     changelog = changelog_sections()
     for advisory, (fixed_in, reaches) in listed_advisories().items():
+        if fixed_in is None:
+            # No release closes it: there is no fix to cite, and every release so
+            # far is inside it, up to the one being written.
+            assert reaches == __version__, (
+                f"{advisory} is not yet closed by any release, and the page says it "
+                f"reaches up to {reaches}; the release being written is {__version__}")
+            continue
         where = cited.get(advisory, set())
         assert fixed_in in where, (
             f"{advisory} says it is fixed in {fixed_in}, but that section does "
@@ -243,6 +257,8 @@ def test_no_advisory_is_claimed_for_a_release_below_the_promise():
     """The promise starts at 0.8.0 because the practice does. An entry for an
     older release would mean the date is wrong rather than that the entry is."""
     for advisory, (fixed_in, _reaches) in listed_advisories().items():
+        if fixed_in is None:
+            continue
         assert as_number(fixed_in) >= PROMISED_FROM, (
             f"{advisory} is listed as fixed in {fixed_in}, below the release the "
             f"page says the practice starts at")
@@ -404,7 +420,9 @@ def test_every_release_a_page_sends_a_reader_to_is_past_every_advisory():
     sent = [(page, v) for page, text in told.items()
             for v in re.findall(r"(\d+\.\d+\.\d+)\**\s+or later", text)]
     assert sent, "no page says which release to move to; this test reads nothing"
-    reach = {a: r for a, (_fixed, r) in listed_advisories().items()}
+    # An advisory no release closes yet is past no release; the pages name it
+    # as the exception wherever they speak of every repair.
+    reach = {a: r for a, (fixed, r) in listed_advisories().items() if fixed}
     inside = [f"{page} sends a reader to {v}, and {a} reaches up to {r}"
               for page, v in sent for a, r in sorted(reach.items())
               if as_number(v) <= as_number(r)]

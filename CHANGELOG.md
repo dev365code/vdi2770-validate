@@ -59,12 +59,21 @@ of them narrowed, one of them made to admit more.
   file named with two spaces and the counts printed as the summary line, and
   a line beginning in a CI runner's command syntax was read as an instruction.
   It is [GHSA-62p8-4642-mwfp](https://github.com/dev365code/vdi2770-validate/security/advisories/GHSA-62p8-4642-mwfp),
-  reaching `vdi2770-validate` from 0.1.0 and `vdi2770` from 0.8.0 up to 0.9.5,
-  and GHSA-3pfq-57fx-w4q5 now reaches up to 0.9.5 too. And a finding that could
+  reaching `vdi2770-validate` from 0.1.0 and `vdi2770` from 0.8.0 up to 0.10.0:
+  0.9.6 closed the newer form of the runner's command syntax, and the older
+  form, which the runner reads anywhere in a line, is not yet closed by any
+  release. GHSA-3pfq-57fx-w4q5 now reaches up to 0.9.5 too. And a finding that could
   not fit the listing is no longer measured first. One thing differs from
   0.9.6: the line on stderr saying a path could not be read prints the path as
   it was typed, where 0.9.6 spelled out a Windows path's backslashes. The
   0.9.6 section below describes both.
+
+- **The repair that went out as 0.9.7 is in this release too.** A container cut
+  short, or with bytes in front of it, could be read as an archive it held and
+  pass; an archive is now read from the start of the file. It is
+  [GHSA-h676-59p4-6632](https://github.com/dev365code/vdi2770-validate/security/advisories/GHSA-h676-59p4-6632),
+  reaching `vdi2770-validate` and `vdi2770` from 0.1.0 up to 0.9.6. The 0.9.7
+  section below describes it.
 
 - **One finding stopped growing with whatever the sender wrote — and the part
   of it you need stopped being thrown away.** The report lists at most a hundred
@@ -278,6 +287,34 @@ is the promise that actually holds. The list now says that: verdicts move across
 releases, never quietly, and the CHANGELOG names each one.
 
 
+## 0.9.7 — 2026-09-25
+
+Who should take this release: anyone who checks deliveries that arrive over a
+network or through a drop folder, where a file can be cut short on the way.
+This release carries one repair and nothing else.
+
+**A file cut short could be read as an archive it happened to hold, and pass.**
+The archive library finds an archive by its end record, searching back from the
+end of the file, and counts whatever comes before that archive as a prefix to
+skip. A container that stores a document container without compressing it, as
+the sample corpus's documentation container does, ends in that document
+container when it is cut short at the right length -- and was read, and passed,
+as that one: a clean verdict on a file nobody delivered. The sample corpus's documentation container, cut to
+150,084 of its 300,169 bytes, reported no error and exited `0` on every release
+from 0.1.0; bytes put in front of a whole archive were skipped the same way. An
+archive is now read from the start of the file -- after the marker a split
+archive small enough to be one file begins with -- and one that begins later,
+or a file that does not begin with a ZIP record, is `Z1`, not a readable ZIP
+archive, and the check exits `1`. The cases are in
+`tests/test_a_file_cut_short_is_not_read_as_what_it_held.py`.
+
+Every container in the sample corpus, and every fixture the test suite builds,
+reports the same findings with the same exit code as in 0.9.6.
+
+Security: [GHSA-h676-59p4-6632](https://github.com/dev365code/vdi2770-validate/security/advisories/GHSA-h676-59p4-6632), for a file cut
+short or with bytes in front of it, reaching `vdi2770-validate` and `vdi2770`
+from 0.1.0 up to 0.9.6; fixed in 0.9.7.
+
 ## 0.9.6 — 2026-09-24
 
 Who should take this release: anyone who reads the text report in a CI log,
@@ -316,6 +353,8 @@ runner reads as a command, reaching `vdi2770-validate` from 0.1.0 and
 `vdi2770` from 0.8.0 up to 0.9.5; fixed in 0.9.6.
 
 *(Correction 2026-09-24: the line on stderr saying a path could not be read wrote the path the way a name inside an archive is written, so a Windows path came back with each backslash spelled out as `\u005c`; 0.10.0 prints the path as it was typed. And the class id measured above is 8.3 million tabs between two letters.)*
+
+*(Correction 2026-09-25: 0.9.6 closed the newer form of the runner's command syntax; the older form, which the runner reads anywhere in a line, is not yet closed by any release, and GHSA-62p8-4642-mwfp now reaches up to 0.9.7.)*
 
 ## 0.9.5 — 2026-09-24
 
@@ -519,7 +558,7 @@ resolver error, because 0.6.0 asks for a 0.4.x engine on purpose.
 No verdict moves in this release. A container judged by 0.9.0 is judged the
 same way here; the only difference a report shows is `toolVersion`.
 
-*(Correction 2026-09-24: pinning 0.8.0, 0.8.1, 0.8.2 or 0.9.0 by both names, as advised above, keeps a release inside the range of four security advisories published since, which SECURITY.md lists; move to 0.9.6 or later instead, which pins both halves exactly.)*
+*(Correction 2026-09-24: pinning 0.8.0, 0.8.1, 0.8.2 or 0.9.0 by both names, as advised above, keeps a release inside the range of five security advisories published since, which SECURITY.md lists; move to 0.9.7 or later instead, which pins both halves exactly.)*
 
 ## 0.9.0 — 2026-09-20
 
