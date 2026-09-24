@@ -7,7 +7,7 @@ from typing import Dict, List
 
 from . import __version__
 from .model import About, Obligation, Report, Severity
-from .names import as_written, on_one_line
+from .names import as_written, not_a_command, on_one_line
 from .resources import schema_stamp
 
 MARK = {Severity.ERROR: "error", Severity.WARNING: "warn ", Severity.INFO: "info "}
@@ -110,9 +110,11 @@ def stopped_said(rid: str, in_all: int, listed: int) -> str:
 
 
 def as_text(report: Report, show_info: bool = True) -> str:
-    # The file's own name, which a drop folder hands over as it was sent: on one
-    # line, like every sentence below it.
-    lines: List[str] = [on_one_line(f"{report.target}")]
+    # The file's own name, which a drop folder hands over as it was sent,
+    # written the way the `at` line writes the same path: kept to its line, a
+    # name made of two spaces and the counts was the summary line, above the
+    # real one.
+    lines: List[str] = [as_written(f"{report.target}")]
     findings = [f for f in report.sorted() if show_info or f.severity is not Severity.INFO]
     stopped = report.stopped(show_info)
     # Not "no findings" over a listing that stopped before its first one: a
@@ -184,7 +186,9 @@ def as_text(report: Report, show_info: bool = True) -> str:
     if r.archives_opened:
         parts.append(f"{r.metadata_read} of {r.metadata_found} metadata files")
     lines.append("  read " + ", ".join(parts))
-    return "\n".join(lines)
+    # And no line leaves as a command to a CI runner: the heading and a detail
+    # begin with what the sender wrote.
+    return "\n".join(not_a_command(line) for line in lines)
 
 
 def as_json(report: Report, show_info: bool = True) -> str:

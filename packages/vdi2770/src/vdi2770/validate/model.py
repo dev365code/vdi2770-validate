@@ -234,6 +234,15 @@ def listed_size(f) -> int:
     return LISTED_ALLOWANCE + max(as_json, as_page)
 
 
+def least_size(f) -> int:
+    """What `listed_size(f)` is at least, counted without walking a character:
+    each one prints as a byte or more, in either shape and on any console."""
+    w = f.where
+    return LISTED_ALLOWANCE + sum(len(s) for s in (
+        f.message, f.detail or "", f.remedy, w.container or "", w.member or "",
+        w.xpath or "", w.subject or ""))
+
+
 @dataclass
 class Read:
     """What this read opened, and what the archive says was there to open.
@@ -289,7 +298,12 @@ class Report:
             self._count_unlisted(f)
             return
         # Not sized once the listing has stopped: nothing it would say is kept.
-        size = 0 if rid in self.over_budget else listed_size(f)
+        # Nor measured when its length already says it cannot fit: measuring
+        # walks every character to spell it out, and a detail can run to a
+        # hundred million of them.
+        size = 0 if rid in self.over_budget else least_size(f)
+        if rid not in self.over_budget and self._spent.get(rid, 0) + size <= LISTING_BUDGET_PER_RULE:
+            size = listed_size(f)
         if rid in self.over_budget or self._spent.get(rid, 0) + size > LISTING_BUDGET_PER_RULE:
             # Counted, not kept, for the same reason. And once a rule's listing
             # has stopped it stays stopped: a smaller finding after a larger one

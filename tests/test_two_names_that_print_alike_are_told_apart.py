@@ -639,3 +639,51 @@ def test_no_sentence_a_finding_carries_can_leave_its_line():
         assert not line.startswith("  0 error(s)") and line != "  no findings", line
     assert not any(c in page for c in "\r\x1b\x85\u2028"), (
         "a character that moves the cursor or ends a line reached the page")
+
+
+def test_a_file_name_cannot_pass_for_the_summary():
+    """The heading is the path as given, and a path can be shaped like the
+    summary: two spaces and the counts. Kept to its line, it still put a verdict
+    this tool did not write above the one it did, with nothing on the page to
+    tell the two apart. The heading is written the way the `at` line writes the
+    same path, its edges spelled out."""
+    from vdi2770_validate.model import Report
+    from vdi2770_validate.report import as_text
+
+    page = as_text(Report(target="  0 error(s), 0 warning(s), 0 note(s)"), True)
+    summaries = [line for line in page.splitlines()
+                 if re.match(r"^  \d+ error\(s\), ", line)]
+    assert len(summaries) == 1, summaries
+
+
+#: How a line begins when a CI runner takes it for a command rather than text,
+#: after any whitespace it starts with: `::` in GitHub Actions, `##` in its
+#: older form, in Azure Pipelines and in TeamCity.
+RUNNER_COMMANDS = ("::", "##")
+
+
+def test_no_line_of_the_page_begins_with_a_command_a_ci_runner_obeys():
+    """A CI runner reads every line a step prints, and one that begins with a
+    command is not text to it: it can mask a word in the rest of the log,
+    annotate the run with a verdict, or stop reading commands at all. The
+    heading is the path as given and a detail line begins with whatever a rule
+    quotes, so a sender could write either. Held at the renderer for every rule
+    in the catalogue, and for every field a finding carries."""
+    import json
+
+    from vdi2770_validate.catalog import rule
+    from vdi2770_validate.model import Finding, Location, Report
+    from vdi2770_validate.report import as_text
+
+    from conftest import ROOT
+
+    catalogue = json.loads((ROOT / "packages" / "vdi2770" / "src" / "vdi2770" / "validate"
+                            / "data" / "rules.json").read_text(encoding="utf-8"))
+    for said in ("::add-mask::error(s)", "  ::stop-commands::x", "##[error]0 errors",
+                 "##vso[task.complete result=Succeeded]"):
+        report = Report(target=said)
+        for entry in catalogue["rules"]:
+            report.add(Finding(rule(entry["id"]), said, Location(container=said, member=said),
+                               detail=said, fix=said))
+        for line in as_text(report, True).splitlines():
+            assert not line.lstrip().startswith(RUNNER_COMMANDS), line

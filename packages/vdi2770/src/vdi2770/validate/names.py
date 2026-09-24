@@ -79,6 +79,28 @@ def on_one_line(text: str) -> str:
     return "".join(_spelled(c) if _draws_nothing(c) else c for c in text)
 
 
+#: How a line begins when a CI runner takes it for a command of its own rather
+#: than for text, after any whitespace the line starts with: `::` in GitHub
+#: Actions, `##` in its older form, in Azure Pipelines and in TeamCity.
+RUNNER_COMMANDS = ("::", "##")
+
+
+def not_a_command(line: str) -> str:
+    """`line`, with its first character spelled out if the line would read to a
+    CI runner as a command.
+
+    Keeping a value on its line is not enough where the line is read by a
+    machine. The heading is the path as given and a detail line begins with
+    whatever a rule quotes, and a runner that sees `::add-mask::error` there
+    stops showing that word for the rest of the log -- or annotates the run, or
+    stops reading commands at all. Spelling out one character is enough for
+    the runner and leaves the line readable.
+    """
+    body = line.lstrip()
+    if not body.startswith(RUNNER_COMMANDS):
+        return line
+    return line[:len(line) - len(body)] + _spelled(body[0]) + body[1:]
+
 def _spelled(c: str) -> str:
     """`c` as the escape a reader can type back.
 

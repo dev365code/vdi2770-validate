@@ -2266,11 +2266,43 @@ LISTING_BUDGET_ROWS = [
 
     ("report/the-heading-stays-on-its-line",
      "packages/vdi2770/src/vdi2770/validate/report.py",
-     '    lines: List[str] = [on_one_line(f"{report.target}")]',
+     '    lines: List[str] = [as_written(f"{report.target}")]',
      '    lines: List[str] = [f"{report.target}"]',
      ["tests/test_two_names_that_print_alike_are_told_apart.py::test_no_archive_controlled_string_can_forge_lines_in_the_report"],
      "the file's own name heads the page, and a drop folder hands it over as "
      "it was sent"),
+
+    ("report/the-heading-is-written-as-the-at-line-writes-it",
+     "packages/vdi2770/src/vdi2770/validate/report.py",
+     '    lines: List[str] = [as_written(f"{report.target}")]',
+     '    lines: List[str] = [on_one_line(f"{report.target}")]',
+     ["tests/test_two_names_that_print_alike_are_told_apart.py::test_a_file_name_cannot_pass_for_the_summary"],
+     "kept to its line, a name made of two spaces and the counts is the summary "
+     "line, above the real one"),
+
+    ("report/no-line-leaves-as-a-runner-command",
+     "packages/vdi2770/src/vdi2770/validate/report.py",
+     '    return "\\n".join(not_a_command(line) for line in lines)',
+     '    return "\\n".join(lines)',
+     ["tests/test_two_names_that_print_alike_are_told_apart.py::test_no_line_of_the_page_begins_with_a_command_a_ci_runner_obeys"],
+     "the heading and a detail line begin with what the sender wrote, and a CI "
+     "runner takes `::add-mask::` there for a command"),
+
+    ("report/both-runner-command-forms-are-spelled",
+     "packages/vdi2770/src/vdi2770/validate/names.py",
+     'RUNNER_COMMANDS = ("::", "##")',
+     'RUNNER_COMMANDS = ("::",)',
+     ["tests/test_two_names_that_print_alike_are_told_apart.py::test_no_line_of_the_page_begins_with_a_command_a_ci_runner_obeys"],
+     "GitHub's older form, Azure Pipelines and TeamCity take a line beginning "
+     "`##` for a command"),
+
+    ("cli/an-unreadable-path-is-not-a-command",
+     "packages/vdi2770/src/vdi2770/validate/cli.py",
+     '            print(not_a_command(f"{as_written(path)}: cannot read it — {on_one_line(why)}"),',
+     '            print((f"{path}: cannot read it — {why}"),',
+     ["tests/test_cli.py::test_a_path_that_cannot_be_read_is_not_a_command_on_stderr"],
+     "the line on stderr begins with the path, and a runner reads stderr for "
+     "commands too"),
 
     ("report/the-budget-charges-a-sentence-as-the-page-prints-it",
      "packages/vdi2770/src/vdi2770/validate/model.py",
@@ -2304,6 +2336,21 @@ LISTING_BUDGET_ROWS = [
      "a console that cannot print UTF-8 gets the JSON with every non-ASCII "
      "character escaped, and a charge counted in UTF-8 let it print three times "
      "the budget"),
+
+    ("report/a-finding-too-long-to-fit-is-not-measured",
+     "packages/vdi2770/src/vdi2770/validate/model.py",
+     "        size = 0 if rid in self.over_budget else least_size(f)",
+     "        size = 0",
+     ["tests/test_a_long_name_does_not_multiply_the_report.py::test_a_finding_that_cannot_fit_is_turned_away_before_it_is_measured"],
+     "measuring a finding walks every character it carries, and one detail can "
+     "run to a hundred million of them"),
+
+    ("report/the-length-bound-is-never-more-than-the-charge",
+     "packages/vdi2770/src/vdi2770/validate/model.py",
+     "    return LISTED_ALLOWANCE + sum(len(s) for s in (",
+     "    return LISTED_ALLOWANCE + 2 * sum(len(s) for s in (",
+     ["tests/test_a_long_name_does_not_multiply_the_report.py::test_the_budget_charges_at_least_what_either_shape_prints"],
+     "a bound above the charge turns away a finding that would have fit"),
 
     ("report/the-allowance-covers-what-every-rule-prints-around-a-finding",
      "packages/vdi2770/src/vdi2770/validate/model.py",
