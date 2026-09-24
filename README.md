@@ -108,6 +108,14 @@ Every code carries a remedy and the source its requirement comes from —
 [docs/rules.md](https://github.com/dev365code/vdi2770-validate/blob/main/docs/rules.md)
 lists all of them.
 
+## Where it stands
+
+<a href="https://github.com/dev365code/vdi2770-validate/blob/main/docs/what-it-catches.md">
+<img src="https://raw.githubusercontent.com/dev365code/vdi2770-validate/main/docs/capabilities.svg?v=d6cd8afa" alt="Coverage: 28 of 42 rules have a fixture pair; Explanation: what is wrong, evidence, remedy, source; Report contract: schemaVersion, golden, exit codes, schema; Entrances: command line, library, single file, Action; Input safety: read budgets, advisory, own mutations; Upstream: pinned by commit" width="100%">
+</a>
+
+*Six things this tool holds itself to, measured on the code this page describes, against the conditions it has set for 1.0. The picture is drawn from [`docs/capabilities.json`](https://github.com/dev365code/vdi2770-validate/blob/main/docs/capabilities.json), and every item it marks done names a file in this repository that says so; the cases behind each axis are in [`docs/what-it-catches.md`](https://github.com/dev365code/vdi2770-validate/blob/main/docs/what-it-catches.md).*
+
 ## Where it sits
 
 ```mermaid
@@ -245,9 +253,9 @@ iiRDS, if that is the handover format you are on.
   rule carries where its requirement comes from, a remedy sentence, and — where the
   reference implementation checks the same thing — the message keys it uses.
 - **28 of 42 rules have a minimal fixture pair** — a container that violates the rule
-  and a conforming one differing in as little as a single member. A 29th has a violating
-  fixture and no counterpart, because there is no conforming version of *this file is not
-  a ZIP*. The rest are exercised by the vendored corpus. A rule that fires nowhere fails
+  and a conforming one differing in as little as a single member. A 29th, *this file is
+  not a ZIP*, has a violating fixture and no counterpart yet. The rest are exercised by
+  the vendored corpus. A rule that fires nowhere fails
   the build, and every rule here has been checked against its own mutations.
 - **Rules cannot reach the parser.** A test fails if a rule module imports `zipfile`
   or an XML library, so a rule cannot accidentally check how a document was spelled
@@ -482,6 +490,11 @@ stops being a phrase you have to read the source to size. The report's
 `schemaVersion` is already `1` and is already on the list above; 1.0 does not
 change it, it commits to not changing it. Neither meaning is that the rule set
 is finished.
+
+That is what 1.0 will mean, and not everything it waits for. The picture under
+*Where it stands* draws the rest; in words:
+
+Before it calls a release 1.0, this project asks of itself — Coverage: 39 of 42, every rule that can have one; Explanation: what is wrong, in one sentence · the evidence as read from the file · a remedy, for every rule · the source of every rule's requirement · the line, for every metadata finding; Report contract: schemaVersion in every report · a golden report held by a test · exit codes under test · a field-by-field schema page; Entrances: command line · Python library · single file, nothing to install · GitHub Action · browser, nothing installed; Input safety: read budgets, per member and per archive · a security fix ships with an advisory · tests verified against their own mutations · declared encodings read without loss; Upstream: upstream corpus pinned by commit · checked weekly for change.
 
 ## The classification table, and a disagreement
 

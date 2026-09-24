@@ -496,8 +496,12 @@ def test_no_document_cites_a_file_that_is_not_here():
     # the harness its figures come from. The section 0.9.3 went out with says
     # only "the repository's own builder", and that section is frozen; this is
     # where a reader of the changelog is told which file that is.
-    assert seen == 40, (
-        f"{seen} citations found, not 40. If you added or removed one, say so "
+    # 40 to 54 when the front page came to draw where it stands: the paragraph
+    # under the picture names its data and the page behind it (two), that page
+    # cites five files for its cases and limits, and the table generated beside
+    # the picture cites the seven files its items point at as evidence.
+    assert seen == 54, (
+        f"{seen} citations found, not 54. If you added or removed one, say so "
         f"here; if you did not, some of them just stopped being checked.")
 
 

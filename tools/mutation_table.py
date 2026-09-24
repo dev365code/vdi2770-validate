@@ -2288,6 +2288,29 @@ LISTING_BUDGET_ROWS = [
      "fixed it would read as no correction: the page naming the release that "
      "shipped the repair goes red, and one naming the corrected release green"),
 
+    ("gates/the-picture-draws-what-the-data-says",
+     "docs/capabilities.json",
+     '"now": 28, "target": 39,',
+     '"now": 29, "target": 39,',
+     ["tests/test_capabilities_current.py::test_rendered_files_match_the_data"],
+     "a count on the front-page picture that the file it is drawn from no longer "
+     "says, and no sentence in the repository says either"),
+
+    ("gates/a-done-item-points-at-a-file-that-says-it",
+     "docs/capabilities.json",
+     '{"file": "action.yml",',
+     '{"file": "pyproject.toml",',
+     ["tests/test_capabilities_current.py::test_every_piece_of_evidence_says_what_it_is_cited_for"],
+     "an entrance drawn as done on the strength of a file that does not say "
+     "what it is cited for"),
+
+    ("gates/the-readme-states-every-1-0-condition",
+     "README.md",
+     "this project asks of itself",
+     "this project asks",
+     ["tests/test_capabilities_current.py::test_every_condition_on_the_picture_is_in_the_readme"],
+     "a condition the picture draws for 1.0 that the page no longer states"),
+
     ("report/a-message-stays-on-its-line",
      "packages/vdi2770/src/vdi2770/validate/report.py",
      '        lines.append(f"  {MARK[f.severity]}  {f.rule.id}  {on_one_line(f.message)}")',

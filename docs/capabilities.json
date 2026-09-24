@@ -1,0 +1,73 @@
+{
+  "product": "vdi2770-validate",
+  "as_of": "0.10.0",
+  "detail": "docs/what-it-catches.md",
+  "axes": [
+    {"key": "coverage", "label": "Coverage",
+     "now": 28, "target": 39,
+     "now_text": "28 of 42 rules have a fixture pair",
+     "target_text": "39 of 42, every rule that can have one",
+     "evidence": [{"file": "README.md", "says": "28 of 42 rules have a minimal fixture pair"}]},
+    {"key": "explanation", "label": "Explanation",
+     "items": [
+       {"text": "what is wrong, in one sentence", "done": true,
+        "evidence": {"file": "README.md", "says": "Three parts, every time: what is wrong"}},
+       {"text": "the evidence as read from the file", "done": true,
+        "evidence": {"file": "README.md", "says": "the evidence as read from your file"}},
+       {"text": "a remedy, for every rule", "done": true,
+        "evidence": {"file": "README.md", "says": "A rule without a remedy does not ship"}},
+       {"text": "the source of every rule's requirement", "done": true,
+        "evidence": {"file": "README.md", "says": "each rule carries where its requirement comes from"}},
+       {"text": "the line, for every metadata finding", "done": false}
+     ],
+     "now_text": "what is wrong, evidence, remedy, source",
+     "target_text": "+ the line, for every metadata finding"},
+    {"key": "report", "label": "Report contract",
+     "items": [
+       {"text": "schemaVersion in every report", "done": true,
+        "evidence": {"file": "docs/golden-report.json", "says": "\"schemaVersion\": 1, \"summary\": {"}},
+       {"text": "a golden report held by a test", "done": true,
+        "evidence": {"file": "tools/golden_report.py", "says": "The whole report for one container, kept as a file a diff can be read from"}},
+       {"text": "exit codes under test", "done": true,
+        "evidence": {"file": "tests/test_cli.py", "says": "is where the exit codes are written down"}},
+       {"text": "a field-by-field schema page", "done": true,
+        "evidence": {"file": "docs/report-schema.md", "says": "This page is what is in an element"}}
+     ],
+     "now_text": "schemaVersion, golden, exit codes, schema",
+     "target_text": "met"},
+    {"key": "entrances", "label": "Entrances",
+     "items": [
+       {"text": "command line", "done": true,
+        "evidence": {"file": "pyproject.toml", "says": "vdi2770-validate = \"vdi2770_validate.entry:run\""}},
+       {"text": "Python library", "done": true,
+        "evidence": {"file": "README.md", "says": "from vdi2770 import read_container_file"}},
+       {"text": "single file, nothing to install", "done": true,
+        "evidence": {"file": "tools/build_zipapp.py", "says": "Build the single-file form"}},
+       {"text": "GitHub Action", "done": true,
+        "evidence": {"file": "action.yml", "says": "Check VDI 2770 document containers in a workflow"}},
+       {"text": "browser, nothing installed", "done": false}
+     ],
+     "now_text": "command line, library, single file, Action",
+     "target_text": "+ browser, nothing installed"},
+    {"key": "input", "label": "Input safety",
+     "items": [
+       {"text": "read budgets, per member and per archive", "done": true,
+        "evidence": {"file": "SECURITY.md", "says": "Per-member size, total size, member count and compression-ratio caps"}},
+       {"text": "a security fix ships with an advisory", "done": true,
+        "evidence": {"file": "SECURITY.md", "says": "a security fix that ships in a release gets a GitHub security advisory"}},
+       {"text": "tests verified against their own mutations", "done": true,
+        "evidence": {"file": "tools/mutation_table.py", "says": "Every claim this project makes about a gate, as a mutation somebody can run"}},
+       {"text": "declared encodings read without loss", "done": false}
+     ],
+     "now_text": "read budgets, advisory, own mutations",
+     "target_text": "+ declared encodings read without loss"},
+    {"key": "upstream", "label": "Upstream",
+     "items": [
+       {"text": "upstream corpus pinned by commit", "done": true,
+        "evidence": {"file": "corpus/MANIFEST.json", "says": "\"repo\": \"DigitalDataChainConsortium/vdi2770\", \"commit\":"}},
+       {"text": "checked weekly for change", "done": false}
+     ],
+     "now_text": "pinned by commit",
+     "target_text": "+ checked weekly for change"}
+  ]
+}

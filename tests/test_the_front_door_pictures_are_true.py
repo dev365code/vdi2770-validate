@@ -117,8 +117,15 @@ def test_the_pictures_alt_text_carries_no_number_either():
     sentence around it still reads true.
     """
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
-    alts = re.findall(r'<img[^>]*\salt="([^"]*)"', readme)
-    alts += [alt for alt, _target in re.findall(r"!\[([^\]]*)\]\(([^)\s]+)\)", readme)]
+    # Except one sentence: the capabilities picture's summary line, which
+    # `tools/capabilities_svg.py` writes from `docs/capabilities.json` and the
+    # test below holds to the data -- a count there is regenerated, which is
+    # what this refuses to trust anywhere else. Only that sentence is let
+    # through, and however a tag is written: reading `src` before `alt` in
+    # double quotes let an alt written first, or in single quotes, pass unread.
+    gen = _capabilities()
+    generated = gen.summary_line(gen.load(str(ROOT / "docs" / "capabilities.json")))
+    alts = [alt for alt, _src in _pictures(readme) if alt != generated]
     assert alts, "the front page draws no picture with alt text; this read one"
     #: A count can be spelled. The text this gate was written for said "three
     #: errors, one warning" -- no digit in it anywhere -- so refusing digits
@@ -286,3 +293,84 @@ def test_the_elision_in_the_shot_says_what_it_elided():
     assert len(rest) == len(errors) + len(warnings), (
         "something that is neither an error nor a warning follows, and the "
         "elision does not mention it")
+
+
+def _pictures(page):
+    """(alt, src) for every picture on `page`, in each way one can be written:
+    an `<img>` tag, read by the standard library's HTML parser rather than a
+    pattern, so the order, the quoting and a `>` inside a value do not matter;
+    a markdown `![alt](src)`; and a reference-style `![alt][label]` resolved
+    through its definition, case-folded as markdown folds it."""
+    from html.parser import HTMLParser
+
+    # A fenced block is not drawn, so it goes. A code span's text stays -- an alt
+    # can quote output in backticks, and its numbers are what this reads -- but
+    # its `<` does not reach the parser, so a tag named in prose, `<Title>` for
+    # one, is not taken for markup.
+    page = re.sub(r"`[^`\n]*`", lambda m: m.group(0).replace("<", " "),
+                  _capabilities().FENCE.sub("", page))
+    found = []
+
+    class Images(HTMLParser):
+        # Markup everywhere, as on the Python that runs `make`: newer patch
+        # releases read what follows a `<title>` or an `<iframe>` as text up to
+        # its end tag, and a picture after one went unseen there.
+        CDATA_CONTENT_ELEMENTS = ()
+        RCDATA_CONTENT_ELEMENTS = ()
+
+        def handle_starttag(self, tag, attrs):
+            if tag == "img":
+                # Every `alt` the tag carries: a browser shows the first of two,
+                # and a dict of them keeps the last.
+                src = next((v for k, v in attrs if k == "src"), "") or ""
+                alts = [v or "" for k, v in attrs if k == "alt"] or [""]
+                found.extend((alt, src) for alt in alts)
+
+        handle_startendtag = handle_starttag
+
+    Images().feed(page)
+    found += re.findall(r"!\[([^\]]*)\]\(([^)\s]+)\)", page)
+    defined = {label.lower(): src for label, src
+               in re.findall(r"(?m)^\[([^\]]+)\]:\s*(\S+)\s*$", page)}
+    found += [(alt, defined.get(label.lower(), ""))
+              for alt, label in re.findall(r"!\[([^\]]*)\]\[([^\]]+)\]", page)]
+    return found
+
+
+def _shown(page, gen):
+    """What a reader sees of `page`: no HTML comments, and no code -- a picture
+    inside a fence or an indented block is shown as its source, not drawn."""
+    page = gen.FENCE.sub("", gen.visible(page))
+    return re.sub(r"(?m)(?:^[ \t]*\n)((?:(?: {4}|\t).*(?:\n|$))+)", "\n", page)
+
+
+def _capabilities():
+    """The generator the capabilities picture is drawn with."""
+    import importlib
+    import sys
+
+    tools = str(ROOT / "tools")
+    if tools not in sys.path:
+        sys.path.insert(0, tools)
+    return importlib.import_module("capabilities_svg")
+
+
+def test_the_capabilities_picture_is_embedded_once_as_its_generator_checks_it():
+    """The generator's `--check` reads the page, the picture, its stamp and the
+    page the picture links to, and nothing ran it. The gates beside it read
+    less: an embed hidden in a comment, a link to a page that does not exist,
+    and a second embed with a caption of its own all passed. So the check runs
+    here, and the page a reader sees holds this picture once, captioned with
+    its summary line."""
+    import subprocess
+    import sys
+
+    done = subprocess.run([sys.executable, "tools/capabilities_svg.py",
+                           "docs/capabilities.json", "--check"],
+                          cwd=ROOT, capture_output=True, text=True)
+    assert done.returncode == 0, done.stdout + done.stderr
+    gen = _capabilities()
+    shown = _shown((ROOT / "README.md").read_text(encoding="utf-8"), gen)
+    embeds = [(alt, src) for alt, src in _pictures(shown) if "capabilities.svg" in src]
+    assert len(embeds) == 1, f"the page shows the capabilities picture {len(embeds)} times"
+    assert embeds[0][0] == gen.summary_line(gen.load(str(ROOT / "docs" / "capabilities.json")))
