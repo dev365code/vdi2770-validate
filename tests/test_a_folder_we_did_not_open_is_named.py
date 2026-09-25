@@ -1,4 +1,4 @@
-"""`Z13` says documents arrived as folders and this tool does not open them.
+"""`Z13` says a folder holds a container this tool did not open.
 A sender's next question is *which* folders, and the answer has to be in the
 field a consumer reads.
 
@@ -10,16 +10,44 @@ field that exists to be read by a machine.
 One finding per folder now. The listing cap in `Report.add` is what makes that
 safe: a delivery with a thousand unopened folders lists the first few and counts
 the rest into `notListed`, the same way any rule that fires per element does.
+
+A folder that can be read is opened as the container it is, so the folders here
+are the sample's two with their metadata streams damaged: folders that hold a
+container and were not opened.
 """
+import io
 import json
 import os
 import subprocess
 import sys
+import tempfile
+import zipfile
+from pathlib import Path
 
 from conftest import CORPUS, ROOT
 
-#: Two folders hold a metadata file, so this draws `Z13` twice.
-FOLDERS = CORPUS / "missingdocuments" / "folders.zip"
+#: Two folders hold a metadata file.
+SAMPLE = CORPUS / "missingdocuments" / "folders.zip"
+
+
+def _unopened(data, member):
+    """`data` with `member`'s stream damaged, so the reader refuses it."""
+    raw = bytearray(data)
+    info = zipfile.ZipFile(io.BytesIO(data)).getinfo(member)
+    start = info.header_offset + 30 + len(info.filename) + len(info.extra) + 16
+    for k in range(start, start + 24):
+        raw[k] ^= 0xFF
+    return bytes(raw)
+
+
+def _both_unopened():
+    """The sample with both folders' metadata unreadable, so it draws `Z13` twice."""
+    data = SAMPLE.read_bytes()
+    for member in ("456-29201/VDI2770_Metadata.xml", "AB393/VDI2770_Metadata.xml"):
+        data = _unopened(data, member)
+    path = Path(tempfile.mkdtemp()) / "folders.zip"
+    path.write_bytes(data)
+    return path
 
 
 def report_for(path):
@@ -36,8 +64,8 @@ def report_for(path):
 
 
 def z13_findings():
-    assert FOLDERS.exists(), f"{FOLDERS} is not here; this gate would prove nothing"
-    return [f for d in report_for(FOLDERS) for f in d.get("findings", [])
+    assert SAMPLE.exists(), f"{SAMPLE} is not here; this gate would prove nothing"
+    return [f for d in report_for(_both_unopened()) for f in d.get("findings", [])
             if f["rule"] == "Z13"]
 
 
@@ -85,11 +113,9 @@ def test_the_folder_named_is_one_the_archive_holds():
     members with `./`, where the normalised folder is a real place under a name
     the listing does not literally contain.
     """
-    import zipfile
-
     findings = z13_findings()
     assert findings, "Z13 did not fire; this gate would pass vacuously"
-    with zipfile.ZipFile(FOLDERS) as z:
+    with zipfile.ZipFile(SAMPLE) as z:
         names = z.namelist()
     levels = {n.rsplit("/", 1)[0].lstrip("./") + "/" for n in names if "/" in n}
     for f in findings:
