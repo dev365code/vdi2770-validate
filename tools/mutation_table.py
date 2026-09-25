@@ -212,6 +212,29 @@ TABLE = [
      "a rule excused from saying where it is while it says so, which would let "
      "it stop without the build noticing"),
 
+    ("gates/the-samples-page-is-written-in-the-order-a-reader-counts",
+     "tools/official_samples.py",
+     '                          for rid in sorted(fired, key=in_order)) or "none"',
+     '                          for rid in sorted(fired)) or "none"',
+     ["tests/test_the_samples_page_is_what_the_tool_says.py::test_the_samples_page_is_what_the_tool_says"],
+     "the generator lists M13 before M3, and the page it writes stops being the "
+     "page in the repository"),
+
+    ("gates/the-samples-page-reads-in-the-order-a-reader-counts",
+     "docs/official-samples.md",
+     "M3 ×1 (table), M4 ×1 (ours), M13 ×1 (ours)",
+     "M13 ×1 (ours), M3 ×1 (table), M4 ×1 (ours)",
+     ["tests/test_the_samples_page_is_what_the_tool_says.py::test_the_rules_on_each_row_are_in_the_order_a_reader_counts"],
+     "a row lists M13 before M3, the order a string sort gives and no reader "
+     "counts in"),
+
+    ("gates/the-samples-page-exit-is-what-the-command-returns",
+     "docs/official-samples.md",
+     "| `demo_invalid_doc_type_names.zip` | 0 |",
+     "| `demo_invalid_doc_type_names.zip` | 1 |",
+     ["tests/test_the_samples_page_is_what_the_tool_says.py::test_each_exit_on_the_page_is_what_the_command_returns"],
+     "the page says a sample exits 1 that the command passes with 0"),
+
     ("gates/a-rule-a-container-can-break-has-a-pair",
      "tools/make_fixtures.py",
      '    add("f1-named-file-missing.zip"',

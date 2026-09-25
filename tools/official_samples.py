@@ -16,6 +16,8 @@ the same commit.
 from __future__ import annotations
 
 import argparse
+import contextlib
+import io
 import json
 import sys
 from collections import Counter
@@ -31,10 +33,26 @@ sys.path.insert(1, str(ROOT / "packages" / "vdi2770" / "src"))
 from vdi2770_validate.model import Severity  # noqa: E402
 from vdi2770_validate.runner import check_file  # noqa: E402
 
+from vdi2770_validate import cli  # noqa: E402
+
 #: Where a rule's requirement comes from, as the table writes it; the legend
 #: under the table says the same in full.
 SOURCE = {"schema": "schema", "table": "table", "container": "container",
           "reference": "reference", "ours": "ours"}
+
+
+def exit_code(path) -> int:
+    """What the command returns for one sample, asked of the command itself: a
+    copy of how an exit is decided would go on writing 1 where a pipeline sees
+    whatever the command came to return instead."""
+    with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+        return cli.main(["check", "--quiet", "--no-bundle", str(path)])
+
+
+def in_order(rule_id):
+    """M3 before M13, as a reader counts them."""
+    letters = rule_id.rstrip("0123456789")
+    return (letters, int(rule_id[len(letters):] or 0))
 
 
 def verdicts():
@@ -54,10 +72,10 @@ def verdicts():
             continue
         fired = Counter(f.rule.id for f in report.findings)
         source = {f.rule.id: SOURCE[f.rule.obligation.value] for f in report.findings}
-        rules = ", ".join(f"{rid} ×{n} ({source[rid]})" for rid, n in sorted(fired.items())) or "none"
-        errors = report.count(Severity.ERROR)
-        judged.append((name, 1 if errors else 0, errors, report.count(Severity.WARNING),
-                       report.count(Severity.INFO), rules))
+        rules = ", ".join(f"{rid} ×{fired[rid]} ({source[rid]})"
+                          for rid in sorted(fired, key=in_order)) or "none"
+        judged.append((name, exit_code(path), report.count(Severity.ERROR),
+                       report.count(Severity.WARNING), report.count(Severity.INFO), rules))
     return manifest["_upstream"], judged, not_containers
 
 
