@@ -7,6 +7,20 @@ Sections through 0.7.0 had their wording tidied after their tags; the text each 
 Who should take this release: nobody for what it judges. No rule, verdict, exit
 code or report field moves.
 
+- **Every rule a container can break has a fixture pair**: a container that
+  breaks it, built from a conforming one by one change. 39 of 42 rules have one,
+  the count this project set itself before 1.0; the other three cannot, and the
+  test that holds the rest to it says why. The reference implementation was run
+  over the eleven new containers at its pinned commit, and the page on where it
+  and this tool disagree counts them.
+- **Every finding about the metadata says the line and column it is about**, and
+  a test requires it, so a rule written later cannot drop them. Three do not say
+  where, each written down with its reason.
+- **The samples page takes each sample's exit from the command** rather than
+  working it out again, and lists the rules on a row in the order a reader
+  counts them.
+- **The pins the front page hands a reader to copy name 0.10.2.** The advice is
+  unchanged: 0.9.7 or later.
 - **GHSA-62p8-4642-mwfp is still not closed in full**: it reaches
   `vdi2770-validate` from 0.1.0 and `vdi2770` from 0.8.0 up to 0.10.3, and the
   older form of the runner's command syntax, which the runner reads anywhere in
