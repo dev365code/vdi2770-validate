@@ -510,8 +510,10 @@ def test_no_document_cites_a_file_that_is_not_here():
     # samples are recorded in and the tool that writes it.
     # 52 to 51 when 0.10.2 became the newest section: 0.10.1's one citation left
     # with it, and the new section cites none.
-    assert seen == 51, (
-        f"{seen} citations found, not 51. If you added or removed one, say so "
+    # 51 to 54 when 0.10.2's section came to say what else it carries: the
+    # samples page and the tool that writes it, and the advisories' record.
+    assert seen == 54, (
+        f"{seen} citations found, not 54. If you added or removed one, say so "
         f"here; if you did not, some of them just stopped being checked.")
 
 

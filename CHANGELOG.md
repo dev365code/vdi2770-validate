@@ -2,7 +2,7 @@
 
 Sections through 0.7.0 had their wording tidied after their tags; the text each version carried when it was published is in that tag's own `CHANGELOG.md`. From 0.8.0 on, a released section is frozen at its tag and takes only appended `*(Correction ...)*` lines.
 
-## 0.10.2 — unreleased
+## 0.10.2 — 2026-09-25
 
 Who should take this release: anyone who may need to tell this project that it
 got something wrong. No rule, verdict, exit code or report field moves.
@@ -18,6 +18,27 @@ got something wrong. No rule, verdict, exit code or report field moves.
   tool could not open as an archive, or did not judge in full -- a limit it
   stopped at, a check of its own that failed (`X5`) -- is followed on stderr by
   one sentence saying how to report it; the report itself is the same.
+- **This tool's verdict on every sample container the reference repository
+  publishes**, in `docs/official-samples.md`: for each, the exit code, the count
+  by severity, and every rule that fired with where its requirement comes from.
+  `tools/official_samples.py` writes it from the tool itself, and the build fails
+  when the page and the tool differ.
+- **The reference is asked every week whether it has moved.** A scheduled
+  workflow asks the reference repository where its default branch is, and fails
+  when that is no longer the commit the corpus and the reference sweep are
+  pinned to, or when the repository could not be asked.
+- **The security page's list of advisories is written from a record**,
+  `docs/advisories.json`, and each changelog section that names an advisory is
+  held to what the record says about it.
+- **The action's outputs are named on the front page**, and the `version`
+  input says what it does: installs that release and runs it.
+- **The pins the front page hands a reader to copy name 0.10.1.** The advice is
+  unchanged: 0.9.7 or later.
+- **With stderr closed, nothing meant for a person lands in the report.** With
+  `2>&-`, or pythonw with no console, Python has no stderr, and a line printed
+  to it went to stdout, into the report: in earlier releases the line saying a
+  path could not be read did. The lines `check` writes beside a report are now
+  said nowhere when there is nowhere to say them.
 - **GHSA-62p8-4642-mwfp is still not closed in full**: it reaches
   `vdi2770-validate` from 0.1.0 and `vdi2770` from 0.8.0 up to 0.10.2, and the
   older form of the runner's command syntax, which the runner reads anywhere in
