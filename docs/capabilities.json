@@ -1,6 +1,6 @@
 {
   "product": "vdi2770-validate",
-  "as_of": "0.10.2",
+  "as_of": "0.10.3",
   "detail": "docs/what-it-catches.md",
   "axes": [
     {"key": "coverage", "label": "Coverage",

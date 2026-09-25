@@ -73,7 +73,7 @@ same promise the table above makes.
   the file itself, the type a relationship names -- and a CI runner reads a
   line that begins in its own command syntax as an instruction rather than as
   text; the exit code and the JSON were not affected. `vdi2770-validate` from
-  0.1.0 and `vdi2770` from 0.8.0, up to 0.10.2. 0.9.6 closed the newer form of
+  0.1.0 and `vdi2770` from 0.8.0, up to 0.10.3. 0.9.6 closed the newer form of
   the runner's command syntax; the older form, which the runner reads anywhere
   in a line, is not yet closed by any release.
 

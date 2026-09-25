@@ -643,7 +643,7 @@ TABLE = [
 
     ("gates/the-pin-names-the-reader-that-was-built",
      "packages/vdi2770/pyproject.toml",
-     'version = "0.10.2"',
+     'version = "0.10.3"',
      'version = "0.7.1"',
      ["tools/check_wheel.py"],
      "the two manifests agree with each other and the artifacts do not: the "
@@ -1091,7 +1091,7 @@ FRONT_DOOR = [
 
     ("gates/the-page-quotes-the-requirement-the-project-declares",
      "README.md",
-     "`vdi2770[validate]==0.10.2`",
+     "`vdi2770[validate]==0.10.3`",
      "`vdi2770[validate]>=0.7.0`",
      ["tests/test_the_front_page_points_at_what_it_shows.py::"
       "test_the_requirement_the_page_quotes_is_the_one_the_project_declares"],
@@ -1100,7 +1100,7 @@ FRONT_DOOR = [
 
     ("gates/the-page-pypi-shows-quotes-the-requirement-the-project-declares",
      "README-vdi2770-validate.md",
-     "`vdi2770[validate]==0.10.2`",
+     "`vdi2770[validate]==0.10.3`",
      "`vdi2770[validate]==0.9.1`",
      ["tests/test_the_front_page_points_at_what_it_shows.py::"
       "test_the_requirement_the_page_quotes_is_the_one_the_project_declares"],
@@ -2276,7 +2276,7 @@ LISTING_BUDGET_ROWS = [
     ("pages/a-closed-advisory-is-not-listed-as-open",
      "docs/advisories.json",
      '"through": "0.9.6",\n      "fixed_in": "0.9.7",\n      "corrections": []',
-     '"through": "0.10.2",\n      "fixed_in": null,\n      "open": "0.9.7 closed part of it; the rest is not yet closed by any release.",\n      "corrections": []',
+     '"through": "0.10.3",\n      "fixed_in": null,\n      "open": "0.9.7 closed part of it; the rest is not yet closed by any release.",\n      "corrections": []',
      ["tests/test_an_advisory_and_its_release_name_each_other.py::"
       "test_each_advisory_is_cited_where_the_record_puts_it"],
      "an advisory the changelog says a release fixed, recorded as open, "
@@ -2284,7 +2284,7 @@ LISTING_BUDGET_ROWS = [
 
     ("pages/a-fix-a-correction-took-back-is-not-named",
      "docs/advisories.json",
-     '"through": "0.10.2",\n      "fixed_in": null,',
+     '"through": "0.10.3",\n      "fixed_in": null,',
      '"through": "0.9.5",\n      "fixed_in": "0.9.6",',
      ["tests/test_an_advisory_and_its_release_name_each_other.py::"
       "test_each_advisory_is_cited_where_the_record_puts_it"],
@@ -2294,7 +2294,7 @@ LISTING_BUDGET_ROWS = [
 
     ("pages/an-advisory-no-release-closes-reaches-the-one-being-written",
      "docs/advisories.json",
-     '"through": "0.10.2",',
+     '"through": "0.10.3",',
      '"through": "0.10.1",',
      ["tests/test_an_advisory_and_its_release_name_each_other.py::"
       "test_each_advisory_is_cited_where_the_record_puts_it"],

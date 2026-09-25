@@ -539,7 +539,7 @@
     },
     "__version__": {
       "kind": "str",
-      "value": "'0.10.2'"
+      "value": "'0.10.3'"
     },
     "build_document": {
       "signature": "(root: 'Node', base: 'Location') -> 'Document'"
@@ -569,5 +569,5 @@
       "signature": "(allowance: 'int') -> 'Callable[[bytes], tuple]'"
     }
   },
-  "version": "0.10.2"
+  "version": "0.10.3"
 }

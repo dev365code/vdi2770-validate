@@ -18,7 +18,7 @@
         "vdi2770-validate": "0.1.0",
         "vdi2770": "0.8.0"
       },
-      "through": "0.10.2",
+      "through": "0.10.3",
       "fixed_in": null,
       "open": "0.9.6 closed the newer form of the runner's command syntax; the older form, which the runner reads anywhere in a line, is not yet closed by any release.",
       "corrections": [

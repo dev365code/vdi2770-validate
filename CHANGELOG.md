@@ -2,6 +2,16 @@
 
 Sections through 0.7.0 had their wording tidied after their tags; the text each version carried when it was published is in that tag's own `CHANGELOG.md`. From 0.8.0 on, a released section is frozen at its tag and takes only appended `*(Correction ...)*` lines.
 
+## 0.10.3 — unreleased
+
+Who should take this release: nobody for what it judges. No rule, verdict, exit
+code or report field moves.
+
+- **GHSA-62p8-4642-mwfp is still not closed in full**: it reaches
+  `vdi2770-validate` from 0.1.0 and `vdi2770` from 0.8.0 up to 0.10.3, and the
+  older form of the runner's command syntax, which the runner reads anywhere in
+  a line, is not yet closed by any release.
+
 ## 0.10.2 — 2026-09-25
 
 Who should take this release: anyone who may need to tell this project that it
