@@ -71,7 +71,7 @@ def render() -> str:
         f"at commit `{upstream['commit']}`, path `{upstream['path']}`,",
         f"under the licence it carries ({upstream['licence']}).",
         "`corpus/MANIFEST.json` holds the SHA-256 of each. This page is this tool's",
-        "verdict on every one of them, and where each rule that fired takes its",
+        "verdict on every container among them, and where each rule that fired takes its",
         "requirement from. `tools/official_samples.py` writes it from the tool itself,",
         "and the build fails when the two differ.",
         "",
@@ -94,7 +94,7 @@ def render() -> str:
         "unless `--fail-on warning` says they should.",
     ]
     if not_containers:
-        lines += ["", "Not containers, and not judged here: "
+        lines += ["", "Not containers, so not on this page: "
                   + ", ".join(f"`{name}`" for name in not_containers) + "."]
     return "\n".join(lines) + "\n"
 

@@ -5,7 +5,7 @@ copied here unmodified: from `DigitalDataChainConsortium/vdi2770`
 at commit `e47c13c1925abc3ed4698cb5ed9e73b5eb544353`, path `examples/`,
 under the licence it carries (MIT, Copyright (C) 2021 Johannes Schmidt).
 `corpus/MANIFEST.json` holds the SHA-256 of each. This page is this tool's
-verdict on every one of them, and where each rule that fired takes its
+verdict on every container among them, and where each rule that fired takes its
 requirement from. `tools/official_samples.py` writes it from the tool itself,
 and the build fails when the two differ.
 
@@ -41,4 +41,4 @@ are in [docs/rules.md](rules.md).
 Exit `1` is at least one error, `0` none -- warnings and notes do not move it
 unless `--fail-on warning` says they should.
 
-Not containers, and not judged here: `.gitignore`, `Invalid1.pdf`, `Invalid2.pdf`, `InvalidName.xml`, `PDFA1b_File.pdf`, `PDFA2b_File.pdf`, `PDFA3b_File.pdf`, `VDI2770_Main.xml`, `Valid.pdf`, `folders/456-29201/VDI2770_Metadata.xml`, `folders/456-29201/demo.pdf`, `folders/456-29201/demo.xlsx`, `folders/AB393/VDI2770_Metadata.xml`, `folders/AB393/demo.docx`, `folders/AB393/demo.pdf`, `folders/VDI2770_Main.pdf`, `folders/VDI2770_Main.xml`, `missingdocuments/VDI2770_Main.pdf`, `missingdocuments/VDI2770_Main.xml`, `pdf/encrypted.pdf`, `pdf/password.pdf`, `pdf/scan.pdf`, `statistics.csv`, `xml/Datasheet.xml`, `xml/Invalid1.xml`, `xml/Invalid2.xml`, `xml/InvalidEmpty.xml`, `xml/Maindocument.xml`, `xml/MissingXmlNs.xml`, `xml/validation.xml`.
+Not containers, so not on this page: `.gitignore`, `Invalid1.pdf`, `Invalid2.pdf`, `InvalidName.xml`, `PDFA1b_File.pdf`, `PDFA2b_File.pdf`, `PDFA3b_File.pdf`, `VDI2770_Main.xml`, `Valid.pdf`, `folders/456-29201/VDI2770_Metadata.xml`, `folders/456-29201/demo.pdf`, `folders/456-29201/demo.xlsx`, `folders/AB393/VDI2770_Metadata.xml`, `folders/AB393/demo.docx`, `folders/AB393/demo.pdf`, `folders/VDI2770_Main.pdf`, `folders/VDI2770_Main.xml`, `missingdocuments/VDI2770_Main.pdf`, `missingdocuments/VDI2770_Main.xml`, `pdf/encrypted.pdf`, `pdf/password.pdf`, `pdf/scan.pdf`, `statistics.csv`, `xml/Datasheet.xml`, `xml/Invalid1.xml`, `xml/Invalid2.xml`, `xml/InvalidEmpty.xml`, `xml/Maindocument.xml`, `xml/MissingXmlNs.xml`, `xml/validation.xml`.

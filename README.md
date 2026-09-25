@@ -204,7 +204,7 @@ on to whatever reads the number; with the default you would add
 |---|---|
 | `exit-code` | what the checker returned: `0` nothing at the fail severity, `1` a finding or an unreadable path, `2` nothing could be read, `3` the install disagreed with itself, `64` a usage error |
 | `pyz` | the single file this step ran, when it ran one; empty on the default path, which installs instead |
-| `version` | the release this step decided to run -- from `version`, from the ref you pinned, or from the tree the action came from |
+| `version` | the release this step decided to run -- from `version`, from the ref you pinned, or from the tree the action came from; empty when `pyz` is given, since nothing was installed and the file answers `--version` itself |
 
 The runner needs a Python on `PATH` (`python3` or `python`); `actions/setup-python`
 is the usual way to be sure.
@@ -267,12 +267,12 @@ iiRDS, if that is the handover format you are on.
   or an XML library, so a rule cannot accidentally check how a document was spelled
   instead of what it says. Rules may read the readers' constants — the reserved file
   names, the container kinds — but not call a parser.
-- **Every published sample, judged in the open.** The reference repository's sample
-  files are in this repository unmodified, and
+- **Every published sample container, judged in the open.** The reference
+  repository's sample files are in this repository unmodified, and
   [docs/official-samples.md](https://github.com/dev365code/vdi2770-validate/blob/main/docs/official-samples.md)
-  is this tool's verdict on each, with where every rule that fired takes its
-  requirement from -- written from the tool itself, so the build fails when the two
-  differ.
+  is this tool's verdict on each container among them, with where every rule
+  that fired takes its requirement from -- written from the tool itself, so the
+  build fails when the two differ.
 - **Recorded disagreements.** Where the free sources disagree, this project picks one
   reading, marks the finding, and writes down the question in
   [docs/divergences.md](https://github.com/dev365code/vdi2770-validate/blob/main/docs/divergences.md).
@@ -425,8 +425,9 @@ that only has the old release cannot read it.
 ## When something looks wrong
 
 **What a bug report carries, and what it does not.** `vdi2770-validate check
-FILE --bug-report` writes a diagnostic bundle for that run: it shows it, writes
-it where you ran the check, and sends nothing. It carries the shape of the file
+FILE --bug-report` writes a diagnostic bundle for that run: it prints a summary
+of it, writes it where you ran the check, and sends nothing; `--show-bundle`
+prints all of it and writes nothing. It carries the shape of the file
 -- its size and SHA-256, and for each member of the archive its size,
 compression method and flags, never its name -- what the run said by rule code
 and count, the release and Python it ran on, and a sentence of your own if you
@@ -434,8 +435,10 @@ add one with `--note`. It does not carry a member's name, a file path, any value
 or identifier from the metadata, a language or product name, a finding's
 message, detail or remedy, any byte of a PDF or of the XML, a ZIP comment or
 what an extra field holds, an environment variable's value, or a user or host
-name. When this tool itself fails on a file it writes the same bundle without
-being asked, and says so; `--no-bundle` stops that.
+name. When this tool stops on a file with an error of its own, it writes the
+same bundle without being asked, and says so; `--no-bundle` stops that. When one
+of its checks fails and the run goes on, the report says so as `X5`, and a
+sentence after it says how to report it.
 
 Attach the bundle to an issue; do not attach the file itself, since an issue
 is public.

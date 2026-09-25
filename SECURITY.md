@@ -31,8 +31,9 @@ Please do not report findings that amount to "a malformed container produces a
 confusing message". Those are welcome, but as ordinary issues.
 
 **What a bug report carries, and what it does not.** `vdi2770-validate check
-FILE --bug-report` writes a diagnostic bundle for that run: it shows it, writes
-it where you ran the check, and sends nothing. It carries the shape of the file
+FILE --bug-report` writes a diagnostic bundle for that run: it prints a summary
+of it, writes it where you ran the check, and sends nothing; `--show-bundle`
+prints all of it and writes nothing. It carries the shape of the file
 -- its size and SHA-256, and for each member of the archive its size,
 compression method and flags, never its name -- what the run said by rule code
 and count, the release and Python it ran on, and a sentence of your own if you
@@ -40,8 +41,10 @@ add one with `--note`. It does not carry a member's name, a file path, any value
 or identifier from the metadata, a language or product name, a finding's
 message, detail or remedy, any byte of a PDF or of the XML, a ZIP comment or
 what an extra field holds, an environment variable's value, or a user or host
-name. When this tool itself fails on a file it writes the same bundle without
-being asked, and says so; `--no-bundle` stops that.
+name. When this tool stops on a file with an error of its own, it writes the
+same bundle without being asked, and says so; `--no-bundle` stops that. When one
+of its checks fails and the run goes on, the report says so as `X5`, and a
+sentence after it says how to report it.
 
 ## Advisories
 

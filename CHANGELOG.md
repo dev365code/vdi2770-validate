@@ -11,11 +11,13 @@ got something wrong. No rule, verdict, exit code or report field moves.
   diagnostic bundle for the run: the shape of the file -- its size and SHA-256,
   and each member's size, compression method and flags, never its name -- what
   the run said by rule code and count, and the release and Python it ran on.
-  Nothing is sent; the bundle is shown, then written where the check ran, and
-  `--show-bundle` only shows it. When this tool itself fails on a file it writes
-  the same bundle without being asked and says so; `--no-bundle` stops that. A
-  file that was refused, or that this tool declined to judge, is followed on
-  stderr by one sentence saying how to report it; the report itself is the same.
+  Nothing is sent; a summary of the bundle is shown, then the bundle is written
+  where the check ran, and `--show-bundle` shows all of it and writes nothing.
+  When this tool stops on a file with an error of its own it writes the same
+  bundle without being asked and says so; `--no-bundle` stops that. A file this
+  tool could not open as an archive, or did not judge in full -- a limit it
+  stopped at, a check of its own that failed (`X5`) -- is followed on stderr by
+  one sentence saying how to report it; the report itself is the same.
 - **GHSA-62p8-4642-mwfp is still not closed in full**: it reaches
   `vdi2770-validate` from 0.1.0 and `vdi2770` from 0.8.0 up to 0.10.2, and the
   older form of the runner's command syntax, which the runner reads anywhere in

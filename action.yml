@@ -69,6 +69,8 @@ outputs:
       The version this step decided to run -- from `version`, or from the ref
       you pinned, or from the tree the action came from. Published because
       "which checker ran" is the question a verdict is only meaningful against.
+      Empty when `pyz` is given: nothing was installed, and the file answers
+      `--version` itself.
     value: ${{ steps.obtain.outputs.version }}
 
 runs:
