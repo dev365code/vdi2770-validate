@@ -47,7 +47,7 @@ makes about a gate, breaks the thing that gate protects, and checks the gate
 notices — including one row that must *survive*, because a harness that
 reports red for a change that does not matter is reporting red for
 everything. Run it when you add or change a gate. `tools/mutation_table.py`
-with no arguments lists the table; it holds 298 rows, each naming the pytest
+with no arguments lists the table; it holds 305 rows, each naming the pytest
 selection or the tool that has to go red.
 
 `make standalone` runs each of the 110 test files on its own. A suite is a shared
@@ -76,6 +76,10 @@ it — changing one without the other is how a release ships a pin nobody can
 satisfy). CI runs exactly those commands — a test
 asserts that, because "the same command" is not the same thing as "the same
 environment".
+
+The list of advisories in SECURITY.md is written from `docs/advisories.json`
+by `tools/advisories.py` (`--write`): edit the record, not the list. `test`
+holds the page to the record, and the changelog to it section by section.
 
 ## Three rules of the road
 

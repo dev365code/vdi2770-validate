@@ -42,32 +42,32 @@ other. Whether the advisory is really published is checked when the release
 goes out: nothing in this repository reaches the network to ask, which is the
 same promise the table above makes.
 
+<!-- advisories: written by tools/advisories.py from docs/advisories.json; edit the data, not this list -->
+
 - [GHSA-h676-59p4-6632](https://github.com/dev365code/vdi2770-validate/security/advisories/GHSA-h676-59p4-6632):
   a file cut short on the way, or with bytes in front of it, could be read as
   an archive it held and pass: a container that stores a document container
   without compressing it, cut short at the right length, was read as that
-  document container, with no error and exit 0.
-  `vdi2770-validate` and `vdi2770` from 0.1.0, up to 0.9.6;
-  fixed in 0.9.7.
+  document container, with no error and exit 0. `vdi2770-validate` and
+  `vdi2770` from 0.1.0, up to 0.9.6; fixed in 0.9.7.
 
 - [GHSA-62p8-4642-mwfp](https://github.com/dev365code/vdi2770-validate/security/advisories/GHSA-62p8-4642-mwfp):
-  the heading of the text report, a detail line, and the line on stderr
-  saying a path could not be read began with a value the sender wrote --
-  the name of the file itself, the type a relationship names -- and a CI
-  runner reads a line that begins in its own command syntax as an
-  instruction rather than as text; the exit code and the JSON were not
-  affected. `vdi2770-validate` from 0.1.0 and `vdi2770` from 0.8.0,
-  up to 0.10.1. 0.9.6 closed the newer form of the runner's command syntax;
-  the older form, which the runner reads anywhere in a line, is not yet closed
-  by any release.
+  the heading of the text report, a detail line, and the line on stderr saying
+  a path could not be read began with a value the sender wrote -- the name of
+  the file itself, the type a relationship names -- and a CI runner reads a
+  line that begins in its own command syntax as an instruction rather than as
+  text; the exit code and the JSON were not affected. `vdi2770-validate` from
+  0.1.0 and `vdi2770` from 0.8.0, up to 0.10.1. 0.9.6 closed the newer form of
+  the runner's command syntax; the older form, which the runner reads anywhere
+  in a line, is not yet closed by any release.
 
 - [GHSA-3pfq-57fx-w4q5](https://github.com/dev365code/vdi2770-validate/security/advisories/GHSA-3pfq-57fx-w4q5):
   a value the sender wrote -- a class id, a language, the identifier a
   relationship names, or the name of the file itself -- could start a line of
   its own in the text report and put a summary and a verdict this tool did not
   write above the real ones; the exit code and the JSON were not affected.
-  0.9.5 kept every value to its line, and a file named with two spaces and
-  the counts was still the summary line. `vdi2770-validate` from 0.1.0 and
+  0.9.5 kept every value to its line, and a file named with two spaces and the
+  counts was still the summary line. `vdi2770-validate` from 0.1.0 and
   `vdi2770` from 0.8.0, up to 0.9.5; fixed in 0.9.6.
 
 - [GHSA-6hqr-phm3-chpf](https://github.com/dev365code/vdi2770-validate/security/advisories/GHSA-6hqr-phm3-chpf):
@@ -76,24 +76,25 @@ same promise the table above makes.
   was bounded, from 0.7.0, by how many findings it held and never by their
   size, so a 156 KB archive made a report of 136 MB in each of its two shapes.
   0.9.3 bounded each rule's listing by the characters its findings stored, and
-  a name made of characters the report spells out still printed six to
-  thirteen times that; 0.9.4 counted what it printed as UTF-8, and a console
-  that cannot print UTF-8 received up to three times the budget.
-  `vdi2770-validate` from 0.1.0 and `vdi2770` from 0.8.0, up to 0.9.4;
-  fixed in 0.9.5.
+  a name made of characters the report spells out still printed six to thirteen
+  times that; 0.9.4 counted what it printed as UTF-8, and a console that cannot
+  print UTF-8 received up to three times the budget. `vdi2770-validate` from
+  0.1.0 and `vdi2770` from 0.8.0, up to 0.9.4; fixed in 0.9.5.
 
 - [GHSA-f9xw-89gp-x52p](https://github.com/dev365code/vdi2770-validate/security/advisories/GHSA-f9xw-89gp-x52p):
   asking whether any document other than this one declares an identifier built
   one set of the whole delivery's identifiers for every document that asked and
   kept them all, so memory grew with the product of the two and a 963 KB
-  archive made one run hold 1.6 GB. `vdi2770` and `vdi2770-validate` from 0.8.0
-  up to 0.9.1; fixed in 0.9.2.
+  archive made one run hold 1.6 GB. `vdi2770-validate` and `vdi2770` from
+  0.8.0, up to 0.9.1; fixed in 0.9.2.
 
 - [GHSA-xp97-jcmj-h45f](https://github.com/dev365code/vdi2770-validate/security/advisories/GHSA-xp97-jcmj-h45f):
-  a container member that lied about its size, or used a compression method
-  the reader could not bound, could make the reader allocate far more memory
-  than the archive's own size. Every release of `vdi2770` and
-  `vdi2770-validate` up to 0.8.0; fixed in 0.8.1.
+  a container member that lied about its size, or used a compression method the
+  reader could not bound, could make the reader allocate far more memory than
+  the archive's own size. `vdi2770-validate` and `vdi2770` from 0.1.0, up to
+  0.8.0; fixed in 0.8.1.
+
+<!-- /advisories -->
 
 **No fix released below 0.8.0 has an advisory of its own, and that is not
 because there was nothing to write one for.** Much of 0.5.0, 0.6.0 and 0.7.0 is hardening against

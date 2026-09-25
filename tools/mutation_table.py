@@ -247,13 +247,13 @@ TABLE = [
      "docs/licensing.md could point at files that are not here"),
 
     ("gates/an-advisory-names-the-release-that-fixes-it",
-     "SECURITY.md",
-     "`vdi2770-validate` up to 0.8.0; fixed in 0.8.1.",
-     "`vdi2770-validate` up to 0.8.0; fixed in 0.8.2.",
+     "docs/advisories.json",
+     '"through": "0.8.0",\n      "fixed_in": "0.8.1",',
+     '"through": "0.8.0",\n      "fixed_in": "0.8.2",',
      ["tests/test_an_advisory_and_its_release_name_each_other.py::"
-      "test_each_advisory_is_cited_by_the_release_that_fixes_it"],
-     "the security page names the release that fixes an advisory and the "
-     "changelog cites the id under that release; let the two drift and a reader "
+      "test_each_advisory_is_cited_where_the_record_puts_it"],
+     "the record names the release that fixes an advisory and the changelog "
+     "cites the id under that release; let the two drift and a reader "
      "following either one lands nowhere"),
 
     ("gates/the-advisory-promise-keeps-its-date",
@@ -280,10 +280,10 @@ TABLE = [
      "advisories/GHSA-xp97-jcmj-h45f)",
      "advisories/GHSA-xp97-jcmj-h45fq)",
      ["tests/test_an_advisory_and_its_release_name_each_other.py::"
-      "test_each_advisory_is_cited_by_the_release_that_fixes_it"],
-     "the identifier pattern was unanchored and the ids were gathered as a set, "
-     "so a typo in one of a link's two copies of the id left the set correct "
-     "and the published link pointing at nothing"),
+      "test_the_security_page_lists_what_the_record_says"],
+     "a link on the security page edited by hand, one copy of the id apart "
+     "from the other, points a reader at nothing; the list is written from "
+     "the record, and the page is held to what that writes"),
 
     ("reader/a-stated-register-is-not-every-register",
      "packages/vdi2770/src/vdi2770/validate/rules/delivery.py",
@@ -2199,27 +2199,23 @@ LISTING_BUDGET_ROWS = [
      "68 MB of JSON from a 144 KB archive"),
 
     ("pages/the-page-follows-a-corrected-fix",
-     "SECURITY.md",
-     "  that cannot print UTF-8 received up to three times the budget.\n"
-     "  `vdi2770-validate` from 0.1.0 and `vdi2770` from 0.8.0, up to 0.9.4;\n"
-     "  fixed in 0.9.5.\n",
-     "  that cannot print UTF-8 received up to three times the budget.\n"
-     "  `vdi2770-validate` from 0.1.0 and `vdi2770` from 0.8.0, up to 0.9.3;\n"
-     "  fixed in 0.9.4.\n",
+     "docs/advisories.json",
+     '"through": "0.9.4",\n      "fixed_in": "0.9.5",',
+     '"through": "0.9.3",\n      "fixed_in": "0.9.4",',
      ["tests/test_an_advisory_and_its_release_name_each_other.py::"
-      "test_each_advisory_is_cited_by_the_release_that_fixes_it"],
-     "0.9.4's own correction says the fix was completed in 0.9.5, and a page "
-     "that still names 0.9.4 tells a reader on it that they are safe"),
+      "test_each_advisory_is_cited_where_the_record_puts_it"],
+     "0.9.4's own correction took its claim back, and a record naming 0.9.4 as "
+     "the fix tells a reader on it that they are safe; the record refuses to "
+     "load with a claim taken back at the release it names as the fix"),
 
     ("pages/a-corrected-fix-names-the-release-that-completed-it",
      "CHANGELOG.md",
-     "console that prints most receives, and GHSA-6hqr-phm3-chpf now reaches up to 0.9.4 and is fixed in 0.9.5.)*",
-     "console that prints most receives, and GHSA-6hqr-phm3-chpf now reaches up to 0.9.4.)*",
+     "; 0.9.5 counts what the console that prints most receives, and GHSA-6hqr-phm3-chpf now reaches up to 0.9.4 and is fixed in 0.9.5.)*",
+     ".)*",
      ["tests/test_an_advisory_and_its_release_name_each_other.py::"
-      "test_each_advisory_is_cited_by_the_release_that_fixes_it"],
-     "0.9.4 cited the advisory as fixed there; only its appended correction "
-     "naming 0.9.5 lets the page name 0.9.5 without naming a release later than "
-     "the one that shipped the repair"),
+      "test_each_advisory_is_cited_where_the_record_puts_it"],
+     "the correction appended to 0.9.4 stops naming the advisory, and the "
+     "record still says 0.9.4's claim to fix it was taken back"),
 
     ("pages/a-correction-sends-a-reader-past-every-advisory",
      "CHANGELOG.md",
@@ -2269,62 +2265,125 @@ LISTING_BUDGET_ROWS = [
      "command around it to read it as one"),
 
     ("pages/an-open-advisory-names-no-fix",
-     "SECURITY.md",
-     "  up to 0.10.1. 0.9.6 closed the newer form",
-     "  up to 0.10.1; fixed in 0.9.6. 0.9.6 closed the newer form",
+     "docs/advisories.json",
+     '"fixed_in": null,\n      "open":',
+     '"fixed_in": "0.9.6",\n      "open":',
      ["tests/test_an_advisory_and_its_release_name_each_other.py::"
       "test_the_two_pages_name_the_same_advisories"],
      "an entry that names a fix and says no release closes it yet tells a "
-     "reader both"),
-
-    ("pages/an-open-range-reaches-the-release-not-before-it",
-     "SECURITY.md",
-     "  up to 0.10.1. 0.9.6 closed the newer form",
-     "  before 0.10.1. 0.9.6 closed the newer form",
-     ["tests/test_an_advisory_and_its_release_name_each_other.py::"
-      "test_each_advisory_is_cited_by_the_release_that_fixes_it"],
-     "a range that stops before the release being written leaves it out of an "
-     "advisory no release closes"),
+     "reader both, and the record refuses to load"),
 
     ("pages/a-closed-advisory-is-not-listed-as-open",
-     "SECURITY.md",
-     "  `vdi2770-validate` and `vdi2770` from 0.1.0, up to 0.9.6;\n  fixed in 0.9.7.",
-     "  `vdi2770-validate` and `vdi2770` from 0.1.0, up to 0.10.1;\n  not yet closed by any release.",
+     "docs/advisories.json",
+     '"through": "0.9.6",\n      "fixed_in": "0.9.7",\n      "corrections": []',
+     '"through": "0.10.1",\n      "fixed_in": null,\n      "open": "0.9.7 closed part of it; the rest is not yet closed by any release.",\n      "corrections": []',
      ["tests/test_an_advisory_and_its_release_name_each_other.py::"
-      "test_each_advisory_is_cited_by_the_release_that_fixes_it"],
-     "an advisory the changelog says a release fixed, listed as open, escapes "
-     "every check a fixed one is held to"),
+      "test_each_advisory_is_cited_where_the_record_puts_it"],
+     "an advisory the changelog says a release fixed, recorded as open, "
+     "escapes every check a fixed one is held to"),
 
     ("pages/a-fix-a-correction-took-back-is-not-named",
-     "SECURITY.md",
-     "  up to 0.10.1. 0.9.6 closed the newer form of the runner's command syntax;\n"
-     "  the older form, which the runner reads anywhere in a line, is not yet closed\n"
-     "  by any release.\n",
-     "  up to 0.9.5; fixed in 0.9.6.\n",
+     "docs/advisories.json",
+     '"through": "0.10.1",\n      "fixed_in": null,',
+     '"through": "0.9.5",\n      "fixed_in": "0.9.6",',
      ["tests/test_an_advisory_and_its_release_name_each_other.py::"
-      "test_each_advisory_is_cited_by_the_release_that_fixes_it"],
+      "test_each_advisory_is_cited_where_the_record_puts_it"],
      "the section that shipped part of a repair carries a correction saying no "
-     "release closes the rest, and a page naming that release as the fix "
+     "release closes the rest, and a record naming that release as the fix "
      "contradicts it"),
 
     ("pages/an-advisory-no-release-closes-reaches-the-one-being-written",
-     "SECURITY.md",
-     "  up to 0.10.1. 0.9.6 closed the newer form",
-     "  up to 0.9.7. 0.9.6 closed the newer form",
+     "docs/advisories.json",
+     '"through": "0.10.1",',
+     '"through": "0.10.0",',
      ["tests/test_an_advisory_and_its_release_name_each_other.py::"
-      "test_each_advisory_is_cited_by_the_release_that_fixes_it"],
+      "test_each_advisory_is_cited_where_the_record_puts_it"],
      "an advisory no release closes reaches every release so far, and a range "
-     "that stops short tells a reader on the newest one they are clear of it"),
+     "that stops one short tells a reader on the newest one they are clear of it"),
 
-    ("gates/a-correction-is-read-past-the-release-it-corrects",
+    ("gates/a-sentence-is-read-apart-from-its-paragraph",
      "tests/test_an_advisory_and_its_release_name_each_other.py",
-     r'            for x in re.findall(r"(?<!not )\bfixed in (\d+\.\d+\.\d+)", line):',
-     r'            for x in re.findall(r"(?<!not )\bfixed in (\d+\.\d+\.\d+)", line)[:1]:',
+     r'            for sentence in re.split(r"(?<=[.!?])\s+", " ".join(para.split()))',
+     r'            for sentence in [" ".join(para.split())]',
      ["tests/test_an_advisory_and_its_release_name_each_other.py::"
-      "test_a_correction_that_names_the_old_release_first_still_counts"],
-     "a correction that names the section's own release before the one that "
-     "fixed it would read as no correction: the page naming the release that "
-     "shipped the repair goes red, and one naming the corrected release green"),
+      "test_each_advisory_is_cited_where_the_record_puts_it"],
+     "read by the paragraph, 0.10.0's words that GHSA-62p8-4642-mwfp is not "
+     "yet closed are taken as said of GHSA-3pfq-57fx-w4q5 a sentence later, "
+     "and a true page goes red"),
+
+    ("gates/a-correction-naming-a-later-fix-is-no-note",
+     "tests/test_an_advisory_and_its_release_name_each_other.py",
+     "        or any(as_number(r) > as_number(release) for r in later.findall(s))\n",
+     "",
+     ["tests/test_an_advisory_and_its_release_name_each_other.py::"
+      "test_what_a_correction_says_is_held_to_what_it_is_recorded_as"],
+     "a correction that says only which later release fixed the advisory "
+     "passes as one that took nothing back, and a record can leave the "
+     "corrected release standing as the fix"),
+
+    ("gates/a-range-however-worded-takes-the-claim-back",
+     "tests/test_an_advisory_and_its_release_name_each_other.py",
+     '    return re.findall(r"(?:up to(?: and including)?|through|reach(?:es|ing)?)\\s+"',
+     '    return re.findall(r"(?:up to|through)\\s+"',
+     ["tests/test_an_advisory_and_its_release_name_each_other.py::"
+      "test_what_a_correction_says_is_held_to_what_it_is_recorded_as"],
+     "a correction that says the range reaches the release in other words than "
+     "'up to' does not count as taking the claim back"),
+
+    ("pages/a-claim-taken-back-is-recorded",
+     "docs/advisories.json",
+     '"in": "0.9.5",\n          "on": "2026-09-24",\n          "took_back": true',
+     '"in": "0.9.5",\n          "on": "2026-09-24",\n          "took_back": false',
+     ["tests/test_an_advisory_and_its_release_name_each_other.py::"
+      "test_each_advisory_is_cited_where_the_record_puts_it"],
+     "0.9.5's correction says the advisory reaches 0.9.5, and a record that "
+     "calls it one that took nothing back leaves 0.9.5's claim explained by "
+     "nothing"),
+
+    ("pages/every-correction-naming-an-advisory-is-recorded",
+     "docs/advisories.json",
+     '"in": "0.8.1",\n          "on": "2026-09-23",',
+     '"in": "0.8.1",\n          "on": "2026-09-22",',
+     ["tests/test_an_advisory_and_its_release_name_each_other.py::"
+      "test_each_advisory_is_cited_where_the_record_puts_it"],
+     "a correction naming the advisory that the record does not know of, and "
+     "one the record names that is not there"),
+
+    ("pages/an-open-advisory-leaves-no-section-standing-as-its-fix",
+     "CHANGELOG.md",
+     '  form, which the runner reads anywhere in a line, is not yet closed by any\n  release. GHSA-3pfq-57fx-w4q5',
+     '  form, which the runner reads anywhere in a line, is closed as well by this\n  release. GHSA-3pfq-57fx-w4q5',
+     ["tests/test_an_advisory_and_its_release_name_each_other.py::"
+      "test_each_advisory_is_cited_where_the_record_puts_it"],
+     "a section naming an advisory no release closes stops saying so and is "
+     "not recorded as a claim taken back, so it stands as a fix"),
+
+    ("pages/no-range-stated-for-a-fixed-advisory-runs-up-to-its-fix",
+     "CHANGELOG.md",
+     'release. GHSA-3pfq-57fx-w4q5 now reaches up to 0.9.5 too.',
+     'release. GHSA-3pfq-57fx-w4q5 now reaches up to 0.9.6 too.',
+     ["tests/test_an_advisory_and_its_release_name_each_other.py::"
+      "test_each_advisory_is_cited_where_the_record_puts_it"],
+     "a later section states a range for the advisory that runs up to the "
+     "release the record says fixed it"),
+
+    ("pages/a-taken-back-claim-says-how-far-it-reaches",
+     "CHANGELOG.md",
+     "GHSA-3pfq-57fx-w4q5 now reaches up to 0.9.5 and is fixed in 0.9.6.)*",
+     "GHSA-3pfq-57fx-w4q5 now reaches up to 0.9.4 and is fixed in 0.9.6.)*",
+     ["tests/test_an_advisory_and_its_release_name_each_other.py::"
+      "test_each_advisory_is_cited_where_the_record_puts_it"],
+     "the correction the record says took 0.9.5's claim back stops the range "
+     "short of 0.9.5, and so takes nothing back"),
+
+    ("pages/the-page-names-only-recorded-advisories",
+     "SECURITY.md",
+     "GHSA-xp97-jcmj-h45f every release of both up to 0.8.0",
+     "GHSA-xp97-jcmj-h45g every release of both up to 0.8.0",
+     ["tests/test_an_advisory_and_its_release_name_each_other.py::"
+      "test_every_advisory_the_page_names_is_recorded"],
+     "the prose around the list names an advisory the record does not have, "
+     "and a reader looking it up finds nothing of ours"),
 
     ("gates/the-picture-draws-what-the-data-says",
      "docs/capabilities.json",

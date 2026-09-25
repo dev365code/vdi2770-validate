@@ -20,6 +20,7 @@ suite opens a socket -- a promise made on the same page it is checking -- so the
 live check belongs to whoever publishes, against the API, at the moment of
 publishing.
 """
+import importlib.util
 import re
 from pathlib import Path
 
@@ -71,80 +72,37 @@ def advisories_section():
     return m.group(1)
 
 
-def listed_advisories():
-    """Advisory id -> the release the page says fixes it, and the range it reaches.
+def _generator():
+    spec = importlib.util.spec_from_file_location(
+        "advisories", ROOT / "tools" / "advisories.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
-    An entry ends where the next one begins *or* where the list does. Splitting
-    only on the next bullet let the last entry's text run to the end of the
-    section, so `fixed in 0.8.1` in a paragraph fifteen lines below was read as
-    that entry naming its release -- the entry could stop naming one and the
-    parser would go on reporting that it did.
+
+#: The generator that writes the security page's list from the record. Its
+#: `load` refuses a record that cannot be true -- a fix inside the range it
+#: closes, an entry that names a fix and says nothing closes it -- so the tests
+#: below start from one that can.
+ADVISORIES = _generator()
+
+
+def records():
+    """The advisories as `docs/advisories.json` records them, in page order."""
+    return ADVISORIES.load()
+
+
+def listed_advisories():
+    """Advisory id -> the release that fixes it (None while no release closes
+    it), and the last release it reaches.
+
+    Read from the record, not from the page. This used to parse the page's
+    sentences, and each round of hardening found another sentence it read in the
+    page's favour: a fix taken from a paragraph fifteen lines below the entry, an
+    entry calling a fixed advisory open, another advisory's release read as this
+    one's. The page is written from the record now, and a test holds it there.
     """
-    out = {}
-    section = advisories_section()
-    # Every entry in the section, wherever it sits. Two earlier spellings each
-    # bounded "the listing" as one run of bullets: the first stopped at any
-    # blank line, which dropped the older advisory the moment a second was
-    # added; the second stopped at the first blank line not followed by a
-    # bullet, which let an entry written *below* the closing prose escape every
-    # check in this function and the set comparison as well. An entry is a
-    # bullet that names an advisory, and each one is cut at the end of its own
-    # bullet so that prose below it is never read as part of it.
-    entries = []
-    for chunk in re.split(r"\n(?=- )", section):
-        if not chunk.startswith("- ") or not GHSA.search(chunk):
-            continue
-        entries.append(re.split(r"\n\n(?!\s)", chunk)[0])
-    for para in entries:
-        ids = set(GHSA.findall(para))
-        if not ids:
-            continue
-        assert len(ids) == 1, f"one entry names more than one advisory: {sorted(ids)}"
-        advisory = ids.pop()
-        # The entry is a link, and a link has the identifier twice: once as the
-        # text a reader sees and once in the address they land on. Collecting
-        # ids as a *set* cannot see a typo in one of the two -- the other copy
-        # still matches, the set is still right, and the link still 404s. So
-        # the two copies are compared to each other, not only to the changelog.
-        link = re.search(r"\[([^\]]+)\]\((https?://[^)]+)\)", " ".join(para.split()))
-        if link:
-            shown, address = link.group(1), link.group(2)
-            assert shown.strip() == advisory, (
-                f"the entry's link reads {shown.strip()!r} and the identifier in "
-                f"it is {advisory}")
-            assert address.rstrip("/").endswith(advisory), (
-                f"the entry for {advisory} links to {address}, which does not "
-                f"end at that advisory")
-            # And on *this* repository, which is what the promise above says.
-            # Ending at the right identifier says nothing about whose advisory
-            # it is: the same id under another owner passed every check here.
-            assert address.startswith(f"https://github.com/{REPO}/security/advisories/"), (
-                f"the entry for {advisory} links to {address}, which is not an "
-                f"advisory on {REPO}; the promise above it says this repository")
-        fixed = re.search(r"(?<!not )\bfixed in (\d+\.\d+\.\d+)", para)
-        # Or it says in so many words that no release closes it yet: an advisory
-        # whose repair was found to close only part of it. Such an entry names no
-        # release as the fix, and the range it gives reaches the one being written.
-        still_open = "not yet closed by any release" in " ".join(para.split())
-        assert not (fixed and still_open), (
-            f"the entry for {advisory} names a release that fixes it and says no "
-            f"release closes it yet")
-        assert fixed or still_open, (
-            f"the entry for {advisory} does not say which release fixes it, nor "
-            f"that no release closes it yet; the promise above it undertakes to "
-            f"name that release")
-        # The promise has two halves -- "naming the versions it reaches **and**
-        # the release that fixes it" -- and only the second was checked, so an
-        # entry could drop the range it reaches and stay green.
-        # An open advisory's range takes in the release being written, so it
-        # says "up to" or "through" it; "before" would leave that one out.
-        reaches = re.search(r"(?:up to|through) (\d+\.\d+\.\d+)" if still_open
-                            else r"(?:up to|through|before) (\d+\.\d+\.\d+)", para)
-        assert reaches, (
-            f"the entry for {advisory} does not say which versions it reaches; "
-            f"the promise above it undertakes to name those too")
-        out[advisory] = (fixed.group(1) if fixed else None, reaches.group(1))
-    return out
+    return {a["id"]: (a["fixed_in"], a["through"]) for a in records()}
 
 
 def cited_advisories():
@@ -156,23 +114,69 @@ def cited_advisories():
     return out
 
 
-def corrections(advisory, where, changelog):
-    """Section -> the latest release that section's own appended corrections say
-    fixed `advisory`, for each section in `where` that has one after itself.
+def correction_lines(section):
+    """The corrections appended to a section, one per line."""
+    return re.findall(r"^\*\(Correct.*\)\*$", section, re.M)
 
-    Every `fixed in` on a line is read, not the first: a correction may name
-    what the section claimed before what is true, and then the first is the
-    section's own release.
+
+def sentences_naming(advisory, text):
+    """The sentences of `text` that name `advisory`, each on one line.
+
+    A sentence and not a paragraph: 0.10.0 says in one paragraph that
+    GHSA-62p8-4642-mwfp is not yet closed and, one sentence later, that
+    GHSA-3pfq-57fx-w4q5 now reaches 0.9.5 -- read by the paragraph, what is said
+    of one was taken as said of the other, and a true page went red.
     """
-    corrected = {}
-    for v in where:
-        for line in re.findall(r"^\*\(Correct.*\)\*$", changelog.get(v, ""), re.M):
-            if advisory not in line:
-                continue
-            for x in re.findall(r"(?<!not )\bfixed in (\d+\.\d+\.\d+)", line):
-                if as_number(x) > as_number(corrected.get(v, v)):
-                    corrected[v] = x
-    return corrected
+    named = re.compile(rf"(?<![\w-]){re.escape(advisory)}(?![\w-])")
+    return [sentence
+            for para in re.split(r"\n\s*\n", text)
+            for sentence in re.split(r"(?<=[.!?])\s+", " ".join(para.split()))
+            if named.search(sentence)]
+
+
+def reaches(text):
+    """Every release `text` says a range reaches, however it says so."""
+    return re.findall(r"(?:up to(?: and including)?|through|reach(?:es|ing)?)\s+"
+                      r"(\d+\.\d+\.\d+)(?![\d.]*\d)", text)
+
+
+def dated_corrections(section, advisory):
+    """(date, line) for each correction appended to `section` that names
+    `advisory`; the date is None where the correction carries none."""
+    named = re.compile(rf"(?<![\w-]){re.escape(advisory)}(?![\w-])")
+    out = []
+    for line in correction_lines(section):
+        if named.search(line):
+            dated = re.match(r"\*\(Correct(?:ion|ed)\s+(\d{4}-\d{2}-\d{2})\b", line)
+            out.append((dated.group(1) if dated else None, line))
+    return out
+
+
+def stated_ranges(text):
+    """Every release `text` says a range runs up to or through. Not "reaches":
+    "does not reach 0.10.2" says the opposite, and a range stated outright is
+    what a reader on that release acts on."""
+    return re.findall(r"(?:up to(?: and including)?|through)\s+(\d+\.\d+\.\d+)(?![\d.]*\d)", text)
+
+
+def takes_back(line, release):
+    """Whether a correction says a claim that `release` fixed the advisory was
+    wrong: that the range reaches `release` or later, or that no release closes
+    it yet. Read whole, as the one line and one correction it is."""
+    return (ADVISORIES.OPEN in " ".join(line.split())
+            or any(as_number(r) >= as_number(release) for r in reaches(line)))
+
+
+def takes_nothing_back(advisory, line, release):
+    """Whether a correction naming `advisory` leaves `release`'s claim standing:
+    no sentence naming the advisory says its range reaches `release` or later,
+    says nothing closes it, or names a later release -- the one that fixed it."""
+    later = re.compile(r"(?<![\d.])(\d+\.\d+\.\d+)(?![\d.]*\d)")
+    return not any(
+        ADVISORIES.OPEN in s
+        or any(as_number(r) >= as_number(release) for r in reaches(s))
+        or any(as_number(r) > as_number(release) for r in later.findall(s))
+        for s in sentences_naming(advisory, line))
 
 
 def test_an_advisory_is_cited_somewhere_at_all():
@@ -194,88 +198,174 @@ def test_the_two_pages_name_the_same_advisories():
         f"only in the changelog: {sorted(cited - listed)}")
 
 
-def test_each_advisory_is_cited_by_the_release_that_fixes_it():
-    """`fixed in 0.8.1` and a citation under `## 0.8.1` are one claim, and a
-    reader who follows either should land on the other."""
+def test_the_security_page_lists_what_the_record_says():
+    """The list on the security page is the record, written out; a hand edit to
+    it, or a record edited without writing the page again, is red."""
+    page = (ROOT / "SECURITY.md").read_text(encoding="utf-8")
+    written = ADVISORIES.page_with(page, ADVISORIES.listing(records(), ADVISORIES.repo()))
+    assert written == page, (
+        "SECURITY.md's list of advisories is not what docs/advisories.json says; "
+        "run python tools/advisories.py --write")
+
+
+def test_every_advisory_the_page_names_is_recorded():
+    """The prose around the list names advisories too, and an id there that the
+    record does not have is a link a reader can follow to nothing of ours."""
+    page = (ROOT / "SECURITY.md").read_text(encoding="utf-8")
+    stray = sorted(set(GHSA.findall(page)) - set(listed_advisories()))
+    assert not stray, f"SECURITY.md names advisories the record does not: {stray}"
+
+
+def test_each_advisory_is_cited_where_the_record_puts_it():
+    """The record says which release fixes an advisory, which releases claimed
+    to and took the claim back, which corrections name it, and how far it
+    reaches; the changelog has to say the same, section by section.
+
+    What is read from the changelog is kept to what cannot be read two ways:
+    which sections name the advisory, each correction that names it and its
+    date, a range's last release, and the words the record uses for an
+    advisory no release closes. Which correction took a claim back is written
+    in the record rather than read out of its words -- every reading of those
+    words found another sentence it read the wrong way. What the words are
+    still held to is that a correction recorded as taking a claim back says the
+    range reaches that release, and one recorded as taking nothing back does
+    not say so.
+    """
     cited = cited_advisories()
     changelog = changelog_sections()
-    for advisory, (fixed_in, reaches) in listed_advisories().items():
+    OPEN = ADVISORIES.OPEN
+    for a in records():
+        advisory, fixed_in, through = a["id"], a["fixed_in"], a["through"]
         where = cited.get(advisory, set())
-        corrected = corrections(advisory, where, changelog)
-        # A section whose own correction says no release closes it yet, where no
-        # later correction names a release that did.
-        reopened = sorted(v for v in where if v not in corrected and any(
-            advisory in line and "not yet closed by any release" in line
-            for line in re.findall(r"^\*\(Correct.*\)\*$", changelog.get(v, ""), re.M)))
+        said = {v: sentences_naming(advisory, changelog[v]) for v in where}
+        # Every correction that names the advisory is in the record, by the
+        # section it is appended to and its date, and everything the record
+        # names is there. A record left as it was when a correction was
+        # appended is red here, whatever the correction says.
+        found = {}
+        for v in sorted(where, key=as_number):
+            for date, line in dated_corrections(changelog[v], advisory):
+                assert date, (
+                    f"a correction appended to {v} names {advisory} and carries no "
+                    f"date; the record names a correction by its date")
+                found.setdefault((v, date), []).append(line)
+        recorded = {(c["in"], c["on"]) for c in a["corrections"]}
+        claimed = {c["in"] for c in a["corrections"] if c["took_back"]}
+        assert set(found) == recorded, (
+            f"{advisory}: corrections that name it {sorted(found)}; the record "
+            f"names {sorted(recorded)}")
+        # A release that claimed the fix and was wrong keeps its claim -- the
+        # section is the record of its tag -- and the correction that takes it
+        # back says how far the advisory now reaches, or that nothing closes it.
+        for c in (c for c in a["corrections"] if c["took_back"]):
+            v, date = c["in"], c["on"]
+            assert any(takes_back(line, v) for line in found[(v, date)]), (
+                f"the record says the correction of {date} appended to {v} took "
+                f"back its claim to fix {advisory}, and it does not say the range "
+                f"reaches {v} or that no release closes it yet; say how far it "
+                f"now reaches")
+        # One that took nothing back does not say it did.
+        for c in (c for c in a["corrections"] if not c["took_back"]):
+            v, date = c["in"], c["on"]
+            after_the_fix = fixed_in is not None and as_number(v) >= as_number(fixed_in)
+            assert all(takes_nothing_back(advisory, line, v) for line in found[(v, date)]), (
+                f"the record says the correction of {date} appended to {v} took "
+                f"nothing back, and a sentence in it naming {advisory} says the "
+                f"range reaches {v} or later, that nothing closes it yet, or names "
+                f"a later release. A sentence is read as said of every advisory it "
+                f"names, so if it speaks of another advisory too, give each its own"
+                + ("" if after_the_fix else
+                   f"; if it does take {v}'s claim back, record it as one that did"))
         if fixed_in is None:
-            # No release closes it: there is no fix to cite, and every release so
-            # far is inside it, up to the one being written.
-            assert reaches == __version__, (
-                f"{advisory} is not yet closed by any release, and the page says it "
-                f"reaches up to {reaches}; the release being written is {__version__}")
-            # And no section still says a release fixed it, unless a correction
-            # appended to it takes that back: a fixed advisory written up as open
-            # would otherwise escape every check a fixed one is held to.
-            for v in sorted(where):
-                said_fixed = [part for part in re.split(r"\n\s*\n", changelog.get(v, ""))
-                              if advisory in part
-                              and re.search(r"(?<!not )\bfixed in \d", part)]
-                assert not said_fixed or v in reopened, (
-                    f"{advisory} is listed as not yet closed by any release, and the "
-                    f"{v} section says a release fixed it, with no correction saying "
-                    f"otherwise")
+            # Every release so far is inside it, up to the one being written.
+            assert through == __version__, (
+                f"{advisory} is not yet closed by any release, and the record says "
+                f"it reaches up to {through}; the release being written is "
+                f"{__version__}")
+            # And the last word on it says so: the newest section that names
+            # it. A fixed advisory recorded as open would otherwise pass here --
+            # its sections name it, and none of them says the words.
+            assert where, f"{advisory} is not cited anywhere in the changelog"
+            latest = max(where, key=as_number)
+            assert any(OPEN in s for s in said[latest]), (
+                f"{advisory} is recorded as not yet closed by any release, and "
+                f"the newest section naming it, {latest}, does not say so in a "
+                f"sentence that names it")
+            # And no section naming it still stands as a fix: each one said it
+            # was open, or claimed a fix that a correction took back. An
+            # advisory reopened with the sections that called it fixed left
+            # uncorrected is otherwise green.
+            standing = sorted((v for v in where if v not in claimed
+                               and not any(OPEN in s for s in said[v])), key=as_number)
+            assert not standing, (
+                f"{advisory} is recorded as not yet closed by any release, and "
+                f"{standing} name it without saying so or being recorded as a "
+                f"claim a correction took back")
             continue
-        assert not reopened, (
-            f"{advisory} is listed as fixed in {fixed_in}, and the correction "
-            f"appended to {reopened} says no release closes it yet")
         assert fixed_in in where, (
-            f"{advisory} says it is fixed in {fixed_in}, but that section does "
+            f"{advisory} is recorded as fixed in {fixed_in}, and that section does "
             f"not cite it (cited under: {sorted(where) or 'nothing'})")
-        # The *earliest* section citing it, not merely one of them. A later
-        # release that carries the same repair cites the same advisory -- so
-        # once two sections named it, asking only "is `fixed in` among them"
-        # stopped being able to fail, and the page could name a release after
-        # the one that shipped the fix. A reader on the patch release then
-        # reads that they are still exposed.
-        # Except a section whose own claim was corrected: an appended line in it
-        # that names this advisory and a later release it was fixed in. 0.9.3
-        # cited GHSA-6hqr-phm3-chpf as fixed there, bounding by the wrong
-        # measure, and 0.9.5 completed it. The page has to follow the
-        # correction: naming the corrected section as the fix is refused, where
-        # before it passed as long as the page and that section agreed.
-        assert fixed_in not in corrected, (
-            f"{advisory} says it is fixed in {fixed_in}, and that section's own "
-            f"correction says the fix was completed in {corrected.get(fixed_in)}")
-        earliest = min((where - set(corrected)) or where, key=as_number)
-        assert fixed_in == earliest, (
-            f"{advisory} says it is fixed in {fixed_in}, and the earliest "
-            f"release whose section cites it is {earliest}; the page names a "
-            f"release later than the one that shipped the repair")
-        # And the range has to be the range that release describes. Until now
-        # it was only required to *exist*: the entry could say it reaches any
-        # version at all and stay green, which is the reading that leaves
-        # somebody on an affected version believing they are not.
-        section = changelog.get(fixed_in, "")
-        said = re.search(r"(?:up to|through|before) (\d+\.\d+\.\d+)", section)
-        assert said, (
-            f"the {fixed_in} section does not say which versions {advisory} "
-            f"reaches, so the entry's range is checked against nothing")
-        assert reaches == said.group(1), (
-            f"the advisory page says {advisory} reaches up to {reaches} and the "
-            f"{fixed_in} section says {said.group(1)}")
+        # Before the fix, a section naming it either claimed the fix and was
+        # corrected, or said the advisory was open. Anything else is a release
+        # before the one recorded as the fix that talks about it as fixed.
+        early = sorted((v for v in where if as_number(v) < as_number(fixed_in)),
+                       key=as_number)
+        unexplained = [v for v in early
+                       if v not in claimed and not any(OPEN in s for s in said[v])]
+        assert not unexplained, (
+            f"{advisory} is recorded as fixed in {fixed_in}, and {unexplained} "
+            f"name it earlier without being recorded as a claim taken back")
+        # From the fix on, nothing calls it open.
+        still = sorted((v for v in where if as_number(v) >= as_number(fixed_in)
+                        and any(OPEN in s for s in said[v])), key=as_number)
+        assert not still, (
+            f"{advisory} is recorded as fixed in {fixed_in}, and {still} say no "
+            f"release closes it yet. A sentence is read as said of every advisory "
+            f"it names: if one sentence speaks of two, give each its own")
+        # And nowhere does a range stated for it run up to the fix: "now reaches
+        # up to 0.9.4" in any section says 0.9.4 did not fix it, whatever the
+        # record names.
+        overrun = sorted((v for v in where if any(
+            as_number(r) >= as_number(fixed_in) for s in said[v] for r in stated_ranges(s))),
+            key=as_number)
+        assert not overrun, (
+            f"{advisory} is recorded as fixed in {fixed_in}, and {overrun} state "
+            f"a range for it up to {fixed_in} or later. A sentence is read as said "
+            f"of every advisory it names: if one sentence speaks of two, give each "
+            f"its own")
+        # And the release that fixed it says how far it reached: the range a
+        # reader on an older release reads is the one the record gives.
+        assert any(through in reaches(s) for s in said[fixed_in]), (
+            f"the record says {advisory} reaches up to {through}, and no sentence "
+            f"naming it in the {fixed_in} section says so")
 
 
-def test_a_correction_that_names_the_old_release_first_still_counts():
-    """A correction says most naturally what the section claimed and then what
-    is true: "this section said it was fixed in 0.9.4; it is fixed in 0.9.5".
-    Reading only the first `fixed in` took that line for no correction at all,
-    and then a page naming 0.9.5, which is true, went red, and a page naming
-    0.9.4, which is not, went green."""
-    line = ("*(Correction 2026-09-24: this section said GHSA-6hqr-phm3-chpf was "
-            "fixed in 0.9.4; it is fixed in 0.9.5.)*")
-    section = f"\nWhat went out.\n\n{line}\n"
-    assert corrections("GHSA-6hqr-phm3-chpf", {"0.9.4"}, {"0.9.4": section}) == {
-        "0.9.4": "0.9.5"}
+def test_what_a_correction_says_is_held_to_what_it_is_recorded_as():
+    """The record says which corrections took a claim back; the words are held
+    to that from both sides. One recorded as taking 0.9.5's claim back says how
+    far the advisory reaches -- across two sentences, or in other words than
+    "up to" -- and one that says only which later release fixed it does not
+    count as either, so it is red until it says the range. One recorded as
+    taking nothing back -- 0.8.1's, which gave the fix its advisory -- names no
+    range reaching its release and no later fix."""
+    advisory = "GHSA-3pfq-57fx-w4q5"
+    for line in (
+            f"so 0.9.5 did not complete the fix for {advisory}. It now reaches up to 0.9.5.",
+            f"{advisory} reaches 0.9.5 as well.",
+            f"{advisory} reaches up to and including 0.9.5.",
+            f"{advisory} now reaches up to 0.9.5 and is fixed in 0.9.6."):
+        assert takes_back(f"*(Correction 2026-09-24: {line})*", "0.9.5"), line
+    only_the_fix = f"*(Correction 2026-09-24: {advisory} is fixed in 0.9.6.)*"
+    assert not takes_back(only_the_fix, "0.9.5")
+    assert not takes_nothing_back(advisory, only_the_fix, "0.9.5")
+    copied = (f"*(Correction 2026-09-24: {advisory} now reaches up to 0.9.3 and is "
+              f"fixed in 0.9.5.)*")
+    assert not takes_back(copied, "0.9.4"), "a range short of the release takes nothing back"
+    xp97 = ("*(Correction 2026-09-23: the fix described above has advisory "
+            "GHSA-xp97-jcmj-h45f, published after this section was written and "
+            "reaching every release of both distributions up to 0.8.0.)*")
+    assert takes_nothing_back("GHSA-xp97-jcmj-h45f", xp97, "0.8.1")
+    assert not takes_back(xp97, "0.8.1")
 
 
 def test_no_advisory_is_claimed_for_a_release_below_the_promise():
