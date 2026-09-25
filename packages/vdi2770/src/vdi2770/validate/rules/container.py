@@ -395,7 +395,10 @@ def check(container, declared, is_declared_payload) -> Iterator[Finding]:
         # this rule too. Read on its own, "store the members at the root of the
         # archive" flattens a document container, and a reader with two findings
         # and no order between them can do exactly that.
-        unopened = {folder_path(f) + "/" for f, _ in folders_holding_metadata(container)}
+        opened_here = {nfc(ch.member_name) for ch in container.children
+                       if (ch.member_name or "").endswith("/")}
+        unopened = {folder_path(f) + "/" for f, _ in folders_holding_metadata(container)
+                    if f not in opened_here}
         also_a_container = sorted(f for f in folders
                                   if folder_path(f) in unopened or f in unopened)
         # `escaped` for a folder that shares its canonical spelling with
@@ -658,7 +661,13 @@ def check(container, declared, is_declared_payload) -> Iterator[Finding]:
     # PDF's is -- and a conforming document container carrying a declared CAD
     # bundle became exit 1, with a remedy asking its supplier to restructure the
     # inside of something that is not a VDI 2770 artefact.
-    as_folders = [] if opaque else folders_holding_metadata(container)
+    # A folder the reader opened as the container it is has nothing unexamined
+    # to report: what is in it is its own container's findings.
+    opened = {nfc(ch.member_name) for ch in container.children
+              if (ch.member_name or "").endswith("/")}
+    as_folders = [] if opaque else [(prefix, leaf) for prefix, leaf
+                                    in folders_holding_metadata(container)
+                                    if prefix not in opened]
     if as_folders:
         r = rule("Z13")
         # What `folders_holding_metadata` returns keeps the archive's own prefix,

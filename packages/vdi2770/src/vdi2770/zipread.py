@@ -620,7 +620,16 @@ def read(data: bytes, path: str, depth: int = 0, _budget: Optional[_Budget] = No
                 c.defects.append(Defect("metadata-unreadable",
                                         c.where.child(member=wanted), str(e)))
 
-    inner_zips = [m for m in c.members if m.name.lower().endswith(".zip")]
+    # A container delivered unzipped: a folder with a reserved name at its top.
+    # Its members are read as the container they are -- taken from this archive
+    # within the same budgets, written into an archive of their own and read by
+    # this same function -- so every guard on names, sizes and depth holds
+    # inside it too. A `.zip` inside such a folder is that container's to open,
+    # not this one's, or it would be opened twice.
+    accepted = [m for m in c.members if not m.is_dir and m.name not in c.rejected]
+    folders = folders_holding_containers([m.name for m in accepted])
+    inner_zips = [m for m in c.members if m.name.lower().endswith(".zip")
+                  and not any(m.name.startswith(f) for f in folders)]
     if depth + 1 < MAX_CONTAINER_LEVELS:
         for i, m in enumerate(inner_zips):
             if not budget.take_bytes(m.size):
@@ -661,12 +670,79 @@ def read(data: bytes, path: str, depth: int = 0, _budget: Optional[_Budget] = No
             child.member_name = m.name
             child.parent = c
             c.children.append(child)
+        for j, folder in enumerate(folders):
+            inside = [m.name for m in accepted if m.name.startswith(folder)]
+            if not budget.take_bytes(sum(m.size for m in accepted if m.name in inside)):
+                c.rejected[folder] = _refuse(
+                    c, "decompression-budget-exhausted", c.where.child(member=folder),
+                    f"this read has inflated {budget.decompressed} bytes and "
+                    f"reading it would take that past {MAX_TOTAL_DECOMPRESSED}; "
+                    f"{len(folders) - j} more containers here were not opened")
+                break
+            if not budget.take_container():
+                c.defects.append(Defect(
+                    "container-budget-exhausted", c.where.child(member=folder),
+                    f"this read has opened {MAX_CONTAINERS} containers, its limit; "
+                    f"{len(folders) - j} more in this archive were not opened"))
+                break
+            try:
+                archive = folder_archive(lambda n: _whole(zf, n), folder, inside)
+            except Exception as e:               # noqa: BLE001 - see read()
+                c.rejected[folder] = _refuse(
+                    c, "member-unreadable", c.where.child(member=folder),
+                    f"{type(e).__name__}: {e}")
+                continue
+            child = read(archive, f"{path}!/{folder}", depth + 1, budget)
+            child.member_name = folder
+            child.parent = c
+            c.children.append(child)
     else:
         for m in inner_zips:
             c.defects.append(Defect("nesting-too-deep", c.where.child(member=m.name),
                                     f"this tool opens {MAX_CONTAINER_LEVELS} container "
                                     f"levels; this one is deeper"))
+        for folder in folders:
+            c.defects.append(Defect("nesting-too-deep", c.where.child(member=folder),
+                                    f"this tool opens {MAX_CONTAINER_LEVELS} container "
+                                    f"levels; this one is deeper"))
     return c
+
+
+def folders_holding_containers(names) -> List[str]:
+    """Folders at whose top a reserved name sits, each ending in `/`: a
+    container delivered unzipped. Only the outermost of nested ones -- reading
+    that one finds the others inside it."""
+    held = set()
+    for name in names:
+        for reserved in (METADATA_XML, MAIN_XML):
+            if name.endswith("/" + reserved) and len(name) > len(reserved) + 1:
+                held.add(name[: -len(reserved)])
+    return sorted(f for f in held if not any(f != g and f.startswith(g) for g in held))
+
+
+def folder_archive(read_member, folder: str, names) -> bytes:
+    """The members under `folder` as an archive of their own: names relative to
+    the folder, stored as they are, in the order given, and nothing from the
+    clock -- the same bytes every time, so a later layer can ask for them again."""
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_STORED) as out:
+        for name in names:
+            out.writestr(zipfile.ZipInfo(name[len(folder):], date_time=(1980, 1, 1, 0, 0, 0)),
+                         read_member(name))
+    return buf.getvalue()
+
+
+def folder_bytes(data: bytes, folder: str, names) -> Optional[bytes]:
+    """A folder container's bytes again, for a caller holding its parent's: the
+    members the first read put in it, and nothing it refused."""
+    read_one = member_reader(data, set(names))
+    got = {}
+    for name in names:
+        one = read_one(name)
+        if one is None:
+            return None
+        got[name] = one
+    return folder_archive(got.__getitem__, folder, names)
 
 
 def _basename(path: str) -> str:

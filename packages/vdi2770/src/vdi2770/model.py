@@ -29,7 +29,9 @@ class Location:
         parts = [self.container or "<input>"]
         if self.member:
             parts.append(self.member)
-        s = "!/".join(parts)
+        # A container delivered as a folder has a path ending in `/`, and its
+        # members are in that folder, not in an archive inside it.
+        s = "".join(parts) if len(parts) == 2 and parts[0].endswith("/") else "!/".join(parts)
         if self.line is not None:
             s += f":{self.line}"
             if self.column is not None:

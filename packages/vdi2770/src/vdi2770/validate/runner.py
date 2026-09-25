@@ -109,6 +109,18 @@ def _step(report, where, what: str, fn, *args, fix: Optional[str] = None):
         return _CRASHED
 
 
+def _folder_again(data: bytes, c):
+    """A container delivered as a folder, put back together from its parent's
+    bytes the way the first read put it together: the same members, in the
+    same order, and none the reader refused."""
+    names = [c.member_name + m.name for m in c.members if not m.is_dir]
+    got = zipread.folder_bytes(data, c.member_name, names)
+    if got is None:
+        raise RuntimeError(f"{c.member_name}: the reader read this folder once and could "
+                           f"not put it together a second time, so its PDFs are not checked")
+    return got
+
+
 def _read_again(data: bytes, name: str):
     """A nested container's bytes, which the first read already opened and read.
 
@@ -280,12 +292,19 @@ def check_bytes(data: bytes, name: str) -> Report:
         # second metadata file turn `1 of 2` into `1 of 1`, which is this tool
         # grading itself on the work it agreed to do.
         listed = c.present or c.file_names
-        report.read.archives_found += sum(
-            1 for n in listed if n.lower().endswith(".zip"))
+        # A folder holding a reserved name is a container that was there to open,
+        # as a `.zip` member is; once opened, the metadata files in it are its
+        # own to count, not this listing's as well.
+        in_folders = zipread.folders_holding_containers(listed)
+        opened = tuple(ch.member_name for ch in c.children
+                       if (ch.member_name or "").endswith("/"))
+        report.read.archives_found += len(in_folders) + sum(
+            1 for n in listed if n.lower().endswith(".zip")
+            and not any(n.startswith(f) for f in in_folders))
         report.read.metadata_found += sum(
             1 for n in listed
             if folder_path(n).replace("\\", "/").rsplit("/", 1)[-1]
-            in (METADATA_XML, MAIN_XML))
+            in (METADATA_XML, MAIN_XML) and not n.startswith(opened or ("\0",)))
         if c.metadata_bytes is not None:
             report.read.metadata_read += 1
         # Leaving a subtree: everything at this depth or below is finished.
@@ -304,7 +323,8 @@ def check_bytes(data: bytes, name: str) -> Report:
             raw = None
             if parent is not None and parent[1] is not None and c.member_name:
                 raw = _step(report, c.where, "member read",
-                            _read_again, parent[1], c.member_name)
+                            _folder_again if c.member_name.endswith("/") else _read_again,
+                            parent[1], c if c.member_name.endswith("/") else c.member_name)
                 if raw is _CRASHED:
                     raw = None
         raw_of[id(c)] = (c.depth, raw)
