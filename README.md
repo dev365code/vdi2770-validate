@@ -111,7 +111,7 @@ lists all of them.
 ## Where it stands
 
 <a href="https://github.com/dev365code/vdi2770-validate/blob/main/docs/what-it-catches.md">
-<img src="https://raw.githubusercontent.com/dev365code/vdi2770-validate/main/docs/capabilities.svg?v=a035c19a" alt="Coverage: 39 of 42 rules have a fixture pair; Explanation: what is wrong, evidence, remedy, source, line; Report contract: schemaVersion, golden, exit codes, schema; Entrances: command line, library, single file, Action; Input safety: read budgets, advisory, own mutations; Upstream: pinned by commit, checked weekly" width="100%">
+<img src="https://raw.githubusercontent.com/dev365code/vdi2770-validate/main/docs/capabilities.svg?v=aa0d7117" alt="Coverage: 39 of 42 rules have a fixture pair; Explanation: what is wrong, evidence, remedy, source, line; Report contract: schemaVersion, golden, exit codes, schema; Entrances: command line, library, single file, Action; Input safety: read budgets, advisory, own mutations; Upstream: pinned by commit, checked weekly" width="100%">
 </a>
 
 *Six things this tool holds itself to, measured on the code this page describes, against the conditions it has set for 1.0. The picture is drawn from [`docs/capabilities.json`](https://github.com/dev365code/vdi2770-validate/blob/main/docs/capabilities.json), and every item it marks done names a file in this repository that says so; the cases behind each axis are in [`docs/what-it-catches.md`](https://github.com/dev365code/vdi2770-validate/blob/main/docs/what-it-catches.md).*
@@ -167,14 +167,15 @@ Exit codes and a versioned JSON report make it a CI gate in one line.
 The step fails when the checker does, which is what a gate is for. If you want
 the *number* instead — `0` clean, `1` a finding or an unreadable path, `2`
 nothing readable at all, `3` the install disagreed with itself, `64` a mistyped
-command line or a `pyz:` that is not there — ask for it:
+command line or a `pyz:` that is not there, `70` this tool failed on a file —
+ask for it:
 
-*Coming in 0.11.0*: an exception raised by this tool's own code while checking
-a file, wherever the tool catches it, returns `70` (`EX_SOFTWARE`) instead of `1`
-or `2`, so a gate can tell a finding about your delivery from a failure of ours.
-A file that cannot be read — a path that does not exist, one you may not open —
-keeps the code it has now: `2` when nothing in the run could be read, `1` beside
-a path that could. A mistyped command line keeps `64`.
+`70` (`EX_SOFTWARE`) is an exception raised by this tool's own code while
+checking a file, wherever the tool caught it — out of the check, or inside it and
+reported as `X5` — so a gate can tell a finding about your delivery from a
+failure of ours. A file that cannot be read — a path that does not exist, one you
+may not open — is not ours: `2` when nothing in the run could be read, `1`
+beside a path that could.
 
 ```yaml
 - uses: dev365code/vdi2770-validate@v0.10.3
@@ -202,7 +203,7 @@ on to whatever reads the number; with the default you would add
 
 | Output | What it is |
 |---|---|
-| `exit-code` | what the checker returned: `0` nothing at the fail severity, `1` a finding or an unreadable path, `2` nothing could be read, `3` the install disagreed with itself, `64` a usage error |
+| `exit-code` | what the checker returned: `0` nothing at the fail severity, `1` a finding or an unreadable path, `2` nothing could be read, `3` the install disagreed with itself, `64` a usage error, `70` this tool failed on a file |
 | `pyz` | the single file this step ran, when it ran one; empty on the default path, which installs instead |
 | `version` | the release this step decided to run -- from `version`, from the ref you pinned, or from the tree the action came from; empty when `pyz` is given, since nothing was installed and the file answers `--version` itself |
 
@@ -390,7 +391,7 @@ The readers and the rules used to be two distributions that had to match. From
 the pair be half-moved, and 0.7.0 pinned it exactly. They are one distribution
 now. `vdi2770-validate` is the old import
 name kept working: two lines that make it the same object as `vdi2770.validate`,
-asking for `vdi2770[validate]==0.10.3` — its own version, exactly. A floor
+asking for `vdi2770[validate]==0.11.0` — its own version, exactly. A floor
 would stop an older engine and let a newer one install beside it, and halves
 that disagree about which release they are do not judge.
 (This page follows the working tree, so the number is the release being

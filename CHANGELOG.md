@@ -2,6 +2,23 @@
 
 Sections through 0.7.0 had their wording tidied after their tags; the text each version carried when it was published is in that tag's own `CHANGELOG.md`. From 0.8.0 on, a released section is frozen at its tag and takes only appended `*(Correction ...)*` lines.
 
+## 0.11.0 — unreleased
+
+Who should take this release: anyone whose pipeline reads the exit code. A
+failure of this tool's own code on a file no longer reads as a finding or as a
+file that could not be read.
+
+- **A failure of this tool's own code exits `70`** (`EX_SOFTWARE`), wherever it
+  was caught: raised out of the check, where it read as a file that could not be
+  read and exited `2` or `1`, or caught inside it and reported as `X5`, where it
+  read as a finding and exited `1`. A path that does not exist or may not be
+  opened keeps `2` alone and `1` beside a file that could be read; a finding
+  keeps `1`; a mistyped command line keeps `64`.
+- **GHSA-62p8-4642-mwfp is still not closed in full**: it reaches
+  `vdi2770-validate` from 0.1.0 and `vdi2770` from 0.8.0 up to 0.11.0, and the
+  older form of the runner's command syntax, which the runner reads anywhere in
+  a line, is not yet closed by any release.
+
 ## 0.10.3 — 2026-09-25
 
 Who should take this release: nobody for what it judges. No rule, verdict, exit

@@ -53,7 +53,8 @@ outputs:
     description: >
       What the checker returned: 0 nothing at the fail severity, 1 a finding or
       an unreadable path, 2 nothing could be read, 3 the install disagreed with
-      itself, 64 a usage error. Readable in both modes -- a failed step does
+      itself, 64 a usage error, 70 this tool failed on a file. Readable in both
+      modes -- a failed step does
       still publish this, which CI measured rather than assumed -- so with the
       default you need `continue-on-error: true` on the step to reach the line
       that reads it. The code is printed either way.

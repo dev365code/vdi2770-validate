@@ -282,7 +282,8 @@ def test_an_unreadable_path_does_not_name_an_address(monkeypatch, capsys):
     monkeypatch.setattr(cli, "check_file",
                         lambda path: (_ for _ in ()).throw(Surprise(f"gave up on {io.BytesIO()!r}")))
     code = cli.main(["check", "--json", "--no-bundle", "whatever.zip"])
-    assert code == 2, f"a path that could not be read is exit 2, not {code}"
+    # This tool failing on the file, not a path that could not be opened: 70.
+    assert code == 70, f"a failure of this tool on a file is exit 70, not {code}"
     out = capsys.readouterr()
     both = out.out + out.err
     assert "gave up on" in both, both

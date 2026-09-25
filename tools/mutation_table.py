@@ -702,7 +702,7 @@ TABLE = [
 
     ("gates/the-pin-names-the-reader-that-was-built",
      "packages/vdi2770/pyproject.toml",
-     'version = "0.10.3"',
+     'version = "0.11.0"',
      'version = "0.7.1"',
      ["tools/check_wheel.py"],
      "the two manifests agree with each other and the artifacts do not: the "
@@ -1150,7 +1150,7 @@ FRONT_DOOR = [
 
     ("gates/the-page-quotes-the-requirement-the-project-declares",
      "README.md",
-     "`vdi2770[validate]==0.10.3`",
+     "`vdi2770[validate]==0.11.0`",
      "`vdi2770[validate]>=0.7.0`",
      ["tests/test_the_front_page_points_at_what_it_shows.py::"
       "test_the_requirement_the_page_quotes_is_the_one_the_project_declares"],
@@ -1159,7 +1159,7 @@ FRONT_DOOR = [
 
     ("gates/the-page-pypi-shows-quotes-the-requirement-the-project-declares",
      "README-vdi2770-validate.md",
-     "`vdi2770[validate]==0.10.3`",
+     "`vdi2770[validate]==0.11.0`",
      "`vdi2770[validate]==0.9.1`",
      ["tests/test_the_front_page_points_at_what_it_shows.py::"
       "test_the_requirement_the_page_quotes_is_the_one_the_project_declares"],
@@ -2335,7 +2335,7 @@ LISTING_BUDGET_ROWS = [
     ("pages/a-closed-advisory-is-not-listed-as-open",
      "docs/advisories.json",
      '"through": "0.9.6",\n      "fixed_in": "0.9.7",\n      "corrections": []',
-     '"through": "0.10.3",\n      "fixed_in": null,\n      "open": "0.9.7 closed part of it; the rest is not yet closed by any release.",\n      "corrections": []',
+     '"through": "0.11.0",\n      "fixed_in": null,\n      "open": "0.9.7 closed part of it; the rest is not yet closed by any release.",\n      "corrections": []',
      ["tests/test_an_advisory_and_its_release_name_each_other.py::"
       "test_each_advisory_is_cited_where_the_record_puts_it"],
      "an advisory the changelog says a release fixed, recorded as open, "
@@ -2343,7 +2343,7 @@ LISTING_BUDGET_ROWS = [
 
     ("pages/a-fix-a-correction-took-back-is-not-named",
      "docs/advisories.json",
-     '"through": "0.10.3",\n      "fixed_in": null,',
+     '"through": "0.11.0",\n      "fixed_in": null,',
      '"through": "0.9.5",\n      "fixed_in": "0.9.6",',
      ["tests/test_an_advisory_and_its_release_name_each_other.py::"
       "test_each_advisory_is_cited_where_the_record_puts_it"],
@@ -2353,7 +2353,7 @@ LISTING_BUDGET_ROWS = [
 
     ("pages/an-advisory-no-release-closes-reaches-the-one-being-written",
      "docs/advisories.json",
-     '"through": "0.10.3",',
+     '"through": "0.11.0",',
      '"through": "0.10.1",',
      ["tests/test_an_advisory_and_its_release_name_each_other.py::"
       "test_each_advisory_is_cited_where_the_record_puts_it"],
@@ -2624,6 +2624,37 @@ LISTING_BUDGET_ROWS = [
       "test_a_bundle_that_cannot_be_drawn_stops_nothing"],
      "only a failed write is caught, and anything else that goes wrong in "
      "drawing the bundle stops the sweep and moves its exit code"),
+
+    ("gates/a-failure-of-ours-raised-out-of-the-check-exits-70",
+     "packages/vdi2770/src/vdi2770/validate/cli.py",
+     "            ours = ours or not isinstance(e, OSError)\n",
+     "            ours = ours\n",
+     ["tests/test_cli.py::test_a_failure_of_ours_exits_70_wherever_it_was_caught"],
+     "this tool raising on a file reads as a file that could not be read, 2 or 1, "
+     "and a gate takes a failure of ours for the delivery's"),
+
+    ("gates/a-failure-of-ours-caught-inside-the-check-exits-70",
+     "packages/vdi2770/src/vdi2770/validate/cli.py",
+     '        crashed = any(f.rule.id == "X5" for f in rep.findings)\n',
+     "        crashed = False\n",
+     ["tests/test_cli.py::test_a_failure_of_ours_exits_70_wherever_it_was_caught"],
+     "a check of this tool that raised, caught and reported as X5, exits 1 as if "
+     "it were a finding about the delivery"),
+
+    ("gates/a-failure-of-ours-is-not-told-as-a-finding",
+     "packages/vdi2770/src/vdi2770/validate/cli.py",
+     "    if ours:\n        return EX_SOFTWARE\n",
+     "    if False:\n        return EX_SOFTWARE\n",
+     ["tests/test_cli.py::test_a_failure_of_ours_exits_70_wherever_it_was_caught"],
+     "the run knows this tool failed and returns the code for a finding anyway"),
+
+    ("gates/a-path-that-cannot-be-opened-is-not-ours",
+     "packages/vdi2770/src/vdi2770/validate/cli.py",
+     "            ours = ours or not isinstance(e, OSError)\n",
+     "            ours = True\n",
+     ["tests/test_cli.py::test_a_failure_of_ours_exits_70_wherever_it_was_caught"],
+     "a path that does not exist exits 70, and a mistyped path in a pipeline "
+     "reads as a defect in this tool"),
 
     ("gates/a-line-for-a-person-stays-out-of-the-report",
      "packages/vdi2770/src/vdi2770/validate/cli.py",

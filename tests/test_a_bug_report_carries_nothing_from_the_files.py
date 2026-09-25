@@ -185,13 +185,13 @@ def test_a_failure_of_this_tool_writes_a_bundle_and_keeps_its_exit_code(tmp_path
         raise KeyError(f"{CANARY} in the message")
     monkeypatch.setattr(cli, "check_file", breaks)
     monkeypatch.chdir(tmp_path)
-    assert cli.main(["check", path, "--no-bundle"]) == 2
+    assert cli.main(["check", path, "--no-bundle"]) == 70
     assert not list(tmp_path.glob("bug-report-*.json")), "--no-bundle wrote a bundle"
-    assert cli.main(["check", path, "--show-bundle"]) == 2
+    assert cli.main(["check", path, "--show-bundle"]) == 70
     assert not list(tmp_path.glob("bug-report-*.json")), "--show-bundle wrote a bundle"
     shown = capsys.readouterr().err
     assert cli.SHOWN in shown and '"trigger": "crash"' in shown, shown
-    assert cli.main(["check", path]) == 2, "writing the bundle changed the exit code"
+    assert cli.main(["check", path]) == 70, "writing the bundle changed the exit code"
     written = list(tmp_path.glob("bug-report-*.json"))
     assert len(written) == 1
     data = written[0].read_bytes()
