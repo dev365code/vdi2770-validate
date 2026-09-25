@@ -2490,6 +2490,22 @@ LISTING_BUDGET_ROWS = [
       "test_a_moved_reference_is_a_red_run"],
      "a reference past the pin ends the week's run green"),
 
+    ("gates/a-refused-question-is-not-a-move",
+     "tools/upstream.py",
+     '        print(f"could not ask {repo}: {asked.stderr.strip()}", file=sys.stderr)\n        return 2',
+     '        print(f"could not ask {repo}: {asked.stderr.strip()}", file=sys.stderr)\n        return 1',
+     ["tests/test_the_reference_is_watched.py::"
+      "test_a_question_that_could_not_be_asked_is_not_a_move"],
+     "a repository that refused the question reads as a reference that moved"),
+
+    ("gates/no-git-is-not-a-move",
+     "tools/upstream.py",
+     "    except (subprocess.TimeoutExpired, OSError) as why:",
+     "    except subprocess.TimeoutExpired as why:",
+     ["tests/test_the_reference_is_watched.py::"
+      "test_a_question_that_could_not_be_asked_is_not_a_move"],
+     "a machine with no git ends the weekly run in a traceback, not in exit 2"),
+
     ("gates/the-reference-is-asked-every-week",
      ".github/workflows/upstream.yml",
      'cron: "0 6 * * 1"',

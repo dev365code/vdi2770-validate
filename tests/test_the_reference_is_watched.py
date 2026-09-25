@@ -88,9 +88,26 @@ def test_an_unanswered_question_is_not_a_move(monkeypatch):
     assert tool.main() == 2, "a question that timed out is reported as a move"
 
 
-#: A day of the week as cron writes it: a number, 7 being Sunday again, or the
-#: three-letter name GitHub also accepts.
-WEEKDAY = re.compile(r"[0-7]|(?i:mon|tue|wed|thu|fri|sat|sun)")
+#: A day of the week as cron writes it: a number from 0 to 6, the range GitHub's
+#: own table of the syntax gives, or the day's three-letter name.
+WEEKDAY = re.compile(r"[0-6]|(?i:mon|tue|wed|thu|fri|sat|sun)")
+
+
+def test_a_question_that_could_not_be_asked_is_not_a_move(monkeypatch):
+    """The repository refusing, and no `git` to ask with, are exit 2 like no
+    answer at all: neither says anything about where the reference is."""
+    import subprocess
+
+    tool = _tool()
+    refused = subprocess.CompletedProcess(args=[], returncode=128, stdout="",
+                                          stderr="fatal: unable to access the repository")
+    monkeypatch.setattr(tool.subprocess, "run", lambda *a, **k: refused)
+    assert tool.main() == 2
+
+    def no_git(*args, **kwargs):
+        raise FileNotFoundError(2, "No such file or directory", "git")
+    monkeypatch.setattr(tool.subprocess, "run", no_git)
+    assert tool.main() == 2
 
 
 def test_the_question_is_asked_every_week():
@@ -116,17 +133,29 @@ def test_the_question_is_asked_every_week():
     jobs = flow.get("jobs") or {}
     assert all(re.fullmatch(r"[A-Za-z_][A-Za-z0-9_-]*", str(name)) for name in jobs), (
         f"a job id GitHub does not accept: {sorted(jobs)}")
-    steps = [step for job in jobs.values() for step in job.get("steps") or []]
-    assert not any(job.get("continue-on-error") for job in jobs.values()) and not any(
-        step.get("continue-on-error") for step in steps), (
+    def asks(step):
+        return str(step.get("run", "")).strip() == "python tools/upstream.py"
+
+    # The job that asks and every job it needs first: what has to run for the
+    # question to be asked. A job that follows it -- one that sends word when
+    # it fails, say -- may carry a condition of its own.
+    chain = {name for name, job in jobs.items() if any(asks(s) for s in job.get("steps") or [])}
+    assert chain, "the weekly workflow does not run the tool that asks"
+    waiting = list(chain)
+    while waiting:
+        needs = jobs.get(waiting.pop(), {}).get("needs") or []
+        for name in [needs] if isinstance(needs, str) else needs:
+            if name not in chain:
+                chain.add(name)
+                waiting.append(name)
+    before = [jobs[name] for name in sorted(chain) if name in jobs]
+    asking = [step for job in before for step in job.get("steps") or [] if asks(step)]
+    assert not any(job.get("continue-on-error") for job in before) and not any(
+        step.get("continue-on-error") for step in asking), (
         "a job or step allowed to fail would turn a move into a green run")
     # A job or step skipped by a condition is reported as a success, so a
     # condition that is false on the schedule -- or always -- is a green week
     # whatever the reference did.
-    asking = [step for step in steps
-              if str(step.get("run", "")).strip() == "python tools/upstream.py"]
-    assert asking, "the weekly workflow does not run the tool that asks"
-    assert not any("if" in job for job in jobs.values()) and not any(
-        "if" in step for step in asking), (
+    assert not any("if" in job for job in before) and not any("if" in step for step in asking), (
         "a condition on the job or the step that asks can skip it, and a skipped "
         "job is reported as a success")
