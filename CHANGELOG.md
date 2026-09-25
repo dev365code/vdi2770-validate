@@ -2,6 +2,25 @@
 
 Sections through 0.7.0 had their wording tidied after their tags; the text each version carried when it was published is in that tag's own `CHANGELOG.md`. From 0.8.0 on, a released section is frozen at its tag and takes only appended `*(Correction ...)*` lines.
 
+## 0.10.2 — unreleased
+
+Who should take this release: anyone who may need to tell this project that it
+got something wrong. No rule, verdict, exit code or report field moves.
+
+- **A bug report a person can attach.** `check --bug-report` writes a
+  diagnostic bundle for the run: the shape of the file -- its size and SHA-256,
+  and each member's size, compression method and flags, never its name -- what
+  the run said by rule code and count, and the release and Python it ran on.
+  Nothing is sent; the bundle is shown, then written where the check ran, and
+  `--show-bundle` only shows it. When this tool itself fails on a file it writes
+  the same bundle without being asked and says so; `--no-bundle` stops that. A
+  file that was refused, or that this tool declined to judge, is followed on
+  stderr by one sentence saying how to report it; the report itself is the same.
+- **GHSA-62p8-4642-mwfp is still not closed in full**: it reaches
+  `vdi2770-validate` from 0.1.0 and `vdi2770` from 0.8.0 up to 0.10.2, and the
+  older form of the runner's command syntax, which the runner reads anywhere in
+  a line, is not yet closed by any release.
+
 ## 0.10.1 — 2026-09-25
 
 Who should take this release: nobody for what it judges. No rule, verdict, exit

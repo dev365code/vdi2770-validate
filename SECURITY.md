@@ -30,6 +30,19 @@ enormously — if it cannot be shared, a description of the structure will do.
 Please do not report findings that amount to "a malformed container produces a
 confusing message". Those are welcome, but as ordinary issues.
 
+**What a bug report carries, and what it does not.** `vdi2770-validate check
+FILE --bug-report` writes a diagnostic bundle for that run: it shows it, writes
+it where you ran the check, and sends nothing. It carries the shape of the file
+-- its size and SHA-256, and for each member of the archive its size,
+compression method and flags, never its name -- what the run said by rule code
+and count, the release and Python it ran on, and a sentence of your own if you
+add one with `--note`. It does not carry a member's name, a file path, any value
+or identifier from the metadata, a language or product name, a finding's
+message, detail or remedy, any byte of a PDF or of the XML, a ZIP comment or
+what an extra field holds, an environment variable's value, or a user or host
+name. When this tool itself fails on a file it writes the same bundle without
+being asked, and says so; `--no-bundle` stops that.
+
 ## Advisories
 
 **From 0.8.0 on, a security fix that ships in a release gets a GitHub security
@@ -57,7 +70,7 @@ same promise the table above makes.
   the file itself, the type a relationship names -- and a CI runner reads a
   line that begins in its own command syntax as an instruction rather than as
   text; the exit code and the JSON were not affected. `vdi2770-validate` from
-  0.1.0 and `vdi2770` from 0.8.0, up to 0.10.1. 0.9.6 closed the newer form of
+  0.1.0 and `vdi2770` from 0.8.0, up to 0.10.2. 0.9.6 closed the newer form of
   the runner's command syntax; the older form, which the runner reads anywhere
   in a line, is not yet closed by any release.
 

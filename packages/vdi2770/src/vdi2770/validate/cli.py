@@ -22,8 +22,10 @@ import json
 import os
 import signal
 import sys
+import time
 
 from . import __version__ as VERSION  # one place, not three
+from . import bundle as bundling
 from . import report as rendering
 from .agreement import MARKER, InstallationDisagrees, refuse_if_disagreeing
 from .catalog import document_classes, rules
@@ -31,16 +33,69 @@ from .model import Severity, without_addresses
 from .names import not_a_command, on_one_line
 from .runner import check_file
 
+#: What a person is told when a file was refused or this tool declined: once,
+#: on stderr, after the reports -- never in a finding's remedy, so that the
+#: report itself is the same bytes with or without it.
+REFUSED = ("If you believe this file is valid, run the same command again with "
+           "--bug-report and attach the bundle to an issue.")
+CRASHED = ("This is a defect in this tool, not in your file. A diagnostic bundle was "
+           "written to {path}. Attach it to an issue: "
+           "https://github.com/dev365code/vdi2770-validate/issues")
+SHOWN = ("This is a defect in this tool, not in your file. The diagnostic bundle is "
+         "above and was not written, as --show-bundle asks. Attach it to an issue: "
+         "https://github.com/dev365code/vdi2770-validate/issues")
+SENT = "Nothing was sent."
+
+
+def _refused(document) -> bool:
+    return any(f.get("about") == "tool" or f.get("rule") == "Z1"
+               for f in document.get("findings", []))
+
+
+def _options(args):
+    """The options a run was given, by name and chosen value only."""
+    chosen = [flag for flag, on in (("--json", args.json), ("--quiet", args.quiet),
+                                    ("--bug-report", args.bug_report),
+                                    ("--show-bundle", args.show_bundle),
+                                    ("--no-bundle", args.no_bundle)) if on]
+    if args.fail_on != "error":
+        chosen.append(f"--fail-on={args.fail_on}")
+    return chosen
+
+
+def _bundle(args, path, document, exit_code, started, *, trigger, error=None):
+    """Draw the bundle, then write it unless only drawing was asked for. A
+    bundle that cannot be written is said so, once, and the run goes on: it is
+    never a reason for a sweep to stop or for its exit code to move."""
+    made = bundling.build(path=path, options=_options(args), inputs=len(args.paths),
+                          report=document, exit_code=exit_code,
+                          seconds=time.perf_counter() - started, trigger=trigger,
+                          note=args.note, out=args.bundle_out, error=error)
+    print(bundling.dumps(made) if args.show_bundle else made["readable"], file=sys.stderr)
+    if args.show_bundle:
+        if trigger == "crash":
+            print(SHOWN, file=sys.stderr)
+        print(SENT, file=sys.stderr)
+        return None
+    try:
+        return bundling.write(made, args.bundle_out)
+    except OSError as e:
+        print(f"The diagnostic bundle could not be written: {e.strerror or e}. {SENT}",
+              file=sys.stderr)
+        return None
+
 
 def _cmd_check(args) -> int:
     worst = 0
     unreadable = 0
+    refused = False
     # `--json` is one document for the whole run. Printing one object per path
     # with no separator was neither JSON nor NDJSON, so the interface advertised
     # as machine-readable could not be read by a machine the moment a CI job
     # passed it a second container.
     documents = []
     for path in args.paths:
+        started = time.perf_counter()
         try:
             rep = check_file(path)
         except InstallationDisagrees:
@@ -77,16 +132,34 @@ def _cmd_check(args) -> int:
             print(not_a_command(f"{on_one_line(path)}: cannot read it — {on_one_line(why)}"),
                   file=sys.stderr)
             unreadable += 1
+            # A path that is not there, or not a file, is the caller's; anything
+            # else raised here is this tool failing on a file it was given, and
+            # that is the one case a bundle is written without being asked for.
+            if not isinstance(e, OSError) and not args.no_bundle:
+                where = _bundle(args, path, None, 2, started, trigger="crash", error=e)
+                if where is not None:
+                    print(CRASHED.format(path=where), file=sys.stderr)
+                    print(SENT, file=sys.stderr)
             # And it appears in the JSON. Skipping it gave a consumer N-1
             # documents for N paths, with the difference explained only in prose
             # on another stream.
             documents.append({"path": path, **rendering.provenance(),
                               "unreadable": why})
             continue
+        document = json.loads(rendering.as_json(rep, not args.quiet))
         if args.json:
-            documents.append({"path": path, **json.loads(rendering.as_json(rep, not args.quiet))})
+            documents.append({"path": path, **document})
         else:
             print(rendering.as_text(rep, not args.quiet))
+        refused = refused or _refused(document)
+        if args.bug_report or args.show_bundle:
+            failing = rep.count(Severity.ERROR) or (
+                args.fail_on == "warning" and rep.count(Severity.WARNING))
+            where = _bundle(args, path, document, 1 if failing else 0, started,
+                            trigger="refusal" if _refused(document) else "manual")
+            if where is not None:
+                print(f"A diagnostic bundle was written to {where}.", file=sys.stderr)
+                print(SENT, file=sys.stderr)
         # Ten rules are warnings. They are warnings on purpose -- `P3` cannot
         # be an error because this tool does not verify PDF/A -- so the number
         # does not move for them by default, and an intake gate that wants
@@ -125,6 +198,8 @@ def _cmd_check(args) -> int:
         print("\nThis tool does not verify PDF/A conformance. It reports the "
               "claim a file makes\nabout itself where it finds one; only a "
               "PDF/A validator can say whether that\nclaim is true.")
+    if refused and not (args.bug_report or args.show_bundle):
+        print(REFUSED, file=sys.stderr)
     if unreadable:
         return 2 if unreadable == len(args.paths) else max(worst, 1)
     return worst
@@ -218,6 +293,14 @@ def main(argv=None) -> int:
     c.add_argument("paths", nargs="+")
     c.add_argument("--json", action="store_true", help="machine-readable output")
     c.add_argument("--quiet", action="store_true", help="hide notes")
+    c.add_argument("--bug-report", action="store_true",
+                   help="write a diagnostic bundle for this run: structure, counts and "
+                        "hashes, nothing from the files; nothing is sent")
+    c.add_argument("--note", help="a sentence of your own to put in the bundle")
+    c.add_argument("--bundle-out", metavar="DIR", help="where to write the bundle (default: here)")
+    c.add_argument("--show-bundle", action="store_true", help="show the bundle and write nothing")
+    c.add_argument("--no-bundle", action="store_true",
+                   help="do not write a bundle when this tool fails on a file")
     c.add_argument("--fail-on", choices=("error", "warning"), default="error",
                    help="exit 1 on findings of this severity or worse "
                         "(default: error)")

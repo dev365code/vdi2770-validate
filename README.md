@@ -111,7 +111,7 @@ lists all of them.
 ## Where it stands
 
 <a href="https://github.com/dev365code/vdi2770-validate/blob/main/docs/what-it-catches.md">
-<img src="https://raw.githubusercontent.com/dev365code/vdi2770-validate/main/docs/capabilities.svg?v=dad2c293" alt="Coverage: 28 of 42 rules have a fixture pair; Explanation: what is wrong, evidence, remedy, source; Report contract: schemaVersion, golden, exit codes, schema; Entrances: command line, library, single file, Action; Input safety: read budgets, advisory, own mutations; Upstream: pinned by commit, checked weekly" width="100%">
+<img src="https://raw.githubusercontent.com/dev365code/vdi2770-validate/main/docs/capabilities.svg?v=bf2dad01" alt="Coverage: 28 of 42 rules have a fixture pair; Explanation: what is wrong, evidence, remedy, source; Report contract: schemaVersion, golden, exit codes, schema; Entrances: command line, library, single file, Action; Input safety: read budgets, advisory, own mutations; Upstream: pinned by commit, checked weekly" width="100%">
 </a>
 
 *Six things this tool holds itself to, measured on the code this page describes, against the conditions it has set for 1.0. The picture is drawn from [`docs/capabilities.json`](https://github.com/dev365code/vdi2770-validate/blob/main/docs/capabilities.json), and every item it marks done names a file in this repository that says so; the cases behind each axis are in [`docs/what-it-catches.md`](https://github.com/dev365code/vdi2770-validate/blob/main/docs/what-it-catches.md).*
@@ -390,7 +390,7 @@ The readers and the rules used to be two distributions that had to match. From
 the pair be half-moved, and 0.7.0 pinned it exactly. They are one distribution
 now. `vdi2770-validate` is the old import
 name kept working: two lines that make it the same object as `vdi2770.validate`,
-asking for `vdi2770[validate]==0.10.1` — its own version, exactly. A floor
+asking for `vdi2770[validate]==0.10.2` — its own version, exactly. A floor
 would stop an older engine and let a newer one install beside it, and halves
 that disagree about which release they are do not judge.
 (This page follows the working tree, so the number is the release being
@@ -422,6 +422,24 @@ vdi2770_validate` and the command itself. One thing cannot be carried across: a
 pickle written through the new module path names `vdi2770.validate.…`, and code
 that only has the old release cannot read it.
 
+## When something looks wrong
+
+**What a bug report carries, and what it does not.** `vdi2770-validate check
+FILE --bug-report` writes a diagnostic bundle for that run: it shows it, writes
+it where you ran the check, and sends nothing. It carries the shape of the file
+-- its size and SHA-256, and for each member of the archive its size,
+compression method and flags, never its name -- what the run said by rule code
+and count, the release and Python it ran on, and a sentence of your own if you
+add one with `--note`. It does not carry a member's name, a file path, any value
+or identifier from the metadata, a language or product name, a finding's
+message, detail or remedy, any byte of a PDF or of the XML, a ZIP comment or
+what an extra field holds, an environment variable's value, or a user or host
+name. When this tool itself fails on a file it writes the same bundle without
+being asked, and says so; `--no-bundle` stops that.
+
+Attach the bundle to an issue; do not attach the file itself, since an issue
+is public.
+
 ## Releases and version numbers
 
 **This is 0.x.** A release goes out when a unit of judgement is ready rather
@@ -441,7 +459,7 @@ with it, says so in a paragraph addressed to whoever gates a build on the
 number. That is the paragraph to read before upgrading; it is the one place this
 project undertakes to be exhaustive.
 
-**A patch release repairs — and four of the eleven patch releases of this package
+**A patch release repairs — and four of the twelve patch releases of this package
 changed what a pipeline sees:**
 
 - `0.5.1` asked for a fixed reader instead of merely permitting one. Until it,
@@ -456,7 +474,7 @@ changed what a pipeline sees:**
   or with bytes in front of it, which was read as an archive it held and passed,
   is now `Z1`, not a readable ZIP archive.
 
-The other seven moved no verdict at all: `0.9.1`; `0.9.2`, which repaired what
+The other eight moved no verdict at all: `0.9.1`; `0.9.2`, which repaired what
 a delivery costs to check and left every finding, every location and every exit
 code exactly where they were; `0.9.3`, which bounded how large a report can
 grow, leaving every summary count and exit code where it was and adding one
@@ -466,7 +484,9 @@ rather than in the characters it stores; `0.9.5`, which keeps every
 sentence of the text report on its own line and charges the budget for the
 console that prints most; `0.9.6`, which keeps a value the sender wrote
 from deciding how a line begins and measures only a finding that can fit;
-and `0.10.1`, which carried only this project's pages about itself.
+`0.10.1`, which carried only this project's pages about itself; and `0.10.2`,
+which writes a bug report a person can attach and leaves every verdict where it
+was.
 A patch is a smaller promise than a minor release;
 it is not a promise that nothing your pipeline reads can change.
 

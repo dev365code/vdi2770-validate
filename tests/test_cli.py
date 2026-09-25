@@ -174,7 +174,9 @@ def test_a_surprise_from_the_reader_does_not_stop_the_sweep(capsys, monkeypatch)
         return real(path)
 
     monkeypatch.setattr(cli, "check_file", boom)
-    code = cli.main(["check", "boom.zip", str(CLEAN_DOCUMENT)])
+    # `--no-bundle`: this is about the sweep going on, not about the bundle a
+    # failure of this tool writes, which would land in the working directory.
+    code = cli.main(["check", "--no-bundle", "boom.zip", str(CLEAN_DOCUMENT)])
     captured = capsys.readouterr()
     assert "something a reader did not expect" in captured.err, captured.err
     assert "0 error(s)" in captured.out, "the sweep stopped at the bad path"

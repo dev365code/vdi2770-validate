@@ -643,7 +643,7 @@ TABLE = [
 
     ("gates/the-pin-names-the-reader-that-was-built",
      "packages/vdi2770/pyproject.toml",
-     'version = "0.10.1"',
+     'version = "0.10.2"',
      'version = "0.7.1"',
      ["tools/check_wheel.py"],
      "the two manifests agree with each other and the artifacts do not: the "
@@ -1091,7 +1091,7 @@ FRONT_DOOR = [
 
     ("gates/the-page-quotes-the-requirement-the-project-declares",
      "README.md",
-     "`vdi2770[validate]==0.10.1`",
+     "`vdi2770[validate]==0.10.2`",
      "`vdi2770[validate]>=0.7.0`",
      ["tests/test_the_front_page_points_at_what_it_shows.py::"
       "test_the_requirement_the_page_quotes_is_the_one_the_project_declares"],
@@ -1100,7 +1100,7 @@ FRONT_DOOR = [
 
     ("gates/the-page-pypi-shows-quotes-the-requirement-the-project-declares",
      "README-vdi2770-validate.md",
-     "`vdi2770[validate]==0.10.1`",
+     "`vdi2770[validate]==0.10.2`",
      "`vdi2770[validate]==0.9.1`",
      ["tests/test_the_front_page_points_at_what_it_shows.py::"
       "test_the_requirement_the_page_quotes_is_the_one_the_project_declares"],
@@ -2276,7 +2276,7 @@ LISTING_BUDGET_ROWS = [
     ("pages/a-closed-advisory-is-not-listed-as-open",
      "docs/advisories.json",
      '"through": "0.9.6",\n      "fixed_in": "0.9.7",\n      "corrections": []',
-     '"through": "0.10.1",\n      "fixed_in": null,\n      "open": "0.9.7 closed part of it; the rest is not yet closed by any release.",\n      "corrections": []',
+     '"through": "0.10.2",\n      "fixed_in": null,\n      "open": "0.9.7 closed part of it; the rest is not yet closed by any release.",\n      "corrections": []',
      ["tests/test_an_advisory_and_its_release_name_each_other.py::"
       "test_each_advisory_is_cited_where_the_record_puts_it"],
      "an advisory the changelog says a release fixed, recorded as open, "
@@ -2284,7 +2284,7 @@ LISTING_BUDGET_ROWS = [
 
     ("pages/a-fix-a-correction-took-back-is-not-named",
      "docs/advisories.json",
-     '"through": "0.10.1",\n      "fixed_in": null,',
+     '"through": "0.10.2",\n      "fixed_in": null,',
      '"through": "0.9.5",\n      "fixed_in": "0.9.6",',
      ["tests/test_an_advisory_and_its_release_name_each_other.py::"
       "test_each_advisory_is_cited_where_the_record_puts_it"],
@@ -2294,8 +2294,8 @@ LISTING_BUDGET_ROWS = [
 
     ("pages/an-advisory-no-release-closes-reaches-the-one-being-written",
      "docs/advisories.json",
+     '"through": "0.10.2",',
      '"through": "0.10.1",',
-     '"through": "0.10.0",',
      ["tests/test_an_advisory_and_its_release_name_each_other.py::"
       "test_each_advisory_is_cited_where_the_record_puts_it"],
      "an advisory no release closes reaches every release so far, and a range "
@@ -2522,6 +2522,48 @@ LISTING_BUDGET_ROWS = [
       "test_the_samples_page_is_what_the_tool_says"],
      "the page of verdicts on the published samples says the empty archive "
      "passes, where the tool refuses it"),
+    ("gates/a-bug-report-carries-no-name",
+     "packages/vdi2770/src/vdi2770/validate/bundle.py",
+     '                     info.flag_bits, len(name), same if same != i else None,',
+     '                     info.flag_bits, name, same if same != i else None,',
+     ["tests/test_a_bug_report_carries_nothing_from_the_files.py::"
+      "test_nothing_a_sender_wrote_is_in_the_bundle"],
+     "a member's name goes into the bundle a person is told carries nothing "
+     "from their files"),
+
+    ("gates/a-bug-report-carries-no-message",
+     "packages/vdi2770/src/vdi2770/validate/bundle.py",
+     '            "messageSha256": _sha256(str(exc).encode("utf-8", "replace"))}',
+     '            "messageSha256": str(exc)}',
+     ["tests/test_a_bug_report_carries_nothing_from_the_files.py::"
+      "test_a_failure_of_this_tool_writes_a_bundle_and_keeps_its_exit_code"],
+     "an exception's message, which quotes values, goes into the bundle "
+     "instead of its hash"),
+
+    ("gates/a-bug-report-has-no-clock",
+     "packages/vdi2770/src/vdi2770/validate/bundle.py",
+     '        "wallSeconds": math.ceil(seconds),',
+     '        "wallSeconds": seconds,',
+     ["tests/test_a_bug_report_carries_nothing_from_the_files.py::"
+      "test_the_same_run_gives_the_same_bytes"],
+     "the run's time goes in to the microsecond, and one run's bundle stops "
+     "being the same bytes as the next"),
+
+    ("gates/a-bug-report-that-cannot-be-written-stops-nothing",
+     "packages/vdi2770/src/vdi2770/validate/cli.py",
+     '    except OSError as e:\n        print(f"The diagnostic bundle could not be written',
+     '    except KeyError as e:\n        print(f"The diagnostic bundle could not be written',
+     ["tests/test_a_bug_report_carries_nothing_from_the_files.py::"
+      "test_a_bundle_that_cannot_be_written_stops_nothing"],
+     "a directory nobody can write to stops the sweep, and the exit code moves"),
+
+    ("gates/a-bug-report-keeps-a-note-short",
+     "packages/vdi2770/src/vdi2770/validate/bundle.py",
+     "NOTE_LIMIT = 2000\n",
+     "NOTE_LIMIT = 10 ** 9\n",
+     ["tests/test_a_bug_report_carries_nothing_from_the_files.py::"
+      "test_a_long_note_and_many_inputs_stay_within_the_limit"],
+     "a long note carries the bundle past the size it promises to stay within"),
 
     ("gates/the-readme-states-every-1-0-condition",
      "README.md",

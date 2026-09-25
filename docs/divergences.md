@@ -205,8 +205,8 @@ Two more, this time observed in the sweep rather than read:
 
 One structural difference, not a defect on either side: the reference extracts
 every container to a temporary folder on disk before validating
-(`ZipUtils.unzipToTemperaryFolder`). This tool never writes to disk, which is
-asserted by a test rather than promised.
+(`ZipUtils.unzipToTemperaryFolder`). This tool extracts nothing to disk, which
+is asserted by a test rather than promised.
 
 ## 4. Codes are ambiguous, so we key on message keys
 
