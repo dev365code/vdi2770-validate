@@ -44,7 +44,7 @@ RUNS = (".yml", ".yaml")
 #: The workflows this repository has. A new one has to be added here on
 #: purpose, and is then swept; one that disappears from this list without
 #: being deleted is the failure this list exists to catch.
-EXPECTED = {"ci.yml", "dco.yml", "oracle.yml", "release.yml"}
+EXPECTED = {"ci.yml", "dco.yml", "oracle.yml", "release.yml", "upstream.yml"}
 
 WORKFLOWS = sorted(path for path in WORKFLOWS_DIR.iterdir()
                    if path.is_file() and path.suffix.lower() in RUNS)

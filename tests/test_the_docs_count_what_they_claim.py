@@ -502,8 +502,10 @@ def test_no_document_cites_a_file_that_is_not_here():
     # the picture cites the seven files its items point at as evidence.
     # 54 to 47 when 0.10.1 became the newest section: the eight citations in
     # the 0.10.0 section left with it, and the new section cites one.
-    assert seen == 47, (
-        f"{seen} citations found, not 47. If you added or removed one, say so "
+    # 47 to 48 when the reference came to be asked about every week: the page
+    # behind the picture names the tool that asks.
+    assert seen == 48, (
+        f"{seen} citations found, not 48. If you added or removed one, say so "
         f"here; if you did not, some of them just stopped being checked.")
 
 

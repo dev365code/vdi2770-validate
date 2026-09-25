@@ -1,0 +1,30 @@
+name: upstream
+
+# Whether the reference implementation has moved since this project pinned it.
+#
+# corpus/MANIFEST.json names the commit the corpus was copied from, and the
+# oracle workflow runs the reference at that commit. A pin does not move on its
+# own; this is what says when the reference has, every Monday, by asking its
+# repository where the default branch is. A red run here is not a defect in
+# this project: exit 1 is a decision to make about the pin, and exit 2 is a
+# question the reference's repository did not answer.
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 6 * * 1"          # 06:00 UTC every Monday
+
+permissions:
+  contents: read
+
+jobs:
+  moved:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - run: python tools/upstream.py

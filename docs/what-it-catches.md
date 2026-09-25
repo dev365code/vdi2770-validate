@@ -143,16 +143,21 @@ it back unchanged.
 commit, which `corpus/MANIFEST.json` names, and is not edited. The oracle
 workflow runs the reference implementation at a pinned commit as well; its
 schedule looks for rot in everything around that pin, not for changes in the
-reference.
+reference. Every Monday a second workflow asks the reference's repository where
+its default branch is, and `python tools/upstream.py` answers the same question
+from a clone: exit `0` while the branch is at the pinned commit, `1` with the
+commit it is at once it has moved, and `2` when the repository could not be
+asked or did not answer.
 
 **Now.**
 
 - upstream corpus pinned by commit — done
-- checked weekly for change — not yet
+- checked weekly for change — done; `tools/upstream.py`, run every Monday by
+  the `upstream` workflow
 
-**1.0.** A weekly check that says when the reference moves. The reference has
-not moved since this project pinned it -- its default branch is at the pinned
-commit -- so moving the pin is not something this project can do on its own;
-the check is what will say when there is a move to make.
+**1.0.** Met. The reference has not moved since this project pinned it -- its
+default branch is at the pinned commit -- so moving the pin is not something
+this project can do on its own; the weekly check is what will say when there is
+a move to make.
 
 The same six, as a table: [docs/capabilities.md](capabilities.md).

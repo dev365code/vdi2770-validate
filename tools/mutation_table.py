@@ -2360,6 +2360,67 @@ LISTING_BUDGET_ROWS = [
      "the page behind the picture counts one more rule with a pair than the "
      "picture draws"),
 
+    ("gates/the-reference-is-read-where-it-is",
+     "tools/upstream.py",
+     "    if head == pinned:",
+     "    if head != pinned:",
+     ["tests/test_the_reference_is_watched.py::"
+      "test_a_default_branch_anywhere_else_has_and_says_where"],
+     "the weekly question reads a reference that moved as one that stayed, and "
+     "the front page's 'checked weekly' checks nothing"),
+
+    ("gates/no-answer-is-not-read-as-no-move",
+     "tools/upstream.py",
+     "    if head is None:",
+     "    if head is None and False:",
+     ["tests/test_the_reference_is_watched.py::"
+      "test_no_answer_is_not_read_as_no_move"],
+     "a repository that answered with nothing is taken to have said something "
+     "about where the reference is"),
+
+    ("gates/a-schedule-commented-out-is-no-schedule",
+     ".github/workflows/upstream.yml",
+     '  schedule:\n    - cron: "0 6 * * 1"',
+     '  # schedule:\n  #   - cron: "0 6 * * 1"',
+     ["tests/test_the_reference_is_watched.py::"
+      "test_the_question_is_asked_every_week"],
+     "the schedule is commented out, the usual way to silence a workflow, and "
+     "the front page still says the reference is checked every week"),
+
+    ("gates/an-unanswered-question-is-not-a-move",
+     "tools/upstream.py",
+     "        print(f\"{repo}: {unanswered}\", file=sys.stderr)\n        return 2",
+     "        print(f\"{repo}: {unanswered}\", file=sys.stderr)\n        return 1",
+     ["tests/test_the_reference_is_watched.py::"
+      "test_an_unanswered_question_is_not_a_move"],
+     "no answer from the reference's repository reads as a move, and a red run "
+     "stops meaning either"),
+
+    ("gates/a-condition-can-skip-the-weekly-question",
+     ".github/workflows/upstream.yml",
+     "  moved:\n    runs-on: ubuntu-latest",
+     "  moved:\n    if: false\n    runs-on: ubuntu-latest",
+     ["tests/test_the_reference_is_watched.py::"
+      "test_the_question_is_asked_every_week"],
+     "a condition skips the job that asks, and a skipped job is reported as a "
+     "success every week"),
+
+    ("gates/a-moved-reference-is-a-red-run",
+     "tools/upstream.py",
+     "    print(said, file=sys.stderr)\n    return 1",
+     "    print(said, file=sys.stderr)\n    return 0",
+     ["tests/test_the_reference_is_watched.py::"
+      "test_a_moved_reference_is_a_red_run"],
+     "a reference past the pin ends the week's run green"),
+
+    ("gates/the-reference-is-asked-every-week",
+     ".github/workflows/upstream.yml",
+     'cron: "0 6 * * 1"',
+     'cron: "0 6 1 * *"',
+     ["tests/test_the_reference_is_watched.py::"
+      "test_the_question_is_asked_every_week"],
+     "the schedule the front page calls weekly fires once a month"),
+
     ("gates/the-readme-states-every-1-0-condition",
      "README.md",
      "this project asks of itself",

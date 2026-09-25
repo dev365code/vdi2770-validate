@@ -5,7 +5,7 @@
 | Report contract | schemaVersion, golden, exit codes, schema | met |
 | Entrances | command line, library, single file, Action | + browser, nothing installed |
 | Input safety | read budgets, advisory, own mutations | + declared encodings read without loss |
-| Upstream | pinned by commit | + checked weekly for change |
+| Upstream | pinned by commit, checked weekly | met |
 
 **Explanation** — 4 of 5:
 - what is wrong, in one sentence — done (`README.md`: "Three parts, every time: what is wrong")
@@ -33,8 +33,8 @@
 - tests verified against their own mutations — done (`tools/mutation_table.py`: "Every claim this project makes about a gate, as a mutation somebody can run")
 - declared encodings read without loss — not yet
 
-**Upstream** — 1 of 2:
+**Upstream** — 2 of 2:
 - upstream corpus pinned by commit — done (`corpus/MANIFEST.json`: ""repo": "DigitalDataChainConsortium/vdi2770", "commit":")
-- checked weekly for change — not yet
+- checked weekly for change — done (`.github/workflows/upstream.yml`: "06:00 UTC every Monday")
 
 Before it calls a release 1.0, this project asks of itself — Coverage: 39 of 42, every rule that can have one; Explanation: what is wrong, in one sentence · the evidence as read from the file · a remedy, for every rule · the source of every rule's requirement · the line, for every metadata finding; Report contract: schemaVersion in every report · a golden report held by a test · exit codes under test · a field-by-field schema page; Entrances: command line · Python library · single file, nothing to install · GitHub Action · browser, nothing installed; Input safety: read budgets, per member and per archive · a security fix ships with an advisory · tests verified against their own mutations · declared encodings read without loss; Upstream: upstream corpus pinned by commit · checked weekly for change.

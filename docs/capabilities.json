@@ -65,9 +65,10 @@
      "items": [
        {"text": "upstream corpus pinned by commit", "done": true,
         "evidence": {"file": "corpus/MANIFEST.json", "says": "\"repo\": \"DigitalDataChainConsortium/vdi2770\", \"commit\":"}},
-       {"text": "checked weekly for change", "done": false}
+       {"text": "checked weekly for change", "done": true,
+        "evidence": {"file": ".github/workflows/upstream.yml", "says": "06:00 UTC every Monday"}}
      ],
-     "now_text": "pinned by commit",
-     "target_text": "+ checked weekly for change"}
+     "now_text": "pinned by commit, checked weekly",
+     "target_text": "met"}
   ]
 }
