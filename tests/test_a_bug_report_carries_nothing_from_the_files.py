@@ -266,6 +266,25 @@ def test_a_path_given_in_one_word_stays_out_too(spelling, tmp_path, capsys):
     assert "<out-1>" in json.loads(data)["invocation"]["argv"]
 
 
+def test_the_file_holds_the_bytes_the_limit_was_measured_on(tmp_path, monkeypatch):
+    """The limit is measured on the bundle's UTF-8 bytes, and the file has to
+    hold those bytes. Written as text, it did not on Windows: every line end
+    became two bytes on the way out, so a bundle measured just under 256 KiB
+    arrived over it. Held here by giving text written to a file what Windows
+    gives it: every line end as two bytes."""
+    made = bundling.build(path=str(FIXTURES / "m2-unknown-class-id.zip"), options=["--bug-report"],
+                          inputs=1, report=None, exit_code=0, seconds=0.0, trigger="manual")
+    as_bytes = Path.write_bytes
+
+    def as_windows_writes_text(self, data, encoding=None, errors=None, newline=None):
+        return as_bytes(self, data.replace("\n", "\r\n").encode(encoding or "utf-8"))
+    monkeypatch.setattr(Path, "write_text", as_windows_writes_text)
+    written = bundling.write(made, str(tmp_path))
+    monkeypatch.undo()
+    assert written.read_bytes() == bundling.dumps(made).encode("utf-8"), (
+        "the file is not the bytes the limit was measured on")
+
+
 def test_a_long_note_and_many_inputs_stay_within_the_limit(tmp_path, capsys):
     out = tmp_path / "out"
     out.mkdir()

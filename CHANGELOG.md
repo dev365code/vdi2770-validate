@@ -14,6 +14,9 @@ file that could not be read.
   read as a finding and exited `1`. A path that does not exist or may not be
   opened keeps `2` alone and `1` beside a file that could be read; a finding
   keeps `1`; a mistyped command line keeps `64`.
+- **A bug report is the bytes its size limit was measured on.** It was written
+  as text, and on Windows every line end became two bytes on the way to the
+  file, so a bundle measured just under 256 KiB arrived over it.
 - **GHSA-62p8-4642-mwfp is still not closed in full**: it reaches
   `vdi2770-validate` from 0.1.0 and `vdi2770` from 0.8.0 up to 0.11.0, and the
   older form of the runner's command syntax, which the runner reads anywhere in

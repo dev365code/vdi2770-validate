@@ -297,5 +297,7 @@ def file_name(bundle: Dict) -> str:
 
 def write(bundle: Dict, out_dir: Optional[str]) -> Path:
     target = Path(out_dir or ".") / file_name(bundle)
-    target.write_text(dumps(bundle), encoding="utf-8")
+    # Bytes, not text: written as text, every line end is two bytes on Windows,
+    # and a bundle measured just under the limit arrives over it.
+    target.write_bytes(dumps(bundle).encode("utf-8"))
     return target

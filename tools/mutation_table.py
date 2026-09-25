@@ -1763,8 +1763,8 @@ PLATFORM_ROWS = [
 
     ('runner/a-container-read-once-and-not-twice-is-a-failure-of-this-tool',
      'packages/vdi2770/src/vdi2770/validate/runner.py',
-     '    if got is None:',
-     '    if False:',
+     '    if got is None:\n        raise RuntimeError(f"{name}: the reader read this container once',
+     '    if False:\n        raise RuntimeError(f"{name}: the reader read this container once',
      ['tests/test_a_rule_that_crashes_does_not_kill_the_run.py::test_a_container_read_once_and_not_twice_is_a_failure_of_this_tool'],
      'without a nested container\'s bytes none of its PDFs are checked, and that happened with the delivery still reported clean'),
 
@@ -2745,6 +2745,15 @@ LISTING_BUDGET_ROWS = [
      "the bundle fails to draw for every input with a finding that points at "
      "nothing in particular -- a refused file among them, the one a person is "
      "told to report"),
+
+    ("gates/a-bug-report-is-the-bytes-its-limit-measured",
+     "packages/vdi2770/src/vdi2770/validate/bundle.py",
+     '    target.write_bytes(dumps(bundle).encode("utf-8"))',
+     '    target.write_text(dumps(bundle), encoding="utf-8")',
+     ["tests/test_a_bug_report_carries_nothing_from_the_files.py::"
+      "test_the_file_holds_the_bytes_the_limit_was_measured_on"],
+     "the bundle written as text: on Windows each line end grows to two bytes and a "
+     "bundle measured under 256 KiB arrives over it"),
 
     ("gates/a-bug-report-carries-no-name-as-numbers",
      "packages/vdi2770/src/vdi2770/validate/bundle.py",
