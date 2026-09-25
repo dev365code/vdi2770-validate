@@ -15,8 +15,8 @@ inputs:
     required: true
   version:
     description: >
-      Which release's single file to run. Defaults to the version of the
-      checkout this action came from, so `uses: ...@v0.9.1` runs 0.9.1.
+      Which release to install and run. Defaults to the version of the ref
+      this action is used at, so the tag you pin is the release that runs.
     required: false
     default: ""
   pyz:
