@@ -200,6 +200,12 @@ on to whatever reads the number; with the default you would add
 | `args` | anything else for `check`, such as `--json` |
 | `fail-on-finding` | `true` by default: a non-zero verdict fails the step. `false` succeeds and fills `exit-code` |
 
+| Output | What it is |
+|---|---|
+| `exit-code` | what the checker returned: `0` nothing at the fail severity, `1` a finding or an unreadable path, `2` nothing could be read, `3` the install disagreed with itself, `64` a usage error |
+| `pyz` | the single file this step ran, when it ran one; empty on the default path, which installs instead |
+| `version` | the release this step decided to run -- from `version`, from the ref you pinned, or from the tree the action came from |
+
 The runner needs a Python on `PATH` (`python3` or `python`); `actions/setup-python`
 is the usual way to be sure.
 
