@@ -506,8 +506,10 @@ def test_no_document_cites_a_file_that_is_not_here():
     # behind the picture names the tool that asks.
     # 48 to 50 when the advisories got a record: CONTRIBUTING names it and the
     # tool that writes the security page's list from it.
-    assert seen == 50, (
-        f"{seen} citations found, not 50. If you added or removed one, say so "
+    # 50 to 52 when the published samples got a page: it names the manifest the
+    # samples are recorded in and the tool that writes it.
+    assert seen == 52, (
+        f"{seen} citations found, not 52. If you added or removed one, say so "
         f"here; if you did not, some of them just stopped being checked.")
 
 

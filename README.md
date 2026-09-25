@@ -261,6 +261,12 @@ iiRDS, if that is the handover format you are on.
   or an XML library, so a rule cannot accidentally check how a document was spelled
   instead of what it says. Rules may read the readers' constants — the reserved file
   names, the container kinds — but not call a parser.
+- **Every published sample, judged in the open.** The reference repository's sample
+  files are in this repository unmodified, and
+  [docs/official-samples.md](https://github.com/dev365code/vdi2770-validate/blob/main/docs/official-samples.md)
+  is this tool's verdict on each, with where every rule that fired takes its
+  requirement from -- written from the tool itself, so the build fails when the two
+  differ.
 - **Recorded disagreements.** Where the free sources disagree, this project picks one
   reading, marks the finding, and writes down the question in
   [docs/divergences.md](https://github.com/dev365code/vdi2770-validate/blob/main/docs/divergences.md).

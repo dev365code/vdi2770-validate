@@ -2480,6 +2480,15 @@ LISTING_BUDGET_ROWS = [
       "test_the_question_is_asked_every_week"],
      "the schedule the front page calls weekly fires once a month"),
 
+    ("pages/the-samples-page-is-what-the-tool-says",
+     "docs/official-samples.md",
+     "| `empty.zip` | 1 | 1 | 0 | 0 | Z2 ×1 (container) |",
+     "| `empty.zip` | 0 | 0 | 0 | 0 | none |",
+     ["tests/test_the_samples_page_is_what_the_tool_says.py::"
+      "test_the_samples_page_is_what_the_tool_says"],
+     "the page of verdicts on the published samples says the empty archive "
+     "passes, where the tool refuses it"),
+
     ("gates/the-readme-states-every-1-0-condition",
      "README.md",
      "this project asks of itself",
