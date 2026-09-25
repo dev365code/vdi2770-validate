@@ -106,17 +106,24 @@ def fingerprint(path: str) -> Dict:
     file is read again: a pipe was read once by the run, and opening it a
     second time waits for a writer that is gone."""
     try:
-        mode = os.stat(path).st_mode
+        given = os.stat(path)
     except OSError:
         return _nothing("file")
-    if stat.S_ISDIR(mode):
+    if stat.S_ISDIR(given.st_mode):
         return _nothing("dir")
-    if not stat.S_ISREG(mode):
+    if not stat.S_ISREG(given.st_mode):
         return _nothing("stream")
     try:
         data = Path(path).read_bytes()
     except OSError:
         return _nothing("file")
+    # What is read again has to be what the file says it holds. A descriptor's
+    # name -- `/dev/stdin`, `/dev/fd/0` -- stats as the regular file behind it,
+    # and on macOS and the BSDs opening it again shares the offset the run left
+    # at the end: the read comes back empty, and a bundle saying 0 bytes
+    # describes a file nobody gave.
+    if len(data) != given.st_size:
+        return _nothing("stream")
     shape = _nothing("file", len(data), _sha256(data))
     try:
         with zipfile.ZipFile(io.BytesIO(data)) as zf:
@@ -223,6 +230,7 @@ def build(*, path: str, options: List[str], inputs: int, report: Optional[Dict],
     if error is not None:
         bundle["error"] = failure(error)
     if note:
+        note = _as_text(note)
         kept = note if len(note) <= NOTE_LIMIT else (
             note[:NOTE_LIMIT] + f" [cut at {NOTE_LIMIT:,} characters]")
         bundle["user"] = {"note": kept}
@@ -260,6 +268,17 @@ def dumps(bundle: Dict) -> str:
     lines = ",\n".join("        " + json.dumps(row, separators=(",", ":")) for row in rows)
     block = "[\n" + lines + "\n      ]" if rows else "[]"
     return text.replace(json.dumps(_ROWS_HERE), block) + "\n"
+
+
+def _as_text(note: str) -> str:
+    """The note as UTF-8 can carry it. A byte the locale could not decode -- a
+    name typed in Latin-1, Korean from a script saved in CP949 -- arrives as a
+    lone surrogate, which UTF-8 cannot encode; it goes out as U+FFFD."""
+    try:
+        raw = note.encode("utf-8", "surrogateescape")
+    except UnicodeEncodeError:
+        raw = note.encode("utf-8", "replace")
+    return raw.decode("utf-8", "replace")
 
 
 def _within_limit(bundle: Dict) -> Dict:

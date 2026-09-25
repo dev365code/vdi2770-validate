@@ -17,9 +17,12 @@ import os
 import subprocess
 import sys
 import zipfile
+import zlib
+from pathlib import Path
 
 import pytest
 
+import vdi2770.validate.bundle as bundling
 import vdi2770.validate.cli as cli
 from conftest import CORPUS, FIXTURES, ROOT
 
@@ -36,6 +39,32 @@ def _forms(text):
         coded = base64.b64encode(pad + raw)
         forms.add(coded[4:-4])              # the part that does not depend on what surrounds it
     return forms
+
+
+def _as_bytes(value):
+    """Every list of whole numbers in the bundle, read back as bytes the ways a
+    list of numbers can hold text: one byte each, or two either way round. The
+    bundle is mostly numbers, and a name carried as `[81, 122, 55, ...]` is a
+    name carried."""
+    if isinstance(value, dict):
+        for inner in value.values():
+            yield from _as_bytes(inner)
+    elif isinstance(value, list):
+        numbers = [v for v in value if type(v) is int]
+        if numbers and len(numbers) == len(value):
+            if all(0 <= v < 256 for v in numbers):
+                yield bytes(numbers)
+            if all(0 <= v < 65536 for v in numbers):
+                yield b"".join(v.to_bytes(2, "little") for v in numbers)
+                yield b"".join(v.to_bytes(2, "big") for v in numbers)
+        for inner in value:
+            yield from _as_bytes(inner)
+
+
+def _leaks(data):
+    """The canary in the bundle's bytes, or in any list of numbers in it."""
+    places = [data, *_as_bytes(json.loads(data))]
+    return [form for form in _forms(CANARY) for place in places if form in place]
 
 
 def _container(tmp_path):
@@ -60,8 +89,15 @@ def _container(tmp_path):
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
         zf.comment = f"{CANARY} archive comment".encode()
         zf.writestr("VDI2770_Metadata.xml", metadata)
-        info = zipfile.ZipInfo(f"{CANARY}/{CANARY}-file.pdf")
-        info.extra = b"\xfe\xca" + len(CANARY.encode()).to_bytes(2, "little") + CANARY.encode()
+        name = f"{CANARY}/{CANARY}-file.pdf"
+        info = zipfile.ZipInfo(name)
+        # Two extra fields, each holding the canary: one of no standard, and
+        # the one Info-ZIP and WinZip write for every name that is not ASCII --
+        # version, the CRC of the name in the header, and the name in UTF-8.
+        # A walk over them that is one byte off reads names out of the second.
+        unicode_path = b"\x01" + zlib.crc32(name.encode()).to_bytes(4, "little") + name.encode()
+        info.extra = (b"\xfe\xca" + len(CANARY.encode()).to_bytes(2, "little") + CANARY.encode()
+                      + b"\x75\x70" + len(unicode_path).to_bytes(2, "little") + unicode_path)
         zf.writestr(info, pdf)
     where = tmp_path / f"drop-{CANARY}"
     where.mkdir()
@@ -84,12 +120,23 @@ def test_nothing_a_sender_wrote_is_in_the_bundle(tmp_path, capsys):
                                       "--note", "the verdict looks wrong to me")
     assert len(written) == 1, written
     data = written[0].read_bytes()
-    leaks = [form for form in _forms(CANARY) if form in data]
+    leaks = _leaks(data)
     assert not leaks, f"the bundle carries the canary as {leaks[:3]}"
     assert CANARY not in written[0].name
     # And what it does carry is there: the shape, the rule codes, the note.
     bundle = json.loads(data)
     assert bundle["input"]["members"]["count"] == 2
+    # Each row is numbers of the kind its field names, so nothing can ride in
+    # a field as a list or a string; and of an extra field, the ids of its
+    # records and not a byte of what they hold.
+    members = bundle["input"]["members"]
+    for row in members["rows"]:
+        field = dict(zip(members["rowFields"], row))
+        assert len(row) == len(members["rowFields"]), row
+        assert all(type(field[k]) is int for k in ("i", "size", "csize", "method", "flagBits", "nameLen")), row
+        assert all(field[k] is None or type(field[k]) is int for k in ("sameNameAs", "sameFoldedNameAs")), row
+        assert type(field["utf8Flag"]) is bool and all(type(x) is int for x in field["extraIds"]), row
+    assert dict(zip(members["rowFields"], members["rows"][1]))["extraIds"] == [0xCAFE, 0x7075]
     assert bundle["run"]["findings"], "the bundle says nothing about the run"
     assert bundle["user"] == {"note": "the verdict looks wrong to me"}
     assert "<input-1>" in bundle["invocation"]["argv"]
@@ -122,11 +169,21 @@ def test_a_failure_of_this_tool_writes_a_bundle_and_keeps_its_exit_code(tmp_path
     written = list(tmp_path.glob("bug-report-*.json"))
     assert len(written) == 1
     data = written[0].read_bytes()
-    assert not [form for form in _forms(CANARY) if form in data]
+    assert not _leaks(data)
     bundle = json.loads(data)
     assert bundle["bundle"]["trigger"] == "crash"
     assert bundle["error"]["type"] == "KeyError"
     assert "defect in this tool" in capsys.readouterr().err
+
+
+def test_a_path_that_is_not_there_is_not_called_a_defect(tmp_path, capsys, monkeypatch):
+    """A mistyped path is the caller's, not this tool's: no bundle is written
+    for it, and nothing calls it a defect here."""
+    monkeypatch.chdir(tmp_path)
+    plain = cli.main(["check", str(tmp_path / "not-there.zip")])
+    assert plain != 0
+    assert not list(tmp_path.glob("bug-report-*.json")), "a mistyped path wrote a bundle"
+    assert "defect in this tool" not in capsys.readouterr().err
 
 
 def test_a_large_archive_is_listed_up_to_the_limit(tmp_path, capsys):
@@ -206,6 +263,67 @@ def test_a_bundle_that_cannot_be_written_stops_nothing(tmp_path, capsys, monkeyp
     assert cli.main(["check", one, one, "--bug-report"]) == plain
     err = capsys.readouterr().err
     assert err.count("could not be written") == 2, err
+
+
+def test_a_note_the_console_could_not_decode_stops_nothing(tmp_path, capsys):
+    """A note typed in another code page -- a name with an umlaut from a Latin-1
+    terminal, Korean from a script saved in CP949 -- arrives holding bytes the
+    locale could not decode. The run is the same run, and the bundle keeps what
+    it can of the note."""
+    one, two = str(FIXTURES / "m2-unknown-class-id.zip"), str(FIXTURES / "m5-bad-language-code.zip")
+    plain = cli.main(["check", "--json", one, two])
+    before = capsys.readouterr().out
+    code, captured, written = _bundle(tmp_path, capsys, "--json", one, two, "--note", "M\udcfcller")
+    assert code == plain, "a note moved the exit code"
+    assert captured.out == before, "a note changed the report"
+    assert len(written) == 2, written
+    for each in written:
+        assert json.loads(each.read_bytes())["user"]["note"] == "M\ufffdller"
+
+
+def test_a_bundle_that_cannot_be_drawn_stops_nothing(tmp_path, capsys, monkeypatch):
+    """Whatever goes wrong in drawing the bundle, not only in writing it, is said
+    once and the sweep goes on with the same report and the same exit code."""
+    one, two = str(FIXTURES / "m2-unknown-class-id.zip"), str(FIXTURES / "m5-bad-language-code.zip")
+    plain = cli.main(["check", one, two])
+    before = capsys.readouterr().out
+
+    def breaks(**_kwargs):
+        raise ValueError("drawing the bundle fell over")
+    monkeypatch.setattr(cli.bundling, "build", breaks)
+    assert cli.main(["check", one, two, "--bug-report"]) == plain
+    captured = capsys.readouterr()
+    assert captured.out == before
+    assert captured.err.count("could not be written") == 2, captured.err
+
+
+def test_an_input_that_reads_back_short_is_not_described_by_what_came_back(monkeypatch):
+    """What is read again for the bundle has to be what the file says it holds,
+    or it is not the input the run read."""
+    path = FIXTURES / "m2-unknown-class-id.zip"
+    monkeypatch.setattr(Path, "read_bytes", lambda self: b"")
+    shape = bundling.fingerprint(str(path))
+    monkeypatch.undo()
+    assert shape["kind"] == "stream" and shape["size"] is None, shape
+
+
+@pytest.mark.skipif(not os.path.exists("/dev/stdin"), reason="no /dev/stdin here")
+def test_a_file_given_as_standard_input_is_not_called_empty(tmp_path):
+    """`check /dev/stdin < file`: on macOS and the BSDs, opening the descriptor's
+    name again shares the offset the run left at the end, so a second read
+    comes back empty. The bundle says the file's size, or that it does not know
+    it -- never 0 bytes for a file that was not empty."""
+    path = FIXTURES / "m8-unlabelled-class-name.zip"
+    with open(path, "rb") as given:
+        subprocess.run([sys.executable, "-m", "vdi2770_validate", "check", "/dev/stdin",
+                        "--bug-report", "--bundle-out", str(tmp_path)],
+                       stdin=given, capture_output=True, text=True, timeout=120,
+                       env={**os.environ, "PYTHONPATH": os.pathsep.join(
+                           [str(ROOT / "src"), str(ROOT / "packages" / "vdi2770" / "src")])})
+    written = list(tmp_path.glob("bug-report-*.json"))
+    assert len(written) == 1, written
+    shape = json.loads(written[0].read_bytes())["input"]
+    assert shape["size"] in (None, path.stat().st_size), shape
 
 
 @pytest.mark.skipif(not hasattr(os, "mkfifo"), reason="no named pipes here")

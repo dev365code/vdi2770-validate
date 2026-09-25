@@ -2551,11 +2551,64 @@ LISTING_BUDGET_ROWS = [
 
     ("gates/a-bug-report-that-cannot-be-written-stops-nothing",
      "packages/vdi2770/src/vdi2770/validate/cli.py",
-     '    except OSError as e:\n        print(f"The diagnostic bundle could not be written',
-     '    except KeyError as e:\n        print(f"The diagnostic bundle could not be written',
+     "    except Exception as e:                  # noqa: BLE001 -- the run's report and exit code are not the bundle's to change",
+     "    except KeyError as e:                  # noqa: BLE001 -- the run's report and exit code are not the bundle's to change",
      ["tests/test_a_bug_report_carries_nothing_from_the_files.py::"
       "test_a_bundle_that_cannot_be_written_stops_nothing"],
      "a directory nobody can write to stops the sweep, and the exit code moves"),
+
+    ("gates/a-bug-report-that-cannot-be-drawn-stops-nothing",
+     "packages/vdi2770/src/vdi2770/validate/cli.py",
+     "    except Exception as e:                  # noqa: BLE001 -- the run's report and exit code are not the bundle's to change",
+     "    except OSError as e:                  # noqa: BLE001 -- the run's report and exit code are not the bundle's to change",
+     ["tests/test_a_bug_report_carries_nothing_from_the_files.py::"
+      "test_a_bundle_that_cannot_be_drawn_stops_nothing"],
+     "only a failed write is caught, and anything else that goes wrong in "
+     "drawing the bundle stops the sweep and moves its exit code"),
+
+    ("gates/a-bug-report-carries-no-name-as-numbers",
+     "packages/vdi2770/src/vdi2770/validate/bundle.py",
+     '                     info.flag_bits, len(name), same if same != i else None,',
+     '                     info.flag_bits, list(name.encode()), same if same != i else None,',
+     ["tests/test_a_bug_report_carries_nothing_from_the_files.py::"
+      "test_nothing_a_sender_wrote_is_in_the_bundle"],
+     "a member's name carried as a list of byte values, which no search of the "
+     "bundle's text for the name would find"),
+
+    ("gates/a-bug-report-walks-an-extra-field-record-by-record",
+     "packages/vdi2770/src/vdi2770/validate/bundle.py",
+     "        at += 4 + size\n",
+     "        at += 4\n",
+     ["tests/test_a_bug_report_carries_nothing_from_the_files.py::"
+      "test_nothing_a_sender_wrote_is_in_the_bundle"],
+     "the walk over an extra field one record short, so the ids it reports "
+     "are read out of what the records hold -- a Unicode path field's name"),
+
+    ("gates/a-bug-report-carries-a-note-as-utf-8-can",
+     "packages/vdi2770/src/vdi2770/validate/bundle.py",
+     "        note = _as_text(note)\n",
+     "        note = note\n",
+     ["tests/test_a_bug_report_carries_nothing_from_the_files.py::"
+      "test_a_note_the_console_could_not_decode_stops_nothing"],
+     "a note with a byte the locale could not decode, and no bundle is written"),
+
+    ("gates/a-bug-report-does-not-describe-a-short-read",
+     "packages/vdi2770/src/vdi2770/validate/bundle.py",
+     "    if len(data) != given.st_size:\n",
+     "    if False:\n",
+     ["tests/test_a_bug_report_carries_nothing_from_the_files.py::"
+      "test_an_input_that_reads_back_short_is_not_described_by_what_came_back"],
+     "a second read that came back short described as the input: 0 bytes for "
+     "a file given as standard input on macOS"),
+
+    ("gates/a-mistyped-path-writes-no-bundle",
+     "packages/vdi2770/src/vdi2770/validate/cli.py",
+     "            if not isinstance(e, OSError) and not args.no_bundle:\n",
+     "            if not args.no_bundle:\n",
+     ["tests/test_a_bug_report_carries_nothing_from_the_files.py::"
+      "test_a_path_that_is_not_there_is_not_called_a_defect"],
+     "a path that is not there called a defect in this tool, with a bundle "
+     "written for it"),
 
     ("gates/a-bug-report-keeps-a-note-short",
      "packages/vdi2770/src/vdi2770/validate/bundle.py",

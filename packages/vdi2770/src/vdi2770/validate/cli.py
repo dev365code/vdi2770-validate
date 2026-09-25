@@ -65,23 +65,24 @@ def _options(args):
 
 def _bundle(args, path, document, exit_code, started, *, trigger, error=None):
     """Draw the bundle, then write it unless only drawing was asked for. A
-    bundle that cannot be written is said so, once, and the run goes on: it is
-    never a reason for a sweep to stop or for its exit code to move."""
-    made = bundling.build(path=path, options=_options(args), inputs=len(args.paths),
-                          report=document, exit_code=exit_code,
-                          seconds=time.perf_counter() - started, trigger=trigger,
-                          note=args.note, out=args.bundle_out, error=error)
-    print(bundling.dumps(made) if args.show_bundle else made["readable"], file=sys.stderr)
-    if args.show_bundle:
-        if trigger == "crash":
-            print(SHOWN, file=sys.stderr)
-        print(SENT, file=sys.stderr)
-        return None
+    bundle that cannot be drawn or written is said so, once, and the run goes
+    on: it is never a reason for a sweep to stop or for its exit code to move.
+    Not only a directory nobody can write to -- anything in here that fails."""
     try:
+        made = bundling.build(path=path, options=_options(args), inputs=len(args.paths),
+                              report=document, exit_code=exit_code,
+                              seconds=time.perf_counter() - started, trigger=trigger,
+                              note=args.note, out=args.bundle_out, error=error)
+        print(bundling.dumps(made) if args.show_bundle else made["readable"], file=sys.stderr)
+        if args.show_bundle:
+            if trigger == "crash":
+                print(SHOWN, file=sys.stderr)
+            print(SENT, file=sys.stderr)
+            return None
         return bundling.write(made, args.bundle_out)
-    except OSError as e:
-        print(f"The diagnostic bundle could not be written: {e.strerror or e}. {SENT}",
-              file=sys.stderr)
+    except Exception as e:                  # noqa: BLE001 -- the run's report and exit code are not the bundle's to change
+        reason = (e.strerror if isinstance(e, OSError) else None) or f"{type(e).__name__} in this tool"
+        print(f"The diagnostic bundle could not be written: {reason}. {SENT}", file=sys.stderr)
         return None
 
 
