@@ -2367,6 +2367,24 @@ LISTING_BUDGET_ROWS = [
      "a later section states a range for the advisory that runs up to the "
      "release the record says fixed it"),
 
+    ("pages/every-section-naming-an-open-advisory-says-so",
+     "CHANGELOG.md",
+     "is not yet closed by any release, and GHSA-62p8-4642-mwfp now reaches up to 0.9.7.)*",
+     "is closed as well, and GHSA-62p8-4642-mwfp now reaches up to 0.9.7.)*",
+     ["tests/test_an_advisory_and_its_release_name_each_other.py::"
+      "test_each_advisory_is_cited_where_the_record_puts_it"],
+     "a section naming an advisory no release closes says only a range, which "
+     "the next release makes too short"),
+
+    ("gates/a-range-past-the-fix-is-not-a-claim-about-it",
+     "tests/test_an_advisory_and_its_release_name_each_other.py",
+     "               and not (start and as_number(start) >= as_number(fixed_in))\n",
+     "",
+     ["tests/test_an_advisory_and_its_release_name_each_other.py::"
+      "test_a_range_is_held_to_the_fix_only_where_it_could_need_it"],
+     "a new release's sentence naming the releases that carry the repair reads "
+     "as saying the fix did not close it"),
+
     ("pages/a-taken-back-claim-says-how-far-it-reaches",
      "CHANGELOG.md",
      "GHSA-3pfq-57fx-w4q5 now reaches up to 0.9.5 and is fixed in 0.9.6.)*",

@@ -153,10 +153,23 @@ def dated_corrections(section, advisory):
 
 
 def stated_ranges(text):
-    """Every release `text` says a range runs up to or through. Not "reaches":
+    """(start, end) for every range `text` states as running up to or through a
+    release; start is None unless the range says where it begins. Not "reaches":
     "does not reach 0.10.2" says the opposite, and a range stated outright is
     what a reader on that release acts on."""
-    return re.findall(r"(?:up to(?: and including)?|through)\s+(\d+\.\d+\.\d+)(?![\d.]*\d)", text)
+    return [(m.group(1), m.group(2)) for m in re.finditer(
+        r"(?:(?:from\s+(\d+\.\d+\.\d+)\s+)through|up to(?: and including)?|through)\s+"
+        r"(\d+\.\d+\.\d+)(?![\d.]*\d)", text)]
+
+
+def overruns(sentence, fixed_in):
+    """Whether `sentence` states a range for an advisory that runs up to the
+    release that fixed it. A range that begins at the fix or after it --
+    "every release from 0.9.7 through 0.10.2 carries the repair" -- is about
+    the releases that have the repair, not a claim that they need it."""
+    return any(as_number(end) >= as_number(fixed_in)
+               and not (start and as_number(start) >= as_number(fixed_in))
+               for start, end in stated_ranges(sentence))
 
 
 def takes_back(line, release):
@@ -291,16 +304,16 @@ def test_each_advisory_is_cited_where_the_record_puts_it():
                 f"{advisory} is recorded as not yet closed by any release, and "
                 f"the newest section naming it, {latest}, does not say so in a "
                 f"sentence that names it")
-            # And no section naming it still stands as a fix: each one said it
-            # was open, or claimed a fix that a correction took back. An
-            # advisory reopened with the sections that called it fixed left
-            # uncorrected is otherwise green.
-            standing = sorted((v for v in where if v not in claimed
-                               and not any(OPEN in s for s in said[v])), key=as_number)
+            # And every section naming it says so, in a sentence that names it.
+            # A section whose fix was taken back by a correction that only
+            # stated a range is not enough: the range is true until the next
+            # release, and then the section says the advisory stops short of it.
+            standing = sorted((v for v in where if not any(OPEN in s for s in said[v])),
+                              key=as_number)
             assert not standing, (
                 f"{advisory} is recorded as not yet closed by any release, and "
-                f"{standing} name it without saying so or being recorded as a "
-                f"claim a correction took back")
+                f"{standing} name it without saying so in a sentence that names "
+                f"it; a correction appended to a section can say it")
             continue
         assert fixed_in in where, (
             f"{advisory} is recorded as fixed in {fixed_in}, and that section does "
@@ -325,9 +338,8 @@ def test_each_advisory_is_cited_where_the_record_puts_it():
         # And nowhere does a range stated for it run up to the fix: "now reaches
         # up to 0.9.4" in any section says 0.9.4 did not fix it, whatever the
         # record names.
-        overrun = sorted((v for v in where if any(
-            as_number(r) >= as_number(fixed_in) for s in said[v] for r in stated_ranges(s))),
-            key=as_number)
+        overrun = sorted((v for v in where if any(overruns(s, fixed_in) for s in said[v])),
+                         key=as_number)
         assert not overrun, (
             f"{advisory} is recorded as fixed in {fixed_in}, and {overrun} state "
             f"a range for it up to {fixed_in} or later. A sentence is read as said "
@@ -366,6 +378,18 @@ def test_what_a_correction_says_is_held_to_what_it_is_recorded_as():
             "reaching every release of both distributions up to 0.8.0.)*")
     assert takes_nothing_back("GHSA-xp97-jcmj-h45f", xp97, "0.8.1")
     assert not takes_back(xp97, "0.8.1")
+
+
+def test_a_range_is_held_to_the_fix_only_where_it_could_need_it():
+    """Up to the fix, or through it, is a range that says the fix did not close
+    it; a range that starts at the fix or past it names the releases that carry
+    the repair."""
+    assert overruns("GHSA-h676-59p4-6632 now reaches up to 0.9.7.", "0.9.7")
+    assert overruns("every release through 0.9.7 is inside GHSA-h676-59p4-6632", "0.9.7")
+    assert not overruns("GHSA-h676-59p4-6632 reaches up to 0.9.6.", "0.9.7")
+    assert not overruns("Every release from 0.9.7 through 0.10.2 carries the repair for "
+                        "GHSA-h676-59p4-6632.", "0.9.7")
+    assert overruns("every release from 0.9.6 through 0.10.2 is inside it", "0.9.7")
 
 
 def test_no_advisory_is_claimed_for_a_release_below_the_promise():
