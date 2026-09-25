@@ -206,9 +206,13 @@ def test_a_large_archive_is_listed_up_to_the_limit(tmp_path, capsys):
 def test_asking_for_a_bundle_changes_no_verdict(path, tmp_path, capsys):
     plain = cli.main(["check", str(path)])
     before = capsys.readouterr().out
-    code, captured, _written = _bundle(tmp_path, capsys, str(path))
+    code, captured, written = _bundle(tmp_path, capsys, str(path))
     assert code == plain, "asking for a bundle moved the exit code"
     assert captured.out == before, "asking for a bundle changed the report"
+    # And it was written. A bundle that fails to draw is said in one line and
+    # the run goes on, which is right for the run and would be silence here:
+    # a defect that hits only some inputs would pass every assertion above.
+    assert len(written) == 1 and "could not be written" not in captured.err, captured.err
 
 
 def test_a_refused_file_is_told_how_to_report_it_once(tmp_path, capsys):
@@ -242,7 +246,8 @@ def test_a_long_note_and_many_inputs_stay_within_the_limit(tmp_path, capsys):
     one = str(FIXTURES / "m2-unknown-class-id.zip")
     cli.main(["check", *([one] * 50), "--bug-report", "--bundle-out", str(out),
               "--note", "x" * 300_000])
-    capsys.readouterr()
+    assert "could not be written" not in capsys.readouterr().err
+    assert list(out.iterdir()), "no bundle was written, so nothing below was checked"
     for written in out.iterdir():
         assert written.stat().st_size <= 256 * 1024
         bundle = json.loads(written.read_bytes())
@@ -324,6 +329,24 @@ def test_a_file_given_as_standard_input_is_not_called_empty(tmp_path):
     assert len(written) == 1, written
     shape = json.loads(written[0].read_bytes())["input"]
     assert shape["size"] in (None, path.stat().st_size), shape
+
+
+def test_with_stderr_closed_the_report_stays_a_report(tmp_path, capsys, monkeypatch):
+    """With stderr closed -- `2>&-`, or pythonw with no console -- there is no
+    `sys.stderr`, and a line printed to it goes to stdout, into the JSON a
+    machine is about to read. The line saying a path could not be read did
+    so before any bundle existed. That, the sentence after a refusal, the
+    bundle's summary and where it went are said nowhere then, and the report
+    is the report."""
+    refused, missing = str(FIXTURES / "z1-not-a-zip.zip"), str(tmp_path / "not-there.zip")
+    monkeypatch.chdir(tmp_path)
+    plain = cli.main(["check", "--json", refused, missing])
+    before = capsys.readouterr().out
+    monkeypatch.setattr(sys, "stderr", None)
+    assert cli.main(["check", "--json", refused, missing, "--bug-report"]) == plain
+    after = capsys.readouterr().out
+    assert after == before, "a line meant for a person is in the report"
+    json.loads(after)
 
 
 @pytest.mark.skipif(not hasattr(os, "mkfifo"), reason="no named pipes here")

@@ -47,6 +47,15 @@ SHOWN = ("This is a defect in this tool, not in your file. The diagnostic bundle
 SENT = "Nothing was sent."
 
 
+def _say(*parts) -> None:
+    """A line for the person running the check: on stderr, or nowhere when
+    there is no stderr. `print(file=None)` writes to stdout, which is where the
+    report is -- with stderr closed (`2>&-`, or pythonw with no console) a line
+    meant for a person landed inside the JSON a machine was about to read."""
+    if sys.stderr is not None:
+        print(*parts, file=sys.stderr)
+
+
 def _refused(document) -> bool:
     return any(f.get("about") == "tool" or f.get("rule") == "Z1"
                for f in document.get("findings", []))
@@ -73,16 +82,16 @@ def _bundle(args, path, document, exit_code, started, *, trigger, error=None):
                               report=document, exit_code=exit_code,
                               seconds=time.perf_counter() - started, trigger=trigger,
                               note=args.note, out=args.bundle_out, error=error)
-        print(bundling.dumps(made) if args.show_bundle else made["readable"], file=sys.stderr)
+        _say(bundling.dumps(made) if args.show_bundle else made["readable"])
         if args.show_bundle:
             if trigger == "crash":
-                print(SHOWN, file=sys.stderr)
-            print(SENT, file=sys.stderr)
+                _say(SHOWN)
+            _say(SENT)
             return None
         return bundling.write(made, args.bundle_out)
     except Exception as e:                  # noqa: BLE001 -- the run's report and exit code are not the bundle's to change
         reason = (e.strerror if isinstance(e, OSError) else None) or f"{type(e).__name__} in this tool"
-        print(f"The diagnostic bundle could not be written: {reason}. {SENT}", file=sys.stderr)
+        _say(f"The diagnostic bundle could not be written: {reason}. {SENT}")
         return None
 
 
@@ -130,8 +139,7 @@ def _cmd_check(args) -> int:
             # the machine-readable one, so a consumer diffing two runs of one
             # drop folder sees a change that is not about their files.
             why = getattr(e, "strerror", None) or without_addresses(str(e))
-            print(not_a_command(f"{on_one_line(path)}: cannot read it — {on_one_line(why)}"),
-                  file=sys.stderr)
+            _say(not_a_command(f"{on_one_line(path)}: cannot read it — {on_one_line(why)}"))
             unreadable += 1
             # A path that is not there, or not a file, is the caller's; anything
             # else raised here is this tool failing on a file it was given, and
@@ -139,8 +147,8 @@ def _cmd_check(args) -> int:
             if not isinstance(e, OSError) and not args.no_bundle:
                 where = _bundle(args, path, None, 2, started, trigger="crash", error=e)
                 if where is not None:
-                    print(CRASHED.format(path=where), file=sys.stderr)
-                    print(SENT, file=sys.stderr)
+                    _say(CRASHED.format(path=where))
+                    _say(SENT)
             # And it appears in the JSON. Skipping it gave a consumer N-1
             # documents for N paths, with the difference explained only in prose
             # on another stream.
@@ -159,8 +167,8 @@ def _cmd_check(args) -> int:
             where = _bundle(args, path, document, 1 if failing else 0, started,
                             trigger="refusal" if _refused(document) else "manual")
             if where is not None:
-                print(f"A diagnostic bundle was written to {where}.", file=sys.stderr)
-                print(SENT, file=sys.stderr)
+                _say(f"A diagnostic bundle was written to {where}.")
+                _say(SENT)
         # Ten rules are warnings. They are warnings on purpose -- `P3` cannot
         # be an error because this tool does not verify PDF/A -- so the number
         # does not move for them by default, and an intake gate that wants
@@ -200,7 +208,7 @@ def _cmd_check(args) -> int:
               "claim a file makes\nabout itself where it finds one; only a "
               "PDF/A validator can say whether that\nclaim is true.")
     if refused and not (args.bug_report or args.show_bundle):
-        print(REFUSED, file=sys.stderr)
+        _say(REFUSED)
     if unreadable:
         return 2 if unreadable == len(args.paths) else max(worst, 1)
     return worst
@@ -320,7 +328,7 @@ def main(argv=None) -> int:
         # One place, so every surface that can state an identity -- `check`,
         # `rules`, `classes`, `--version` -- ends the same way, and no report
         # is written on the way out.
-        print(f"{MARKER}: {e}", file=sys.stderr)
+        _say(f"{MARKER}: {e}")
         return 3
 
 

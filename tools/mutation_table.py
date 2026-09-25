@@ -2566,6 +2566,34 @@ LISTING_BUDGET_ROWS = [
      "only a failed write is caught, and anything else that goes wrong in "
      "drawing the bundle stops the sweep and moves its exit code"),
 
+    ("gates/a-line-for-a-person-stays-out-of-the-report",
+     "packages/vdi2770/src/vdi2770/validate/cli.py",
+     "    if sys.stderr is not None:\n        print(*parts, file=sys.stderr)\n",
+     "    if True:\n        print(*parts, file=sys.stderr)\n",
+     ["tests/test_a_bug_report_carries_nothing_from_the_files.py::"
+      "test_with_stderr_closed_the_report_stays_a_report"],
+     "with stderr closed, the sentence after a refusal lands inside the JSON "
+     "report, and a machine reading it gets something that does not parse"),
+
+    ("gates/a-sweep-of-many-inputs-still-gets-its-bundles",
+     "packages/vdi2770/src/vdi2770/validate/bundle.py",
+     '        shown.append(f"<{inputs - INPUTS_SHOWN} more inputs>")',
+     '        shown.append("<" + (inputs - INPUTS_SHOWN) + " more inputs>")',
+     ["tests/test_a_bug_report_carries_nothing_from_the_files.py::"
+      "test_a_long_note_and_many_inputs_stay_within_the_limit"],
+     "a sweep of more than ten inputs writes no bundle at all, each one said "
+     "in a line nobody reads, and the build stays green"),
+
+    ("gates/every-input-gets-its-bundle",
+     "packages/vdi2770/src/vdi2770/validate/bundle.py",
+     '"whereKinds": {"member": 0, "line": 0, "none": 0}})',
+     '"whereKinds": {"member": 0, "line": 0}})',
+     ["tests/test_a_bug_report_carries_nothing_from_the_files.py::"
+      "test_asking_for_a_bundle_changes_no_verdict"],
+     "the bundle fails to draw for every input with a finding that points at "
+     "nothing in particular -- a refused file among them, the one a person is "
+     "told to report"),
+
     ("gates/a-bug-report-carries-no-name-as-numbers",
      "packages/vdi2770/src/vdi2770/validate/bundle.py",
      '                     info.flag_bits, len(name), same if same != i else None,',
@@ -2683,8 +2711,8 @@ LISTING_BUDGET_ROWS = [
 
     ("cli/an-unreadable-path-is-not-a-command",
      "packages/vdi2770/src/vdi2770/validate/cli.py",
-     '            print(not_a_command(f"{on_one_line(path)}: cannot read it — {on_one_line(why)}"),',
-     '            print((f"{path}: cannot read it — {why}"),',
+     '            _say(not_a_command(f"{on_one_line(path)}: cannot read it — {on_one_line(why)}"))',
+     '            _say((f"{path}: cannot read it — {why}"))',
      ["tests/test_cli.py::test_a_path_that_cannot_be_read_is_not_a_command_on_stderr"],
      "the line on stderr begins with the path, and a runner reads stderr for "
      "commands too"),
