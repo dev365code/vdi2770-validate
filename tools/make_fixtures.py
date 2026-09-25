@@ -369,8 +369,11 @@ def main() -> int:
     add("z9-file-in-a-folder.zip", f, "Z9", ["B.docx", META],
         "B.docx moved into a folder, and its DigitalFile names it there")
 
-    # Z13 — the document container delivered as a folder of its members
-    # instead of as a .zip member, which this tool does not open.
+    # Z13 — the document container delivered as a folder of its members, which
+    # this tool reads like a .zip member -- except this one, whose metadata
+    # cannot be read: forty bytes of its deflate stream flipped, the shape of a
+    # damaged transfer. A folder that holds a container and was not opened.
+    # Written by hand: no ZIP writer produces a broken CRC on purpose.
     innerz = io.BytesIO(basen["documentcontainer.zip"])
     with zipfile.ZipFile(innerz) as src:
         parts = {n: src.read(n) for n in src.namelist()}
@@ -378,8 +381,18 @@ def main() -> int:
     f.pop("documentcontainer.zip")
     for n, d in parts.items():
         f["documentcontainer/" + n] = d
-    add("z13-document-as-a-folder.zip", f, "Z13", ["documentcontainer.zip"],
-        "the document container unpacked into a folder of the same name")
+    raw = bytearray(write_bytes(f))
+    damaged = "documentcontainer/" + META
+    info = zipfile.ZipFile(io.BytesIO(bytes(raw))).getinfo(damaged)
+    start = info.header_offset + 30 + len(info.filename) + 100
+    for k in range(start, start + 40):
+        raw[k] ^= 0xFF
+    (OUT / "z13-document-folder-unread.zip").write_bytes(bytes(raw))
+    made["z13-document-folder-unread.zip"] = {
+        "rule": "Z13", "basedOn": "documentationcontainer.zip",
+        "changed": ["documentcontainer.zip", damaged],
+        "note": "the document container unpacked into a folder, and forty bytes of the "
+                "folder's metadata stream flipped so it cannot be read"}
 
     # F1 — a file the metadata names that is not in the container
     f = dict(base)

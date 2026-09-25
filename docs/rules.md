@@ -126,13 +126,13 @@ Why this is ours: Document containers hold a document's files. A container insid
 
 **Remedy.** Re-create the archive and send it again. A member with a broken CRC is usually a truncated transfer; a member that needs a password has not been handed over, because the recipient cannot open it.
 
-### `Z13` — Documents are delivered as folders, which this tool does not open
+### `Z13` — A folder holds a container this tool did not open
 
 *error* · obligation `ours` · **about: this tool**
 
-Why this is ours: A folder holding VDI2770_Metadata.xml is a document container that was not zipped. This tool opens .zip members and nothing else, so everything inside was unchecked — and a report that said nothing would be telling the reader it passed. The reference implementation does read them, so this is a limit of ours rather than a fault of the delivery.
+Why this is ours: A folder holding VDI2770_Metadata.xml or VDI2770_Main.xml is a container that was not zipped, and this tool reads it as the container it is, as the reference implementation does. This one it did not open — its metadata could not be read, or a limit on depth or on what one read may inflate was reached — so everything inside is unchecked, and a report that said nothing would be telling the reader it passed. The limit is ours rather than a fault of the delivery.
 
-**Remedy.** Nothing here is necessarily wrong with the container. Zip each document folder into its own .zip member if you want this tool to check it, or check those folders with something that reads them.
+**Remedy.** Nothing here is necessarily wrong with the container. The finding beside this one says why the folder was not opened; once that is put right the folder is checked like any other container.
 
 ## files
 

@@ -12,21 +12,38 @@ Held here: the same document container, zipped or unpacked into a folder, draws
 the same findings. The folder draws `Z9` besides, which says the archive stores
 files in folders, and nothing else may differ.
 """
+import io
+import zipfile
 from collections import Counter
 
-from vdi2770_validate.runner import check_file
+from vdi2770_validate.runner import check_bytes
 
-from conftest import CLEAN_DOCUMENTATION, FIXTURES
+from conftest import CLEAN_DOCUMENTATION
 
 
-def _verdict(path, *, leave_out=()):
-    return Counter((f.rule.id, f.severity.value) for f in check_file(str(path)).findings
+def _unpacked():
+    """The sample documentation container with its one document container
+    unpacked into a folder of the same name."""
+    buf = io.BytesIO()
+    with zipfile.ZipFile(CLEAN_DOCUMENTATION) as given, zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as out:
+        for name in given.namelist():
+            if name != "documentcontainer.zip":
+                out.writestr(name, given.read(name))
+                continue
+            with zipfile.ZipFile(io.BytesIO(given.read(name))) as inner:
+                for part in inner.namelist():
+                    out.writestr("documentcontainer/" + part, inner.read(part))
+    return buf.getvalue()
+
+
+def _verdict(data, *, leave_out=()):
+    return Counter((f.rule.id, f.severity.value) for f in check_bytes(data, "delivery.zip").findings
                    if f.rule.id not in leave_out)
 
 
 def test_a_document_container_in_a_folder_draws_what_it_draws_zipped():
-    zipped = _verdict(CLEAN_DOCUMENTATION)
-    folder = _verdict(FIXTURES / "z13-document-as-a-folder.zip", leave_out=("Z9",))
+    zipped = _verdict(CLEAN_DOCUMENTATION.read_bytes())
+    folder = _verdict(_unpacked(), leave_out=("Z9",))
     assert folder == zipped, (
         f"unpacked into a folder: {sorted(folder.items())}; "
         f"zipped: {sorted(zipped.items())}")
