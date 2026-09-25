@@ -299,6 +299,30 @@
         ]
       }
     },
+    "f1-named-file-missing.zip": {
+      "reference": {
+        "ERROR": [
+          "REP_007"
+        ],
+        "INFO": [
+          "REP_003",
+          "REP_005",
+          "REP_008",
+          "REP_009",
+          "REP_010",
+          "REP_011",
+          "REP_020",
+          "REP_028",
+          "REP_036",
+          "ZU_005"
+        ]
+      },
+      "ours": {
+        "error": [
+          "F1"
+        ]
+      }
+    },
     "f2-undeclared-file.zip": {
       "reference": {
         "INFO": [
@@ -581,6 +605,33 @@
         ]
       }
     },
+    "m13-type-and-individual.zip": {
+      "reference": {
+        "INFO": [
+          "REP_003",
+          "REP_005",
+          "REP_008",
+          "REP_009",
+          "REP_010",
+          "REP_011",
+          "REP_015",
+          "REP_020",
+          "REP_028",
+          "REP_036",
+          "REP_041",
+          "REP_043",
+          "ZU_005"
+        ]
+      },
+      "ours": {
+        "info": [
+          "P4"
+        ],
+        "warning": [
+          "M13"
+        ]
+      }
+    },
     "m2-unknown-class-id.zip": {
       "reference": {
         "ERROR": [
@@ -607,6 +658,58 @@
           "M2"
         ],
         "info": [
+          "P4"
+        ]
+      }
+    },
+    "m3-german-name-of-another-class.zip": {
+      "reference": {
+        "INFO": [
+          "REP_003",
+          "REP_005",
+          "REP_008",
+          "REP_009",
+          "REP_010",
+          "REP_011",
+          "REP_015",
+          "REP_020",
+          "REP_028",
+          "REP_036",
+          "REP_041",
+          "REP_043",
+          "ZU_005"
+        ]
+      },
+      "ours": {
+        "info": [
+          "P4"
+        ],
+        "warning": [
+          "M3"
+        ]
+      }
+    },
+    "m4-english-name-of-another-class.zip": {
+      "reference": {
+        "INFO": [
+          "REP_003",
+          "REP_005",
+          "REP_008",
+          "REP_009",
+          "REP_010",
+          "REP_011",
+          "REP_015",
+          "REP_020",
+          "REP_028",
+          "REP_036",
+          "REP_041",
+          "REP_043",
+          "ZU_005"
+        ]
+      },
+      "ours": {
+        "info": [
+          "M4",
           "P4"
         ]
       }
@@ -1226,6 +1329,18 @@
         ]
       }
     },
+    "z1-cut-short.zip": {
+      "reference": {
+        "ERROR": [
+          "ZU_003"
+        ]
+      },
+      "ours": {
+        "error": [
+          "Z1"
+        ]
+      }
+    },
     "z1-not-a-zip.zip": {
       "reference": {
         "ERROR": [
@@ -1299,6 +1414,75 @@
         "error": [
           "F1",
           "Z12"
+        ]
+      }
+    },
+    "z13-document-as-a-folder.zip": {
+      "reference": {
+        "INFO": [
+          "D_003",
+          "REP_003",
+          "REP_005",
+          "REP_008",
+          "REP_009",
+          "REP_010",
+          "REP_011",
+          "REP_012",
+          "REP_015",
+          "REP_020",
+          "REP_028",
+          "REP_030",
+          "REP_031",
+          "REP_032",
+          "REP_036",
+          "REP_041",
+          "REP_043",
+          "ZU_005"
+        ]
+      },
+      "ours": {
+        "error": [
+          "Z13"
+        ],
+        "info": [
+          "P4"
+        ],
+        "warning": [
+          "Z9"
+        ]
+      }
+    },
+    "z2-empty-archive.zip": {
+      "reference": {
+        "ERROR": [
+          "REP_004",
+          "REP_035"
+        ],
+        "INFO": [
+          "REP_036",
+          "ZU_005"
+        ]
+      },
+      "ours": {
+        "error": [
+          "Z2"
+        ]
+      }
+    },
+    "z3-neither-kind.zip": {
+      "reference": {
+        "ERROR": [
+          "REP_004",
+          "REP_035"
+        ],
+        "INFO": [
+          "REP_036",
+          "ZU_005"
+        ]
+      },
+      "ours": {
+        "error": [
+          "Z3"
         ]
       }
     },
@@ -1412,6 +1596,105 @@
         ],
         "info": [
           "P4"
+        ]
+      }
+    },
+    "z7-no-main-pdf.zip": {
+      "reference": {
+        "ERROR": [
+          "REP_007",
+          "REP_025"
+        ],
+        "INFO": [
+          "D_003",
+          "REP_003",
+          "REP_005",
+          "REP_008",
+          "REP_009",
+          "REP_010",
+          "REP_011",
+          "REP_012",
+          "REP_015",
+          "REP_020",
+          "REP_028",
+          "REP_030",
+          "REP_031",
+          "REP_032",
+          "REP_036",
+          "REP_041",
+          "REP_043",
+          "ZU_005"
+        ]
+      },
+      "ours": {
+        "error": [
+          "F1",
+          "Z7"
+        ],
+        "info": [
+          "P4"
+        ]
+      }
+    },
+    "z8-no-document-containers.zip": {
+      "reference": {
+        "ERROR": [
+          "D_004"
+        ],
+        "INFO": [
+          "D_003",
+          "REP_003",
+          "REP_005",
+          "REP_008",
+          "REP_009",
+          "REP_010",
+          "REP_011",
+          "REP_012",
+          "REP_015",
+          "REP_020",
+          "REP_028",
+          "REP_036",
+          "REP_041",
+          "REP_043",
+          "ZU_005"
+        ]
+      },
+      "ours": {
+        "error": [
+          "M11"
+        ],
+        "info": [
+          "P4"
+        ],
+        "warning": [
+          "Z8"
+        ]
+      }
+    },
+    "z9-file-in-a-folder.zip": {
+      "reference": {
+        "INFO": [
+          "REP_003",
+          "REP_005",
+          "REP_008",
+          "REP_009",
+          "REP_010",
+          "REP_011",
+          "REP_015",
+          "REP_020",
+          "REP_028",
+          "REP_036",
+          "REP_041",
+          "REP_043",
+          "ZU_005"
+        ]
+      },
+      "ours": {
+        "info": [
+          "P4"
+        ],
+        "warning": [
+          "Z9"
         ]
       }
     }

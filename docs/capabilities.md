@@ -1,6 +1,6 @@
 | Axis | Now | 1.0 condition |
 |---|---|---|
-| Coverage | 28 of 42 rules have a fixture pair | 39 of 42, every rule that can have one |
+| Coverage | 39 of 42 rules have a fixture pair | 39 of 42, every rule that can have one |
 | Explanation | what is wrong, evidence, remedy, source | + the line, for every metadata finding |
 | Report contract | schemaVersion, golden, exit codes, schema | met |
 | Entrances | command line, library, single file, Action | + browser, nothing installed |

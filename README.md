@@ -111,7 +111,7 @@ lists all of them.
 ## Where it stands
 
 <a href="https://github.com/dev365code/vdi2770-validate/blob/main/docs/what-it-catches.md">
-<img src="https://raw.githubusercontent.com/dev365code/vdi2770-validate/main/docs/capabilities.svg?v=148933cf" alt="Coverage: 28 of 42 rules have a fixture pair; Explanation: what is wrong, evidence, remedy, source; Report contract: schemaVersion, golden, exit codes, schema; Entrances: command line, library, single file, Action; Input safety: read budgets, advisory, own mutations; Upstream: pinned by commit, checked weekly" width="100%">
+<img src="https://raw.githubusercontent.com/dev365code/vdi2770-validate/main/docs/capabilities.svg?v=7b2bdfdb" alt="Coverage: 39 of 42 rules have a fixture pair; Explanation: what is wrong, evidence, remedy, source; Report contract: schemaVersion, golden, exit codes, schema; Entrances: command line, library, single file, Action; Input safety: read budgets, advisory, own mutations; Upstream: pinned by commit, checked weekly" width="100%">
 </a>
 
 *Six things this tool holds itself to, measured on the code this page describes, against the conditions it has set for 1.0. The picture is drawn from [`docs/capabilities.json`](https://github.com/dev365code/vdi2770-validate/blob/main/docs/capabilities.json), and every item it marks done names a file in this repository that says so; the cases behind each axis are in [`docs/what-it-catches.md`](https://github.com/dev365code/vdi2770-validate/blob/main/docs/what-it-catches.md).*
@@ -258,10 +258,10 @@ iiRDS, if that is the handover format you are on.
   rendered as [docs/rules.md](https://github.com/dev365code/vdi2770-validate/blob/main/docs/rules.md) — each
   rule carries where its requirement comes from, a remedy sentence, and — where the
   reference implementation checks the same thing — the message keys it uses.
-- **28 of 42 rules have a minimal fixture pair** — a container that violates the rule
-  and a conforming one differing in as little as a single member. A 29th, *this file is
-  not a ZIP*, has a violating fixture and no counterpart yet. The rest are exercised by
-  the vendored corpus. A rule that fires nowhere fails
+- **39 of 42 rules have a minimal fixture pair** — a container that violates the rule
+  and a conforming one differing in as little as a single member. The other three
+  cannot have one: two report a fault in this tool rather than in a file, and the third
+  fires on every conforming container. A rule that fires nowhere fails
   the build, and every rule here has been checked against its own mutations.
 - **Rules cannot reach the parser.** A test fails if a rule module imports `zipfile`
   or an XML library, so a rule cannot accidentally check how a document was spelled

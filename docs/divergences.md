@@ -13,7 +13,7 @@ check that — the normative text is paywalled.
 
 ## How much of this was measured
 
-It is measured now. All 49 containers in `corpus/` and
+It is measured now. All 60 containers in `corpus/` and
 `tests/fixtures/` were put through the reference implementation at its pinned commit
 `e47c13c`, with the locale forced to `en_US`, and the result is checked in at
 [`docs/oracle-sweep.json`](oracle-sweep.json). `tools/capture_oracle.py --check`
@@ -59,10 +59,10 @@ What the sweep settled:
   agreement are not — the same limitation §4 discloses, and it applies here too.) The `refKeys`/`refCodes` split earns its keep:
   thirteen of the reference's displayed codes are emitted from more than one key
   with different meanings, so a comparison keyed on the code alone is unsound.
-- **5 containers where it reports an error and we do not**, and **six where we
+- **5 containers where it reports an error and we do not**, and **seven where we
   do and it does not**. Neither list is a surprise — they are the severity
-  policies in §1 and §2 below, and our own budget rules — but they were assumed
-  before and are counted now.
+  policies in §1 and §2 below, our own budget rules, and the folders this tool
+  does not open (`Z13`) — but they were assumed before and are counted now.
 - **It throws rather than reports on two of our fixtures.** More on that in §3.
 
 The remaining "read from its source" claims in this document are marked where

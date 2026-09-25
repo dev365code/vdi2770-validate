@@ -11,7 +11,7 @@ import re
 from vdi2770_validate.model import Severity
 from vdi2770_validate.runner import check_file
 
-from conftest import ROOT, ordinal, under_test
+from conftest import ROOT, spelled, under_test
 
 README = (ROOT / "README.md").read_text(encoding="utf-8")
 BLOCK = re.search(r"```\n\$ vdi2770-validate check (\S+)\n(.*?)```", README, re.S)
@@ -112,7 +112,6 @@ def test_the_readme_counts_its_own_fixture_pairs():
 
     fixtures = json.loads((FIXTURES / "MANIFEST.json").read_text(encoding="utf-8"))["fixtures"]
     paired = {m["rule"] for m in fixtures.values() if m["basedOn"] is not None}
-    lone = {m["rule"] for m in fixtures.values()} - paired
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
 
     m = re.search(r"\*\*(\d+) of (\d+) rules have a minimal fixture pair\*\*", readme)
@@ -120,17 +119,14 @@ def test_the_readme_counts_its_own_fixture_pairs():
     assert (int(m.group(1)), int(m.group(2))) == (len(paired), len(set(rules()))), (
         f"README says {m.group(1)} of {m.group(2)}; the manifest and catalogue say "
         f"{len(paired)} of {len(set(rules()))}")
-    # Derived, and it was not: a hand-written `{1: "24th", 2: "25th"}` was off by
-    # one in both entries, so the README's "A 24th" — which contradicted its own
-    # "24 of 37" — was the sentence this test *required*. Writing the true one
-    # turned the build red.
-    assert len(lone) == 1, (
-        f"{len(lone)} rules have a fixture with no counterpart: {sorted(lone)}; "
-        f"the README describes exactly one and has to be rewritten")
-    n = len(paired) + 1
-    assert f"A {ordinal(n)}" in readme, (
-        f"{len(paired)} rules have a pair and one more has a lone fixture, so the "
-        f"lone one is the {ordinal(n)}; the README says otherwise")
+    # And the ones without a pair, counted the same way. The sentence once went
+    # on to name a rule with a violating fixture and no counterpart; when that
+    # rule got its pair, a count written by hand beside the one above would
+    # have gone on saying the old thing.
+    others = len(set(rules())) - len(paired)
+    assert f"The other {spelled(others)}" in readme, (
+        f"{others} rules have no pair and the README does not say "
+        f"'The other {spelled(others)}'")
 
 
 def test_the_classes_transcript_is_output_the_tool_produces():

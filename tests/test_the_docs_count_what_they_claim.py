@@ -514,8 +514,10 @@ def test_no_document_cites_a_file_that_is_not_here():
     # samples page and the tool that writes it, and the advisories' record.
     # 54 to 51 when 0.10.3 became the newest section: 0.10.2's three citations
     # left with it, and the new section cites none.
-    assert seen == 51, (
-        f"{seen} citations found, not 51. If you added or removed one, say so "
+    # 51 to 52 when every rule a container can break got a pair: the page behind
+    # the picture names the test that holds them to it.
+    assert seen == 52, (
+        f"{seen} citations found, not 52. If you added or removed one, say so "
         f"here; if you did not, some of them just stopped being checked.")
 
 

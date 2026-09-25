@@ -195,6 +195,25 @@ TABLE = [
      "satisfying firing coverage — the generator now owns the directory, so the "
      "rule genuinely stops firing and the gate says so"),
 
+    ("gates/a-rule-a-container-can-break-has-a-pair",
+     "tools/make_fixtures.py",
+     '    add("f1-named-file-missing.zip"',
+     '    _dropped = lambda *a, **k: None; _dropped("f1-named-file-missing.zip"',
+     ["tools/make_fixtures.py",
+      "tests/test_rule_pairs.py::test_every_rule_that_can_have_a_pair_has_one"],
+     "a rule that loses its pair while a corpus container still fires it: firing "
+     "coverage stays green, and nothing shows any more what change to a "
+     "conforming container brings the rule on"),
+
+    ("gates/a-rule-is-excused-from-a-pair-only-for-a-reason-that-holds",
+     "tests/test_rule_pairs.py",
+     '    "P4": ("notes a claim of PDF/A conformance this tool does not verify, and fires on "',
+     '    "M2": "a reason nobody checked", '
+     '"P4": ("notes a claim of PDF/A conformance this tool does not verify, and fires on "',
+     ["tests/test_rule_pairs.py::test_every_rule_that_can_have_a_pair_has_one"],
+     "an excuse written for a rule the conforming containers do not fire, which "
+     "would let it lose its pair without the build saying so"),
+
     ("gates/an-excuse-is-not-available-to-every-rule",
      "tools/rule_coverage.py",
      "    if about_a_container:",
@@ -2405,8 +2424,8 @@ LISTING_BUDGET_ROWS = [
 
     ("gates/the-picture-draws-what-the-data-says",
      "docs/capabilities.json",
-     '"now": 28, "target": 39,',
-     '"now": 29, "target": 39,',
+     '"now": 39, "target": 39,',
+     '"now": 38, "target": 39,',
      ["tests/test_capabilities_current.py::test_rendered_files_match_the_data"],
      "a count on the front-page picture that the file it is drawn from no longer "
      "says, and no sentence in the repository says either"),
@@ -2430,11 +2449,11 @@ LISTING_BUDGET_ROWS = [
 
     ("gates/the-page-behind-the-picture-counts-what-it-draws",
      "docs/what-it-catches.md",
-     "**Now.** 28 of 42 rules have a minimal fixture pair",
-     "**Now.** 29 of 42 rules have a minimal fixture pair",
+     "**Now.** 39 of 42 rules have a minimal fixture pair",
+     "**Now.** 38 of 42 rules have a minimal fixture pair",
      ["tests/test_the_front_door_pictures_are_true.py::"
       "test_the_page_behind_the_picture_marks_what_the_picture_draws"],
-     "the page behind the picture counts one more rule with a pair than the "
+     "the page behind the picture counts one rule fewer with a pair than the "
      "picture draws"),
 
     ("gates/the-reference-is-read-where-it-is",

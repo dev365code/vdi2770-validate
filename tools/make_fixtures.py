@@ -74,9 +74,12 @@ def main() -> int:
     basen = members(DOCN)
     made = {}
 
-    def add(name, files, rule, changed, note):
+    def add(name, files, rule, changed, note, based_on=None):
         write(name, files)
-        made[name] = {"rule": rule, "basedOn": "documentcontainer.zip" if META in files else "documentationcontainer.zip",
+        # Which container it came from, when the edit leaves that unreadable
+        # from what is left: an archive emptied, or one whose metadata was renamed.
+        made[name] = {"rule": rule, "basedOn": based_on or ("documentcontainer.zip" if META in files
+                                                            else "documentationcontainer.zip"),
                       "changed": changed, "note": note}
 
     # Z1 — not a ZIP at all
@@ -324,6 +327,87 @@ def main() -> int:
     add("p5-unconfirmed-pdf.zip", f, "P5", ["B.pdf"],
         "B.pdf replaced with a header and enough decoy `obj` tokens to end the "
         "search for an indirect object before it finds one")
+
+    # Z1 again, and this time a pair: the conforming container cut short. The
+    # directory a ZIP reader starts from is at the end, so a transfer that stops
+    # halfway leaves an archive nothing can open -- which is what the rule is for.
+    OUT.mkdir(parents=True, exist_ok=True)
+    whole = DOC.read_bytes()
+    (OUT / "z1-cut-short.zip").write_bytes(whole[:len(whole) // 2])
+    made["z1-cut-short.zip"] = {
+        "rule": "Z1", "basedOn": "documentcontainer.zip", "changed": ["<whole file>"],
+        "note": "the first half of the conforming container, as a transfer that stopped halfway leaves it"}
+
+    # Z2 — nothing in the archive at all
+    add("z2-empty-archive.zip", {}, "Z2", sorted(base), "every member removed",
+        based_on="documentcontainer.zip")
+
+    # Z3 — the metadata's name in the wrong case. Both names that make a
+    # container one kind or the other are case-sensitive, so this archive is
+    # neither.
+    f = dict(base)
+    f["vdi2770_metadata.xml"] = f.pop(META)
+    add("z3-neither-kind.zip", f, "Z3", [META], "VDI2770_Metadata.xml renamed to vdi2770_metadata.xml",
+        based_on="documentcontainer.zip")
+
+    # Z7 — a documentation container without its main document's PDF
+    f = dict(basen)
+    f.pop("VDI2770_Main.pdf")
+    add("z7-no-main-pdf.zip", f, "Z7", ["VDI2770_Main.pdf"], "VDI2770_Main.pdf removed")
+
+    # Z8 — a documentation container that delivers no document containers
+    f = dict(basen)
+    f.pop("documentcontainer.zip")
+    add("z8-no-document-containers.zip", f, "Z8", ["documentcontainer.zip"],
+        "the one document container removed")
+
+    # Z9 — a file stored in a folder. The metadata follows it there, so the
+    # file-set rules have nothing to say and this one is all that fires.
+    f = dict(base)
+    f["Dokumente/B.docx"] = f.pop("B.docx")
+    f[META] = edit(base[META], ">B.docx</DigitalFile>", ">Dokumente/B.docx</DigitalFile>")
+    add("z9-file-in-a-folder.zip", f, "Z9", ["B.docx", META],
+        "B.docx moved into a folder, and its DigitalFile names it there")
+
+    # Z13 — the document container delivered as a folder of its members
+    # instead of as a .zip member, which this tool does not open.
+    innerz = io.BytesIO(basen["documentcontainer.zip"])
+    with zipfile.ZipFile(innerz) as src:
+        parts = {n: src.read(n) for n in src.namelist()}
+    f = dict(basen)
+    f.pop("documentcontainer.zip")
+    for n, d in parts.items():
+        f["documentcontainer/" + n] = d
+    add("z13-document-as-a-folder.zip", f, "Z13", ["documentcontainer.zip"],
+        "the document container unpacked into a folder of the same name")
+
+    # F1 — a file the metadata names that is not in the container
+    f = dict(base)
+    f.pop("B.pdf")
+    add("f1-named-file-missing.zip", f, "F1", ["B.pdf"], "B.pdf removed; the metadata still names it")
+
+    # M3 — a German class name that belongs to another class id
+    f = dict(base)
+    f[META] = edit(base[META], '<ClassName Language="de">Technische Spezifikation</ClassName>',
+                   '<ClassName Language="de">Zeichnungen, Pläne</ClassName>')
+    add("m3-german-name-of-another-class.zip", f, "M3", [META],
+        "the German class name of 02-01 replaced with the one published for 02-02")
+
+    # M4 — an English class name that is not the published one
+    f = dict(base)
+    f[META] = edit(base[META], '<ClassName Language="en">Technical specification</ClassName>',
+                   '<ClassName Language="en">Drawings, plans</ClassName>')
+    add("m4-english-name-of-another-class.zip", f, "M4", [META],
+        "the English class name of 02-01 replaced with the one published for 02-02")
+
+    # M13 — one identifier filed as a type and as an individual. Both claims
+    # name the same register, `product type`, so nothing says they are two
+    # different things spelled alike.
+    f = dict(base)
+    f[META] = edit(base[META], 'ObjectType="Type">BR-01-26</ObjectId>',
+                   'ObjectType="Individual">BR-01</ObjectId>')
+    add("m13-type-and-individual.zip", f, "M13", [META],
+        "the second ReferencedObject re-filed as an Individual under the first one's id, BR-01")
 
     (OUT / "MANIFEST.json").write_text(json.dumps({
         "_about": "The violating half of each rule's fixture pair. Each is one deliberate change to a corpus container.",

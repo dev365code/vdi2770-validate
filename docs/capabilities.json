@@ -4,10 +4,10 @@
   "detail": "docs/what-it-catches.md",
   "axes": [
     {"key": "coverage", "label": "Coverage",
-     "now": 28, "target": 39,
-     "now_text": "28 of 42 rules have a fixture pair",
+     "now": 39, "target": 39,
+     "now_text": "39 of 42 rules have a fixture pair",
      "target_text": "39 of 42, every rule that can have one",
-     "evidence": [{"file": "README.md", "says": "28 of 42 rules have a minimal fixture pair"}]},
+     "evidence": [{"file": "README.md", "says": "39 of 42 rules have a minimal fixture pair"}]},
     {"key": "explanation", "label": "Explanation",
      "items": [
        {"text": "what is wrong, in one sentence", "done": true,

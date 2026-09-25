@@ -22,10 +22,11 @@ clone of this repository after `make fixtures`.
 and exits `1`. Rerun it with
 `vdi2770-validate check tests/fixtures/m2-unknown-class-id.zip`.
 
-**Now.** 28 of 42 rules have a minimal fixture pair like this one: a container
+**Now.** 39 of 42 rules have a minimal fixture pair like this one: a container
 that breaks the rule, built from one that does not. `tools/make_fixtures.py`
-records which fixture each one is built from, and `tests/test_readme_sample.py`
-holds the README's sentence to that count.
+records which fixture each one is built from, `tests/test_readme_sample.py`
+holds the README's sentence to that count, and `tests/test_rule_pairs.py` fails
+the build for a rule a container can break that has no pair.
 
 **1.0.** 39 of 42, every rule that can have one. Two rules cannot fire from any
 container: `X0` reports that this tool's own installation is broken, and `X5`

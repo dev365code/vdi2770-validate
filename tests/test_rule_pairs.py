@@ -71,6 +71,36 @@ def test_every_rule_has_a_fixture_or_a_reason(monkeypatch):
         assert len(why) > 40, f"{rule_id} is excused without a real reason"
 
 
+#: The one rule a container can fire that no pair can hold, and why. `X0` and
+#: `X5` cannot fire from a container at all; `tools/rule_coverage.py` says why.
+NO_PAIR = {
+    "P4": ("notes a claim of PDF/A conformance this tool does not verify, and fires on "
+           "every conforming container: a conforming container carries a PDF, and a "
+           "readable PDF either makes that claim or draws P3 for not making it, so there "
+           "is no conforming half for P4 to be absent from"),
+}
+
+
+def test_every_rule_that_can_have_a_pair_has_one(monkeypatch):
+    """A corpus example shows a rule firing somewhere. A pair shows what fires
+    it: one change to a container that does not, and the rule appears. Every
+    rule a container can break has one, and the exceptions say why."""
+    monkeypatch.syspath_prepend(str(ROOT / "tools"))
+    from rule_coverage import CANNOT_FIRE
+    paired = {m["rule"] for m in MANIFEST.values() if m["basedOn"] is not None}
+    missing = sorted(set(rules()) - paired - set(CANNOT_FIRE) - set(NO_PAIR))
+    assert not missing, f"rules a container can break that have no fixture pair: {missing}"
+    for rule_id, why in NO_PAIR.items():
+        assert rule_id in rules() and rule_id not in CANNOT_FIRE, rule_id
+        assert len(why) > 40, f"{rule_id} is excused from a pair without a real reason"
+        # The reason is a fact about the conforming containers, so it is read
+        # from them: the day one stops firing it, it can have a pair.
+        for clean in CLEAN.values():
+            assert rule_id in fired(clean), (
+                f"{rule_id} is excused as firing on every conforming container, and "
+                f"{clean.name} does not fire it")
+
+
 
 def test_a_crash_is_not_read_as_a_verdict(monkeypatch):
     """`fired` answers for every fixture in this file, and each case asks only
