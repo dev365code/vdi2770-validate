@@ -18,10 +18,11 @@
         "evidence": {"file": "README.md", "says": "A rule without a remedy does not ship"}},
        {"text": "the source of every rule's requirement", "done": true,
         "evidence": {"file": "README.md", "says": "each rule carries where its requirement comes from"}},
-       {"text": "the line, for every metadata finding", "done": false}
+       {"text": "the line, for every metadata finding", "done": true,
+        "evidence": {"file": "tests/test_a_finding_says_where_it_is.py", "says": "A finding about the metadata points at the line and column it is about"}}
      ],
-     "now_text": "what is wrong, evidence, remedy, source",
-     "target_text": "+ the line, for every metadata finding"},
+     "now_text": "what is wrong, evidence, remedy, source, line",
+     "target_text": "met"},
     {"key": "report", "label": "Report contract",
      "items": [
        {"text": "schemaVersion in every report", "done": true,

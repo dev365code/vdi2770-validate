@@ -195,6 +195,23 @@ TABLE = [
      "satisfying firing coverage — the generator now owns the directory, so the "
      "rule genuinely stops firing and the gate says so"),
 
+    ("gates/a-finding-in-the-metadata-says-the-line",
+     "packages/vdi2770/src/vdi2770/validate/rules/metadata.py",
+     "            yield Finding(r, r.title, c.src.child(container=container.path,",
+     "            yield Finding(r, r.title, c.src.child(line=None, column=None, container=container.path,",
+     ["tests/test_a_finding_says_where_it_is.py::test_a_finding_in_the_metadata_says_the_line"],
+     "a class id nobody publishes, reported with no line: the reader is sent "
+     "to search the metadata for the value the finding quotes"),
+
+    ("gates/a-finding-written-down-as-unplaced-is-unplaced",
+     "tests/test_a_finding_says_where_it_is.py",
+     '    ("X4", "line"): "the schema checker stopped part of the way down and does not say where",',
+     '    ("M2", "line"): "never checked", '
+     '("X4", "line"): "the schema checker stopped part of the way down and does not say where",',
+     ["tests/test_a_finding_says_where_it_is.py::test_a_finding_in_the_metadata_says_the_line"],
+     "a rule excused from saying where it is while it says so, which would let "
+     "it stop without the build noticing"),
+
     ("gates/a-rule-a-container-can-break-has-a-pair",
      "tools/make_fixtures.py",
      '    add("f1-named-file-missing.zip"',

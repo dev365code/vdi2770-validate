@@ -1,18 +1,18 @@
 | Axis | Now | 1.0 condition |
 |---|---|---|
 | Coverage | 39 of 42 rules have a fixture pair | 39 of 42, every rule that can have one |
-| Explanation | what is wrong, evidence, remedy, source | + the line, for every metadata finding |
+| Explanation | what is wrong, evidence, remedy, source, line | met |
 | Report contract | schemaVersion, golden, exit codes, schema | met |
 | Entrances | command line, library, single file, Action | + browser, nothing installed |
 | Input safety | read budgets, advisory, own mutations | + declared encodings read without loss |
 | Upstream | pinned by commit, checked weekly | met |
 
-**Explanation** — 4 of 5:
+**Explanation** — 5 of 5:
 - what is wrong, in one sentence — done (`README.md`: "Three parts, every time: what is wrong")
 - the evidence as read from the file — done (`README.md`: "the evidence as read from your file")
 - a remedy, for every rule — done (`README.md`: "A rule without a remedy does not ship")
 - the source of every rule's requirement — done (`README.md`: "each rule carries where its requirement comes from")
-- the line, for every metadata finding — not yet
+- the line, for every metadata finding — done (`tests/test_a_finding_says_where_it_is.py`: "A finding about the metadata points at the line and column it is about")
 
 **Report contract** — 4 of 4:
 - schemaVersion in every report — done (`docs/golden-report.json`: ""schemaVersion": 1, "summary": {")

@@ -111,7 +111,7 @@ lists all of them.
 ## Where it stands
 
 <a href="https://github.com/dev365code/vdi2770-validate/blob/main/docs/what-it-catches.md">
-<img src="https://raw.githubusercontent.com/dev365code/vdi2770-validate/main/docs/capabilities.svg?v=7b2bdfdb" alt="Coverage: 39 of 42 rules have a fixture pair; Explanation: what is wrong, evidence, remedy, source; Report contract: schemaVersion, golden, exit codes, schema; Entrances: command line, library, single file, Action; Input safety: read budgets, advisory, own mutations; Upstream: pinned by commit, checked weekly" width="100%">
+<img src="https://raw.githubusercontent.com/dev365code/vdi2770-validate/main/docs/capabilities.svg?v=a035c19a" alt="Coverage: 39 of 42 rules have a fixture pair; Explanation: what is wrong, evidence, remedy, source, line; Report contract: schemaVersion, golden, exit codes, schema; Entrances: command line, library, single file, Action; Input safety: read budgets, advisory, own mutations; Upstream: pinned by commit, checked weekly" width="100%">
 </a>
 
 *Six things this tool holds itself to, measured on the code this page describes, against the conditions it has set for 1.0. The picture is drawn from [`docs/capabilities.json`](https://github.com/dev365code/vdi2770-validate/blob/main/docs/capabilities.json), and every item it marks done names a file in this repository that says so; the cases behind each axis are in [`docs/what-it-catches.md`](https://github.com/dev365code/vdi2770-validate/blob/main/docs/what-it-catches.md).*

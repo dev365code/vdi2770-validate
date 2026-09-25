@@ -121,3 +121,37 @@ def test_which_rules_name_a_member_is_the_recorded_set():
         f"{gained} name a member now and are still recorded as memberless. "
         f"Remove them, so this set stays a list of real debts rather than a "
         f"list of rules somebody once excused.")
+
+
+#: Findings pointing into the metadata that do not say where in it, and why.
+#: Held both ways, like the set above: a rule that stops placing its findings
+#: fails, and so does one written here that places them now.
+NOT_PLACED = {
+    ("X2", "column"): ("the schema checker reports the line of the element it refused, "
+                       "and not the column"),
+    ("X4", "line"): "the schema checker stopped part of the way down and does not say where",
+    ("Z10", "line"): ("two entries in the archive's directory share the metadata's name; "
+                      "the finding is about the directory, not about a place in the file"),
+}
+
+
+def test_a_finding_in_the_metadata_says_the_line():
+    """A finding about the metadata points at the line and column it is about.
+
+    The report has carried a line for these since the reader kept positions,
+    and nothing required it: a rule written later could drop it, and the
+    first a reader would know is a finding they have to search the file for.
+    """
+    from vdi2770.zipread import MAIN_XML, METADATA_XML
+
+    in_metadata = [f for f in findings()
+                   if str(f["where"].get("member") or "").rsplit("/", 1)[-1] in (METADATA_XML, MAIN_XML)]
+    assert in_metadata, "no finding points into the metadata; this gate would prove nothing"
+    unplaced = {(f["rule"], "line" if f["where"].get("line") is None else "column")
+                for f in in_metadata
+                if f["where"].get("line") is None or f["where"].get("column") is None}
+    assert unplaced <= set(NOT_PLACED), (
+        f"findings in the metadata that do not say where in it: {sorted(unplaced - set(NOT_PLACED))}")
+    assert set(NOT_PLACED) <= unplaced, (
+        f"{sorted(set(NOT_PLACED) - unplaced)} say where they are now and are still "
+        f"written down as not saying it. Remove them.")

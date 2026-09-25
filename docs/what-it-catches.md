@@ -54,12 +54,16 @@ identifier is on.
 - a remedy, for every rule — done
 - the source of every rule's requirement — done; [docs/rules.md](rules.md) lists
   each rule's source and remedy
-- the line, for every metadata finding — not yet
+- the line, for every metadata finding — done; `tests/test_a_finding_says_where_it_is.py`
 
-**1.0.** A finding about the metadata carries a line and column where the check
-knows one, as the case above does, and nothing yet requires every such finding
-to. The condition is a test that does, so that a rule written later cannot drop
-it without the build saying so.
+**1.0.** Met. A finding about the metadata carries a line and column where the
+check knows one, as the case above does, and a test requires every such finding
+to, so that a rule written later cannot drop it without the build saying so.
+Three do not say where, and the test names each with its reason: the schema
+checker gives the line of an element it refuses and not the column, and does
+not say where it stopped when it gives up part of the way down; and two
+entries in the archive's directory that share the metadata's name are about
+the directory, not about a place in the file.
 
 ## Report contract
 
