@@ -2575,6 +2575,68 @@ LISTING_BUDGET_ROWS = [
      "with stderr closed, the sentence after a refusal lands inside the JSON "
      "report, and a machine reading it gets something that does not parse"),
 
+    ("gates/a-line-for-a-person-does-not-fall-back-to-the-console",
+     "packages/vdi2770/src/vdi2770/validate/cli.py",
+     "    if sys.stderr is not None:\n        print(*parts, file=sys.stderr)\n",
+     "    if True:\n        print(*parts, file=sys.stderr or sys.__stderr__)\n",
+     ["tests/test_a_bug_report_carries_nothing_from_the_files.py::"
+      "test_with_stderr_closed_the_report_stays_a_report"],
+     "a fallback to sys.__stderr__, which is None too when stderr is closed, "
+     "so the line goes to stdout and into the report all the same"),
+
+    ("gates/the-sentence-after-a-refusal-stays-out-of-the-report",
+     "packages/vdi2770/src/vdi2770/validate/cli.py",
+     "        _say(REFUSED)\n",
+     "        print(REFUSED, file=sys.stderr)\n",
+     ["tests/test_a_bug_report_carries_nothing_from_the_files.py::"
+      "test_with_stderr_closed_the_report_stays_a_report"],
+     "the one line a refused file is followed by, printed the old way, lands in "
+     "the JSON report when stderr is closed"),
+
+    ("gates/a-crash-line-stays-out-of-the-report",
+     "packages/vdi2770/src/vdi2770/validate/cli.py",
+     "                    _say(CRASHED.format(path=where))\n",
+     "                    print(CRASHED.format(path=where), file=sys.stderr)\n",
+     ["tests/test_a_bug_report_carries_nothing_from_the_files.py::"
+      "test_with_stderr_closed_the_report_stays_a_report"],
+     "the line saying this tool failed on a file lands in the JSON report when "
+     "stderr is closed"),
+
+    ("gates/show-bundle-prints-the-bundle",
+     "packages/vdi2770/src/vdi2770/validate/cli.py",
+     '        _say(bundling.dumps(made) if args.show_bundle else made["readable"])',
+     '        _say(bundling.dump(made) if args.show_bundle else made["readable"])',
+     ["tests/test_a_bug_report_carries_nothing_from_the_files.py::"
+      "test_a_failure_of_this_tool_writes_a_bundle_and_keeps_its_exit_code"],
+     "--show-bundle prints one line saying the bundle could not be written "
+     "where the bundle should be"),
+
+    ("gates/a-bundle-counts-what-the-report-did-not-list",
+     "packages/vdi2770/src/vdi2770/validate/bundle.py",
+     '"notListed": sum(n["count"] for n in',
+     '"notListed": sum(n.count for n in',
+     ["tests/test_a_bug_report_carries_nothing_from_the_files.py::"
+      "test_a_large_delivery_and_a_warning_gate_get_their_bundle"],
+     "a delivery with more findings of one rule than the report lists gets no "
+     "bundle"),
+
+    ("gates/a-bundle-names-the-budget-that-stopped-a-listing",
+     "packages/vdi2770/src/vdi2770/validate/bundle.py",
+     '    stopped = [s["rule"] for s in',
+     '    stopped = [s.rule for s in',
+     ["tests/test_a_bug_report_carries_nothing_from_the_files.py::"
+      "test_a_large_delivery_and_a_warning_gate_get_their_bundle"],
+     "a delivery whose listing stopped at its budget gets no bundle"),
+
+    ("gates/a-warning-gate-gets-its-bundle",
+     "packages/vdi2770/src/vdi2770/validate/cli.py",
+     '        chosen.append(f"--fail-on={args.fail_on}")',
+     '        chosen.append(f"--fail-on={args.fail_on.value}")',
+     ["tests/test_a_bug_report_carries_nothing_from_the_files.py::"
+      "test_a_large_delivery_and_a_warning_gate_get_their_bundle"],
+     "a run with --fail-on warning, the command a person is told to run again, "
+     "gets no bundle"),
+
     ("gates/a-sweep-of-many-inputs-still-gets-its-bundles",
      "packages/vdi2770/src/vdi2770/validate/bundle.py",
      '        shown.append(f"<{inputs - INPUTS_SHOWN} more inputs>")',

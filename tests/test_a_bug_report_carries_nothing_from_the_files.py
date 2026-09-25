@@ -30,6 +30,31 @@ from conftest import CORPUS, FIXTURES, ROOT
 CANARY = "Qz7Canary4Vx9Kp"
 
 
+@pytest.fixture(autouse=True)
+def not_written():
+    """Every bundle that could not be drawn or written, in this test.
+
+    `check` says such a failure in one line and goes on, which is right for a
+    person's run and is silence in a test: a defect in drawing a bundle passed
+    every test here that did not look for that line. So every test looks. One
+    that expects a bundle to fail says so by emptying this list.
+    """
+    seen = []
+    said = cli._say
+
+    def listening(*parts):
+        if parts and str(parts[0]).startswith("The diagnostic bundle could not be written"):
+            seen.append(str(parts[0]))
+        said(*parts)
+    # Its own patch, not the test's `monkeypatch`: asking for that here set it
+    # up ahead of `capsys`, so a test's own patch of `sys.stderr` was undone
+    # after `capsys` had put the real one back, and left a closed one behind.
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(cli, "_say", listening)
+        yield seen
+    assert not seen, f"a bundle could not be drawn or written: {seen}"
+
+
 def _forms(text):
     """Every way the canary could sit in the bundle's bytes and still be read."""
     raw = text.encode("utf-8")
@@ -164,7 +189,8 @@ def test_a_failure_of_this_tool_writes_a_bundle_and_keeps_its_exit_code(tmp_path
     assert not list(tmp_path.glob("bug-report-*.json")), "--no-bundle wrote a bundle"
     assert cli.main(["check", path, "--show-bundle"]) == 2
     assert not list(tmp_path.glob("bug-report-*.json")), "--show-bundle wrote a bundle"
-    capsys.readouterr()
+    shown = capsys.readouterr().err
+    assert cli.SHOWN in shown and '"trigger": "crash"' in shown, shown
     assert cli.main(["check", path]) == 2, "writing the bundle changed the exit code"
     written = list(tmp_path.glob("bug-report-*.json"))
     assert len(written) == 1
@@ -255,7 +281,7 @@ def test_a_long_note_and_many_inputs_stay_within_the_limit(tmp_path, capsys):
         assert bundle["invocation"]["argv"][-1] == "<40 more inputs>"
 
 
-def test_a_bundle_that_cannot_be_written_stops_nothing(tmp_path, capsys, monkeypatch):
+def test_a_bundle_that_cannot_be_written_stops_nothing(tmp_path, capsys, monkeypatch, not_written):
     """A working directory nobody can write to is not a reason for the sweep to
     stop, or for its exit code to move."""
     one = str(FIXTURES / "m2-unknown-class-id.zip")
@@ -268,6 +294,7 @@ def test_a_bundle_that_cannot_be_written_stops_nothing(tmp_path, capsys, monkeyp
     assert cli.main(["check", one, one, "--bug-report"]) == plain
     err = capsys.readouterr().err
     assert err.count("could not be written") == 2, err
+    not_written.clear()
 
 
 def test_a_note_the_console_could_not_decode_stops_nothing(tmp_path, capsys):
@@ -286,7 +313,7 @@ def test_a_note_the_console_could_not_decode_stops_nothing(tmp_path, capsys):
         assert json.loads(each.read_bytes())["user"]["note"] == "M\ufffdller"
 
 
-def test_a_bundle_that_cannot_be_drawn_stops_nothing(tmp_path, capsys, monkeypatch):
+def test_a_bundle_that_cannot_be_drawn_stops_nothing(tmp_path, capsys, monkeypatch, not_written):
     """Whatever goes wrong in drawing the bundle, not only in writing it, is said
     once and the sweep goes on with the same report and the same exit code."""
     one, two = str(FIXTURES / "m2-unknown-class-id.zip"), str(FIXTURES / "m5-bad-language-code.zip")
@@ -300,6 +327,7 @@ def test_a_bundle_that_cannot_be_drawn_stops_nothing(tmp_path, capsys, monkeypat
     captured = capsys.readouterr()
     assert captured.out == before
     assert captured.err.count("could not be written") == 2, captured.err
+    not_written.clear()
 
 
 def test_an_input_that_reads_back_short_is_not_described_by_what_came_back(monkeypatch):
@@ -331,7 +359,7 @@ def test_a_file_given_as_standard_input_is_not_called_empty(tmp_path):
     assert shape["size"] in (None, path.stat().st_size), shape
 
 
-def test_with_stderr_closed_the_report_stays_a_report(tmp_path, capsys, monkeypatch):
+def test_with_stderr_closed_the_report_stays_a_report(tmp_path, capsys, monkeypatch, not_written):
     """With stderr closed -- `2>&-`, or pythonw with no console -- there is no
     `sys.stderr`, and a line printed to it goes to stdout, into the JSON a
     machine is about to read. The line saying a path could not be read did
@@ -343,10 +371,45 @@ def test_with_stderr_closed_the_report_stays_a_report(tmp_path, capsys, monkeypa
     plain = cli.main(["check", "--json", refused, missing])
     before = capsys.readouterr().out
     monkeypatch.setattr(sys, "stderr", None)
+    monkeypatch.setattr(sys, "__stderr__", None)
     assert cli.main(["check", "--json", refused, missing, "--bug-report"]) == plain
     after = capsys.readouterr().out
     assert after == before, "a line meant for a person is in the report"
     json.loads(after)
+    # Without --bug-report, which is the run that says the sentence after a
+    # refusal at all.
+    assert cli.main(["check", "--json", refused, missing]) == plain
+    assert capsys.readouterr().out == before, "the sentence after a refusal is in the report"
+
+    # And a failure of this tool, its bundle written and not.
+    def breaks(_path):
+        raise KeyError("in the message")
+    monkeypatch.setattr(cli, "check_file", breaks)
+    for more in ([], ["--bundle-out", str(tmp_path / "nowhere")]):
+        cli.main(["check", "--json", refused, *more])
+        json.loads(capsys.readouterr().out)
+    assert len(not_written) == 1, not_written
+    not_written.clear()
+
+
+@pytest.mark.parametrize("many, long", [(120, 1), (40, 30_000)], ids=["not-listed", "listing-stopped"])
+def test_a_large_delivery_and_a_warning_gate_get_their_bundle(many, long, tmp_path, capsys):
+    """A delivery with more findings of one rule than the report lists, or
+    with names long enough to stop the listing, run with the warning gate a
+    person may have been using when told to run the same command again."""
+    buf = io.BytesIO()
+    with zipfile.ZipFile(CORPUS / "container" / "documentcontainer.zip") as given, \
+            zipfile.ZipFile(buf, "w") as zf:
+        for info in given.infolist():
+            zf.writestr(info, given.read(info))
+        for i in range(many):
+            zf.writestr(f"{i:03d}{'n' * long}.txt", b"x")
+    path = tmp_path / "large.zip"
+    path.write_bytes(buf.getvalue())
+    _code, captured, written = _bundle(tmp_path, capsys, str(path), "--fail-on", "warning")
+    assert len(written) == 1 and "could not be written" not in captured.err, captured.err
+    run = json.loads(written[0].read_bytes())["run"]
+    assert run["notListed"] or run["budgets"]["hit"], run
 
 
 @pytest.mark.skipif(not hasattr(os, "mkfifo"), reason="no named pipes here")
