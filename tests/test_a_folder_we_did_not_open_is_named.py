@@ -24,27 +24,17 @@ import tempfile
 import zipfile
 from pathlib import Path
 
-from conftest import CORPUS, ROOT
+from conftest import CORPUS, ROOT, unopened
 
 #: Two folders hold a metadata file.
 SAMPLE = CORPUS / "missingdocuments" / "folders.zip"
-
-
-def _unopened(data, member):
-    """`data` with `member`'s stream damaged, so the reader refuses it."""
-    raw = bytearray(data)
-    info = zipfile.ZipFile(io.BytesIO(data)).getinfo(member)
-    start = info.header_offset + 30 + len(info.filename) + len(info.extra) + 16
-    for k in range(start, start + 24):
-        raw[k] ^= 0xFF
-    return bytes(raw)
 
 
 def _both_unopened():
     """The sample with both folders' metadata unreadable, so it draws `Z13` twice."""
     data = SAMPLE.read_bytes()
     for member in ("456-29201/VDI2770_Metadata.xml", "AB393/VDI2770_Metadata.xml"):
-        data = _unopened(data, member)
+        data = unopened(data, member)
     path = Path(tempfile.mkdtemp()) / "folders.zip"
     path.write_bytes(data)
     return path

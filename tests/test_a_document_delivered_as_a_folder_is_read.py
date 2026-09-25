@@ -47,3 +47,32 @@ def test_a_document_container_in_a_folder_draws_what_it_draws_zipped():
     assert folder == zipped, (
         f"unpacked into a folder: {sorted(folder.items())}; "
         f"zipped: {sorted(zipped.items())}")
+
+
+def test_a_container_inside_a_document_container_is_one_zipped_or_not():
+    """`Z11`: a document container carries another container inside it. A
+    folder is a container that was not zipped, and `F2` says nothing about the
+    files in one, so a rule that saw only `.zip` members let the same inner
+    container through unpacked that it stopped zipped -- the check its reason
+    says an inner container gets past."""
+    from conftest import CLEAN_DOCUMENT
+
+    def carrying(unpacked):
+        buf = io.BytesIO()
+        with zipfile.ZipFile(CLEAN_DOCUMENT) as outer, zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as out:
+            for name in outer.namelist():
+                out.writestr(name, outer.read(name))
+            if not unpacked:
+                out.writestr("inner.zip", CLEAN_DOCUMENT.read_bytes())
+            else:
+                with zipfile.ZipFile(CLEAN_DOCUMENT) as inner:
+                    for name in inner.namelist():
+                        out.writestr("inner/" + name, inner.read(name))
+        return buf.getvalue()
+
+    def z11(data):
+        return [f.where.member for f in check_bytes(data, "delivery.zip").findings
+                if f.rule.id == "Z11"]
+
+    assert z11(carrying(unpacked=False)) == ["inner.zip"], "the premise"
+    assert z11(carrying(unpacked=True)) == ["inner/"], "the same container unpacked went unremarked"

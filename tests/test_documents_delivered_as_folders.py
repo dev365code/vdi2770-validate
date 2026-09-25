@@ -31,7 +31,7 @@ import pytest
 from vdi2770_validate.model import Severity
 from vdi2770_validate.runner import check_bytes
 
-from conftest import CLEAN_DOCUMENT, CLEAN_DOCUMENTATION
+from conftest import CLEAN_DOCUMENT, CLEAN_DOCUMENTATION, unopened
 
 DOC = zipfile.ZipFile(CLEAN_DOCUMENT)
 DOCN = zipfile.ZipFile(CLEAN_DOCUMENTATION)
@@ -50,18 +50,6 @@ def foldered(folder="AB393", metadata=None):
 
 def report(data):
     return check_bytes(data, "foldered.zip")
-
-
-def unopened(data, member):
-    """`data` with `member`'s stream damaged, so the reader refuses it and the
-    folder holding it is one this tool did not open: what `Z13` is about, now
-    that a readable folder is opened as the container it is."""
-    raw = bytearray(data)
-    info = zipfile.ZipFile(io.BytesIO(data)).getinfo(member)
-    start = info.header_offset + 30 + len(info.filename) + len(info.extra) + 16
-    for k in range(start, start + 24):
-        raw[k] ^= 0xFF
-    return bytes(raw)
 
 
 def test_a_folder_that_holds_metadata_is_not_nothing():

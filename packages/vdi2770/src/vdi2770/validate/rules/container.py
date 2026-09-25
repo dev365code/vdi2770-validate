@@ -645,6 +645,33 @@ def check(container, declared, is_declared_payload) -> Iterator[Finding]:
                     fix="Move it up into the documentation container if it is a "
                         "container, or — if it is genuinely payload — rename the "
                         "reserved file inside it, which is what makes it one.")
+        # A folder holding a reserved name is a container that was not zipped,
+        # and the reader opens it as the one it is -- so inside a document
+        # container it is what this rule is about, as a `.zip` is. `F2` says
+        # nothing about the files in such a folder, which is the check this
+        # rule's reason says an inner container gets past: seeing `.zip` members
+        # alone, the rule stopped a container zipped and let the same one
+        # through unpacked. Declaring its files does not excuse it the way it
+        # excuses a zip: payload is one DigitalFile, and a folder is not one.
+        # The outermost folder only; one inside it is its own container's to
+        # judge, as a `.zip` inside it is.
+        if declared is not None:
+            held: dict = {}
+            for prefix, leaf in folders_holding_metadata(container):
+                held.setdefault(folder_path(prefix), set()).add(leaf)
+            for where in sorted(set(held) - {""}):
+                if _inside(where.rpartition("/")[0], unopened_here):
+                    continue
+                r = rule("Z11")
+                yield Finding(
+                    r, r.title, container.where.child(member=where + "/", subject=where + "/"),
+                    detail=f"{as_written(where + '/')} holds "
+                           f"{', '.join(sorted(held[where]))}, which makes it a "
+                           f"container delivered unzipped",
+                    fix="Move it up into the documentation container, zipped or "
+                        "as it is, where containers belong. If what it holds "
+                        "are this document's own files, rename the reserved "
+                        "file in it, which is what makes the folder a container.")
 
     # Whatever kind of container this is. `files.py` keeps `F2` quiet about every
     # file inside a folder that holds its own metadata, in any container, because
