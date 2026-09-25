@@ -113,8 +113,7 @@ def _folder_again(data: bytes, c):
     """A container delivered as a folder, put back together from its parent's
     bytes the way the first read put it together: the same members, in the
     same order, and none the reader refused."""
-    names = [c.member_name + m.name for m in c.members if not m.is_dir]
-    got = zipread.folder_bytes(data, c.member_name, names)
+    got = zipread.folder_bytes(data, c.member_name, list(c.folder_members))
     if got is None:
         raise RuntimeError(f"{c.member_name}: the reader read this folder once and could "
                            f"not put it together a second time, so its PDFs are not checked")
@@ -300,11 +299,12 @@ def check_bytes(data: bytes, name: str) -> Report:
                        if (ch.member_name or "").endswith("/"))
         report.read.archives_found += len(in_folders) + sum(
             1 for n in listed if n.lower().endswith(".zip")
-            and not any(n.startswith(f) for f in in_folders))
+            and not any(zipread.placed(n).startswith(f) for f in in_folders))
         report.read.metadata_found += sum(
             1 for n in listed
             if folder_path(n).replace("\\", "/").rsplit("/", 1)[-1]
-            in (METADATA_XML, MAIN_XML) and not n.startswith(opened or ("\0",)))
+            in (METADATA_XML, MAIN_XML)
+            and not zipread.placed(n).startswith(opened or ("\0",)))
         if c.metadata_bytes is not None:
             report.read.metadata_read += 1
         # Leaving a subtree: everything at this depth or below is finished.

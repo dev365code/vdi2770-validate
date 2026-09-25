@@ -398,7 +398,7 @@ def check(container, declared, is_declared_payload) -> Iterator[Finding]:
         opened_here = {nfc(ch.member_name) for ch in container.children
                        if (ch.member_name or "").endswith("/")}
         unopened = {folder_path(f) + "/" for f, _ in folders_holding_metadata(container)
-                    if f not in opened_here}
+                    if folder_path(f) + "/" not in opened_here}
         also_a_container = sorted(f for f in folders
                                   if folder_path(f) in unopened or f in unopened)
         # `escaped` for a folder that shares its canonical spelling with
@@ -667,7 +667,7 @@ def check(container, declared, is_declared_payload) -> Iterator[Finding]:
               if (ch.member_name or "").endswith("/")}
     as_folders = [] if opaque else [(prefix, leaf) for prefix, leaf
                                     in folders_holding_metadata(container)
-                                    if prefix not in opened]
+                                    if folder_path(prefix) + "/" not in opened]
     if as_folders:
         r = rule("Z13")
         # What `folders_holding_metadata` returns keeps the archive's own prefix,

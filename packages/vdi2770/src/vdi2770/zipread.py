@@ -142,6 +142,12 @@ class Container:
     # repr and compare are off because this points back up: without that, a
     # `repr()` of any container walks the whole tree, and `==` recurses.
     parent: Optional[Container] = field(default=None, repr=False, compare=False)
+    # For a container delivered as a folder: the members of the parent it was
+    # made from, as the parent's archive spells them. The folder's own member
+    # names are reduced -- `./AB393/B.pdf` and `AB393//B.pdf` are both `B.pdf` in
+    # `AB393/` -- so they cannot be turned back into these, and a caller that
+    # wants the same bytes again asks with these.
+    folder_members: Tuple[str, ...] = ()
 
     @property
     def where(self) -> Location:
@@ -629,7 +635,7 @@ def read(data: bytes, path: str, depth: int = 0, _budget: Optional[_Budget] = No
     accepted = [m for m in c.members if not m.is_dir and m.name not in c.rejected]
     folders = folders_holding_containers([m.name for m in accepted])
     inner_zips = [m for m in c.members if m.name.lower().endswith(".zip")
-                  and not any(m.name.startswith(f) for f in folders)]
+                  and not any(placed(m.name).startswith(f) for f in folders)]
     if depth + 1 < MAX_CONTAINER_LEVELS:
         for i, m in enumerate(inner_zips):
             if not budget.take_bytes(m.size):
@@ -671,7 +677,7 @@ def read(data: bytes, path: str, depth: int = 0, _budget: Optional[_Budget] = No
             child.parent = c
             c.children.append(child)
         for j, folder in enumerate(folders):
-            inside = [m.name for m in accepted if m.name.startswith(folder)]
+            inside = [m.name for m in accepted if placed(m.name).startswith(folder)]
             if not budget.take_bytes(sum(m.size for m in accepted if m.name in inside)):
                 c.rejected[folder] = _refuse(
                     c, "decompression-budget-exhausted", c.where.child(member=folder),
@@ -694,6 +700,7 @@ def read(data: bytes, path: str, depth: int = 0, _budget: Optional[_Budget] = No
                 continue
             child = read(archive, f"{path}!/{folder}", depth + 1, budget)
             child.member_name = folder
+            child.folder_members = tuple(inside)
             child.parent = c
             c.children.append(child)
     else:
@@ -708,15 +715,24 @@ def read(data: bytes, path: str, depth: int = 0, _budget: Optional[_Budget] = No
     return c
 
 
+def placed(name: str) -> str:
+    """Where a member is, however the archive spells it: `nfc`, then `.` and
+    empty segments dropped, so `./AB393/B.pdf` and `AB393//B.pdf` are both
+    `AB393/B.pdf`. The same reduction as `validate.names.folder_path`, which the
+    rules use to agree about folders; `..` is left alone, as there."""
+    return "/".join(seg for seg in nfc(name).split("/") if seg not in ("", "."))
+
+
 def folders_holding_containers(names) -> List[str]:
-    """Folders at whose top a reserved name sits, each ending in `/`: a
-    container delivered unzipped. Only the outermost of nested ones -- reading
-    that one finds the others inside it."""
+    """Folders at whose top a reserved name sits, each ending in `/` and
+    reduced by `placed`: a container delivered unzipped. Only the outermost of
+    nested ones -- reading that one finds the others inside it."""
     held = set()
     for name in names:
+        where = placed(name)
         for reserved in (METADATA_XML, MAIN_XML):
-            if name.endswith("/" + reserved) and len(name) > len(reserved) + 1:
-                held.add(name[: -len(reserved)])
+            if where.endswith("/" + reserved) and len(where) > len(reserved) + 1:
+                held.add(where[: -len(reserved)])
     return sorted(f for f in held if not any(f != g and f.startswith(g) for g in held))
 
 
@@ -727,7 +743,7 @@ def folder_archive(read_member, folder: str, names) -> bytes:
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_STORED) as out:
         for name in names:
-            out.writestr(zipfile.ZipInfo(name[len(folder):], date_time=(1980, 1, 1, 0, 0, 0)),
+            out.writestr(zipfile.ZipInfo(placed(name)[len(folder):], date_time=(1980, 1, 1, 0, 0, 0)),
                          read_member(name))
     return buf.getvalue()
 
