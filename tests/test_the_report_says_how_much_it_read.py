@@ -17,8 +17,10 @@ that deserves it least.
 from __future__ import annotations
 
 import io
+import os
 import zipfile
 
+import pytest
 from vdi2770_validate.report import as_text
 from vdi2770_validate.runner import check_bytes
 
@@ -301,6 +303,8 @@ def test_quiet_does_not_hide_the_line_from_the_page_either():
     assert "read 1 of 1 archives" in as_text(report, False)
 
 
+@pytest.mark.skipif(os.name == "nt", reason="zipfile turns a backslash in a member's name into / "
+                    "as it reads an archive on Windows, so there is no backslash name to refuse")
 def test_a_name_the_reader_refuses_for_a_backslash_is_still_counted():
     """`a\\b\\VDI2770_Metadata.xml` is refused as an unsafe name, and the
     predicate that recognises a metadata file split on `/` only — so the one
@@ -310,13 +314,7 @@ def test_a_name_the_reader_refuses_for_a_backslash_is_still_counted():
     with zipfile.ZipFile(buf, "w") as z:
         for name in base.namelist():
             z.writestr(name, base.read(name))
-        # Named after construction: `ZipInfo` turns the platform's separator
-        # into `/` as it is built, so on Windows the name written was
-        # `outer/inner/VDI2770_Metadata.xml` -- a folder, which is opened now,
-        # and not the backslash this test is about.
-        refused = zipfile.ZipInfo("placeholder")
-        refused.filename = "outer\\inner\\VDI2770_Metadata.xml"
-        z.writestr(refused, b"<x/>")
+        z.writestr("outer\\inner\\VDI2770_Metadata.xml", b"<x/>")
     r = check_bytes(buf.getvalue(), "back.zip").read
     assert (r.metadata_read, r.metadata_found) == (1, 2), (
         f"{r.metadata_read} of {r.metadata_found}")
