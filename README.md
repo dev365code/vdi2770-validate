@@ -234,6 +234,9 @@ one where none can.
 **What is inside a file the metadata declares.** A `.zip` a document declares as one of its
 files is that document's content, the way a PDF's pages are, and nothing in it is judged as
 VDI 2770 — `Z14` says so on the report. How the archive stores its entries is still read.
+A declared `.zip` whose own root holds `VDI2770_Metadata.xml` or `VDI2770_Main.xml` is a
+container all the same, and is judged as one — `Z11` says it should not be inside a
+document container.
 
 **What the guideline text says.** It is sold by DIN Media and was not read. Every
 rule names a free source instead, or says the judgement is ours and explains
