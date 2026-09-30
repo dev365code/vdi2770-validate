@@ -1190,6 +1190,15 @@ TABLE = [
      'a documentation container delivered as a folder was not a folder to the rules, '
      'and a delivery nobody looked inside came back clean'),
 
+    ('reader/a-folders-members-are-named-from-the-folder',
+     'packages/vdi2770/src/vdi2770/zipread.py',
+     '            out.writestr(zipfile.ZipInfo(placed(name)[len(folder):], date_time=(1980, 1, 1, 0, 0, 0)),',
+     '            out.writestr(zipfile.ZipInfo(placed(name), date_time=(1980, 1, 1, 0, 0, 0)),',
+     ['tests/test_a_document_delivered_as_a_folder_is_read.py::'
+      'test_a_member_refused_in_a_folder_is_refused_once_as_it_is_zipped'],
+     'the archive a folder was read as kept the folder in every name, so its '
+     'reserved file was not at its root and it was not the container it is'),
+
     ('rules/z13-names-the-file-the-folder-holds',
      'packages/vdi2770/src/vdi2770/validate/rules/container.py',
      '            held = ", ".join(sorted(set(leaves)))',

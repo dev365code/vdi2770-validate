@@ -205,3 +205,32 @@ def test_a_folder_that_reads_once_and_not_twice_is_refused_not_a_crash(monkeypat
     assert "delivery.zip!/documentcontainer/" in {str(f.where) for f in report.findings
                                                    if f.rule.id == "Z12"}, sorted(fired)
     assert "Z13" in fired, "a folder this tool did not open was not said to be one"
+
+
+def test_a_member_refused_in_a_folder_is_refused_once_as_it_is_zipped():
+    """What the reader refuses -- a name that climbs out of the folder, a name
+    stored twice -- it refuses once, in the archive that holds it. The folder is
+    put together from what that read accepted, so the container it is does not
+    meet the member a second time; zipped, the inner read is the one that
+    refuses it. Either way one finding, and the same one."""
+    from conftest import CLEAN_DOCUMENT
+
+    with zipfile.ZipFile(CLEAN_DOCUMENT) as doc:
+        inner = [(n, doc.read(n)) for n in doc.namelist()]
+        twice = doc.read("B.pdf")
+    with zipfile.ZipFile(CLEAN_DOCUMENTATION) as docn:
+        root = [(n, docn.read(n)) for n in ("VDI2770_Main.xml", "VDI2770_Main.pdf")]
+
+    def packed(entries):
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+            for n, d in entries:
+                z.writestr(n, d)
+        return buf.getvalue()
+
+    for extra in ([("../escaped.txt", b"x")], [("B.pdf", twice)]):
+        zipped = _verdict(packed(root + [("documentcontainer.zip", packed(inner + extra))]))
+        folder = _verdict(packed(root + [("documentcontainer/" + n, d) for n, d in inner + extra]),
+                          leave_out=("Z9",))
+        assert folder == zipped, (
+            f"{extra[0][0]} unpacked: {sorted(folder.items())}; zipped: {sorted(zipped.items())}")

@@ -632,6 +632,10 @@ def read(data: bytes, path: str, depth: int = 0, _budget: Optional[_Budget] = No
     # this same function -- so every guard on names, sizes and depth holds
     # inside it too. A `.zip` inside such a folder is that container's to open,
     # not this one's, or it would be opened twice.
+    # (`not in c.rejected` is an equivalent mutant today: every refusal above
+    # skips the member before it reaches `members`. Kept because a refused
+    # member must not be read a second time into a folder's archive, whatever
+    # the order of the checks above becomes.)
     accepted = [m for m in c.members if not m.is_dir and m.name not in c.rejected]
     folders = folders_holding_containers([m.name for m in accepted])
     inner_zips = [m for m in c.members if m.name.lower().endswith(".zip")

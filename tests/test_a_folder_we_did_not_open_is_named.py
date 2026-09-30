@@ -15,7 +15,6 @@ A folder that can be read is opened as the container it is, so the folders here
 are the sample's two with their metadata streams damaged: folders that hold a
 container and were not opened.
 """
-import io
 import json
 import os
 import subprocess
