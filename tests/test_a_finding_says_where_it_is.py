@@ -81,22 +81,23 @@ def test_a_rule_names_a_member_always_or_never():
 #: The rules whose findings name no member, measured rather than inferred.
 #:
 #: An earlier draft asked `about` instead, on the theory that a container-level
-#: rule has no member to name. `about` does not mean that: 34 of the 42 rules
+#: rule has no member to name. `about` does not mean that: 35 of the 43 rules
 #: are `about: container` and most of them name a member -- `P4` is one, and it
 #: names the PDF it read. So that draft permitted any of those 34 to drop its
 #: location silently, which is the whole failure it was written to prevent.
 #:
-#: This is the inventory instead. Six rules name no member, and all six are
-#: about the archive itself: it is empty, it is neither kind of container, it
-#: holds no document containers, its members sit in folders. There is nothing to
-#: point at, and inventing something would be worse than the null.
+#: This is the inventory instead. Seven rules name no member, and all seven
+#: are about the archive itself: it is empty, it is neither kind of container, it
+#: holds no document containers, its members sit in folders, it is a declared
+#: file this tool does not look inside. There is nothing to point at, and
+#: inventing something would be worse than the null.
 #:
 #: `Z13` was on this list and is not any more. It reported every folder it
 #: declined to open in one finding, with the names in the detail sentence, and
 #: it reports one finding per folder now -- which is what took it off. That is
 #: what this set is for: a rule leaving it is a debt paid, and the test below
 #: fails while a paid debt is still written down as owed.
-NAMES_NO_MEMBER = {"Z1", "Z2", "Z3", "Z7", "Z8", "Z9"}
+NAMES_NO_MEMBER = {"Z1", "Z2", "Z3", "Z7", "Z8", "Z9", "Z14"}
 
 
 def test_which_rules_name_a_member_is_the_recorded_set():

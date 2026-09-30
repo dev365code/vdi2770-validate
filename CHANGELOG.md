@@ -14,6 +14,15 @@ file that could not be read.
   read as a finding and exited `1`. A path that does not exist or may not be
   opened keeps `2` alone and `1` beside a file that could be read; a finding
   keeps `1`; a mistyped command line keeps `64`.
+- **Nothing inside a declared payload is judged, zipped or not.** A `.zip` the
+  metadata declares as a `DigitalFile` is the document's content. A container
+  inside it was opened and judged when zipped -- a broken one drew `X1`, and
+  exit `1` on a conforming document container -- and passed over when unpacked
+  into a folder. The reference implementation reports nothing about what is
+  inside one in either shape, and now neither does this tool: the new `Z14`
+  (info) says once, at the payload, that its inside was not checked. A declared
+  `.zip` whose own root holds a reserved name is still a container, and still
+  `Z11`.
 - **A bug report is the bytes its size limit was measured on.** It was written
   as text, and on Windows every line end became two bytes on the way to the
   file, so a bundle measured just under 256 KiB arrived over it.

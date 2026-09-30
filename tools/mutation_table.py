@@ -1096,8 +1096,8 @@ TABLE = [
 
     ("report/the-figure-counts-what-the-archive-lists",
      "packages/vdi2770/src/vdi2770/validate/runner.py",
-     "        listed = c.present or c.file_names",
-     "        listed = c.file_names",
+     "        listed = () if payload else (c.present or c.file_names)",
+     "        listed = () if payload else c.file_names",
      ["tests/test_the_report_says_how_much_it_read.py"],
      "refusing a member took it out of the denominator, so the figure improved "
      "when this tool declined to look"),
@@ -1207,8 +1207,8 @@ FRONT_DOOR = [
 
     ("gates/the-badge-counts-the-catalogue",
      "README.md",
+     "rules-43_each_with_a_remedy",
      "rules-42_each_with_a_remedy",
-     "rules-41_each_with_a_remedy",
      ["tests/test_the_front_page_points_at_what_it_shows.py::"
       "test_the_badge_that_counts_rules_counts_the_catalogue"],
      "a number inside a shields.io URL is not the shape the prose gate reads, "
@@ -1695,8 +1695,8 @@ PLATFORM_ROWS = [
 
     ('docs/a-layer-total-is-checked-like-any-other-cell',
      'docs/rules.md',
-     '| `container` | 0 | 0 | 3 | 3 | 7 | 13 |',
-     '| `container` | 0 | 0 | 3 | 3 | 7 | 14 |',
+     '| `container` | 0 | 0 | 3 | 3 | 8 | 14 |',
+     '| `container` | 0 | 0 | 3 | 3 | 8 | 15 |',
      ['tests/test_the_rules_page_shows_where_each_layer_stands.py::test_every_number_in_the_table_is_the_number_in_the_data'],
      'the totals were skipped as sums of the cells above them, so a generator that miscounted them, regenerated, read as a page that matched its catalogue'),
 
@@ -1730,8 +1730,8 @@ PLATFORM_ROWS = [
 
     ('report/a-rules-location-behaviour-is-recorded',
      'tests/test_a_finding_says_where_it_is.py',
-     'NAMES_NO_MEMBER = {"Z1", "Z2", "Z3", "Z7", "Z8", "Z9"}',
-     'NAMES_NO_MEMBER = {"Z1", "Z2", "Z3", "Z7", "Z8", "Z9", "P4"}',
+     'NAMES_NO_MEMBER = {"Z1", "Z2", "Z3", "Z7", "Z8", "Z9", "Z14"}',
+     'NAMES_NO_MEMBER = {"Z1", "Z2", "Z3", "Z7", "Z8", "Z9", "Z14", "P4"}',
      ['tests/test_a_finding_says_where_it_is.py::test_which_rules_name_a_member_is_the_recorded_set'],
      'an excuse added for a rule that does name a member is how the set stops being a list of real debts and starts being a list of rules somebody once waved through'),
 
@@ -2503,8 +2503,8 @@ LISTING_BUDGET_ROWS = [
 
     ("gates/the-picture-draws-what-the-data-says",
      "docs/capabilities.json",
-     '"now": 39, "target": 39,',
-     '"now": 38, "target": 39,',
+     '"now": 40, "target": 40,',
+     '"now": 39, "target": 40,',
      ["tests/test_capabilities_current.py::test_rendered_files_match_the_data"],
      "a count on the front-page picture that the file it is drawn from no longer "
      "says, and no sentence in the repository says either"),
@@ -2528,8 +2528,8 @@ LISTING_BUDGET_ROWS = [
 
     ("gates/the-page-behind-the-picture-counts-what-it-draws",
      "docs/what-it-catches.md",
-     "**Now.** 39 of 42 rules have a minimal fixture pair",
-     "**Now.** 38 of 42 rules have a minimal fixture pair",
+     "**Now.** 40 of 43 rules have a minimal fixture pair",
+     "**Now.** 39 of 43 rules have a minimal fixture pair",
      ["tests/test_the_front_door_pictures_are_true.py::"
       "test_the_page_behind_the_picture_marks_what_the_picture_draws"],
      "the page behind the picture counts one rule fewer with a pair than the "
