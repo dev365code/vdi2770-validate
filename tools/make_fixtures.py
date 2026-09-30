@@ -299,6 +299,25 @@ def main() -> int:
     add("z11-container-in-document.zip", f, "Z11", ["stowaway.zip"],
         "a document container carrying another container")
 
+    # Z14 — a declared payload, which is the document's content and not looked
+    # inside. Each holds a container whose metadata is not XML, zipped in one
+    # and unpacked into a folder in the other: what is inside a declared file
+    # is its own business in both shapes, so neither is judged, and the report
+    # says once, at the payload, that it did not look.
+    declaring = edit(base[META], ">B.pdf</DigitalFile>",
+                     '>B.pdf</DigitalFile>\n        '
+                     '<DigitalFile FileFormat="application/zip">cad.zip</DigitalFile>')
+    part = {META: b"not vdi metadata", "model.step": b"ISO-10303-21;\n"}
+    for shape, how, payload in (("zip", "zipped", {"partA.zip": write_bytes(part)}),
+                                ("folder", "unpacked into a folder",
+                                 {"partA/" + n: d for n, d in part.items()})):
+        f = dict(base)
+        f[META] = declaring
+        f["cad.zip"] = write_bytes(payload)
+        add(f"z14-{shape}-in-a-declared-payload.zip", f, "Z14", [META, "cad.zip"],
+            f"cad.zip declared as a DigitalFile, holding a container {how} whose "
+            f"metadata is not XML")
+
     # M9 — the same identifier twice
     f = dict(base)
     f[META] = edit(base[META], '<DocumentId DomainId="BSP-OEM">data-sheet-br-01-26</DocumentId>',

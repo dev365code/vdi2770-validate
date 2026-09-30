@@ -339,6 +339,64 @@ def test_z13_does_not_look_inside_a_declared_payload():
         f"a declared payload's insides were judged as a delivery: {sorted(fired)}")
     assert report.clean, [f"{f.rule.id}: {f.message}" for f in report.findings
                           if f.severity.value == "error"]
+    said = [str(f.where) for f in report.findings if f.rule.id == "Z14"]
+    assert said == ["payload.zip!/cad.zip"], f"not said once, at the payload: {said}"
+
+
+def test_a_container_inside_a_declared_payload_is_not_judged_zipped_either():
+    """The payload's inside was its own business in a folder and not in a zip.
+
+    A conforming document container declaring `cad.zip` came back clean while
+    the bundle held a folder with a metadata file in it -- and exit 1, with
+    `X1`, when the same metadata sat in a `.zip` inside the bundle instead: the
+    walk down nested archives did not stop at the declaration. A declared file
+    is the document's content, not the container's structure, and the
+    reference implementation looks inside neither. What the report does say is
+    that it did not look, once, at the payload -- and a read that did not look
+    does not call itself incomplete for it.
+    """
+    import io
+    import re
+    import zipfile
+
+    from vdi2770_validate.runner import check_bytes
+
+    from conftest import CLEAN_DOCUMENT
+
+    src = zipfile.ZipFile(CLEAN_DOCUMENT)
+    meta = src.read("VDI2770_Metadata.xml").decode("utf-8")
+    one = re.search(r"(\s*)<DigitalFile[^>]*>B\.pdf</DigitalFile>", meta)
+    assert one, "the fixture no longer declares B.pdf"
+    meta = meta.replace(one.group(0), one.group(0) + one.group(1)
+                        + '<DigitalFile FileFormat="application/zip">cad.zip</DigitalFile>', 1)
+
+    part = io.BytesIO()
+    with zipfile.ZipFile(part, "w") as z:
+        z.writestr("VDI2770_Metadata.xml", b"not vdi metadata")
+        z.writestr("model.step", b"ISO-10303-21;\n")
+    payload = io.BytesIO()
+    with zipfile.ZipFile(payload, "w") as z:
+        z.writestr("partA.zip", part.getvalue())
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        for name in src.namelist():
+            z.writestr(name, meta.encode("utf-8") if name == "VDI2770_Metadata.xml"
+                       else src.read(name))
+        z.writestr("cad.zip", payload.getvalue())
+
+    report = check_bytes(buf.getvalue(), "payload.zip")
+    inside = [f"{f.rule.id} {f.where}" for f in report.findings
+              if str(f.where).startswith("payload.zip!/cad.zip!/")]
+    assert not inside, f"a declared payload's insides were judged: {inside}"
+    assert report.clean, [f"{f.rule.id}: {f.message}" for f in report.findings
+                          if f.severity.value == "error"]
+    said = [str(f.where) for f in report.findings if f.rule.id == "Z14"]
+    assert said == ["payload.zip!/cad.zip"], f"not said once, at the payload: {said}"
+    r = report.read
+    assert (r.archives_opened, r.archives_found, r.metadata_read, r.metadata_found) == (2, 2, 1, 1), (
+        f"the read counted the payload's inside: {r.archives_opened} of {r.archives_found} "
+        f"archives, {r.metadata_read} of {r.metadata_found} metadata files")
 
 
 def _folder_meta_declaring(name):

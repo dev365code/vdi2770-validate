@@ -63,6 +63,20 @@ def _inside(here: str, unopened) -> bool:
             return True
     return False
 
+
+def sealed(container, is_declared_payload) -> bool:
+    """A declared payload: an archive the parent's metadata declares as one of
+    the document's files, and not a container itself.
+
+    What is inside it is its own business, the way what is inside a PDF is. The
+    walk down nested archives did not stop here: a folder in a declared bundle
+    went unjudged while a `.zip` in the same place was opened and judged, and
+    a conforming document container drew `X1` and exit 1 for a metadata file
+    inside its parts bundle. One decision, read by the walk that stops at it
+    and by the rule that says it stopped."""
+    return container.kind is Kind.UNKNOWN and is_declared_payload is True
+
+
 def folders_holding_metadata(container) -> list:
     """Folders that hold a reserved container name — a container that was not
     zipped.
@@ -283,6 +297,13 @@ def check(container, declared, is_declared_payload) -> Iterator[Finding]:
     # payload and `None` is a parent nobody could model -- neither is something
     # to judge the shape of.
     opaque = container.kind is Kind.UNKNOWN and is_declared_payload is not False
+    # Said once, at the payload, rather than passing over it in silence: a
+    # reader seeing nothing about `cad.zip` takes what is in it as checked.
+    if sealed(container, is_declared_payload):
+        r = rule("Z14")
+        yield Finding(r, r.title, container.where,
+                      detail=f"{as_written(container.member_name)} is declared in the "
+                             f"metadata as one of the document's files")
 
     # `defects` too, and this is the door the guard above was not watching:
     # `nameless-member` is the one refusal recorded as a bare defect and never in

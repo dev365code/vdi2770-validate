@@ -12,21 +12,21 @@ tool, because both are errors on purpose and severity cannot carry the differenc
 - **`table`** (2) — a freely published table says so (IDTA 02004)
 - **`container`** (4) — mechanics of ZIP and XML — true without VDI 2770
 - **`reference`** (14) — observed in the MIT reference implementation, **not** verified against the guideline, which is paywalled
-- **`ours`** (21) — our own judgement, and it carries a reason
+- **`ours`** (22) — our own judgement, and it carries a reason
 
-42 rules.
+43 rules.
 
 Where each layer stands:
 
 | layer | `schema` | `table` | `container` | `reference` | `ours` | total |
 |---|---|---|---|---|---|---|
-| `container` | 0 | 0 | 3 | 3 | 7 | 13 |
+| `container` | 0 | 0 | 3 | 3 | 8 | 14 |
 | `files` | 0 | 0 | 0 | 3 | 1 | 4 |
 | `metadata` | 0 | 2 | 0 | 7 | 4 | 13 |
 | `pdf` | 0 | 0 | 0 | 1 | 4 | 5 |
 | `schema` | 1 | 0 | 1 | 0 | 4 | 6 |
 | `tool` | 0 | 0 | 0 | 0 | 1 | 1 |
-| **total** | **1** | **2** | **4** | **14** | **21** | **42** |
+| **total** | **1** | **2** | **4** | **14** | **22** | **43** |
 
 ## container
 
@@ -133,6 +133,14 @@ Why this is ours: Document containers hold a document's files. A container insid
 Why this is ours: A folder holding VDI2770_Metadata.xml or VDI2770_Main.xml is a container that was not zipped, and this tool reads it as the container it is, as the reference implementation does. This one it did not open — its metadata could not be read, or a limit on depth or on what one read may inflate was reached — so everything inside is unchecked, and a report that said nothing would be telling the reader it passed. The limit is ours rather than a fault of the delivery.
 
 **Remedy.** Nothing here is necessarily wrong with the container. The finding beside this one says why the folder was not opened; once that is put right the folder is checked like any other container.
+
+### `Z14` — A declared file is an archive this tool did not look inside
+
+*info* · obligation `ours`
+
+Why this is ours: A file the metadata declares is part of a document's content, not of the container's structure, so what is inside it is its own business, the way what is inside a PDF is: nothing in it is judged, a container in it included. The reference implementation reports nothing about what is inside one either. Saying so every time keeps a reader from taking the archive's contents as checked.
+
+**Remedy.** Nothing to change if the archive is the document's content. If it holds documents meant to be checked as VDI 2770 containers, put them in the documentation container as containers of their own rather than inside a document's file.
 
 ## files
 

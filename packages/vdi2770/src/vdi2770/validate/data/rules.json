@@ -615,6 +615,18 @@
       "refKeys": [],
       "refCodes": [],
       "about": "tool"
+    },
+    {
+      "id": "Z14",
+      "layer": "container",
+      "severity": "info",
+      "obligation": "ours",
+      "title": "A declared file is an archive this tool did not look inside",
+      "whyOurs": "A file the metadata declares is part of a document's content, not of the container's structure, so what is inside it is its own business, the way what is inside a PDF is: nothing in it is judged, a container in it included. The reference implementation reports nothing about what is inside one either. Saying so every time keeps a reader from taking the archive's contents as checked.",
+      "remedy": "Nothing to change if the archive is the document's content. If it holds documents meant to be checked as VDI 2770 containers, put them in the documentation container as containers of their own rather than inside a document's file.",
+      "refKeys": [],
+      "refCodes": [],
+      "about": "container"
     }
   ]
 }

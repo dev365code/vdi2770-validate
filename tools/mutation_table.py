@@ -993,6 +993,45 @@ TABLE = [
      "at the depth limit an innermost documentation container holding only its "
      "declared payload delivered nothing, and nothing said so"),
 
+    ("rules/a-declared-payload-is-sealed",
+     "packages/vdi2770/src/vdi2770/validate/rules/container.py",
+     "    return container.kind is Kind.UNKNOWN and is_declared_payload is True",
+     "    return False",
+     ["tests/test_a_declared_zip_is_a_payload.py::test_z13_does_not_look_inside_a_declared_payload",
+      "tests/test_a_declared_zip_is_a_payload.py::"
+      "test_a_container_inside_a_declared_payload_is_not_judged_zipped_either"],
+     "a conforming document container drew `X1` and exit 1 for a metadata file "
+     "inside its declared parts bundle -- and only when the file sat in a `.zip` there"),
+
+    ("runner/the-walk-stops-at-a-declared-payload",
+     "packages/vdi2770/src/vdi2770/validate/runner.py",
+     "        if c.parent is not None and id(c.parent) in beyond:",
+     "        if False:",
+     ["tests/test_a_declared_zip_is_a_payload.py::test_z13_does_not_look_inside_a_declared_payload",
+      "tests/test_a_declared_zip_is_a_payload.py::"
+      "test_a_container_inside_a_declared_payload_is_not_judged_zipped_either"],
+     "the decision was made and the walk went on below it, judging a container "
+     "inside a declared file"),
+
+    ("runner/a-payloads-listing-is-not-there-to-read",
+     "packages/vdi2770/src/vdi2770/validate/runner.py",
+     "        listed = () if payload else (c.present or c.file_names)",
+     "        listed = c.present or c.file_names",
+     ["tests/test_a_declared_zip_is_a_payload.py::"
+      "test_a_container_inside_a_declared_payload_is_not_judged_zipped_either"],
+     "a read that did not look inside a declared file called itself incomplete "
+     "for it: an archive found there, and never opened"),
+
+    ("rules/a-declared-payload-is-said-to-be-one",
+     "packages/vdi2770/src/vdi2770/validate/rules/container.py",
+     '    if sealed(container, is_declared_payload):\n        r = rule("Z14")',
+     '    if False:\n        r = rule("Z14")',
+     ["tests/test_a_declared_zip_is_a_payload.py::test_z13_does_not_look_inside_a_declared_payload",
+      "tests/test_a_declared_zip_is_a_payload.py::"
+      "test_a_container_inside_a_declared_payload_is_not_judged_zipped_either"],
+     "the report passed over a declared archive in silence, and a reader takes "
+     "what is in it as checked"),
+
     ("reader/a-near-miss-is-skipped-only-for-an-unsafe-name",
      "packages/vdi2770/src/vdi2770/zipread.py",
      '         if defect.kind == "unsafe-member-name"})',
