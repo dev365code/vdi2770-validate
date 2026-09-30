@@ -31,15 +31,16 @@ folders rather than zipped: they are read now, and judged.
   files in such a folder, so a rule that looked only at `.zip` members let the
   container through unpacked that it stopped zipped. The exit is the one
   `Z13` gave the same folder before: `1`.
-- **Nothing inside a declared payload is judged, zipped or not.** A `.zip` the
+- **What is inside a declared payload is not judged as VDI 2770, zipped or not.** A `.zip` the
   metadata declares as a `DigitalFile` is the document's content. A container
   inside it was opened and judged when zipped -- a broken one drew `X1`, and
   exit `1` on a conforming document container -- and passed over when unpacked
   into a folder. The reference implementation reports nothing about what is
-  inside one in either shape, and now neither does this tool: the new `Z14`
-  (info) says once, at the payload, that its inside was not checked. A declared
-  `.zip` whose own root holds a reserved name is still a container, and still
-  `Z11`.
+  inside one in either shape, and now neither does this tool, at whatever depth
+  the payload sits: the new `Z14` (info) says once, at the payload, that what is
+  in it was not judged. How the archive stores its entries -- a name that climbs
+  out, an entry that cannot be read -- is still reported. A declared `.zip`
+  whose own root holds a reserved name is still a container, and still `Z11`.
 - **A bug report is the bytes its size limit was measured on.** It was written
   as text, and on Windows every line end became two bytes on the way to the
   file, so a bundle measured just under 256 KiB arrived over it.

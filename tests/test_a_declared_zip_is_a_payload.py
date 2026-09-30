@@ -399,6 +399,45 @@ def test_a_container_inside_a_declared_payload_is_not_judged_zipped_either():
         f"archives, {r.metadata_read} of {r.metadata_found} metadata files")
 
 
+def test_a_declared_payload_one_level_down_is_not_looked_inside_either():
+    """The ordinary shape: a documentation container, its document container,
+    and the document's parts bundle. There the bundle is one level deeper, and
+    what is inside it passed the depth limit -- which the reader reported as
+    `Z6`, an error, about containers inside a file the metadata declared."""
+    import io
+    import re
+    import zipfile
+
+    from vdi2770_validate.runner import check_bytes
+
+    from conftest import CLEAN_DOCUMENT, CLEAN_DOCUMENTATION
+
+    def packed(entries):
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w") as z:
+            for n, d in entries:
+                z.writestr(n, d)
+        return buf.getvalue()
+
+    src = zipfile.ZipFile(CLEAN_DOCUMENT)
+    meta = src.read("VDI2770_Metadata.xml").decode("utf-8")
+    one = re.search(r"(\s*)<DigitalFile[^>]*>B\.pdf</DigitalFile>", meta)
+    meta = meta.replace(one.group(0), one.group(0) + one.group(1)
+                        + '<DigitalFile FileFormat="application/zip">cad.zip</DigitalFile>', 1)
+    docn = zipfile.ZipFile(CLEAN_DOCUMENTATION)
+    root = [(n, docn.read(n)) for n in docn.namelist() if n != "documentcontainer.zip"]
+    for cad in (packed([("sub.zip", packed([("p.step", b"ISO-10303-21;")])), ("top.step", b"ISO")]),
+                packed([("partA/VDI2770_Metadata.xml", b"<x/>"), ("partA/m.step", b"ISO")])):
+        document = packed([(n, meta.encode("utf-8") if n == "VDI2770_Metadata.xml" else src.read(n))
+                           for n in src.namelist()] + [("cad.zip", cad)])
+        report = check_bytes(packed(root + [("documentcontainer.zip", document)]), "d.zip")
+        inside = [f"{f.rule.id} {f.where}" for f in report.findings
+                  if str(f.where).startswith("d.zip!/documentcontainer.zip!/cad.zip!/")]
+        assert not inside, inside
+        assert report.clean, [f"{f.rule.id} {f.where}" for f in report.findings
+                              if f.severity.value == "error"]
+
+
 def _folder_meta_declaring(name):
     return ('<?xml version="1.0" encoding="UTF-8"?>'
             '<Document xmlns="http://www.vdi.de/schemas/vdi2770"><DocumentVersion>'

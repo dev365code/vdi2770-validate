@@ -271,6 +271,15 @@ def check(container, declared, is_declared_payload) -> Iterator[Finding]:
         if (rid == "Z6" and declared is not None and d.where.member
                 and folder_path(d.where.member) in declared):
             continue
+        # Inside a declared payload the containers are the payload's business
+        # and are not walked, so the reader's word on how deep they go or how
+        # many it could open is about nothing this report judges. A parts
+        # bundle one level further down -- a documentation container, its
+        # document, the document's bundle -- drew `Z6`, an error, for a folder
+        # inside it.
+        if (d.kind in ("nesting-too-deep", "container-budget-exhausted")
+                and sealed(container, is_declared_payload)):
+            continue
         r = rule(rid)
         yield Finding(r, r.title, d.where,
                       detail=f"{d.kind}: {d.detail}" if d.detail else d.kind,

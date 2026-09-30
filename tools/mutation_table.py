@@ -1199,6 +1199,23 @@ TABLE = [
      'the archive a folder was read as kept the folder in every name, so its '
      'reserved file was not at its root and it was not the container it is'),
 
+    ('rules/a-declared-payloads-depth-is-not-this-reports',
+     'packages/vdi2770/src/vdi2770/validate/rules/container.py',
+     ('        if (d.kind in ("nesting-too-deep", "container-budget-exhausted")\n' '                and sealed(container, is_declared_payload)):'),
+     ('        if (False\n' '                and sealed(container, is_declared_payload)):'),
+     ['tests/test_a_declared_zip_is_a_payload.py::test_a_declared_payload_one_level_down_is_not_looked_inside_either'],
+     'a parts bundle one level down drew Z6, an error, for a folder inside a file '
+     'the metadata declared'),
+
+    ('rules/a-declared-payload-is-not-searched-for-folders',
+     'packages/vdi2770/src/vdi2770/validate/rules/container.py',
+     '    as_folders = [] if opaque else [',
+     '    as_folders = [] if False else [',
+     ['tests/test_a_declared_zip_is_a_payload.py::'
+      'test_a_declared_payload_one_level_down_is_not_looked_inside_either'],
+     'a folder inside a parts bundle one level down, past the depth limit, was '
+     'reported as a folder holding a container this tool did not open'),
+
     ('rules/z13-names-the-file-the-folder-holds',
      'packages/vdi2770/src/vdi2770/validate/rules/container.py',
      '            held = ", ".join(sorted(set(leaves)))',
