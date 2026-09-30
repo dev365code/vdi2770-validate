@@ -327,8 +327,15 @@ class _Budget:
         return True
 
 
-def read(data: bytes, path: str, depth: int = 0, _budget: Optional[_Budget] = None,
-         _inherited: Optional[Dict[str, Defect]] = None) -> Container:
+def read(data: bytes, path: str, depth: int = 0, _budget: Optional[_Budget] = None) -> Container:
+    return _read(data, path, depth, _budget, None)
+
+
+def _read(data: bytes, path: str, depth: int, _budget: Optional[_Budget],
+          _inherited: Optional[Dict[str, Defect]]) -> Container:
+    """`read`, with what the archive holding this one refused under it -- for a
+    container delivered as a folder, handed over before it reads itself. Not
+    on `read`, which is the reader's public door and has no use for it."""
     budget = _budget if _budget is not None else _Budget()
     c = Container(path=path, depth=depth)
     try:
@@ -685,7 +692,7 @@ def read(data: bytes, path: str, depth: int = 0, _budget: Optional[_Budget] = No
                     f"this read has opened {MAX_CONTAINERS} containers, its limit; "
                     f"{skipped} more in this archive were not opened"))
                 break
-            child = read(inner, nested_path(path, m.name), depth + 1, budget)
+            child = _read(inner, nested_path(path, m.name), depth + 1, budget, None)
             child.member_name = m.name
             child.parent = c
             c.children.append(child)
@@ -730,7 +737,7 @@ def read(data: bytes, path: str, depth: int = 0, _budget: Optional[_Budget] = No
             # and the report told the sender to add a file they had sent.
             refused = {within(name, folder): defect for name, defect in c.rejected.items()
                        if not name.endswith("/") and placed(name).startswith(folder)}
-            child = read(archive, nested_path(path, folder), depth + 1, budget, refused)
+            child = _read(archive, nested_path(path, folder), depth + 1, budget, refused)
             child.member_name = folder
             child.folder_members = tuple(inside)
             child.parent = c

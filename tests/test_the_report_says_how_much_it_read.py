@@ -310,7 +310,13 @@ def test_a_name_the_reader_refuses_for_a_backslash_is_still_counted():
     with zipfile.ZipFile(buf, "w") as z:
         for name in base.namelist():
             z.writestr(name, base.read(name))
-        z.writestr("outer\\inner\\VDI2770_Metadata.xml", b"<x/>")
+        # Named after construction: `ZipInfo` turns the platform's separator
+        # into `/` as it is built, so on Windows the name written was
+        # `outer/inner/VDI2770_Metadata.xml` -- a folder, which is opened now,
+        # and not the backslash this test is about.
+        refused = zipfile.ZipInfo("placeholder")
+        refused.filename = "outer\\inner\\VDI2770_Metadata.xml"
+        z.writestr(refused, b"<x/>")
     r = check_bytes(buf.getvalue(), "back.zip").read
     assert (r.metadata_read, r.metadata_found) == (1, 2), (
         f"{r.metadata_read} of {r.metadata_found}")
