@@ -295,8 +295,12 @@ def check_bytes(data: bytes, name: str) -> Report:
         # Judged against the parent's declarations, `AB393/cad.zip` drew `Z3`
         # ("the parent modelled its metadata and did not declare this") beside
         # the `Z13` saying `AB393/` was never read. Unknown, not undeclared.
+        # Not a folder the reader opened as a container: that folder is the
+        # container its metadata governs, not a member of it, and never a file
+        # the parent could have declared -- treated as unknown, one that turned
+        # out to be no container at all passed in silence.
         governed_elsewhere = (
-            bool(c.member_name) and c.parent is not None
+            bool(c.member_name) and not c.member_name.endswith("/") and c.parent is not None
             # By name, not through the module attribute: the crash-guard test
             # replaces `r_container` wholesale with a stub that has only
             # `check`, and reaching through the attribute made the runner
@@ -344,8 +348,12 @@ def check_bytes(data: bytes, name: str) -> Report:
             [n for n in listed if getattr(c.rejected.get(n), "kind", None) != "unsafe-member-name"])
         # What an opened folder's archive holds, it counts; a second spelling
         # of one of its names, which it does not hold, is still this listing's.
+        # And what this read refused under an opened folder it handed to that
+        # folder's container, whose listing counts it.
         held = {member for ch in c.children if (ch.member_name or "").endswith("/")
                 for _name, member in zipread.folder_entries(ch.member_name, ch.folder_members)}
+        held |= {n for n in c.rejected for ch in c.children
+                 if (ch.member_name or "").endswith("/") and zipread.placed(n).startswith(ch.member_name)}
         report.read.archives_found += len(in_folders) + sum(
             1 for n in listed if n.lower().endswith(".zip")
             and not any(zipread.placed(n).startswith(f) for f in in_folders))

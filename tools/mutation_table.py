@@ -1217,9 +1217,10 @@ TABLE = [
 
     ('reader/a-folder-knows-what-its-archive-refused',
      'packages/vdi2770/src/vdi2770/zipread.py',
-     '                    child.rejected.setdefault(within(name, folder), defect)',
-     '                    pass',
-     ['tests/test_a_document_delivered_as_a_folder_is_read.py::test_a_member_refused_in_a_folder_is_said_to_be_refused_not_missing'],
+     '        c.rejected.setdefault(name, defect)',
+     '        pass',
+     ['tests/test_a_document_delivered_as_a_folder_is_read.py::test_a_member_refused_in_a_folder_is_said_to_be_refused_not_missing',
+      'tests/test_a_document_delivered_as_a_folder_is_read.py::test_a_refusal_reaches_a_folder_inside_a_folder'],
      'a member refused in a folder was reported as not sent, with a remedy telling '
      'the sender to add it'),
 
@@ -1271,6 +1272,24 @@ TABLE = [
       'test_a_declared_payload_one_level_down_is_not_looked_inside_either'],
      'a folder inside a parts bundle one level down, past the depth limit, was '
      'reported as a folder holding a container this tool did not open'),
+
+    ('runner/a-folder-is-never-governed-elsewhere',
+     'packages/vdi2770/src/vdi2770/validate/runner.py',
+     '            bool(c.member_name) and not c.member_name.endswith("/") and c.parent is not None',
+     '            bool(c.member_name) and c.parent is not None',
+     ['tests/test_a_document_delivered_as_a_folder_is_read.py::'
+      'test_a_folder_whose_reserved_name_is_spelled_with_a_dot_is_judged_as_zipped'],
+     'a folder opened as a container that turned out to be none was treated as a '
+     'file nobody could tell about, and passed in silence where zipped it drew Z3'),
+
+    ('report/a-refusal-handed-to-a-folder-is-counted-there',
+     'packages/vdi2770/src/vdi2770/validate/runner.py',
+     '        held |= {n for n in c.rejected for ch in c.children',
+     '        held |= {n for n in () for ch in c.children',
+     ['tests/test_a_document_delivered_as_a_folder_is_read.py::'
+      'test_a_refused_metadata_file_in_a_folder_is_counted_once'],
+     'a metadata file refused under an opened folder was counted by the archive '
+     'and again by the folder it was handed to'),
 
     ('rules/z13-names-the-file-the-folder-holds',
      'packages/vdi2770/src/vdi2770/validate/rules/container.py',

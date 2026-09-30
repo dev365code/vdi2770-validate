@@ -355,3 +355,51 @@ def test_a_folder_is_held_to_the_size_a_nested_container_is_read_within(monkeypa
             refused, sorted(f"{f.rule.id} {f.where}" for f in report.findings))
         assert not [f for f in report.findings if str(f.where).startswith(f"d.zip!/{refused}")
                     and str(f.where) != f"d.zip!/{refused}"], refused
+
+
+def test_a_refusal_reaches_a_folder_inside_a_folder():
+    """Handed to a folder's container after it had read itself, a refusal never
+    reached the folders inside it: two folders down, a damaged PDF was a file
+    never sent, with a remedy asking for it."""
+    from conftest import CORPUS, unopened
+
+    nested = _entries((CORPUS / "container" / "vdi2770_excel.zip").read_bytes())
+    unpacked = _pack(_unzipped(nested))
+    damaged = next(n for n, _d in _unzipped(nested) if n.endswith("/U1D1/U1D1.pdf"))
+    said = [f.detail for f in check_bytes(unopened(unpacked, damaged), "d.zip").findings if f.rule.id == "F1"]
+    assert said and all("in the archive but was refused" in d for d in said), said
+
+
+def test_a_folder_whose_reserved_name_is_spelled_with_a_dot_is_judged_as_zipped():
+    """`docdir/./VDI2770_Metadata.xml`: zipped, `./VDI2770_Metadata.xml` is not at
+    the archive's root and the archive is no container, which is `Z3`. Unpacked,
+    the folder was opened, found to be no container either, and then passed
+    over in silence -- a folder is never a file the metadata declared, and was
+    treated as one nobody could tell about."""
+    from conftest import CLEAN_DOCUMENT
+
+    pdf = dict(_entries(CLEAN_DOCUMENT.read_bytes()))["B.pdf"]
+    with zipfile.ZipFile(CLEAN_DOCUMENTATION) as docn:
+        root = [(n, docn.read(n)) for n in docn.namelist()]
+    zipped = check_bytes(_pack(root + [("docdir.zip", _pack([("./VDI2770_Metadata.xml", b"not xml"),
+                                                              ("B.pdf", pdf)]))]), "d.zip")
+    folder = check_bytes(_pack(root + [("docdir/./VDI2770_Metadata.xml", b"not xml"),
+                                       ("docdir/B.pdf", pdf)]), "d.zip")
+    assert not zipped.clean, "the premise"
+    assert Counter((f.rule.id, f.severity.value) for f in folder.findings if f.rule.id != "Z9") == \
+        Counter((f.rule.id, f.severity.value) for f in zipped.findings if f.rule.id != "Z9")
+
+
+def test_a_refused_metadata_file_in_a_folder_is_counted_once():
+    from conftest import CLEAN_DOCUMENT, unopened
+
+    doc = _entries(CLEAN_DOCUMENT.read_bytes())
+    with zipfile.ZipFile(CLEAN_DOCUMENTATION) as docn:
+        root = [(n, docn.read(n)) for n in ("VDI2770_Main.xml", "VDI2770_Main.pdf")]
+    inner = doc + [("sub/" + n, d) for n, d in doc]
+    zipped = check_bytes(_pack(root + [("documentcontainer.zip",
+                                        unopened(_pack(inner), "sub/VDI2770_Metadata.xml"))]), "d.zip")
+    folder = check_bytes(unopened(_pack(root + [("documentcontainer/" + n, d) for n, d in inner]),
+                                  "documentcontainer/sub/VDI2770_Metadata.xml"), "d.zip")
+    assert (folder.read.metadata_read, folder.read.metadata_found) == \
+        (zipped.read.metadata_read, zipped.read.metadata_found)

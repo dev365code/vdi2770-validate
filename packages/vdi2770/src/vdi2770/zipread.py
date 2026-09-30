@@ -327,7 +327,8 @@ class _Budget:
         return True
 
 
-def read(data: bytes, path: str, depth: int = 0, _budget: Optional[_Budget] = None) -> Container:
+def read(data: bytes, path: str, depth: int = 0, _budget: Optional[_Budget] = None,
+         _inherited: Optional[Dict[str, Defect]] = None) -> Container:
     budget = _budget if _budget is not None else _Budget()
     c = Container(path=path, depth=depth)
     try:
@@ -570,6 +571,14 @@ def read(data: bytes, path: str, depth: int = 0, _budget: Optional[_Budget] = No
     c.duplicate_names = tuple(dupes)
     # `present`, not `file_names`: what kind of container this is follows from
     # the names the archive declares, not from which of them we could inflate.
+    # A container delivered as a folder is handed what the archive holding it
+    # refused under the folder, before it decides what it is or opens the
+    # folders inside it: zipped, its own read would have refused those members
+    # here, and a refusal handed over only after this read was over never
+    # reached a folder inside it. Known, not reported again -- the refusal is
+    # the holding archive's finding.
+    for name, defect in (_inherited or {}).items():
+        c.rejected.setdefault(name, defect)
     c.kind, c.near_misses = _classify(
         c.present,
         {name for name, defect in c.rejected.items()
@@ -714,19 +723,17 @@ def read(data: bytes, path: str, depth: int = 0, _budget: Optional[_Budget] = No
                     c, "member-unreadable", c.where.child(member=folder),
                     f"{type(e).__name__}: {e}")
                 continue
-            child = read(archive, nested_path(path, folder), depth + 1, budget)
-            child.member_name = folder
-            child.folder_members = tuple(inside)
-            child.parent = c
             # What this read refused under the folder is in the folder all the
             # same, and the container it is has to know: zipped, its own read
             # refuses the member and its report says "in the archive but was
             # refused"; unpacked, the member was missing from what it was handed
-            # and the report told the sender to add a file they had sent. Known,
-            # not re-reported: the refusal is already this archive's finding.
-            for name, defect in c.rejected.items():
-                if not name.endswith("/") and placed(name).startswith(folder):
-                    child.rejected.setdefault(within(name, folder), defect)
+            # and the report told the sender to add a file they had sent.
+            refused = {within(name, folder): defect for name, defect in c.rejected.items()
+                       if not name.endswith("/") and placed(name).startswith(folder)}
+            child = read(archive, nested_path(path, folder), depth + 1, budget, refused)
+            child.member_name = folder
+            child.folder_members = tuple(inside)
+            child.parent = c
             # And a pair this archive holds as one path spelled twice is the
             # folder's to report where the folder holds both spellings -- a name
             # composed and decomposed, `./B.pdf` beside `B.pdf` inside it -- as
