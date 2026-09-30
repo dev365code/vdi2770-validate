@@ -177,7 +177,7 @@ def test_a_folder_we_did_not_open_is_said_so_in_any_container():
     folder in a document container and the files vanished from the report with
     nothing said, which is the one outcome the suppression was written to avoid.
     """
-    from conftest import CLEAN_DOCUMENT
+    from conftest import CLEAN_DOCUMENT, unopened
 
     src = zipfile.ZipFile(CLEAN_DOCUMENT)
     buf = io.BytesIO()
@@ -186,9 +186,13 @@ def test_a_folder_we_did_not_open_is_said_so_in_any_container():
             z.writestr(m, src.read(m))
         z.writestr("sub/VDI2770_Metadata.xml", b"<x/>")
         z.writestr("sub/nobody_declared_this.pdf", b"%PDF-1.4\n")
-    report = check_bytes(buf.getvalue(), "folder-in-a-document.zip")
+    # A folder whose metadata cannot be read: one this tool reads is opened.
+    report = check_bytes(unopened(buf.getvalue(), "sub/VDI2770_Metadata.xml"),
+                         "folder-in-a-document.zip")
     fired = {f.rule.id for f in report.findings}
-    assert not any(f.rule.id == "F2" and "nobody_declared_this" in (f.detail or "")
+    # In `where`, which is where `F2` names the file: its detail is empty, so a
+    # check against the detail could not fail.
+    assert not any(f.rule.id == "F2" and "nobody_declared_this" in (f.where.member or "")
                    for f in report.findings), \
         "a file inside a folder we did not open was called undeclared"
     assert "Z13" in fired, (
@@ -306,13 +310,13 @@ def test_the_summary_says_how_many_errors_are_this_tool_declining():
     Seven rules are `about: tool` and all seven are errors, on the documented
     ground that exit 0 must never mean "checked". Every one of their titles says
     the tool declined — *the schema check could not run*, *this tool did not
-    build a model*, *which this tool does not open*. What said nothing was the
+    build a model*, *a container this tool did not open*. What said nothing was the
     count. A supplier reads the last line of the report, sees one error against
     their delivery, and the axis lives only in the JSON.
     """
     from vdi2770_validate.report import as_text
 
-    from conftest import CLEAN_DOCUMENT, CLEAN_DOCUMENTATION
+    from conftest import CLEAN_DOCUMENT, CLEAN_DOCUMENTATION, unopened
 
     docn = zipfile.ZipFile(CLEAN_DOCUMENTATION)
     doc = zipfile.ZipFile(CLEAN_DOCUMENT)
@@ -322,7 +326,7 @@ def test_the_summary_says_how_many_errors_are_this_tool_declining():
         z.writestr("VDI2770_Main.pdf", docn.read("VDI2770_Main.pdf"))
         for name in doc.namelist():
             z.writestr("doc1/" + name, doc.read(name))
-    report = check_bytes(buf.getvalue(), "folders.zip")
+    report = check_bytes(unopened(buf.getvalue(), "doc1/VDI2770_Metadata.xml"), "folders.zip")
     assert "Z13" in {f.rule.id for f in report.findings}, "premise"
     summary = counts_line(as_text(report, True))
     assert "declin" in summary, f"the summary hides the axis: {summary!r}"
@@ -348,7 +352,7 @@ def test_a_documentation_folder_is_a_folder_this_tool_did_not_open_too():
     inside such a folder *is* opened and reported on, so a reader takes the rest
     as checked too.
     """
-    from conftest import CLEAN_DOCUMENTATION
+    from conftest import CLEAN_DOCUMENTATION, unopened
 
     docn = zipfile.ZipFile(CLEAN_DOCUMENTATION)
     buf = io.BytesIO()
@@ -358,7 +362,9 @@ def test_a_documentation_folder_is_a_folder_this_tool_did_not_open_too():
         z.writestr("plantA/VDI2770_Main.xml", b"<<< not even XML >>>")
         z.writestr("plantA/VDI2770_Main.pdf", b"this is not a pdf")
 
-    report = check_bytes(buf.getvalue(), "handover.zip")
+    # One this tool could not open: a folder it can read is read, and what is
+    # in it is that container's findings.
+    report = check_bytes(unopened(buf.getvalue(), "plantA/VDI2770_Main.xml"), "handover.zip")
     fired = {f.rule.id for f in report.findings}
     assert "Z13" in fired, (
         f"nothing said the folder had not been opened: {sorted(fired)}")
@@ -486,7 +492,7 @@ def test_z13_names_the_reserved_file_each_folder_actually_holds():
     """The detail always said `VDI2770_Metadata.xml`, whichever file the folder
     holds — widened matching, unwidened sentence. A reader grepped their ZIP
     listing for a name that is not in it."""
-    from conftest import CLEAN_DOCUMENTATION
+    from conftest import CLEAN_DOCUMENTATION, unopened
 
     docn = zipfile.ZipFile(CLEAN_DOCUMENTATION)
     buf = io.BytesIO()
@@ -494,7 +500,7 @@ def test_z13_names_the_reserved_file_each_folder_actually_holds():
         z.writestr("VDI2770_Main.xml", docn.read("VDI2770_Main.xml"))
         z.writestr("VDI2770_Main.pdf", docn.read("VDI2770_Main.pdf"))
         z.writestr("plantA/VDI2770_Main.xml", b"<x/>")
-    report = check_bytes(buf.getvalue(), "docnfolder.zip")
+    report = check_bytes(unopened(buf.getvalue(), "plantA/VDI2770_Main.xml"), "docnfolder.zip")
     z13 = [f for f in report.findings if f.rule.id == "Z13"]
     assert z13, [f.rule.id for f in report.findings]
     assert "VDI2770_Main.xml" in (z13[0].detail or ""), z13[0].detail

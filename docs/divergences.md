@@ -13,7 +13,7 @@ check that — the normative text is paywalled.
 
 ## How much of this was measured
 
-It is measured now. All 60 containers in `corpus/` and
+It is measured now. All 62 containers in `corpus/` and
 `tests/fixtures/` were put through the reference implementation at its pinned commit
 `e47c13c`, with the locale forced to `en_US`, and the result is checked in at
 [`docs/oracle-sweep.json`](oracle-sweep.json). `tools/capture_oracle.py --check`
@@ -61,9 +61,10 @@ What the sweep settled:
   with different meanings, so a comparison keyed on the code alone is unsound.
 - **5 containers where it reports an error and we do not**, and **seven where we
   do and it does not**. Neither list is a surprise — they are the severity
-  policies in §1 and §2 below, our own budget rules, and the folders this tool
-  does not open (`Z13`) — but they were assumed before and are counted now.
-- **It throws rather than reports on two of our fixtures.** More on that in §3.
+  policies in §1 and §2 below, our own budget rules, and the archives the
+  reference throws on rather than reports (§3) — but they were assumed before
+  and are counted now.
+- **It throws rather than reports on three of our fixtures.** More on that in §3.
 
 The remaining "read from its source" claims in this document are marked where
 they appear.
@@ -200,8 +201,11 @@ Two more, this time observed in the sweep rather than read:
   directory`), which does its job. It is a robustness gap — the other three
   members of that archive are never looked at, and the caller sees a stack trace
   instead of a finding. Our `Z4` reports it and carries on.
-- **A member with a broken CRC does the same.** Same shape: the failure is real,
-  the handling turns one bad member into no answer. Our `Z12` reports it.
+- **A member with a broken CRC does the same**, and two of our fixtures carry
+  one: an ordinary member, and the metadata of a document container delivered as
+  a folder. Same shape: the failure is real, the handling turns one bad member
+  into no answer. Our `Z12` reports it, and `Z13` names the folder it left
+  unopened.
 
 One structural difference, not a defect on either side: the reference extracts
 every container to a temporary folder on disk before validating

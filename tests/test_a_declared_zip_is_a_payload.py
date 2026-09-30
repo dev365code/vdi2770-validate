@@ -421,7 +421,7 @@ def test_a_member_of_an_unopened_folder_is_not_judged_by_the_roots_metadata():
 
     from vdi2770_validate.runner import check_bytes
 
-    from conftest import CLEAN_DOCUMENT, CLEAN_DOCUMENTATION
+    from conftest import CLEAN_DOCUMENT, CLEAN_DOCUMENTATION, unopened
 
     doc = zipfile.ZipFile(CLEAN_DOCUMENT)
     docn = zipfile.ZipFile(CLEAN_DOCUMENTATION)
@@ -440,7 +440,7 @@ def test_a_member_of_an_unopened_folder_is_not_judged_by_the_roots_metadata():
             z.writestr("AB393/VDI2770_Metadata.xml", _folder_meta_declaring("cad.zip"))
             z.writestr("AB393/B.pdf", doc.read("B.pdf"))
             z.writestr("AB393/cad.zip", payload.getvalue())
-        report = check_bytes(buf.getvalue(), "folder.zip")
+        report = check_bytes(unopened(buf.getvalue(), "AB393/VDI2770_Metadata.xml"), "folder.zip")
         fired = {f.rule.id for f in report.findings}
         assert "Z13" in fired, (root_kind, sorted(fired))
         judged = {f.rule.id for f in report.findings

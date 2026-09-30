@@ -6,7 +6,8 @@ Sections through 0.7.0 had their wording tidied after their tags; the text each 
 
 Who should take this release: anyone whose pipeline reads the exit code. A
 failure of this tool's own code on a file no longer reads as a finding or as a
-file that could not be read.
+file that could not be read. And anyone who receives documents delivered as
+folders rather than zipped: they are read now, and judged.
 
 - **A failure of this tool's own code exits `70`** (`EX_SOFTWARE`), wherever it
   was caught: raised out of the check, where it read as a file that could not be
@@ -14,6 +15,22 @@ file that could not be read.
   read as a finding and exited `1`. A path that does not exist or may not be
   opened keeps `2` alone and `1` beside a file that could be read; a finding
   keeps `1`; a mistyped command line keeps `64`.
+- **A container delivered as a folder is read as the container it is.** A
+  folder holding `VDI2770_Metadata.xml` or `VDI2770_Main.xml` is a document or
+  documentation container that was not zipped, and the reference implementation
+  reads it as one. This tool said `Z13` and checked nothing inside; now the
+  folder's members are read within the same limits a nested `.zip` is read
+  within, and judged as that container, its findings under the folder's path
+  (`folders.zip!/456-29201/demo.pdf`). `Z13` stays for a folder this tool could
+  not open, and says why beside it. `Z9`'s remedy names such a folder and says
+  to zip it rather than flatten it, whether or not it was opened. Verdicts move:
+  `missingdocuments/folders.zip` loses its two `Z13` errors and gains what is in
+  its folders, an `M13` warning and two `P4` notes; its exit stays `1`.
+- **A container unpacked into a folder inside a document container is `Z11`**,
+  as the same container zipped there always was. `F2` says nothing about the
+  files in such a folder, so a rule that looked only at `.zip` members let the
+  container through unpacked that it stopped zipped. The exit is the one
+  `Z13` gave the same folder before: `1`.
 - **Nothing inside a declared payload is judged, zipped or not.** A `.zip` the
   metadata declares as a `DigitalFile` is the document's content. A container
   inside it was opened and judged when zipped -- a broken one drew `X1`, and

@@ -133,6 +133,8 @@ NOT_PLACED = {
     ("X4", "line"): "the schema checker stopped part of the way down and does not say where",
     ("Z10", "line"): ("two entries in the archive's directory share the metadata's name; "
                       "the finding is about the directory, not about a place in the file"),
+    ("Z12", "line"): ("the member could not be read at all, so there is no line in it to "
+                      "point at; the finding is about the member as it is stored"),
 }
 
 

@@ -416,12 +416,19 @@ def check(container, declared, is_declared_payload) -> Iterator[Finding]:
         # this rule too. Read on its own, "store the members at the root of the
         # archive" flattens a document container, and a reader with two findings
         # and no order between them can do exactly that.
+        #
+        # A folder this tool did open is still one: there is no `Z13` beside
+        # this finding then, but the folder holds a reserved name, and zipping
+        # it is still what removes it without flattening what is inside.
         opened_here = {nfc(ch.member_name) for ch in container.children
                        if (ch.member_name or "").endswith("/")}
-        unopened = {folder_path(f) + "/" for f, _ in folders_holding_metadata(container)
-                    if folder_path(f) + "/" not in opened_here}
+        reserved_in = {}
+        for f, leaf in folders_holding_metadata(container):
+            reserved_in.setdefault(folder_path(f) + "/", set()).add(leaf)
+        unopened = {f for f in reserved_in if f not in opened_here}
         also_a_container = sorted(f for f in folders
                                   if folder_path(f) in unopened or f in unopened)
+        opened_container = sorted(f for f in folders if folder_path(f) + "/" in opened_here)
         # `escaped` for a folder that shares its canonical spelling with
         # another, `as_written` for the rest: two folders named NFC and NFD of
         # one word print identically, and a page that says "2 folders" over two
@@ -435,19 +442,35 @@ def check(container, declared, is_declared_payload) -> Iterator[Finding]:
                              f"folder{'' if len(named) == 1 else 's'}: "
                              + ", ".join(shown)
                              + (", ..." if len(named) > 5 else ""),
-                      fix=None if not also_a_container else
-                      (rule("Z9").remedy + " Not by hand for "
-                       + ", ".join(as_written(f) for f in also_a_container[:5])
-                       + (", ..." if len(also_a_container) > 5 else "")
-                       + (": the finding beside this one says that folder is a "
-                          "container this tool did not open, and zipping it into "
-                          "a .zip member is what removes the folder without "
-                          "flattening what is inside it."
-                          if len(also_a_container) == 1 else
-                          ": the findings beside this one say those folders are "
-                          "containers this tool did not open, and zipping each "
-                          "into its own .zip member is what removes the folders "
-                          "without flattening what is inside them.")))
+                      fix=None if not (also_a_container or opened_container) else
+                      (rule("Z9").remedy
+                       + ("" if not also_a_container else
+                          " Not by hand for "
+                          + ", ".join(as_written(f) for f in also_a_container[:5])
+                          + (", ..." if len(also_a_container) > 5 else "")
+                          + (": the finding beside this one says that folder is a "
+                             "container this tool did not open, and zipping it into "
+                             "a .zip member is what removes the folder without "
+                             "flattening what is inside it."
+                             if len(also_a_container) == 1 else
+                             ": the findings beside this one say those folders are "
+                             "containers this tool did not open, and zipping each "
+                             "into its own .zip member is what removes the folders "
+                             "without flattening what is inside them."))
+                       + ("" if not opened_container else
+                          (" Nor" if also_a_container else " Not") + " by hand for "
+                          + ", ".join(as_written(f) for f in opened_container[:5])
+                          + (", ..." if len(opened_container) > 5 else "")
+                          + (f": it holds "
+                             f"{' and '.join(sorted(reserved_in[folder_path(opened_container[0]) + '/']))}, "
+                             f"which makes it a container delivered unzipped, and "
+                             f"zipping it into a .zip member is what removes the "
+                             f"folder without flattening what is inside it."
+                             if len(opened_container) == 1 else
+                             ": each holds VDI2770_Metadata.xml or VDI2770_Main.xml, "
+                             "which makes it a container delivered unzipped, and "
+                             "zipping each into its own .zip member is what removes "
+                             "the folders without flattening what is inside them."))))
 
     if container.duplicate_names:
         r = rule("Z10")

@@ -68,6 +68,10 @@
           "Tuple[str, ...]",
           "has-default"
         ],
+        "folder_members": [
+          "Tuple[str, ...]",
+          "has-default"
+        ],
         "kind": [
           "Kind",
           "has-default"

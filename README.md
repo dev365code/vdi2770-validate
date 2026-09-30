@@ -14,7 +14,7 @@
 
 ## Ten seconds
 
-<img src="https://raw.githubusercontent.com/dev365code/vdi2770-validate/main/docs/assets/tenseconds.svg?v=14164ddf" alt="Real vdi2770-validate output: error F1, a file named in the metadata is not in the container, with the metadata line it is declared on and the remedy; error Z7, the documentation container has no VDI2770_Main.pdf, with its remedy; then a line saying how many findings follow and how many of them are this tool declining to look." width="100%">
+<img src="https://raw.githubusercontent.com/dev365code/vdi2770-validate/main/docs/assets/tenseconds.svg?v=9adb3519" alt="Real vdi2770-validate output: error F1, a file named in the metadata is not in the container, with the metadata line it is declared on and the remedy; error Z7, the documentation container has no VDI2770_Main.pdf, with its remedy; then a line saying how many findings follow and how many of them are this tool declining to look." width="100%">
 
 ```console
 $ pip install vdi2770-validate
@@ -65,21 +65,16 @@ folders.zip
          at folders.zip
          per the reference implementation - observed there, not verified against the standard (REP_025)
          -> Add the main document as VDI2770_Main.pdf at the root of the documentation container, next to VDI2770_Main.xml.
-  error  Z13  Documents are delivered as folders, which this tool does not open
-         at folders.zip!/456-29201/
-         456-29201/ holds VDI2770_Metadata.xml, and nothing inside it was read
+  warn   M13  One identifier is called both a type and an individual
+         at folders.zip!/VDI2770_Main.xml:19:2
+         'ABC1223' is declared as Individual, Type in this delivery (folders.zip, folders.zip!/456-29201/, folders.zip!/AB393/); an identifier names one kind of thing
          per this tool's own rule
-         -> Nothing here is necessarily wrong with the container. Zip each document folder into its own .zip member if you want this tool to check it, or check those folders with something that reads them.
-  error  Z13  Documents are delivered as folders, which this tool does not open
-         at folders.zip!/AB393/
-         AB393/ holds VDI2770_Metadata.xml, and nothing inside it was read
-         per this tool's own rule
-         -> Nothing here is necessarily wrong with the container. Zip each document folder into its own .zip member if you want this tool to check it, or check those folders with something that reads them.
+         -> Decide which the identifier names and say the same thing in both places: ObjectType="Type" for a product model, ObjectType="Individual" for one manufactured item. If the two documents really are about different things, give them different identifiers.
 
-  … 1 more Z9 warning
+  … 1 more Z9 warning, then P4 and P4
 
-  4 error(s), 1 warning(s), 0 note(s) — 2 of the errors are this tool declining to look, not the container
-  read 1 of 1 archives, 1 of 3 metadata files
+  2 error(s), 2 warning(s), 2 note(s)
+  read 3 of 3 archives, 3 of 3 metadata files
 
 This tool does not verify PDF/A conformance. It reports the claim a file makes
 about itself where it finds one; only a PDF/A validator can say whether that
@@ -88,8 +83,8 @@ claim is true.
 
 The last line is there on every report. `0 error(s)` says what was found; that
 line says how much of the container was reached, counted over the names the
-archive itself lists — so a delivery whose documents are in folders this tool
-does not open cannot come back looking like one it read end to end.
+archive itself lists — so a delivery with a part this tool could not open cannot
+come back looking like one it read end to end.
 
 </details>
 
@@ -99,7 +94,7 @@ does not open cannot come back looking like one it read end to end.
 |---|---|
 | metadata that declares `VDI2770_Main.pdf`, and an archive without it | `error F1` — with the line and column of the declaration that has nothing behind it |
 | a class id outside the twelve VDI 2770 publishes | `error M2` — the id is quoted back, and the twelve are listed |
-| documents delivered as folders instead of nested containers | `error Z13` — and it says plainly that this is the tool declining to look, not the container being wrong |
+| documents delivered as folders instead of nested containers | `warn Z9` — and each folder is read as the container it holds, its findings under the folder's path; `error Z13` only for one this tool could not open, said plainly as this tool declining to look |
 | a member name that would escape the extraction directory | `error Z4` — refused, and nothing was ever written to disk to escape into |
 | a declared PDF the scan could not confirm is a PDF | `error P5` — reported as *not confirmed*, never as *not a PDF* |
 | a main document that refers to documents the handover does not contain | `error M11` — each dangling reference named, and silent when this tool did not read the whole delivery |

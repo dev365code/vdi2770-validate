@@ -140,7 +140,7 @@ and this page said "every report" about both until somebody read it twice.
 The first is a count of what was read, and every report has its own:
 
 ```
-  read 1 of 1 archives, 1 of 3 metadata files
+  read 3 of 3 archives, 3 of 3 metadata files
 ```
 
 Both halves are over names the archive's own directory lists, refusals included.

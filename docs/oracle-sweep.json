@@ -444,10 +444,13 @@
       "ours": {
         "error": [
           "F1",
-          "Z13",
           "Z7"
         ],
+        "info": [
+          "P4"
+        ],
         "warning": [
+          "M13",
           "Z9"
         ]
       }
@@ -1417,31 +1420,15 @@
         ]
       }
     },
-    "z13-document-as-a-folder.zip": {
+    "z13-document-folder-unread.zip": {
       "reference": {
-        "INFO": [
-          "D_003",
-          "REP_003",
-          "REP_005",
-          "REP_008",
-          "REP_009",
-          "REP_010",
-          "REP_011",
-          "REP_012",
-          "REP_015",
-          "REP_020",
-          "REP_028",
-          "REP_030",
-          "REP_031",
-          "REP_032",
-          "REP_036",
-          "REP_041",
-          "REP_043",
-          "ZU_005"
+        "EXCEPTION": [
+          "«uncoded»"
         ]
       },
       "ours": {
         "error": [
+          "Z12",
           "Z13"
         ],
         "info": [
@@ -1449,6 +1436,56 @@
         ],
         "warning": [
           "Z9"
+        ]
+      }
+    },
+    "z14-folder-in-a-declared-payload.zip": {
+      "reference": {
+        "INFO": [
+          "REP_003",
+          "REP_005",
+          "REP_008",
+          "REP_009",
+          "REP_010",
+          "REP_011",
+          "REP_015",
+          "REP_020",
+          "REP_028",
+          "REP_036",
+          "REP_041",
+          "REP_043",
+          "ZU_005"
+        ]
+      },
+      "ours": {
+        "info": [
+          "P4",
+          "Z14"
+        ]
+      }
+    },
+    "z14-zip-in-a-declared-payload.zip": {
+      "reference": {
+        "INFO": [
+          "REP_003",
+          "REP_005",
+          "REP_008",
+          "REP_009",
+          "REP_010",
+          "REP_011",
+          "REP_015",
+          "REP_020",
+          "REP_028",
+          "REP_036",
+          "REP_041",
+          "REP_043",
+          "ZU_005"
+        ]
+      },
+      "ours": {
+        "info": [
+          "P4",
+          "Z14"
         ]
       }
     },
