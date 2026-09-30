@@ -336,9 +336,16 @@ def check_bytes(data: bytes, name: str) -> Report:
         # A folder holding a reserved name is a container that was there to open,
         # as a `.zip` member is; once opened, the metadata files in it are its
         # own to count, not this listing's as well.
-        in_folders = zipread.folders_holding_containers(listed)
-        opened = tuple(ch.member_name for ch in c.children
-                       if (ch.member_name or "").endswith("/"))
+        # Not from a name refused as unsafe: `../VDI2770_Metadata.xml` is a
+        # name that climbs out of the archive, not a folder holding a
+        # container, and counted as one it was an archive "found" that no
+        # finding explained.
+        in_folders = zipread.folders_holding_containers(
+            [n for n in listed if getattr(c.rejected.get(n), "kind", None) != "unsafe-member-name"])
+        # What an opened folder's archive holds, it counts; a second spelling
+        # of one of its names, which it does not hold, is still this listing's.
+        held = {member for ch in c.children if (ch.member_name or "").endswith("/")
+                for _name, member in zipread.folder_entries(ch.member_name, ch.folder_members)}
         report.read.archives_found += len(in_folders) + sum(
             1 for n in listed if n.lower().endswith(".zip")
             and not any(zipread.placed(n).startswith(f) for f in in_folders))
@@ -346,7 +353,7 @@ def check_bytes(data: bytes, name: str) -> Report:
             1 for n in listed
             if folder_path(n).replace("\\", "/").rsplit("/", 1)[-1]
             in (METADATA_XML, MAIN_XML)
-            and not zipread.placed(n).startswith(opened or ("\0",)))
+            and n not in held)
         if c.metadata_bytes is not None:
             report.read.metadata_read += 1
         # Leaving a subtree: everything at this depth or below is finished.

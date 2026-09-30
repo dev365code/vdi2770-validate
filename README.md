@@ -14,7 +14,7 @@
 
 ## Ten seconds
 
-<img src="https://raw.githubusercontent.com/dev365code/vdi2770-validate/main/docs/assets/tenseconds.svg?v=9adb3519" alt="Real vdi2770-validate output: error F1, a file named in the metadata is not in the container, with the metadata line it is declared on and the remedy; error Z7, the documentation container has no VDI2770_Main.pdf, with its remedy; then a line saying how many findings follow and how many of them are this tool declining to look." width="100%">
+<img src="https://raw.githubusercontent.com/dev365code/vdi2770-validate/main/docs/assets/tenseconds.svg?v=9adb3519" alt="Real vdi2770-validate output: error F1, a file named in the metadata is not in the container, with the metadata line it is declared on and the remedy; error Z7, the documentation container has no VDI2770_Main.pdf, with its remedy; then a line saying how many findings follow, and one saying how much of the delivery was read." width="100%">
 
 ```console
 $ pip install vdi2770-validate
@@ -231,7 +231,9 @@ three fields that say what produced the run, like every other entry: a run where
 some entries can be version-checked and some cannot is worse for a consumer than
 one where none can.
 
-**Documents delivered as folders.** They are reported, not opened — `Z13` above.
+**What is inside a file the metadata declares.** A `.zip` a document declares as one of its
+files is that document's content, the way a PDF's pages are, and nothing in it is judged as
+VDI 2770 — `Z14` says so on the report. How the archive stores its entries is still read.
 
 **What the guideline text says.** It is sold by DIN Media and was not read. Every
 rule names a free source instead, or says the judgement is ours and explains

@@ -130,7 +130,7 @@ Why this is ours: Document containers hold a document's files. A container insid
 
 *error* · obligation `ours` · **about: this tool**
 
-Why this is ours: A folder holding VDI2770_Metadata.xml or VDI2770_Main.xml is a container that was not zipped, and this tool reads it as the container it is, as the reference implementation does. This one it did not open — its metadata could not be read, or a limit on depth or on what one read may inflate was reached — so everything inside is unchecked, and a report that said nothing would be telling the reader it passed. The limit is ours rather than a fault of the delivery.
+Why this is ours: A folder holding VDI2770_Metadata.xml or VDI2770_Main.xml is a container that was not zipped, and this tool reads it as the container it is, as the reference implementation does. This one it did not open — its metadata could not be read, or a limit this tool puts on one read was reached: how deep, how large, how many containers — so everything inside is unchecked, and a report that said nothing would be telling the reader it passed. The limit is ours rather than a fault of the delivery.
 
 **Remedy.** Nothing here is necessarily wrong with the container. The finding beside this one says why the folder was not opened; once that is put right the folder is checked like any other container.
 

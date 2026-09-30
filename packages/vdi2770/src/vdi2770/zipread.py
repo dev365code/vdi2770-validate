@@ -676,13 +676,25 @@ def read(data: bytes, path: str, depth: int = 0, _budget: Optional[_Budget] = No
                     f"this read has opened {MAX_CONTAINERS} containers, its limit; "
                     f"{skipped} more in this archive were not opened"))
                 break
-            child = read(inner, f"{path}!/{m.name}", depth + 1, budget)
+            child = read(inner, nested_path(path, m.name), depth + 1, budget)
             child.member_name = m.name
             child.parent = c
             c.children.append(child)
         for j, folder in enumerate(folders):
             inside = [m.name for m in accepted if placed(m.name).startswith(folder)]
-            if not budget.take_bytes(sum(m.size for m in accepted if m.name in inside)):
+            size = sum(m.size for m in accepted if m.name in inside)
+            # The folder is read as one nested container, held whole, and a
+            # nested container is held to this cap: a `.zip` over it is refused
+            # before it is read. The same content unpacked was held to nothing
+            # but the read's total.
+            if size > MAX_MEMBER_BYTES:
+                c.rejected[folder] = _refuse(
+                    c, "member-too-large", c.where.child(member=folder),
+                    f"the folder's members come to {size} bytes, over the "
+                    f"{MAX_MEMBER_BYTES} byte limit a nested container is read "
+                    f"within")
+                continue
+            if not budget.take_bytes(size):
                 c.rejected[folder] = _refuse(
                     c, "decompression-budget-exhausted", c.where.child(member=folder),
                     f"this read has inflated {budget.decompressed} bytes and "
@@ -702,10 +714,31 @@ def read(data: bytes, path: str, depth: int = 0, _budget: Optional[_Budget] = No
                     c, "member-unreadable", c.where.child(member=folder),
                     f"{type(e).__name__}: {e}")
                 continue
-            child = read(archive, f"{path}!/{folder}", depth + 1, budget)
+            child = read(archive, nested_path(path, folder), depth + 1, budget)
             child.member_name = folder
             child.folder_members = tuple(inside)
             child.parent = c
+            # What this read refused under the folder is in the folder all the
+            # same, and the container it is has to know: zipped, its own read
+            # refuses the member and its report says "in the archive but was
+            # refused"; unpacked, the member was missing from what it was handed
+            # and the report told the sender to add a file they had sent. Known,
+            # not re-reported: the refusal is already this archive's finding.
+            for name, defect in c.rejected.items():
+                if not name.endswith("/") and placed(name).startswith(folder):
+                    child.rejected.setdefault(within(name, folder), defect)
+            # And a pair this archive holds as one path spelled twice is the
+            # folder's to report where the folder holds both spellings -- a name
+            # composed and decomposed, `./B.pdf` beside `B.pdf` inside it -- as
+            # the inner archive does zipped. Where the two are one name to the
+            # folder, it holds one of them and the pair stays this archive's.
+            spelled = {}
+            for name in c.duplicate_names:
+                if placed(name).startswith(folder):
+                    spelled.setdefault(placed(name), []).append(within(name, folder))
+            handed = {key for key, names in spelled.items() if len(set(names)) == len(names)}
+            if handed:
+                c.duplicate_names = tuple(n for n in c.duplicate_names if placed(n) not in handed)
             c.children.append(child)
     else:
         for m in inner_zips:
@@ -740,14 +773,55 @@ def folders_holding_containers(names) -> List[str]:
     return sorted(f for f in held if not any(f != g and f.startswith(g) for g in held))
 
 
+def nested_path(path: str, name: str) -> str:
+    """The path of a container read out of the one at `path`: a member of an
+    archive is after its `!/`, and a member of a folder is in the folder."""
+    return path + name if path.endswith("/") else f"{path}!/{name}"
+
+
+def within(name: str, folder: str) -> str:
+    """`name`, a member under `folder`, as the folder's own archive spells it:
+    what follows the folder, as written. `./AB393/./B.pdf` is `./B.pdf` in
+    `AB393/`, as it would be in `AB393.zip` -- the folder's segments are matched
+    the way `placed` reduces them, and what is left keeps its own spelling,
+    save the empty segments a doubled slash leaves: `AB393//B.pdf` is `B.pdf`,
+    not `/B.pdf`, which a read refuses as a path from the root."""
+    want = [seg for seg in folder.split("/") if seg]
+    parts = name.split("/")
+    matched = position = 0
+    while matched < len(want) and position < len(parts):
+        segment = parts[position]
+        position += 1
+        if segment in ("", "."):
+            continue
+        matched += 1
+    return "/".join(seg for seg in parts[position:] if seg)
+
+
+def folder_entries(folder: str, names):
+    """`(name in the folder, member)` for what a folder's archive holds: each
+    member as `within` spells it, and of members that spell one name in the
+    folder identically -- `./AB393/B.pdf` beside `AB393/B.pdf` -- the first.
+    Those are one name to the folder, and written in twice the container they
+    make refused both as a name stored twice and never read the document."""
+    kept, seen = [], set()
+    for name in names:
+        relative = within(name, folder)
+        if relative not in seen:
+            seen.add(relative)
+            kept.append((relative, name))
+    return kept
+
+
 def folder_archive(read_member, folder: str, names) -> bytes:
-    """The members under `folder` as an archive of their own: names relative to
-    the folder, stored as they are, in the order given, and nothing from the
-    clock -- the same bytes every time, so a later layer can ask for them again."""
+    """The members under `folder` as an archive of their own, as
+    `folder_entries` names them: stored as they are, in the order given, and
+    nothing from the clock -- the same bytes every time, so a later layer can
+    ask for them again."""
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_STORED) as out:
-        for name in names:
-            out.writestr(zipfile.ZipInfo(placed(name)[len(folder):], date_time=(1980, 1, 1, 0, 0, 0)),
+        for relative, name in folder_entries(folder, names):
+            out.writestr(zipfile.ZipInfo(relative, date_time=(1980, 1, 1, 0, 0, 0)),
                          read_member(name))
     return buf.getvalue()
 

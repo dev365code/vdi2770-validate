@@ -25,7 +25,9 @@ folders rather than zipped: they are read now, and judged.
   not open, and says why beside it. `Z9`'s remedy names such a folder and says
   to zip it rather than flatten it, whether or not it was opened. Verdicts move:
   `missingdocuments/folders.zip` loses its two `Z13` errors and gains what is in
-  its folders, an `M13` warning and two `P4` notes; its exit stays `1`.
+  its folders, an `M13` warning and two `P4` notes; its exit stays `1`. A
+  delivery whose document containers are folders with nothing wrong inside them,
+  which 0.10.3 failed with `Z13`, now passes.
 - **A container unpacked into a folder inside a document container is `Z11`**,
   as the same container zipped there always was. `F2` says nothing about the
   files in such a folder, so a rule that looked only at `.zip` members let the

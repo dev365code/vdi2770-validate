@@ -1042,7 +1042,7 @@ TABLE = [
 
     ('report/an-opened-folders-metadata-is-counted-once',
      'packages/vdi2770/src/vdi2770/validate/runner.py',
-     '            and not zipread.placed(n).startswith(opened or ("\\0",)))',
+     '            and n not in held)',
      '            )',
      ['tests/test_the_report_says_how_much_it_read.py::test_a_container_delivered_unpacked_is_counted_the_way_it_is_zipped'],
      'the metadata file in an opened folder was counted by the listing it sits in '
@@ -1090,7 +1090,7 @@ TABLE = [
 
     ('reader/a-folder-is-charged-against-the-read-budget',
      'packages/vdi2770/src/vdi2770/zipread.py',
-     '            if not budget.take_bytes(sum(m.size for m in accepted if m.name in inside)):',
+     '            if not budget.take_bytes(size):',
      '            if False:',
      ['tests/test_a_document_delivered_as_a_folder_is_read.py::test_a_folder_is_charged_against_the_budget_a_zip_is'],
      'a folder was inflated a second time, into the archive read as its container, '
@@ -1121,7 +1121,7 @@ TABLE = [
 
     ('rules/an-opened-folder-draws-no-z13',
      'packages/vdi2770/src/vdi2770/validate/rules/container.py',
-     '                                    if folder_path(prefix) + "/" not in opened]',
+     '                                    if not _inside(folder_path(prefix), opened)]',
      '                                    ]',
      ['tests/test_a_document_delivered_as_a_folder_is_read.py::test_a_document_container_in_a_folder_draws_what_it_draws_zipped'],
      'a folder read as the container it is was still reported as one this tool did '
@@ -1145,8 +1145,8 @@ TABLE = [
 
     ('rules/an-opened-folder-is-not-said-to-be-unopened',
      'packages/vdi2770/src/vdi2770/validate/rules/container.py',
-     '        unopened = {f for f in reserved_in if f not in opened_here}',
-     '        unopened = set(reserved_in)',
+     '                    if f not in opened_here and not _inside(f[:-1], within_opened)}',
+     '                    }',
      ['tests/test_a_folder_is_a_folder.py::test_a_folder_this_tool_opened_is_still_not_to_be_flattened'],
      "`Z9`'s remedy pointed at a `Z13` beside it for a folder this tool had opened, "
      'and there was none'),
@@ -1192,12 +1192,52 @@ TABLE = [
 
     ('reader/a-folders-members-are-named-from-the-folder',
      'packages/vdi2770/src/vdi2770/zipread.py',
-     '            out.writestr(zipfile.ZipInfo(placed(name)[len(folder):], date_time=(1980, 1, 1, 0, 0, 0)),',
-     '            out.writestr(zipfile.ZipInfo(placed(name), date_time=(1980, 1, 1, 0, 0, 0)),',
+     '    return "/".join(seg for seg in parts[position:] if seg)',
+     '    return name',
      ['tests/test_a_document_delivered_as_a_folder_is_read.py::'
       'test_a_member_refused_in_a_folder_is_refused_once_as_it_is_zipped'],
      'the archive a folder was read as kept the folder in every name, so its '
      'reserved file was not at its root and it was not the container it is'),
+
+    ('rules/a-folder-inside-an-opened-folder-is-that-folders-to-open',
+     'packages/vdi2770/src/vdi2770/validate/rules/container.py',
+     'if not _inside(folder_path(prefix), opened)]',
+     'if folder_path(prefix) not in opened]',
+     ['tests/test_a_document_delivered_as_a_folder_is_read.py::test_folders_inside_folders_draw_what_the_zips_inside_zips_draw'],
+     'a fully unpacked three-level delivery drew Z13 for every folder its inner '
+     'folders had opened'),
+
+    ('reader/a-container-inside-a-folder-is-at-a-path-in-it',
+     'packages/vdi2770/src/vdi2770/zipread.py',
+     '    return path + name if path.endswith("/") else f"{path}!/{name}"',
+     '    return f"{path}!/{name}"',
+     ['tests/test_a_document_delivered_as_a_folder_is_read.py::test_a_container_inside_a_folder_is_at_a_path_in_that_folder'],
+     'a finding in a container inside a folder was printed at `folder/!/inner.zip`, '
+     'and one report spelled one member two ways'),
+
+    ('reader/a-folder-knows-what-its-archive-refused',
+     'packages/vdi2770/src/vdi2770/zipread.py',
+     '                    child.rejected.setdefault(within(name, folder), defect)',
+     '                    pass',
+     ['tests/test_a_document_delivered_as_a_folder_is_read.py::test_a_member_refused_in_a_folder_is_said_to_be_refused_not_missing'],
+     'a member refused in a folder was reported as not sent, with a remedy telling '
+     'the sender to add it'),
+
+    ('reader/one-name-in-a-folder-is-one-entry',
+     'packages/vdi2770/src/vdi2770/zipread.py',
+     '        if relative not in seen:',
+     '        if True:',
+     ['tests/test_a_document_delivered_as_a_folder_is_read.py::test_two_spellings_of_one_path_in_a_folder_are_the_parents_to_report'],
+     'two spellings of one path became one name stored twice, both were refused, and '
+     'the document went unread'),
+
+    ('reader/a-pair-the-folder-holds-is-the-folders-to-report',
+     'packages/vdi2770/src/vdi2770/zipread.py',
+     '            if handed:',
+     '            if False:',
+     ['tests/test_a_document_delivered_as_a_folder_is_read.py::test_two_spellings_of_one_path_in_a_folder_are_the_parents_to_report'],
+     'a name composed and decomposed in a folder was reported by the archive and '
+     'again by the folder'),
 
     ('rules/a-declared-payloads-depth-is-not-this-reports',
      'packages/vdi2770/src/vdi2770/validate/rules/container.py',
@@ -1206,6 +1246,22 @@ TABLE = [
      ['tests/test_a_declared_zip_is_a_payload.py::test_a_declared_payload_one_level_down_is_not_looked_inside_either'],
      'a parts bundle one level down drew Z6, an error, for a folder inside a file '
      'the metadata declared'),
+
+    ('report/a-name-refused-as-unsafe-is-not-a-folder',
+     'packages/vdi2770/src/vdi2770/validate/runner.py',
+     '            [n for n in listed if getattr(c.rejected.get(n), "kind", None) != "unsafe-member-name"])',
+     '            list(listed))',
+     ['tests/test_the_report_says_how_much_it_read.py::test_a_refused_name_that_ends_in_a_reserved_name_is_not_a_folder_to_open'],
+     '`../VDI2770_Metadata.xml` was counted as a folder holding a container, an '
+     'archive found that no finding explained'),
+
+    ('reader/a-folder-is-held-to-the-nested-container-cap',
+     'packages/vdi2770/src/vdi2770/zipread.py',
+     '            if size > MAX_MEMBER_BYTES:',
+     '            if False:',
+     ['tests/test_a_document_delivered_as_a_folder_is_read.py::test_a_folder_is_held_to_the_size_a_nested_container_is_read_within'],
+     'a nested container over the member cap was refused zipped and read whole '
+     'unpacked'),
 
     ('rules/a-declared-payload-is-not-searched-for-folders',
      'packages/vdi2770/src/vdi2770/validate/rules/container.py',

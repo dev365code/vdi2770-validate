@@ -431,10 +431,15 @@ def check(container, declared, is_declared_payload) -> Iterator[Finding]:
         # it is still what removes it without flattening what is inside.
         opened_here = {nfc(ch.member_name) for ch in container.children
                        if (ch.member_name or "").endswith("/")}
+        # A folder inside an opened folder is the opened container's: its own
+        # `Z9` names it, and its `Z13` if it could not open it.
+        within_opened = {folder_path(ch.member_name) for ch in container.children
+                         if (ch.member_name or "").endswith("/")}
         reserved_in = {}
         for f, leaf in folders_holding_metadata(container):
             reserved_in.setdefault(folder_path(f) + "/", set()).add(leaf)
-        unopened = {f for f in reserved_in if f not in opened_here}
+        unopened = {f for f in reserved_in
+                    if f not in opened_here and not _inside(f[:-1], within_opened)}
         also_a_container = sorted(f for f in folders
                                   if folder_path(f) in unopened or f in unopened)
         opened_container = sorted(f for f in folders if folder_path(f) + "/" in opened_here)
@@ -743,11 +748,14 @@ def check(container, declared, is_declared_payload) -> Iterator[Finding]:
     # inside of something that is not a VDI 2770 artefact.
     # A folder the reader opened as the container it is has nothing unexamined
     # to report: what is in it is its own container's findings.
-    opened = {nfc(ch.member_name) for ch in container.children
+    # And a folder inside one it opened is that folder's container to open,
+    # and to report: counted here as well, a fully unpacked three-level
+    # delivery drew `Z13` for every folder its inner folders had opened.
+    opened = {folder_path(ch.member_name) for ch in container.children
               if (ch.member_name or "").endswith("/")}
     as_folders = [] if opaque else [(prefix, leaf) for prefix, leaf
                                     in folders_holding_metadata(container)
-                                    if folder_path(prefix) + "/" not in opened]
+                                    if not _inside(folder_path(prefix), opened)]
     if as_folders:
         r = rule("Z13")
         # What `folders_holding_metadata` returns keeps the archive's own prefix,

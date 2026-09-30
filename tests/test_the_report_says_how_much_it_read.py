@@ -125,6 +125,22 @@ def test_a_container_delivered_unpacked_is_counted_the_way_it_is_zipped():
             f"{zipped[2]} of {zipped[3]}")
 
 
+def test_a_refused_name_that_ends_in_a_reserved_name_is_not_a_folder_to_open():
+    """`../VDI2770_Metadata.xml` and `/abs/VDI2770_Metadata.xml` are names the
+    reader refuses as unsafe, not folders holding a container -- counted as
+    folders, a delivery with none read `1 of 2 archives`, and nothing in the
+    report said what the second one was."""
+    doc = zipfile.ZipFile(CLEAN_DOCUMENT)
+    for bad in ("../VDI2770_Metadata.xml", "/abs/VDI2770_Metadata.xml"):
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w") as z:
+            for name in doc.namelist():
+                z.writestr(name, doc.read(name))
+            z.writestr(bad, doc.read("VDI2770_Metadata.xml"))
+        r = check_bytes(buf.getvalue(), "c.zip").read
+        assert (r.archives_opened, r.archives_found) == (1, 1), (bad, r.archives_opened, r.archives_found)
+
+
 def test_the_figure_does_not_improve_when_the_tool_does_less(monkeypatch):
     """The denominator comes from the archive, so giving up cannot flatter it."""
     from vdi2770 import zipread

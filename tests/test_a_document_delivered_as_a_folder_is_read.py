@@ -234,3 +234,124 @@ def test_a_member_refused_in_a_folder_is_refused_once_as_it_is_zipped():
                           leave_out=("Z9",))
         assert folder == zipped, (
             f"{extra[0][0]} unpacked: {sorted(folder.items())}; zipped: {sorted(zipped.items())}")
+
+
+# What follows was found by building the same content zipped and unpacked, at
+# every level a delivery nests, and comparing the two reports line by line.
+
+def _entries(data):
+    with zipfile.ZipFile(io.BytesIO(data)) as z:
+        return [(i.filename, z.read(i)) for i in z.infolist() if not i.is_dir()]
+
+
+def _pack(entries):
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        for n, d in entries:
+            z.writestr(n, d)
+    return buf.getvalue()
+
+
+def _unzipped(entries, depth=0, levels=99):
+    """Every `.zip` member unpacked into a folder of its name, down `levels` levels."""
+    out = []
+    for n, d in entries:
+        if n.endswith(".zip") and depth < levels:
+            out += [(n[:-4] + "/" + m, x) for m, x in _unzipped(_entries(d), depth + 1, levels)]
+        else:
+            out.append((n, d))
+    return out
+
+
+def test_folders_inside_folders_draw_what_the_zips_inside_zips_draw():
+    """A folder inside an opened folder is that folder's container to open, and
+    it did -- while the outer one reported it as a folder nobody opened."""
+    from conftest import CORPUS
+
+    nested = (CORPUS / "container" / "vdi2770_excel.zip").read_bytes()
+    zipped = check_bytes(nested, "d.zip")
+    folder = check_bytes(_pack(_unzipped(_entries(nested))), "d.zip")
+    assert not [f.where for f in folder.findings if f.rule.id == "Z13"], "an opened folder called unopened"
+    assert Counter((f.rule.id, f.severity.value) for f in folder.findings if f.rule.id != "Z9") == \
+        Counter((f.rule.id, f.severity.value) for f in zipped.findings if f.rule.id != "Z9")
+
+
+def test_a_container_inside_a_folder_is_at_a_path_in_that_folder():
+    from conftest import CORPUS
+
+    nested = _entries((CORPUS / "container" / "vdi2770_excel.zip").read_bytes())
+    report = check_bytes(_pack(_unzipped(nested, levels=1)), "d.zip")
+    wheres = {str(f.where) for f in report.findings}
+    assert wheres and not [w for w in wheres if "/!/" in w], sorted(wheres)
+
+
+def test_a_member_refused_in_a_folder_is_said_to_be_refused_not_missing():
+    """The zipped container says `B.pdf` is in the archive and was refused;
+    unpacked, it said the file was not there, and told the sender to add it."""
+    from conftest import CLEAN_DOCUMENT, unopened
+
+    doc = _entries(CLEAN_DOCUMENT.read_bytes())
+    with zipfile.ZipFile(CLEAN_DOCUMENTATION) as docn:
+        root = [(n, docn.read(n)) for n in ("VDI2770_Main.xml", "VDI2770_Main.pdf")]
+    twice = dict(doc)["B.pdf"]
+    for zipped, folder in (
+            (_pack(root + [("documentcontainer.zip", unopened(_pack(doc), "B.pdf"))]),
+             unopened(_pack(root + [("documentcontainer/" + n, d) for n, d in doc]), "documentcontainer/B.pdf")),
+            (_pack(root + [("documentcontainer.zip", _pack(doc + [("B.pdf", twice)]))]),
+             _pack(root + [("documentcontainer/" + n, d) for n, d in doc + [("B.pdf", twice)]]))):
+        # The reader's own sentence names the member as the archive holding it
+        # spells it: `B.pdf` in the inner archive, `documentcontainer/B.pdf` in
+        # the one the folder is in. Nothing else may differ.
+        said = [[(f.detail or "").replace("documentcontainer/B.pdf", "B.pdf")
+                 for f in check_bytes(data, "d.zip").findings if f.rule.id == "F1"]
+                for data in (zipped, folder)]
+        assert said[1] == said[0], said
+
+
+def test_two_spellings_of_one_path_in_a_folder_are_the_parents_to_report():
+    """`./x` beside `x`, or one name composed and decomposed: the archive holding
+    them reports the pair, and the folder is read with one of them -- zipped,
+    the inner archive reports the pair and reads it. Written into the folder's
+    archive as one name twice, both were refused and the document went unread."""
+    import unicodedata
+
+    from conftest import CLEAN_DOCUMENT
+
+    doc = _entries(CLEAN_DOCUMENT.read_bytes())
+    d = dict(doc)
+    with zipfile.ZipFile(CLEAN_DOCUMENTATION) as docn:
+        root = [(n, docn.read(n)) for n in ("VDI2770_Main.xml", "VDI2770_Main.pdf")]
+    for extra in ([("./B.pdf", d["B.pdf"])], [("./VDI2770_Metadata.xml", d["VDI2770_Metadata.xml"])],
+                  [("Prüf.pdf", b"%PDF-1.4"), (unicodedata.normalize("NFD", "Prüf.pdf"), b"%PDF-1.4")]):
+        zipped = check_bytes(_pack(root + [("documentcontainer.zip", _pack(doc + extra))]), "d.zip")
+        folder = check_bytes(_pack(root + [("documentcontainer/" + n, x) for n, x in doc]
+                                   + [(("./documentcontainer/" + n[2:]) if n.startswith("./")
+                                       else "documentcontainer/" + n, x) for n, x in extra]), "d.zip")
+        count = [Counter((f.rule.id, f.severity.value) for f in r.findings if f.rule.id != "Z9")
+                 for r in (folder, zipped)]
+        assert count[0] == count[1], (extra[0][0], sorted(count[0].items()), sorted(count[1].items()))
+        assert (folder.read.metadata_read, folder.read.metadata_found) == \
+            (zipped.read.metadata_read, zipped.read.metadata_found), extra[0][0]
+
+
+def test_a_folder_is_held_to_the_size_a_nested_container_is_read_within(monkeypatch):
+    """A nested `.zip` over `MAX_MEMBER_BYTES` is refused, because a nested
+    container is held whole while it is read. A folder is read as one too,
+    whole, and was held to nothing but the read's total."""
+    from conftest import CLEAN_DOCUMENT
+    from vdi2770 import zipread
+
+    doc = _entries(CLEAN_DOCUMENT.read_bytes())
+    with zipfile.ZipFile(CLEAN_DOCUMENTATION) as docn:
+        root = [(n, docn.read(n)) for n in ("VDI2770_Main.xml",)]
+    # Under every member, over the container they make together.
+    cap = max(len(d) for _n, d in doc) + 1
+    assert cap < sum(len(d) for _n, d in doc), "the premise"
+    monkeypatch.setattr(zipread, "MAX_MEMBER_BYTES", cap)
+    for data, refused in ((_pack(root + [("documentcontainer.zip", _pack(doc))]), "documentcontainer.zip"),
+                          (_pack(root + [("documentcontainer/" + n, d) for n, d in doc]), "documentcontainer/")):
+        report = check_bytes(data, "d.zip")
+        assert f"d.zip!/{refused}" in {str(f.where) for f in report.findings if f.rule.id == "Z5"}, (
+            refused, sorted(f"{f.rule.id} {f.where}" for f in report.findings))
+        assert not [f for f in report.findings if str(f.where).startswith(f"d.zip!/{refused}")
+                    and str(f.where) != f"d.zip!/{refused}"], refused
