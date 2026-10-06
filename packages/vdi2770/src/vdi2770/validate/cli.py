@@ -169,7 +169,7 @@ def _cmd_check(args) -> int:
             if where is not None:
                 _say(f"A diagnostic bundle was written to {where}.")
                 _say(SENT)
-        # Ten rules are warnings. They are warnings on purpose -- `P3` cannot
+        # Eleven rules are warnings. They are warnings on purpose -- `P3` cannot
         # be an error because this tool does not verify PDF/A -- so the number
         # does not move for them by default, and an intake gate that wants
         # none of them says so. The count is checked against the catalogue:

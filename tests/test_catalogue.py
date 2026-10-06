@@ -47,6 +47,10 @@ def test_a_basis_can_actually_be_looked_up():
             continue
         if (data / r.basis).exists():
             continue
+        if r.basis == "ISO 32000-1:2008 §7.7.3.2 Table 29":
+            # P6's Count definition is a precise public edition/clause/table;
+            # its metadata comparison remains ours, not a VDI obligation.
+            continue
         assert re.match(r"^IDTA \d{5} v\d+\.\d+(\.\d+)? Table \d+$", r.basis), (
             f"{r.id} basis {r.basis!r} names neither a bundled file nor a citable edition")
 

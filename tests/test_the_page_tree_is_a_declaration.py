@@ -3,9 +3,12 @@ import json
 import zipfile
 
 import pytest
+from vdi2770_validate.model import About, Obligation, Severity
+from vdi2770_validate.runner import check_file
 
 import vdi2770
 from conftest import FIXTURES
+from vdi2770_validate import report as rendering
 
 CASES = json.loads((FIXTURES / "pages/MANIFEST.json").read_text(encoding="utf-8"))
 
@@ -32,11 +35,14 @@ def test_the_reader_follows_the_declared_page_tree(name):
         assert facts.page_count == expected
         assert facts.page_count_why is None
     elif expected is None:
-        assert facts.encrypted and facts.page_count is None
+        if "is_pdf" in CASES[name]:
+            assert facts.is_pdf is None and facts.page_count is None and facts.page_count_why is None
+        else:
+            assert facts.encrypted and facts.page_count is None
     else:
         assert facts.page_count is None
         assert expected in facts.page_count_why
-    assert facts.is_pdf is True
+    assert facts.is_pdf is CASES[name].get("is_pdf", True)
     assert facts.pdfa_claim == "2b"
 
 
@@ -184,3 +190,104 @@ def test_a_latest_null_root_is_not_replaced_by_an_older_root(monkeypatch):
     body = append_revision(body, {200: b"0"}, root=None, prev=previous, extra=b" /Root null")
     facts = vdi2770.read_pdf(body, page_count=True)
     assert facts.page_count is None and "Root" in facts.page_count_why
+
+
+QUIET = {"equal", "incremental-equal", "object-stream", "png-xref", "encrypted",
+         "linearized", "plus", "space", "invalid-zero", "invalid-negative",
+         "invalid-underscore", "invalid-unicode", "compressed-claim", "multiple-pdfs", "unconfirmed",
+         "padded-pdf-count"}
+
+
+@pytest.mark.parametrize("name", CASES)
+def test_p6_compares_each_version_at_the_metadata_number(name):
+    path = FIXTURES / "pages" / (name + ".zip")
+    report = check_file(str(path))
+    findings = [f for f in report.findings if f.rule.id == "P6"]
+    expected = 0 if name in QUIET else 2 if name == "two-versions" else 1
+    assert len(findings) == expected, [(f.rule.id, f.detail) for f in report.findings]
+    with zipfile.ZipFile(path) as archive:
+        lines = archive.read("VDI2770_Metadata.xml").decode("utf-8").splitlines()
+    for f in findings:
+        assert f.severity is Severity.WARNING and f.rule.obligation is Obligation.OURS
+        assert f.where.member == "VDI2770_Metadata.xml" and f.where.subject == "B.pdf"
+        assert f.where.column is not None and "NumberOfPages" in lines[f.where.line - 1]
+        assert "B.pdf" in f.detail
+        if isinstance(CASES[name]["page_count"], str):
+            assert f.about is About.TOOL
+            assert "could not be read" in f.message and "could not be read:" in f.detail
+            assert json.loads(rendering.as_json(report))["read"]["complete"] is False
+        else:
+            assert f.about is About.CONTAINER
+            assert f.message == "The metadata and the PDF's page tree declare different page counts"
+            assert "NumberOfPages" in f.remedy and "page tree" in f.remedy
+            assert "declares" in f.detail and "metadata says" in f.detail
+            if name == "zero":
+                assert "declares no pages" in f.detail
+            if name == "false-count":
+                assert "declares 5" in f.detail and "has 5" not in f.detail
+            if name == "long-number":
+                assert len(f.detail) < 220 and "4301 digits" in f.detail
+    assert "X5" not in {f.rule.id for f in report.findings}
+
+
+def test_page_inflation_refusal_is_reported_even_when_a_raw_pdfa_claim_exists(monkeypatch):
+    from vdi2770 import pdfread
+
+    monkeypatch.setattr(pdfread, "MAX_INFLATED_PER_READ", 0)
+    report = check_file(str(FIXTURES / "pages/object-stream.zip"))
+    pages = [f for f in report.findings if f.rule.id == "P6"]
+    assert len(pages) == 1 and pages[0].about is About.TOOL
+    assert "read inflation budget" in pages[0].detail
+    assert {"Z5", "P4"} <= {f.rule.id for f in report.findings}
+    assert json.loads(rendering.as_json(report))["read"]["complete"] is False
+    z5 = next(f for f in report.findings if f.rule.id == "Z5")
+    assert "page tree" in z5.detail and "Every other check" not in z5.remedy
+
+
+def test_excel_template_page_declarations_produce_seven_true_warnings():
+    from conftest import CORPUS
+
+    report = check_file(str(CORPUS / "container/vdi2770_excel.zip"))
+    pages = [f for f in report.findings if f.rule.id == "P6"]
+    assert len(pages) == 7
+    assert all(f.about is About.CONTAINER and "declares 1" in f.detail for f in pages)
+    assert report.count(Severity.ERROR) == 0
+
+
+def test_a_pdf_without_a_comparison_does_not_read_its_page_tree(monkeypatch):
+    from conftest import CLEAN_DOCUMENT
+    from vdi2770 import _pdfpages
+
+    def forbidden(*args):
+        pytest.fail("the page tree was read without a valid comparison")
+
+    monkeypatch.setattr(_pdfpages, "declared_count", forbidden)
+    for path in [CLEAN_DOCUMENT, FIXTURES / "pages/multiple-pdfs.zip",
+                 FIXTURES / "pages/invalid-unicode.zip", FIXTURES / "pages/encrypted.zip",
+                 FIXTURES / "pages/unconfirmed.zip"]:
+        report = check_file(str(path))
+        assert "P6" not in {f.rule.id for f in report.findings}
+
+
+def test_overlapping_xref_indices_are_declined_before_inflation(monkeypatch):
+    from vdi2770 import pdfread
+
+    body = pdf("overlapping-index")
+
+    def forbidden():
+        pytest.fail("a malformed Index spent the inflation allowance")
+
+    monkeypatch.setattr(pdfread.zlib, "decompressobj", forbidden)
+    facts = vdi2770.read_pdf(body, page_count=True)
+    assert facts.page_count is None and "Index" in facts.page_count_why
+
+
+def test_published_silent_paths_are_the_generated_verdicts():
+    import subprocess
+    import sys
+
+    from conftest import ROOT
+
+    done = subprocess.run([sys.executable, "tools/silent_paths.py"], cwd=ROOT,
+                          capture_output=True, text=True)
+    assert done.returncode == 0, done.stdout + done.stderr

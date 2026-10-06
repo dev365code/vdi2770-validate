@@ -57,13 +57,14 @@ def append_revision(base, values, root=1, prev=None, extra=b""):
     return bytes(data)
 
 
-def classic(count=7, leaves=None, encrypted=False, portfolio=False, cycle=False, padding=0):
+def classic(count=7, leaves=None, encrypted=False, portfolio=False, cycle=False, padding=0, unconfirmed=False):
     values = objects(count, leaves, portfolio)
     if cycle:
         values[1] = b"<< /Type /Catalog /Pages 1 0 R /Metadata 100 0 R >>"
     if padding:
         values[2] = b"<< /Padding (" + b"x" * padding + b") /Count " + str(count).encode("ascii") + b" >>"
-    return append_revision(b"%PDF-1.7\n", values, extra=b" /Encrypt 99 0 R" if encrypted else b"")
+    prefix = b"%PDF-1.7\n" + (b"% " + b"obj " * 100_000 + b"\n" if unconfirmed else b"")
+    return append_revision(prefix, values, extra=b" /Encrypt 99 0 R" if encrypted else b"")
 
 
 def incremental():
@@ -81,7 +82,7 @@ def prev_cycle():
     return base.replace(b" /Root 1 0 R", f" /Root 1 0 R /Prev {at}".encode("ascii"), 1)
 
 
-def compressed(count=7, predictor=False, object_cycle=False, compressed_claim=False):
+def compressed(count=7, predictor=False, object_cycle=False, compressed_claim=False, overlap=False):
     values = objects(count)
     if compressed_claim:
         values[100] = stream(zlib.compress(XMP), b" /Type /Metadata /Subtype /XML /Filter /FlateDecode")
@@ -110,6 +111,8 @@ def compressed(count=7, predictor=False, object_cycle=False, compressed_claim=Fa
         rows.append(row)
     payload = b"".join(rows)
     extra = b" /Type /XRef /Size 104 /Root 1 0 R /W [1 4 2] /Index [0 104] /Filter /FlateDecode"
+    if overlap:
+        extra = extra.replace(b"/Index [0 104]", b"/Index [0 60 50 44]")
     if predictor:
         previous = bytes(7)
         encoded = []
@@ -180,4 +183,9 @@ def cases():
         "large-count": ("7", classic("9" * 4301, leaves=1), "range"),
         "object-stream-cycle": ("7", compressed(object_cycle=True), "cycle"),
         "compressed-claim": ("7", compressed(compressed_claim=True), 7),
+        "multiple-pdfs": ("14", classic(), 7),
+        "two-versions": ("8", classic(), 7),
+        "unconfirmed": ("8", classic(unconfirmed=True), None),
+        "overlapping-index": ("7", compressed(overlap=True), "Index"),
+        "padded-pdf-count": ("7", classic("0" * 4301 + "7", leaves=7), 7),
     }

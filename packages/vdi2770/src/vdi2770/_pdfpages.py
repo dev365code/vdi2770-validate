@@ -100,9 +100,10 @@ class Syntax:
         raw = self.data[at:self.pos]
         if _INTEGER.fullmatch(raw):
             # Decimal conversion is never handed an unbounded string.
-            if len(raw.lstrip(b"+-")) > 10:
+            digits = raw.lstrip(b"+-").lstrip(b"0") or b"0"
+            if len(digits) > 10:
                 raise Declined("integer range guard")
-            value = int(raw)
+            value = int((b"-" if raw.startswith(b"-") else b"") + digits)
             if not -(2**31) <= value < 2**31:
                 raise Declined("integer range guard")
             return value
@@ -285,6 +286,11 @@ class PageReader:
                     if not isinstance(trailer, dict):
                         raise Declined("damaged xref trailer")
                     uint(trailer.get("Size"), "xref Size")
+                    previous = 0
+                    for first, count, _ in ranges:
+                        if first < previous or first + count > trailer["Size"]:
+                            raise Declined("xref table subsection order or range")
+                        previous = first + count
                     self.sections.append(("table", window, ranges))
                     return trailer
                 first = uint(first, "xref first object")
@@ -313,13 +319,15 @@ class PageReader:
         if not isinstance(index, list) or len(index) % 2:
             raise Declined("damaged xref Index")
         ranges, consumed = [], 0
+        previous = 0
         for i in range(0, len(index), 2):
             first = uint(index[i], "xref Index")
             count = uint(index[i + 1], "xref Index")
-            if first + count > size:
-                raise Declined("xref Index outside Size")
+            if first < previous or first + count > size:
+                raise Declined("xref Index order, overlap or Size range")
             ranges.append((first, count, consumed))
             consumed += count
+            previous = first + count
         payload = self.inflate(dictionary, stream_at)
         if consumed * sum(widths) != len(payload):
             raise Declined("damaged xref stream length")
@@ -360,6 +368,8 @@ class PageReader:
             return self.cache[reference]
         if reference in self.active:
             raise Declined("object stream reference cycle")
+        if len(self.active) >= pdfread.MAX_PAGE_OBJECTS:
+            raise Declined(f"object limit {pdfread.MAX_PAGE_OBJECTS}")
         self.active.add(reference)
         try:
             return self.interpret(reference)
@@ -372,6 +382,10 @@ class PageReader:
             result = self.indirect_at(at, reference)
         elif kind == 2:
             if at not in self.streams:
+                stream_entry = self.entry(Ref(uint(at, "object stream number"), 0))
+                if stream_entry[0] != 1:
+                    raise Declined("object stream reference cycle" if stream_entry[1] == at
+                                   else "an object stream cannot itself be compressed")
                 dictionary, stream_at = self.object(Ref(uint(at, "object stream number"), 0))
                 if not isinstance(dictionary, dict) or dictionary.get("Type") != Name("ObjStm") or stream_at is None:
                     raise Declined("xref does not name an object stream")

@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import io
 import json
+import re
 import sys
 import zipfile
 from pathlib import Path
@@ -427,9 +428,18 @@ def main() -> int:
         f = dict(base)
         f[META] = edit(base[META], "<DocumentVersion>", f'<DocumentVersion NumberOfPages="{number}">')
         f["B.pdf"] = pdf
+        if name == "multiple-pdfs":
+            digital = re.search(rb"<DigitalFile[^>]*>B\.pdf</DigitalFile>", f[META]).group(0)
+            f[META] = f[META].replace(digital, digital + b"\n" + digital.replace(b"B.pdf", b"C.pdf"), 1)
+            f["C.pdf"] = pdf
+        if name == "two-versions":
+            version = re.search(rb"<DocumentVersion[^>]*>.*?</DocumentVersion>", f[META], re.S).group(0)
+            f[META] = f[META].replace(version, version + b"\n" + version, 1)
         (page_dir / (name + ".zip")).write_bytes(write_bytes(f))
         page_manifest[name] = {"number": number, "page_count": result,
                                "basedOn": "documentcontainer.zip", "changed": [META, "B.pdf"]}
+        if name == "unconfirmed":
+            page_manifest[name]["is_pdf"] = None
     (page_dir / "MANIFEST.json").write_text(
         json.dumps(page_manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
