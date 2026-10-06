@@ -415,6 +415,10 @@ MAX_INFLATED_TOTAL = 32_000_000       # the whole budget for one file
 # runs out, which is why it stops inflation and nothing else.
 MAX_INFLATED_PER_READ = 4 * 1024 * 1024 * 1024
 
+# ISO 32000-1's xref-selected page-tree path; these bound work, not validity.
+MAX_PAGE_OBJECTS = 16
+MAX_PAGE_OBJECT_WINDOW = 64 * 1024
+
 
 @dataclass(frozen=True)
 class PdfFacts:
@@ -432,6 +436,8 @@ class PdfFacts:
     header: str = ""
     encrypted: bool = False
     pdfa_claim: Optional[str] = None   # e.g. "2b" — a CLAIM, never a verdict
+    page_count: Optional[int] = None  # the root /Count declaration, not rendered pages
+    page_count_why: Optional[str] = None
 
 
 # `_OBJ_HEADER` cannot be turned on a whole file. `\d+\s+\d+\s+obj` over 200 KB
@@ -536,7 +542,7 @@ def _stream_starts(data: bytes, cut: Optional[List[Optional[str]]] = None):
 
 
 def _haystacks(data: bytes, allowance: Optional[List[int]] = None,
-               cut: Optional[List[Optional[str]]] = None):
+               cut: Optional[List[Optional[str]]] = None, file_left=None):
     """The raw bytes, then each stream inflated — under a budget.
 
     A PDF stream can expand about a thousandfold, and we are looking for one
@@ -552,8 +558,8 @@ def _haystacks(data: bytes, allowance: Optional[List[int]] = None,
     """
     yield data
     spent = 0
-    cap = (MAX_INFLATED_TOTAL if allowance is None
-           else min(MAX_INFLATED_TOTAL, allowance[0]))
+    file_cap = MAX_INFLATED_TOTAL if file_left is None else file_left[0]
+    cap = file_cap if allowance is None else min(file_cap, allowance[0])
     for seen, at in enumerate(_stream_starts(data, cut)):
         if seen >= MAX_STREAMS or spent >= cap:
             # Stopping here used to be silent, and a caller that cannot tell
@@ -573,13 +579,13 @@ def _haystacks(data: bytes, allowance: Optional[List[int]] = None,
                 # reported as the read's, and the read's remedy is "split the
                 # delivery", which does nothing about a per-file ceiling.
                 cut[0] = ("streams" if seen >= MAX_STREAMS
-                          else "read" if cap < MAX_INFLATED_TOTAL
+                          else "read" if cap < file_cap
                           else "file")
             return
         chunk = data[at:at + MAX_STREAM_SCAN]
         engine = zlib.decompressobj()
         try:
-            out = engine.decompress(chunk, MAX_INFLATED_PER_STREAM)
+            out = engine.decompress(chunk, min(MAX_INFLATED_PER_STREAM, cap - spent))
         except zlib.error:
             continue
         # Two limits end a stream early and both used to do it in silence: the
@@ -700,7 +706,7 @@ def reader(allowance: int) -> Callable[[bytes], tuple]:
     """
     left = [allowance]
 
-    def read_one(data: bytes):
+    def read_one(data: bytes, *, page_count: bool = False):
         """`(facts, cut_short)`. The budget bounds inflating, nothing else.
 
         It used to answer `None` for a file the allowance no longer reached,
@@ -726,12 +732,12 @@ def reader(allowance: int) -> Callable[[bytes], tuple]:
         that starts with nothing left is not a special case any more -- its cap
         is zero, so the first stream stops it, and the answer is the allowance.
         """
-        return _read(data, left)
+        return _read(data, left, page_count=page_count)
 
     return read_one
 
 
-def read(data: bytes) -> PdfFacts:
+def read(data: bytes, *, page_count: bool = False) -> PdfFacts:
     """The four facts, with no allowance across files.
 
     This drops whether the claim search was cut short, because `PdfFacts` is a
@@ -739,10 +745,10 @@ def read(data: bytes) -> PdfFacts:
     to tell "no claim" from "stopped looking" -- and a caller reporting on
     somebody else's file does -- takes `reader()` instead, which returns both.
     """
-    return _read(data, None)[0]
+    return _read(data, None, page_count=page_count)[0]
 
 
-def _read(data: bytes, allowance: Optional[List[int]]):
+def _read(data: bytes, allowance: Optional[List[int]], *, page_count: bool = False):
     """`(facts, cut_short)`, where `cut_short` names which limit stopped the
     claim search before it ran out of file, or is `None`.
 
@@ -784,9 +790,16 @@ def _read(data: bytes, allowance: Optional[List[int]]):
     # say "this is not a PDF" only having looked all the way through.
     is_pdf = _has_an_indirect_object(data)
     encrypted = _is_encrypted(data)
+    count, count_why = None, None
+    file_left = None
+    if page_count and is_pdf is True and not encrypted:
+        from ._pdfpages import declared_count
+
+        file_left = [MAX_INFLATED_TOTAL]
+        count, count_why = declared_count(data, allowance, file_left)
     claim = None
     cut = [None]
-    for hay in _haystacks(data, allowance, cut):
+    for hay in _haystacks(data, allowance, cut, file_left):
         for packet in _packets(hay, cut):
             claim = _claim_in(packet)
             if claim:
@@ -794,5 +807,5 @@ def _read(data: bytes, allowance: Optional[List[int]]):
         if claim:
             break
     return (PdfFacts(is_pdf=is_pdf, header=header, encrypted=encrypted,
-                     pdfa_claim=claim),
+                     pdfa_claim=claim, page_count=count, page_count_why=count_why),
             cut[0] if claim is None else None)

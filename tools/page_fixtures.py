@@ -81,8 +81,10 @@ def prev_cycle():
     return base.replace(b" /Root 1 0 R", f" /Root 1 0 R /Prev {at}".encode("ascii"), 1)
 
 
-def compressed(count=7, predictor=False):
+def compressed(count=7, predictor=False, object_cycle=False, compressed_claim=False):
     values = objects(count)
+    if compressed_claim:
+        values[100] = stream(zlib.compress(XMP), b" /Type /Metadata /Subtype /XML /Filter /FlateDecode")
     catalog, pages = values.pop(1), values.pop(2)
     first_body = catalog + b"\n"
     header = f"1 0 2 {len(first_body)} ".encode("ascii")
@@ -97,7 +99,9 @@ def compressed(count=7, predictor=False):
     at = positions[103] = len(data)
     rows = []
     for number in range(104):
-        if number in (1, 2):
+        if object_cycle and number == 102:
+            row = b"\x02" + (102).to_bytes(4, "big") + b"\x00\x00"
+        elif number in (1, 2):
             row = b"\x02" + (102).to_bytes(4, "big") + (number - 1).to_bytes(2, "big")
         elif number in positions:
             row = b"\x01" + positions[number].to_bytes(4, "big") + b"\x00\x00"
@@ -174,4 +178,6 @@ def cases():
         "bad-xref": ("7", classic().replace(b"\nxref\n", b"\nxxxx\n"), "xref"),
         "real-count": ("7", classic("7.0", leaves=7), "integer"),
         "large-count": ("7", classic("9" * 4301, leaves=1), "range"),
+        "object-stream-cycle": ("7", compressed(object_cycle=True), "cycle"),
+        "compressed-claim": ("7", compressed(compressed_claim=True), 7),
     }

@@ -136,3 +136,51 @@ def test_xref_resolution_stops_at_its_section_cap(monkeypatch):
     facts = vdi2770.read_pdf(body, page_count=True)
     assert facts.page_count is None
     assert "xref section limit" in facts.page_count_why
+
+
+@pytest.mark.parametrize("limit", ["file", "read"])
+def test_page_reading_spends_the_shared_inflation_before_claim_search(monkeypatch, limit):
+    from vdi2770 import pdfread
+
+    body = pdf("compressed-claim")
+    real = pdfread.zlib.decompressobj
+    expanded = []
+
+    class Counted:
+        def __init__(self):
+            self.inner = real()
+
+        def decompress(self, body, cap):
+            out = self.inner.decompress(body, cap)
+            expanded.append(len(out))
+            return out
+
+        @property
+        def eof(self):
+            return self.inner.eof
+
+    monkeypatch.setattr(pdfread.zlib, "decompressobj", Counted)
+    if limit == "file":
+        monkeypatch.setattr(pdfread, "MAX_INFLATED_TOTAL", 1000)
+    read = pdfread.reader(1000 if limit == "read" else pdfread.MAX_INFLATED_PER_READ)
+    facts, cut = read(body, page_count=True)
+    assert facts.page_count == 7, "claim search must not spend the allowance first"
+    assert sum(expanded) <= 1000
+    assert facts.pdfa_claim is None
+    assert cut == limit
+    print("shared-page-inflation", limit, expanded)
+
+
+def test_a_latest_null_root_is_not_replaced_by_an_older_root(monkeypatch):
+    import re
+
+    from conftest import ROOT
+
+    monkeypatch.syspath_prepend(str(ROOT / "tools"))
+    from page_fixtures import append_revision
+
+    body = pdf("equal")
+    previous = int(re.findall(rb"startxref\n([0-9]+)", body)[-1])
+    body = append_revision(body, {200: b"0"}, root=None, prev=previous, extra=b" /Root null")
+    facts = vdi2770.read_pdf(body, page_count=True)
+    assert facts.page_count is None and "Root" in facts.page_count_why
