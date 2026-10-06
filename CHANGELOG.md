@@ -2,6 +2,36 @@
 
 Sections through 0.7.0 had their wording tidied after their tags; the text each version carried when it was published is in that tag's own `CHANGELOG.md`. From 0.8.0 on, a released section is frozen at its tag and takes only appended `*(Correction ...)*` lines.
 
+## 0.11.0 — unreleased
+
+Who should take this release: readers comparing metadata with a PDF revision.
+
+- **P6 compares page declarations**: a version's NumberOfPages and its sole
+  declared PDF's root page-tree Count. A mismatch is warning/ours; rendered
+  pages are not counted. The seven versions in vdi2770_excel.zip use template
+  values 10, 100 and 4 beside PDFs declaring one page: seven new warnings,
+  with the default exit unchanged at 0. The generated table in `docs/official-samples.md`
+  records them. Other existing corpus verdicts do not move.
+- **A declined page-tree comparison says why** through P6 on the tool axis
+  and read.complete=false. Page-tree reading runs before PDF/A claim search
+  and shares the file/stream/read inflation ceilings. Header, indirect-object
+  and encryption checks keep running; encrypted files are not compared.
+- **PDF access is bounded**: last startxref, xref tables/streams, Root and Pages,
+  incremental updates, object streams and Annex F ordering; no recovery scan.
+  The reader limits sections to 64, object interpretations to 16 and windows
+  to 64 KiB. Root Count zero is reported as declaring no pages.
+- **NumberOfPages keeps its original value** and both X2 and P6 use the XSD
+  ASCII grammar without converting the metadata to int. Long finite positive
+  values no longer depend on Python's decimal conversion limit; underscores
+  and non-ASCII digits remain X2 errors. Comparison and quoting are bounded.
+- **The metadata attribute allowance remains 100,000**: 1,600× above the worst document
+  **64** attributes in the current corpus and fixtures. The same 100,000
+  allowance is 1,600× the worst document when the per-element and total caps
+  are considered together; neither cap was increased.
+- **The reader API adds optional page_count/page_count_why** and preserves
+  existing positional dataclass construction. The two distributions share
+  version 0.11.0.
+
 ## 0.10.3 — 2026-09-25
 
 Who should take this release: nobody for what it judges. No rule, verdict, exit

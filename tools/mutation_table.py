@@ -702,7 +702,7 @@ TABLE = [
 
     ("gates/the-pin-names-the-reader-that-was-built",
      "packages/vdi2770/pyproject.toml",
-     'version = "0.10.3"',
+     'version = "0.11.0"',
      'version = "0.7.1"',
      ["tools/check_wheel.py"],
      "the two manifests agree with each other and the artifacts do not: the "
@@ -1150,7 +1150,7 @@ FRONT_DOOR = [
 
     ("gates/the-page-quotes-the-requirement-the-project-declares",
      "README.md",
-     "`vdi2770[validate]==0.10.3`",
+     "`vdi2770[validate]==0.11.0`",
      "`vdi2770[validate]>=0.7.0`",
      ["tests/test_the_front_page_points_at_what_it_shows.py::"
       "test_the_requirement_the_page_quotes_is_the_one_the_project_declares"],
@@ -1159,7 +1159,7 @@ FRONT_DOOR = [
 
     ("gates/the-page-pypi-shows-quotes-the-requirement-the-project-declares",
      "README-vdi2770-validate.md",
-     "`vdi2770[validate]==0.10.3`",
+     "`vdi2770[validate]==0.11.0`",
      "`vdi2770[validate]==0.9.1`",
      ["tests/test_the_front_page_points_at_what_it_shows.py::"
       "test_the_requirement_the_page_quotes_is_the_one_the_project_declares"],
@@ -1168,7 +1168,7 @@ FRONT_DOOR = [
 
     ("gates/the-badge-counts-the-catalogue",
      "README.md",
-     "rules-42_each_with_a_remedy",
+     "rules-43_each_with_a_remedy",
      "rules-41_each_with_a_remedy",
      ["tests/test_the_front_page_points_at_what_it_shows.py::"
       "test_the_badge_that_counts_rules_counts_the_catalogue"],
@@ -2287,7 +2287,7 @@ LISTING_BUDGET_ROWS = [
 
     ("pages/a-pin-a-reader-runs-is-past-every-advisory",
      "README.md",
-     'pip install "vdi2770-validate==0.10.3"',
+     'pip install "vdi2770-validate==0.11.0"',
      'pip install "vdi2770-validate==0.7.0"',
      ["tests/test_an_advisory_and_its_release_name_each_other.py::"
       "test_every_pin_a_page_hands_a_reader_is_past_every_advisory"],
@@ -2297,7 +2297,7 @@ LISTING_BUDGET_ROWS = [
 
     ("pages/an-action-ref-a-reader-copies-is-past-every-advisory",
      "README.md",
-     "| `uses: dev365code/vdi2770-validate@v0.10.3` |",
+     "| `uses: dev365code/vdi2770-validate@v0.11.0` |",
      "| `uses: dev365code/vdi2770-validate@v0.7.0` |",
      ["tests/test_an_advisory_and_its_release_name_each_other.py::"
       "test_every_pin_a_page_hands_a_reader_is_past_every_advisory"],
@@ -2307,7 +2307,7 @@ LISTING_BUDGET_ROWS = [
 
     ("pages/a-ref-written-alone-is-past-every-advisory",
      "README.md",
-     "`@v0.10.3` installs 0.10.3",
+     "`@v0.11.0` installs 0.11.0",
      "`@v0.7.0` installs 0.7.0",
      ["tests/test_an_advisory_and_its_release_name_each_other.py::"
       "test_every_pin_a_page_hands_a_reader_is_past_every_advisory"],
@@ -2316,7 +2316,7 @@ LISTING_BUDGET_ROWS = [
 
     ("pages/a-pin-in-a-sentence-is-past-every-advisory",
      "README.md",
-     "`vdi2770-validate==0.10.3` installs one matching pair.",
+     "`vdi2770-validate==0.11.0` installs one matching pair.",
      "`vdi2770-validate==0.9.6` installs one matching pair.",
      ["tests/test_an_advisory_and_its_release_name_each_other.py::"
       "test_every_pin_a_page_hands_a_reader_is_past_every_advisory"],
@@ -2335,7 +2335,7 @@ LISTING_BUDGET_ROWS = [
     ("pages/a-closed-advisory-is-not-listed-as-open",
      "docs/advisories.json",
      '"through": "0.9.6",\n      "fixed_in": "0.9.7",\n      "corrections": []',
-     '"through": "0.10.3",\n      "fixed_in": null,\n      "open": "0.9.7 closed part of it; the rest is not yet closed by any release.",\n      "corrections": []',
+     '"through": "0.11.0",\n      "fixed_in": null,\n      "open": "0.9.7 closed part of it; the rest is not yet closed by any release.",\n      "corrections": []',
      ["tests/test_an_advisory_and_its_release_name_each_other.py::"
       "test_each_advisory_is_cited_where_the_record_puts_it"],
      "an advisory the changelog says a release fixed, recorded as open, "
@@ -2343,7 +2343,7 @@ LISTING_BUDGET_ROWS = [
 
     ("pages/a-fix-a-correction-took-back-is-not-named",
      "docs/advisories.json",
-     '"through": "0.10.3",\n      "fixed_in": null,',
+     '"through": "0.11.0",\n      "fixed_in": null,',
      '"through": "0.9.5",\n      "fixed_in": "0.9.6",',
      ["tests/test_an_advisory_and_its_release_name_each_other.py::"
       "test_each_advisory_is_cited_where_the_record_puts_it"],
@@ -2353,7 +2353,7 @@ LISTING_BUDGET_ROWS = [
 
     ("pages/an-advisory-no-release-closes-reaches-the-one-being-written",
      "docs/advisories.json",
-     '"through": "0.10.3",',
+     '"through": "0.11.0",',
      '"through": "0.10.1",',
      ["tests/test_an_advisory_and_its_release_name_each_other.py::"
       "test_each_advisory_is_cited_where_the_record_puts_it"],
@@ -2464,16 +2464,16 @@ LISTING_BUDGET_ROWS = [
 
     ("gates/the-picture-draws-what-the-data-says",
      "docs/capabilities.json",
-     '"now": 39, "target": 39,',
-     '"now": 38, "target": 39,',
+     '"now": 40,\n      "target": 40,',
+     '"now": 39,\n      "target": 40,',
      ["tests/test_capabilities_current.py::test_rendered_files_match_the_data"],
      "a count on the front-page picture that the file it is drawn from no longer "
      "says, and no sentence in the repository says either"),
 
     ("gates/a-done-item-points-at-a-file-that-says-it",
      "docs/capabilities.json",
-     '{"file": "action.yml",',
-     '{"file": "pyproject.toml",',
+     '"file": "action.yml",',
+     '"file": "pyproject.toml",',
      ["tests/test_capabilities_current.py::test_every_piece_of_evidence_says_what_it_is_cited_for"],
      "an entrance drawn as done on the strength of a file that does not say "
      "what it is cited for"),
@@ -2489,7 +2489,7 @@ LISTING_BUDGET_ROWS = [
 
     ("gates/the-page-behind-the-picture-counts-what-it-draws",
      "docs/what-it-catches.md",
-     "**Now.** 39 of 42 rules have a minimal fixture pair",
+     "**Now.** 40 of 43 rules have a minimal fixture pair",
      "**Now.** 38 of 42 rules have a minimal fixture pair",
      ["tests/test_the_front_door_pictures_are_true.py::"
       "test_the_page_behind_the_picture_marks_what_the_picture_draws"],

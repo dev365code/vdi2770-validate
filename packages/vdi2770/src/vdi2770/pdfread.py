@@ -1,14 +1,10 @@
-"""Four facts about a PDF, read by scanning bytes.
+"""PDF claims and an optional bounded root page-tree declaration.
 
-We deliberately do not use a PDF parsing library. We need whether the file is a
-PDF at all, its header, whether it is encrypted, and what PDF/A level it
-*claims* in its XMP packet — the four the summary line names, and the four
-`PdfFacts` carries; this paragraph used to say three and forget `is_pdf`.
-Pulling a full parser for untrusted supplier files, to read four facts, is a
-poor trade in both dependency weight and attack surface.
-
-What this cannot do: verify a PDF/A claim. Only a PDF/A validator can. The
-report says so every time it prints a claim.
+The basic scan reports is_pdf, header, encryption and a PDF/A claim. An opt-in
+page-count read follows xref to Root, Catalog, Pages and Count before the claim
+search, sharing its inflation budgets. Count is a declaration, not rendered
+pages. A refusal is carried in page_count_why. This reader does not verify
+PDF/A conformance, recover damaged xref, or walk every page-tree leaf.
 """
 from __future__ import annotations
 
@@ -695,7 +691,7 @@ def reader(allowance: int) -> Callable[[bytes], tuple]:
     """`read`, with what it inflates charged to one allowance for the whole read.
 
     Answers `(facts, cut_short)`, where `cut_short` names the limit that ended
-    the claim search early or is `None`. That is not the same answer as "no
+    the claim search early or is None. The optional page result carries its own reason. That is not the same answer as "no
     claim in it", and the caller has to say which: a scan that did not finish
     found nothing, and reporting that as a fact about the file is the shape
     `PdfFacts` exists to keep out of a report.
@@ -718,8 +714,8 @@ def reader(allowance: int) -> Callable[[bytes], tuple]:
         126 files of the kind an ordinary machine is full of reach 4 GiB, so
         this was not a hypothetical.
 
-        `cut_short` says the search for a claim did not finish, which is the one
-        thing the allowance can take away.
+        `cut_short` says the search for a claim did not finish, which is one
+        result the allowance can take away; page_count_why names a page-tree refusal.
 
         It used to be decided here, before the file was looked at: *was the
         allowance already spent when this one came up*. That is true of every
@@ -738,10 +734,10 @@ def reader(allowance: int) -> Callable[[bytes], tuple]:
 
 
 def read(data: bytes, *, page_count: bool = False) -> PdfFacts:
-    """The four facts, with no allowance across files.
+    """The basic facts and optional page_count/page_count_why, without a cross-file allowance.
 
-    This drops whether the claim search was cut short, because `PdfFacts` is a
-    published shape and the answer has nowhere to go in it. A caller that needs
+    This drops whether the claim search was cut short, because claim-search refusal is returned separately by reader().
+    Page-count refusals do travel in page_count_why. A caller that needs
     to tell "no claim" from "stopped looking" -- and a caller reporting on
     somebody else's file does -- takes `reader()` instead, which returns both.
     """

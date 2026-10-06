@@ -84,10 +84,13 @@ supplier archive does not cost you the other four hundred.
 `Location` with the line and column it was written at, which is the reason this
 package parses XML itself instead of handing you an `ElementTree`.
 
-`read_pdf(data)` returns four facts and no verdict: `is_pdf`, `header`,
-`encrypted`, and `pdfa_claim` — the last being what the file's own metadata
-*claims*, such as `"2b"`. Nothing here verifies that claim. Verifying PDF/A takes
-a PDF/A validator, and this is not one.
+`read_pdf(data)` returns is_pdf, header, encrypted and pdfa_claim.
+With `read_pdf(data, page_count=True)`, it also returns page_count and
+page_count_why. The former is the PDF root page tree's Count declaration,
+not a count of rendered leaves; the latter says why this bounded reader
+declined that result. Page-tree reading runs before PDF/A claim search and
+shares its inflation allowance. Encrypted files are not compared.
+Nothing here verifies PDF/A conformance.
 
 **`is_pdf` has three values, not two.** `True` found an indirect object, `False`
 looked at the whole file and found none, and `None` gave up at `MAX_OBJ_PROBES`
@@ -142,14 +145,17 @@ references — a 4.1 KiB archive — held 48 MB before this bound existed and ho
 23 MB now. The last two bound the
 attributes hung off it, which neither of the others sees: attributes are cheap
 to write and the schema check downstream is quadratic in how many sit on one
-element, so 12,000 of them in a 27 KiB archive cost 13.6 seconds. `vdi2770.pdfread` has thirteen of its own for the PDF scan:
+element, so 12,000 of them in a 27 KiB archive cost 13.6 seconds. `vdi2770.pdfread` has fifteen of its own for the PDF scan:
 `MAX_STREAMS` with the `MAX_STREAM_MARKERS` that bounds how many places are
 looked at to find that many — the second exists because a marker the scan
 rejects still costs it something — `MAX_STREAM_SCAN`, `MAX_INFLATED_PER_STREAM`,
 `MAX_INFLATED_TOTAL`, `MAX_INFLATED_PER_READ`, `MAX_OBJ_PROBES`, `MAX_XMP_PACKETS`, `MAX_PDFA_PREFIXES`,
 `MAX_TRAILER_SCAN` with `MAX_TRAILER_BYTES` and the `MAX_TRAILERS` the second is
 derived from — one bounds how much of a single trailer dictionary is read and
-the other how much all of them together may cost — and `MAX_LINE_LOOKBACK`, how
+the other how much all of them together may cost — and `MAX_LINE_LOOKBACK`, plus `MAX_PAGE_OBJECTS` (16 interpretations) and
+`MAX_PAGE_OBJECT_WINDOW` (64 KiB per object or xref table). The page reader
+uses `MAX_TRAILERS` for at most 64 xref sections with a visited set.
+`MAX_LINE_LOOKBACK` bounds how
 far back a token looks for the start of its line, which is what examining one
 costs. That last is small on purpose: it divides into `MAX_TRAILER_BYTES` to
 bound how many tokens are examined at all, and the two attacks it sits between
