@@ -41,13 +41,20 @@ def _positive_integer_hooks():
     >= 1 exactly when at least one digit remains after leading zeros are removed.
     """
     from xmlschema import XMLSchemaValidationError
+    from xmlschema.validators import XsdAttribute
 
     originals = {}
 
     def before_decode(element, xsd_element):
         saved = []
         for name, attribute in xsd_element.attributes.items():
-            if attribute is None or attribute.type.name != _POSITIVE_INTEGER_TYPE:
+            # The table also holds an attribute wildcard, which has no type, and
+            # may hold a declaration the schema prohibits, which it refuses on its
+            # own. Both are stepped over: the one would be a crash reported as the
+            # document's fault, the other a second complaint about one mistake.
+            if not isinstance(attribute, XsdAttribute) or attribute.type is None:
+                continue
+            if attribute.type.name != _POSITIVE_INTEGER_TYPE or attribute.use == "prohibited":
                 continue
             if name not in element.attrib:
                 continue

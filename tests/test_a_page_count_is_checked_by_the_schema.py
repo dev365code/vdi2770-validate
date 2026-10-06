@@ -83,8 +83,9 @@ def test_a_positive_page_count_is_left_alone():
 
 
 # XSD Part 2 §§3.3.13, 3.3.25 and 4.3.6: the contract is run on each Python.
-# Candidate (a): a finite positive integer has no XSD upper digit bound.
-# This is a candidate expectation, pending the controller's policy decision.
+# The schema places no upper bound on the digits of an integer, so a finite
+# positive value is valid at any length and draws nothing. The 4300 that some
+# interpreters stop at is a defence of theirs, not a fact about the document.
 LONG_PAGE_COUNT_FINDINGS = ()
 
 CASES = [
@@ -188,3 +189,77 @@ def test_the_schema_adapter_leaves_the_reader_tree_unchanged():
     errors = xsdvalidate.validate(data, tree)
     assert errors and "NumberOfPages" in errors[0]["reason"]
     assert version.attrib == before == {"NumberOfPages": "1_0"}
+
+
+def test_the_complaint_is_rendered_over_the_original_value():
+    """The stand-in that keeps a long value away from int() must be gone again
+    by the time anybody reads the element: a complaint that quoted "1" where the
+    document says "1_0" would name a value the sender never wrote."""
+    with zipfile.ZipFile(io.BytesIO(container_with("1_0"))) as source:
+        data = source.read("VDI2770_Metadata.xml")
+    before_decode, after_decode = xsdvalidate._positive_integer_hooks()
+    complaints = [err for err in xsdvalidate._schema().iter_errors(
+                      io.BytesIO(data), validation_hook=before_decode,
+                      extra_validator=after_decode)
+                  if "expected xs:positiveInteger" in (err.reason or "")]
+    assert len(complaints) == 1, [err.reason for err in complaints]
+    assert complaints[0].obj.attrib["NumberOfPages"] == "1_0"
+
+
+# A schema of our own making, for the shapes the bundled one does not have:
+# an attribute wildcard, and an attribute declared and then prohibited.
+_OTHER_SHAPES = """<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    targetNamespace="urn:test:shapes" xmlns="urn:test:shapes"
+    elementFormDefault="qualified">
+  <xs:element name="Root">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Open" minOccurs="0">
+          <xs:complexType>
+            <xs:attribute name="N" type="xs:positiveInteger"/>
+            <xs:anyAttribute processContents="lax"/>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="Closed" minOccurs="0">
+          <xs:complexType>
+            <xs:attribute name="N" type="xs:positiveInteger"/>
+            <xs:attribute name="P" type="xs:positiveInteger" use="prohibited"/>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>"""
+
+
+@pytest.fixture
+def other_shapes(monkeypatch):
+    import xmlschema
+
+    schema = xmlschema.XMLSchema(_OTHER_SHAPES)
+    monkeypatch.setattr(xsdvalidate, "_schema", lambda: schema)
+    return schema
+
+
+@pytest.mark.parametrize("value, expected", [("1_0", 1), ("7", 0)])
+def test_an_attribute_wildcard_beside_a_positive_integer_is_not_a_crash(other_shapes, value, expected):
+    """`anyAttribute` arrives in the attribute table as a wildcard with no type.
+    The check must step over it, not fall over it: a crash here is reported as
+    the document's fault, with advice to simplify a document that is fine."""
+    data = f'<Root xmlns="urn:test:shapes"><Open N="{value}" foo="bar"/></Root>'.encode()
+    errors = xsdvalidate.validate(data, vdi2770.parse_xml(data))
+    assert all("broken" not in error for error in errors), errors
+    assert len([e for e in errors if "expected xs:positiveInteger" in e["reason"]]) == expected, errors
+
+
+def test_a_prohibited_attribute_is_refused_once(other_shapes):
+    """The schema already refuses an attribute it prohibits. Judging its value as
+    well would tell the sender two things about one mistake."""
+    data = b'<Root xmlns="urn:test:shapes"><Closed N="1_0" P="1_0"/></Root>'
+    errors = xsdvalidate.validate(data, vdi2770.parse_xml(data))
+    assert all("broken" not in error for error in errors), errors
+    about_p = [e["reason"] for e in errors if "'P'" in e["reason"] or " P " in e["reason"]
+               or e["reason"].startswith("attribute P")]
+    assert len(about_p) == 1, errors
+    assert "expected xs:positiveInteger" not in about_p[0]
+    assert len([e for e in errors if "expected xs:positiveInteger" in e["reason"]]) == 1, errors
