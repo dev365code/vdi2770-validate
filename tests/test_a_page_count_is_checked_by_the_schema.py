@@ -18,12 +18,18 @@ zero, the page becomes wrong and this fails with it rather than after somebody
 notices.
 """
 import io
+import json
+import os
+import subprocess
+import sys
 import zipfile
 
 import pytest
 from vdi2770_validate.runner import check_bytes
 
-from conftest import CORPUS
+import vdi2770
+from conftest import CLEAN_DOCUMENT, CORPUS, under_test
+from vdi2770_validate import xsdvalidate
 
 SAMPLE = CORPUS / "container" / "documentcontainer.zip"
 
@@ -74,3 +80,111 @@ def test_a_positive_page_count_is_left_alone():
     assert "X2" not in ids(with_page_count("7")), (
         'NumberOfPages="7" is a conforming value and drew a schema finding'
     )
+
+
+# XSD Part 2 §§3.3.13, 3.3.25 and 4.3.6: the contract is run on each Python.
+# Candidate (a): a finite positive integer has no XSD upper digit bound.
+# This is a candidate expectation, pending the controller's policy decision.
+LONG_PAGE_COUNT_FINDINGS = ()
+
+CASES = [
+    pytest.param("9" * 4301, LONG_PAGE_COUNT_FINDINGS, id="4301-digits"),
+    pytest.param("1_0", ("X2",), id="underscore"),
+    pytest.param("٧", ("X2",), id="arabic-indic"),
+    pytest.param("+007", (), id="plus-leading-zero"),
+    pytest.param("0", ("X2",), id="zero"),
+    pytest.param("-3", ("X2",), id="negative"),
+    pytest.param("9" * 4300, (), id="4300-digits"),
+    pytest.param("+" + "0" * 4301 + "7", LONG_PAGE_COUNT_FINDINGS, id="long-leading-zero"),
+    pytest.param("0" * 4301, ("X2",), id="long-zero"),
+    pytest.param(" &#x9;+007&#xD;&#xA; ", (), id="xml-whitespace"),
+    pytest.param("\u00a07\u00a0", ("X2",), id="non-xml-whitespace"),
+    pytest.param("1 0", ("X2",), id="internal-space"),
+    pytest.param("", ("X2",), id="empty"),
+    pytest.param("+000", ("X2",), id="signed-zero"),
+]
+
+
+def container_with(value):
+    out = io.BytesIO()
+    with zipfile.ZipFile(CLEAN_DOCUMENT) as source, zipfile.ZipFile(out, "w") as target:
+        for name in source.namelist():
+            data = source.read(name)
+            if name == "VDI2770_Metadata.xml":
+                assert b"<DocumentVersion>" in data
+                data = data.replace(b"<DocumentVersion>",
+                                    f'<DocumentVersion NumberOfPages="{value}">'.encode(), 1)
+            target.writestr(name, data)
+    return out.getvalue()
+
+
+@pytest.mark.parametrize("value, expected", CASES)
+def test_positive_integer_uses_the_xsd_lexical_and_value_spaces(value, expected):
+    report = check_bytes(container_with(value), "pages.zip")
+    # P4 is the sample's PDF/A claim note. Every other finding is part of this
+    # contract, including a crash or an incomplete schema check.
+    assert sorted(f.rule.id for f in report.findings) == sorted(["P4", *expected])
+    for finding in report.findings:
+        if finding.rule.id == "X2":
+            assert "NumberOfPages" in finding.detail
+            assert finding.where.line is not None
+            assert finding.where.xpath.endswith("/DocumentVersion")
+
+
+@pytest.mark.parametrize("limit", ["640", "0"])
+@pytest.mark.parametrize("value, expected", CASES[:6])
+def test_cli_verdict_is_independent_of_the_runtime_digit_limit(tmp_path, limit, value, expected):
+    path = tmp_path / "pages.zip"
+    path.write_bytes(container_with(value))
+    done = subprocess.run(
+        [sys.executable, "-m", "vdi2770_validate", "check", "--json", "--no-bundle", os.fspath(path)],
+        env=under_test(PYTHONINTMAXSTRDIGITS=limit), capture_output=True, text=True)
+    assert done.returncode == (1 if expected else 0), done.stderr
+    document = json.loads(done.stdout)[0]
+    assert sorted(f["rule"] for f in document["findings"]) == sorted(["P4", *expected])
+
+
+@pytest.mark.parametrize("value, expected", CASES)
+def test_the_original_attribute_never_reaches_the_integer_decoder(monkeypatch, value, expected):
+    integer = xsdvalidate._schema().maps.types["{http://www.w3.org/2001/XMLSchema}positiveInteger"]
+    real = integer.to_python
+    decoded = []
+
+    def counting(token):
+        decoded.append(token)
+        return real(token)
+
+    monkeypatch.setattr(integer, "to_python", counting)
+    report = check_bytes(container_with(value), "pages.zip")
+    assert sorted(f.rule.id for f in report.findings) == sorted(["P4", *expected])
+    assert decoded == ["1"], "the original positiveInteger reached int()"
+
+
+def test_other_schema_violations_survive_a_long_positive_integer():
+    with zipfile.ZipFile(io.BytesIO(container_with("9" * 4301))) as source:
+        data = source.read("VDI2770_Metadata.xml")
+    bad = data.replace(b"<ClassId>", b"<NotAThing>").replace(b"</ClassId>", b"</NotAThing>")
+    assert bad != data
+    errors = xsdvalidate.validate(bad, vdi2770.parse_xml(bad))
+    assert errors and all("broken" not in error for error in errors)
+    assert any("NotAThing" in error["reason"] for error in errors)
+    assert all("NumberOfPages" not in error["reason"] for error in errors)
+
+
+def test_a_foreign_attribute_is_not_treated_as_a_schema_positive_integer():
+    data = (b'<Document xmlns="http://www.vdi.de/schemas/vdi2770">'
+            b'<DocumentVersion xmlns="urn:foreign" NumberOfPages="1_0"/></Document>')
+    errors = xsdvalidate.validate(data, vdi2770.parse_xml(data))
+    assert errors and all("broken" not in error for error in errors)
+    assert all("expected xs:positiveInteger" not in error["reason"] for error in errors)
+
+
+def test_the_schema_adapter_leaves_the_reader_tree_unchanged():
+    with zipfile.ZipFile(io.BytesIO(container_with("1_0"))) as source:
+        data = source.read("VDI2770_Metadata.xml")
+    tree = vdi2770.parse_xml(data)
+    version = tree.find("DocumentVersion")
+    before = dict(version.attrib)
+    errors = xsdvalidate.validate(data, tree)
+    assert errors and "NumberOfPages" in errors[0]["reason"]
+    assert version.attrib == before == {"NumberOfPages": "1_0"}

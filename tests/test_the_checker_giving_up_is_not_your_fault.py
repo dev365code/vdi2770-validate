@@ -119,7 +119,7 @@ def test_what_the_schema_check_found_before_it_crashed_is_kept():
     from vdi2770_validate import xsdvalidate
 
     class Truthful:
-        def iter_errors(self, src):
+        def iter_errors(self, src, **kwargs):
             yield type("E", (), {"path": "/Document/A[1]", "reason": "first is wrong"})()
             yield type("E", (), {"path": "/Document/A[2]", "reason": "second is wrong"})()
             raise ValueError("gave up halfway")
@@ -149,7 +149,7 @@ def test_an_exception_with_no_message_does_not_break_the_handler():
     from vdi2770_validate import xsdvalidate
 
     class Silent:
-        def iter_errors(self, src):
+        def iter_errors(self, src, **kwargs):
             raise MemoryError()
 
     real = xsdvalidate._schema
