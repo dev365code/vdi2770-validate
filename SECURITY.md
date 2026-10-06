@@ -73,9 +73,7 @@ same promise the table above makes.
   the file itself, the type a relationship names -- and a CI runner reads a
   line that begins in its own command syntax as an instruction rather than as
   text; the exit code and the JSON were not affected. `vdi2770-validate` from
-  0.1.0 and `vdi2770` from 0.8.0, up to 0.11.0. 0.9.6 closed the newer form of
-  the runner's command syntax; the older form, which the runner reads anywhere
-  in a line, is not yet closed by any release.
+  0.1.0 and `vdi2770` from 0.8.0, before 0.11.0; fixed in 0.11.0.
 
 - [GHSA-3pfq-57fx-w4q5](https://github.com/dev365code/vdi2770-validate/security/advisories/GHSA-3pfq-57fx-w4q5):
   a value the sender wrote -- a class id, a language, the identifier a
@@ -127,8 +125,8 @@ advisories written later reach those releases all the same —
 GHSA-xp97-jcmj-h45f every release of both up to 0.8.0, GHSA-6hqr-phm3-chpf
 every release of the command up to 0.9.4, GHSA-3pfq-57fx-w4q5 every release of
 the command up to 0.9.5, GHSA-h676-59p4-6632 every release of both up to 0.9.6,
-and GHSA-62p8-4642-mwfp every release of the command, which no release yet
-closes in full — so the release to move to is 0.9.7 or later.
+and GHSA-62p8-4642-mwfp every release of the command before 0.11.0, which
+closes it in full — so the release to move to is 0.11.0 or later.
 
 One thing about reading them: below 0.7.0 the reader and the command carried
 separate numbers, and a heading does not say which of the two it belongs to. The
@@ -161,10 +159,9 @@ of GHSA-f9xw-89gp-x52p, and so is 0.9.1: a matched pair of any of them is
 affected, and a mismatched pair is not judged at all. Every release of the
 command up to 0.9.4 is inside the range of GHSA-6hqr-phm3-chpf, every one up to
 0.9.5 inside that of GHSA-3pfq-57fx-w4q5, and every one up to 0.9.6 inside that of
-GHSA-h676-59p4-6632, as well; GHSA-62p8-4642-mwfp reaches every release, and no
-release yet closes it in full.
-Move to **0.9.7** or later, which carries every repair except for
-GHSA-62p8-4642-mwfp and pins both halves
+GHSA-h676-59p4-6632, as well; GHSA-62p8-4642-mwfp reaches releases before
+0.11.0, which closes both forms of the runner's command syntax.
+Move to **0.11.0** or later, which carries every listed repair and pins both halves
 exactly. Do not get there by upgrading the reader on its own — the
 two halves ship under one number and the tool refuses to judge a pair that
 disagrees with itself, which is exit `3` rather than a verdict about your

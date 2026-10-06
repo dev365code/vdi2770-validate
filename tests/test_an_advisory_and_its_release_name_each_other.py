@@ -24,6 +24,8 @@ import importlib.util
 import re
 from pathlib import Path
 
+import pytest
+
 from vdi2770_validate import __version__
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -90,6 +92,54 @@ ADVISORIES = _generator()
 def records():
     """The advisories as `docs/advisories.json` records them, in page order."""
     return ADVISORIES.load()
+
+
+def test_an_exclusive_endpoint_can_be_the_release_that_fixes_it(tmp_path):
+    import copy
+    import json
+
+    record = copy.deepcopy(records()[0])
+    record.update(through="0.11.0", through_inclusive=False, fixed_in="0.11.0")
+    path = tmp_path / "advisories.json"
+    path.write_text(json.dumps({"advisories": [record]}), encoding="utf-8")
+    assert ADVISORIES.load(path) == [record]
+    assert "before 0.11.0; fixed in 0.11.0" in ADVISORIES.reach(record)
+
+
+@pytest.mark.parametrize("inclusive,fixed,start", [
+    (True, "0.11.0", "0.1.0"),
+    (False, "0.10.3", "0.1.0"),
+    (False, "0.11.0", "0.11.0"),
+    ("false", "0.11.0", "0.1.0"),
+])
+def test_an_endpoint_still_refuses_a_fix_inside_it_or_an_empty_range(tmp_path, inclusive, fixed, start):
+    import copy
+    import json
+
+    record = copy.deepcopy(records()[0])
+    record.update(through="0.11.0", through_inclusive=inclusive, fixed_in=fixed)
+    record["from"] = dict.fromkeys(record["from"], start)
+    path = tmp_path / "advisories.json"
+    path.write_text(json.dumps({"advisories": [record]}), encoding="utf-8")
+    with pytest.raises(SystemExit):
+        ADVISORIES.load(path)
+
+
+@pytest.mark.parametrize("inclusive,version,expected", [
+    (True, "0.10.3", False), (True, "0.11.0", False), (True, "0.11.1", True),
+    (False, "0.10.3", False), (False, "0.11.0", True), (False, "0.11.1", True),
+])
+def test_page_advice_observes_both_kinds_of_endpoint(inclusive, version, expected):
+    assert past_range({"through": "0.11.0", "through_inclusive": inclusive}, version) is expected
+
+
+def test_a_later_correction_changes_advice_without_erasing_the_earlier_record():
+    old = "*(Correction 2026-09-24: move to 0.9.7 or later.)*"
+    newer = "*(Correction 2026-10-06: move to 0.11.0 or later.)*"
+    fact = "*(Correction 2026-09-25: the earlier wording describes this field.)*"
+    assert current_correction_advice({"0.9.1": "\n".join([old, fact, newer])}) == [fact, newer]
+    assert current_correction_advice({"0.9.1": old}) == [old]
+    assert current_correction_advice({"0.9.1": fact}) == [fact]
 
 
 def listed_advisories():
@@ -347,7 +397,9 @@ def test_each_advisory_is_cited_where_the_record_puts_it():
             f"its own")
         # And the release that fixed it says how far it reached: the range a
         # reader on an older release reads is the one the record gives.
-        assert any(through in reaches(s) for s in said[fixed_in]), (
+        endpoints = reaches if a.get("through_inclusive", True) else (
+            lambda s: re.findall(r"before\s+(\d+\.\d+\.\d+)(?![\d.]*\d)", s))
+        assert any(through in endpoints(s) for s in said[fixed_in]), (
             f"the record says {advisory} reaches up to {through}, and no sentence "
             f"naming it in the {fixed_in} section says so")
 
@@ -545,10 +597,23 @@ def what_a_reader_is_told():
         assert shown, f"{home}pyproject.toml no longer names the page PyPI shows"
         pages.add(home + shown.group(1))
     told = {page: (ROOT / page).read_text(encoding="utf-8") for page in sorted(pages)}
-    told["a correction in CHANGELOG.md"] = "\n".join(re.findall(
-        r"^\*\(Correct.*\)\*$", (ROOT / "CHANGELOG.md").read_text(encoding="utf-8"),
-        re.M))
+    told["a correction in CHANGELOG.md"] = "\n".join(current_correction_advice(changelog_sections()))
     return told
+
+
+def current_correction_advice(sections):
+    """A later correction of advice supersedes that section's earlier advice."""
+    current = []
+    for section in sections.values():
+        lines = correction_lines(section)
+        advice = [line for line in lines if re.search(r"\d+\.\d+\.\d+\**\s+or later", line)]
+        current.extend(line for line in lines if line not in advice or line == advice[-1])
+    return current
+
+
+def past_range(record, version):
+    end, release = as_number(record["through"]), as_number(version)
+    return release > end if record.get("through_inclusive", True) else release >= end
 
 
 def test_every_release_a_page_sends_a_reader_to_is_past_every_advisory():
@@ -566,10 +631,10 @@ def test_every_release_a_page_sends_a_reader_to_is_past_every_advisory():
     assert sent, "no page says which release to move to; this test reads nothing"
     # An advisory no release closes yet is past no release; the pages name it
     # as the exception wherever they speak of every repair.
-    reach = {a: r for a, (fixed, r) in listed_advisories().items() if fixed}
+    reach = {a["id"]: a for a in records() if a["fixed_in"]}
     inside = [f"{page} sends a reader to {v}, and {a} reaches up to {r}"
               for page, v in sent for a, r in sorted(reach.items())
-              if as_number(v) <= as_number(r)]
+              if not past_range(r, v)]
     assert not inside, inside
 
 
@@ -609,10 +674,10 @@ def test_every_pin_a_page_hands_a_reader_is_past_every_advisory():
                 handed.append((page, release, copied))
     assert any(copied for _, _, copied in handed), (
         "no page hands a reader a pin to copy; this test reads nothing")
-    reach = {a: r for a, (fixed, r) in listed_advisories().items() if fixed}
+    reach = {a["id"]: a for a in records() if a["fixed_in"]}
     inside = [f"{page} hands a reader {v}, and {a} reaches up to {r}"
               for page, v, copied in handed
               if copied or as_number(v) >= PROMISED_FROM
               for a, r in sorted(reach.items())
-              if as_number(v) <= as_number(r)]
+              if not past_range(r, v)]
     assert not inside, inside

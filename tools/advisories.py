@@ -52,7 +52,7 @@ def _refuse(advisory: str, why: str) -> None:
 
 def load(path: Path = DATA) -> list:
     """The advisories, in the order the page lists them, refused where the record
-    cannot be true: a fix that is not after the range it closes, an entry that
+    cannot be true: a fix inside the range it closes, an entry that
     names a fix and says no release closes it, a claim taken back after the
     release that did close it.
 
@@ -70,7 +70,7 @@ def load(path: Path = DATA) -> list:
         if name in seen:
             _refuse(name, "listed twice")
         seen.add(name)
-        extra = set(a) - {"id", "text", "from", "through", "fixed_in", "open",
+        extra = set(a) - {"id", "text", "from", "through", "through_inclusive", "fixed_in", "open",
                           "corrections"}
         if extra:
             _refuse(name, f"fields this generator does not read: {sorted(extra)}")
@@ -85,15 +85,20 @@ def load(path: Path = DATA) -> list:
         if not isinstance(froms, dict) or tuple(sorted(froms)) != tuple(sorted(DISTRIBUTIONS)):
             _refuse(name, f"`from` names each of {DISTRIBUTIONS} and nothing else")
         through = a.get("through")
+        inclusive = a.get("through_inclusive", True)
+        if not isinstance(inclusive, bool):
+            _refuse(name, "`through_inclusive` is a boolean; omitted means inclusive")
         for v in [*froms.values(), through]:
             if not isinstance(v, str) or not VERSION.fullmatch(v):
                 _refuse(name, f"{v!r} is not a version")
-        if any(number(v) > number(through) for v in froms.values()):
-            _refuse(name, "a range that starts after it ends")
+        if any(number(v) > number(through) or (not inclusive and number(v) == number(through))
+               for v in froms.values()):
+            _refuse(name, "a range that starts after it ends or contains no release")
         fixed = a.get("fixed_in")
         if fixed is not None and (not isinstance(fixed, str) or not VERSION.fullmatch(fixed)):
             _refuse(name, f"`fixed_in` {fixed!r} is neither a version nor null")
-        if fixed is not None and number(fixed) <= number(through):
+        if fixed is not None and (number(fixed) < number(through)
+                                  or (inclusive and number(fixed) == number(through))):
             _refuse(name, f"fixed in {fixed}, which is inside the range it closes (up to {through})")
         if (fixed is None) != ("open" in a):
             _refuse(name, "`open` says what is still open, and only an entry no release "
@@ -129,7 +134,8 @@ def reach(a: dict) -> str:
     else:
         who = f"`vdi2770-validate` from {f['vdi2770-validate']} and `vdi2770` from {f['vdi2770']}"
     tail = f"; fixed in {a['fixed_in']}." if a["fixed_in"] else f". {a['open']}"
-    return f"{who}, up to {a['through']}{tail}"
+    endpoint = "up to" if a.get("through_inclusive", True) else "before"
+    return f"{who}, {endpoint} {a['through']}{tail}"
 
 
 def entry(a: dict, owner: str) -> str:

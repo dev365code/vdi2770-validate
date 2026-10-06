@@ -194,7 +194,7 @@ on to whatever reads the number; with the default you would add
 | Input | What it is |
 |---|---|
 | `paths` | the containers to check, separated by spaces |
-| `version` | which release to install. Left empty it is the ref you pinned — `@v0.11.0` installs 0.11.0 — falling back to the version the action's own checkout publishes, so `@main` may name a version not on the index yet. **The rules travel with the engine**: an older `version` is an older rule set and may return a different verdict. Four releases cannot be asked for at all: 0.8.0, 0.8.1, 0.8.2 and 0.9.0 name their engine with a floor, so installing one brings a newer engine beside it and the tool refuses to judge a pair that disagrees with itself (exit 3). Ask for 0.9.7 or later: every earlier release is inside the range of GHSA-h676-59p4-6632 |
+| `version` | which release to install. Left empty it is the ref you pinned — `@v0.11.0` installs 0.11.0 — falling back to the version the action's own checkout publishes, so `@main` may name a version not on the index yet. **The rules travel with the engine**: an older `version` is an older rule set and may return a different verdict. Four releases cannot be asked for at all: 0.8.0, 0.8.1, 0.8.2 and 0.9.0 name their engine with a floor, so installing one brings a newer engine beside it and the tool refuses to judge a pair that disagrees with itself (exit 3). Ask for 0.11.0 or later, which closes every advisory this repository lists |
 | `pyz` | a `vdi2770.pyz` you already have. Given, **this action installs nothing and fetches nothing** |
 | `sha256` | the hash `pyz` must have. For a file carried into a closed network; the default path does not need it, because `pip` checks the index's own hashes |
 | `args` | anything else for `check`, such as `--json` |
@@ -501,7 +501,7 @@ answer it gives today is the answer it gave when you signed off on it. From
 
 Four releases cannot be pinned that way: 0.8.0, 0.8.1, 0.8.2 and 0.9.0 name
 their engine with a floor, and a floor stops holding the moment a newer engine
-exists. Move to 0.9.7 or later, which pins both halves exactly — and pinning
+exists. Move to 0.11.0 or later, which pins both halves exactly — and pinning
 one of those four by both names is not a way to stay put, because every release
 from 0.8.0 to 0.9.1 is inside the range of GHSA-f9xw-89gp-x52p:
 
@@ -514,8 +514,8 @@ is inside GHSA-h676-59p4-6632, every one up to 0.9.5 inside GHSA-3pfq-57fx-w4q5,
 every one up to 0.9.4 inside GHSA-6hqr-phm3-chpf, and every one before 0.9.2
 inside another advisory as well — GHSA-xp97-jcmj-h45f reaches every release up
 to 0.8.0, and GHSA-f9xw-89gp-x52p every release from 0.8.0 to 0.9.1 — so 0.9.7
-is the first release outside all of them except GHSA-62p8-4642-mwfp, which no
-release yet closes in full. The pin runs one way: the engine does not
+is the first release outside those five. GHSA-62p8-4642-mwfp reaches releases
+before 0.11.0, which closes it in full. The pin runs one way: the engine does not
 name this package back, so upgrading the engine alone beside an older command
 leaves a mismatched pair, and a command from 0.8.0 on refuses that pair rather
 than judging with it (exit `3`).

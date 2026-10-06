@@ -32,6 +32,8 @@ Who should take this release: readers comparing metadata with a PDF revision.
   existing positional dataclass construction. The two distributions share
   version 0.11.0.
 
+Security: [GHSA-62p8-4642-mwfp](https://github.com/dev365code/vdi2770-validate/security/advisories/GHSA-62p8-4642-mwfp), for the runner's older syntax read anywhere in a text-report or stderr line: spell its first character so it remains text; reaching vdi2770-validate from 0.1.0 and vdi2770 from 0.8.0 before 0.11.0; fixed in 0.11.0.
+
 ## 0.10.3 — 2026-09-25
 
 Who should take this release: nobody for what it judges. No rule, verdict, exit
@@ -687,6 +689,8 @@ No verdict moves in this release. A container judged by 0.9.0 is judged the
 same way here; the only difference a report shows is `toolVersion`.
 
 *(Correction 2026-09-24: pinning 0.8.0, 0.8.1, 0.8.2 or 0.9.0 by both names, as advised above, keeps a release inside the range of five security advisories published since, which SECURITY.md lists; move to 0.9.7 or later instead, which pins both halves exactly.)*
+
+*(Correction 2026-10-06: the version advice in the correction above is superseded; move to 0.11.0 or later, which closes every advisory SECURITY.md lists and pins both halves exactly.)*
 
 ## 0.9.0 — 2026-09-20
 
