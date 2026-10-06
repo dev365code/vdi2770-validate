@@ -73,8 +73,8 @@ def test_a_positive_page_count_is_left_alone():
 
 
 # XSD Part 2 §§3.3.13, 3.3.25 and 4.3.6: the contract is run on each Python.
-# Candidate (a): a finite positive integer has no XSD upper digit bound.
-# This is a candidate expectation, pending the controller's policy decision.
+# A finite positive integer has no XSD upper digit bound. P6 separately
+# compares the normalized declaration without int(), including long values.
 LONG_PAGE_COUNT_FINDINGS = ()
 
 CASES = [

@@ -1,7 +1,6 @@
 """PDF rules (P). We report what a PDF claims. We never report a claim as a verdict."""
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass
 from typing import Iterator
 
@@ -56,7 +55,6 @@ RESERVED = "the reserved main document"
 
 # XSD Part 2 §§3.3.13, 3.3.25, 4.3.6. This is eligibility for comparing,
 # not another finding for the lexical/value-space violations X2 already names.
-_POSITIVE_PAGES = re.compile(r"[ \t\r\n]*\+?[0-9]+[ \t\r\n]*")
 MAX_PAGE_NUMBER_QUOTE = 80
 
 
@@ -65,9 +63,14 @@ def page_targets(container, document):
     members = Members(container.file_names)
     for version in document.versions:
         raw = version.number_of_pages
-        if raw is None or _POSITIVE_PAGES.fullmatch(raw) is None:
+        if raw is None:
             continue
-        digits = raw.strip(" \t\r\n").lstrip("+").lstrip("0")
+        digits = raw.strip(" \t\r\n")
+        if digits.startswith("+"):
+            digits = digits[1:]
+        if not digits or not all("0" <= c <= "9" for c in digits):
+            continue
+        digits = digits.lstrip("0")
         if not digits:
             continue
         names = {members.resolve(f.file_name) for f in version.files

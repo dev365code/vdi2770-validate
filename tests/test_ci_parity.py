@@ -638,6 +638,7 @@ def test_the_fixture_generator_owns_its_output_directory(tmp_path):
 
     (tmp_path / "tools").mkdir()
     shutil.copy2(ROOT / "tools" / "make_fixtures.py", tmp_path / "tools")
+    shutil.copy2(ROOT / "tools" / "page_fixtures.py", tmp_path / "tools")
     # The whole corpus, not the files the generator happens to read today: an
     # enumeration here would turn "the generator started using another example"
     # into a failure of this test, which is about something else.

@@ -16,8 +16,9 @@ _INTEGER = re.compile(rb"[+-]?[0-9]+")
 _ROW = re.compile(rb"([0-9]{10}) ([0-9]{5}) ([nf])(?: \r| \n|\r\n)")
 
 
-class Declined(ValueError):
-    pass
+# Refusals use a catchable builtin and are converted to page_count_why.
+# This private reader introduces no new exception type in the public API.
+Declined = ValueError
 
 
 class Name(str):
