@@ -1,0 +1,177 @@
+"""Reproducible PDF declarations for the page-tree reader's fixture contracts.
+
+ISO 32000-1 §§7.5.4, 7.5.7, 7.5.8, 7.7.3.2 and Annex F. No PDF library,
+external executable, or hand-maintained binary is needed to rebuild these.
+"""
+import re
+import zlib
+
+XMP = (b'<x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF '
+       b'xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">'
+       b'<rdf:Description xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/" '
+       b'pdfaid:part="2" pdfaid:conformance="b"/></rdf:RDF></x:xmpmeta>')
+
+
+def stream(body, extra=b""):
+    return b"<< /Length " + str(len(body)).encode("ascii") + extra + b" >>\nstream\n" + body + b"\nendstream"
+
+
+def objects(count, leaves=None, portfolio=False):
+    leaves = count if leaves is None else leaves
+    kids = b" ".join(f"{n} 0 R".encode("ascii") for n in range(3, 3 + leaves))
+    result = {
+        1: b"<< /Type /Catalog /Pages 2 0 R /Metadata 100 0 R"
+           + (b" /Collection << >>" if portfolio else b"") + b" >>",
+        2: b"<< /Type /Pages /Count " + str(count).encode("ascii") + b" /Kids [" + kids + b"] >>",
+        100: stream(XMP, b" /Type /Metadata /Subtype /XML"),
+    }
+    for n in range(3, 3 + leaves):
+        result[n] = b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 100] >>"
+    return result
+
+
+def append_revision(base, values, root=1, prev=None, extra=b""):
+    data = bytearray(base)
+    positions = {}
+    for number, body in sorted(values.items()):
+        positions[number] = len(data)
+        data.extend(f"{number} 0 obj\n".encode("ascii") + body + b"\nendobj\n")
+    at = len(data)
+    data.extend(b"xref\n")
+    if not base.endswith(b"\n") or b"startxref" not in base:
+        size = max(values) + 1
+        data.extend(f"0 {size}\n".encode("ascii"))
+        for number in range(size):
+            data.extend((f"{positions[number]:010d} 00000 n \n" if number in positions
+                         else "0000000000 65535 f \n").encode("ascii"))
+    else:
+        size = max(max(values), 100) + 1
+        for number in sorted(values):
+            data.extend(f"{number} 1\n{positions[number]:010d} 00000 n \n".encode("ascii"))
+    trailer = f"<< /Size {size}".encode("ascii")
+    if root is not None:
+        trailer += f" /Root {root} 0 R".encode("ascii")
+    if prev is not None:
+        trailer += f" /Prev {prev}".encode("ascii")
+    data.extend(b"trailer\n" + trailer + extra + b" >>\nstartxref\n" + str(at).encode("ascii") + b"\n%%EOF\n")
+    return bytes(data)
+
+
+def classic(count=7, leaves=None, encrypted=False, portfolio=False, cycle=False, padding=0):
+    values = objects(count, leaves, portfolio)
+    if cycle:
+        values[1] = b"<< /Type /Catalog /Pages 1 0 R /Metadata 100 0 R >>"
+    if padding:
+        values[2] = b"<< /Padding (" + b"x" * padding + b") /Count " + str(count).encode("ascii") + b" >>"
+    return append_revision(b"%PDF-1.7\n", values, extra=b" /Encrypt 99 0 R" if encrypted else b"")
+
+
+def incremental():
+    initial = classic(2)
+    previous = int(re.findall(rb"startxref\n([0-9]+)", initial)[-1])
+    return append_revision(initial, {
+        2: b"<< /Type /Pages /Count 3 /Kids [3 0 R 4 0 R 5 0 R] >>",
+        5: b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 100] >>",
+    }, root=None, prev=previous)
+
+
+def prev_cycle():
+    base = classic()
+    at = base.index(b"xref\n")
+    return base.replace(b" /Root 1 0 R", f" /Root 1 0 R /Prev {at}".encode("ascii"), 1)
+
+
+def compressed(count=7, predictor=False):
+    values = objects(count)
+    catalog, pages = values.pop(1), values.pop(2)
+    first_body = catalog + b"\n"
+    header = f"1 0 2 {len(first_body)} ".encode("ascii")
+    payload = header + first_body + pages
+    values[102] = stream(zlib.compress(payload),
+                         f" /Type /ObjStm /N 2 /First {len(header)} /Filter /FlateDecode".encode("ascii"))
+    data = bytearray(b"%PDF-1.7\n")
+    positions = {}
+    for number, body in sorted(values.items()):
+        positions[number] = len(data)
+        data.extend(f"{number} 0 obj\n".encode("ascii") + body + b"\nendobj\n")
+    at = positions[103] = len(data)
+    rows = []
+    for number in range(104):
+        if number in (1, 2):
+            row = b"\x02" + (102).to_bytes(4, "big") + (number - 1).to_bytes(2, "big")
+        elif number in positions:
+            row = b"\x01" + positions[number].to_bytes(4, "big") + b"\x00\x00"
+        else:
+            row = b"\x00" * 5 + b"\xff\xff"
+        rows.append(row)
+    payload = b"".join(rows)
+    extra = b" /Type /XRef /Size 104 /Root 1 0 R /W [1 4 2] /Index [0 104] /Filter /FlateDecode"
+    if predictor:
+        previous = bytes(7)
+        encoded = []
+        for row in rows:
+            encoded.append(b"\x02" + bytes((x - y) % 256 for x, y in zip(row, previous)))
+            previous = row
+        payload = b"".join(encoded)
+        extra += b" /DecodeParms << /Predictor 12 /Columns 7 >>"
+    data.extend(b"103 0 obj\n" + stream(zlib.compress(payload), extra) + b"\nendobj\n"
+                + b"startxref\n" + str(at).encode("ascii") + b"\n%%EOF\n")
+    return bytes(data)
+
+
+def linearized():
+    """Annex F's first-page xref -> forward Prev -> main xref layout."""
+    values = objects(7)
+    prefix = (b"%PDF-1.7\n150 0 obj\n<< /Linearized 1 /L 0000000000 /H [0 0] "
+              b"/O 3 /E 0000000000 /N 7 /T 0000000000 >>\nendobj\n")
+    first = len(prefix)
+    front = (b"xref\n1 2\n0000000000 00000 n \n0000000000 00000 n \n"
+             b"trailer\n<< /Size 151 /Root 1 0 R /Prev 0000000000 >>\n")
+    data = bytearray(prefix + front)
+    positions = {150: 9}
+    for number, body in sorted(values.items()):
+        positions[number] = len(data)
+        data.extend(f"{number} 0 obj\n".encode("ascii") + body + b"\nendobj\n")
+    main = len(data)
+    data.extend(b"xref\n0 151\n")
+    for number in range(151):
+        data.extend((f"{positions[number]:010d} 00000 n \n" if number in positions
+                     else "0000000000 65535 f \n").encode("ascii"))
+    data.extend(b"trailer\n<< /Size 151 >>\nstartxref\n" + str(first).encode("ascii") + b"\n%%EOF\n")
+    data[first:first + len(front)] = front.replace(b"0000000000 00000 n", f"{positions[1]:010d} 00000 n".encode("ascii"), 1).replace(
+        b"0000000000 00000 n", f"{positions[2]:010d} 00000 n".encode("ascii"), 1).replace(
+        b"/Prev 0000000000", f"/Prev {main:010d}".encode("ascii"))
+    return bytes(data).replace(b"/L 0000000000", f"/L {len(data):010d}".encode("ascii")).replace(
+        b"/E 0000000000", f"/E {main:010d}".encode("ascii")).replace(
+        b"/T 0000000000", f"/T {main:010d}".encode("ascii"))
+
+
+def cases():
+    """name -> (metadata count, PDF bytes, expected count or refusal reason)."""
+    return {
+        "equal": ("7", classic(), 7),
+        "different": ("8", classic(), 7),
+        "incremental-equal": ("3", incremental(), 3),
+        "incremental-different": ("2", incremental(), 3),
+        "object-stream": ("7", compressed(), 7),
+        "png-xref": ("7", compressed(predictor=True), 7),
+        "encrypted": ("8", classic(encrypted=True), None),
+        "pages-cycle": ("7", classic(cycle=True), "cycle"),
+        "prev-cycle": ("7", prev_cycle(), "cycle"),
+        "linearized": ("7", linearized(), 7),
+        "portfolio": ("7", classic(portfolio=True), "portfolio"),
+        "zero": ("7", classic(0, leaves=1), 0),
+        "false-count": ("2", classic(5, leaves=2), 5),
+        "long-number": ("9" * 4301, classic(), 7),
+        "plus": ("+007", classic(), 7),
+        "space": (" 7 ", classic(), 7),
+        "invalid-zero": ("0", classic(), 7),
+        "invalid-negative": ("-3", classic(), 7),
+        "invalid-underscore": ("1_0", classic(), 7),
+        "invalid-unicode": ("٧", classic(), 7),
+        "window-limit": ("7", classic(padding=65536), "window"),
+        "missing-startxref": ("7", classic().split(b"startxref")[0], "startxref"),
+        "bad-xref": ("7", classic().replace(b"\nxref\n", b"\nxxxx\n"), "xref"),
+        "real-count": ("7", classic("7.0", leaves=7), "integer"),
+        "large-count": ("7", classic("9" * 4301, leaves=1), "range"),
+    }

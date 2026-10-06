@@ -86,6 +86,9 @@ class DocumentVersion:
     # document somewhere".
     life_cycle_src: Location = Location()
     src: Location = Location()
+    #: The XML attribute value, including whitespace/sign/leading zeros.
+    #: Last and defaulted: existing positional callers keep their meaning.
+    number_of_pages: Optional[str] = None
 
 
 @dataclass(frozen=True)
@@ -292,6 +295,7 @@ def build(root: Node, base: Location) -> Document:
             life_cycle_src=(_loc(base, lcs, lcs.attrib.get("StatusValue", "").strip() or None)
                             if lcs else _loc(base, v)),
             src=_loc(base, v, v.text_of("DocumentVersionId") or None),
+            number_of_pages=v.attrib.get("NumberOfPages"),
         ))
 
     return Document(identifiers=identifiers, classifications=tuple(classifications),

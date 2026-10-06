@@ -16,6 +16,8 @@ import sys
 import zipfile
 from pathlib import Path
 
+from page_fixtures import cases
+
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "packages" / "vdi2770" / "src"))
 from vdi2770 import pdfread  # noqa: E402 - after sys.path
@@ -408,6 +410,28 @@ def main() -> int:
                    'ObjectType="Individual">BR-01</ObjectId>')
     add("m13-type-and-individual.zip", f, "M13", [META],
         "the second ReferencedObject re-filed as an Individual under the first one's id, BR-01")
+
+    # One violating fixture pair, plus the full reader contract (including
+    # normal counterexamples) in a separately described subdirectory.
+    f = dict(base)
+    f[META] = edit(base[META], "<DocumentVersion>", '<DocumentVersion NumberOfPages="7">')
+    add("p6-page-declaration-mismatch.zip", f, "P6", [META],
+        "NumberOfPages=7 beside the original one-page PDF's Count declaration")
+    page_dir = OUT / "pages"
+    page_dir.mkdir(exist_ok=True)
+    for stale in page_dir.iterdir():
+        if stale.is_file():
+            stale.unlink()
+    page_manifest = {}
+    for name, (number, pdf, result) in cases().items():
+        f = dict(base)
+        f[META] = edit(base[META], "<DocumentVersion>", f'<DocumentVersion NumberOfPages="{number}">')
+        f["B.pdf"] = pdf
+        (page_dir / (name + ".zip")).write_bytes(write_bytes(f))
+        page_manifest[name] = {"number": number, "page_count": result,
+                               "basedOn": "documentcontainer.zip", "changed": [META, "B.pdf"]}
+    (page_dir / "MANIFEST.json").write_text(
+        json.dumps(page_manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
     (OUT / "MANIFEST.json").write_text(json.dumps({
         "_about": "The violating half of each rule's fixture pair. Each is one deliberate change to a corpus container.",
