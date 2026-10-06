@@ -44,6 +44,11 @@ failure — files that never claimed at all.
 
 ## Known limits of what *is* in scope
 
+- **Text spelling at the listing limit**: the page charges the visible spelling
+  of runner syntax against the existing listing allowance. It can list fewer
+  findings at that limit and says how many; the stored report, JSON, counts and
+  exit code stay unchanged.
+
 - **Page declarations**: P6 compares only a version with exactly one distinct
   application/pdf member. Several PDFs are not added together or compared.
   Encrypted PDFs are not compared. The root Count is the file's declaration,

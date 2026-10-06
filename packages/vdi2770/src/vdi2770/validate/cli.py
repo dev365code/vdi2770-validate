@@ -139,6 +139,7 @@ def _cmd_check(args) -> int:
             # the machine-readable one, so a consumer diffing two runs of one
             # drop folder sees a change that is not about their files.
             why = getattr(e, "strerror", None) or without_addresses(str(e))
+            # Like the text report, keep the whole stderr line as text to a runner.
             _say(not_a_command(f"{on_one_line(path)}: cannot read it — {on_one_line(why)}"))
             unreadable += 1
             # A path that is not there, or not a file, is the caller's; anything

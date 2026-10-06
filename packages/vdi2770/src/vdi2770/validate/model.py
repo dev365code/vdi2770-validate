@@ -23,7 +23,7 @@ from vdi2770.model import Defect, Location
 from vdi2770.xmlread import NS, UnsafeXml, XmlTooLarge
 from vdi2770.zipread import MAIN_PDF, MAIN_XML, METADATA_XML, Kind
 
-from .names import as_written, on_one_line
+from .names import as_written, not_a_command, on_one_line
 
 #: An exception that names an object names the address it happened to live at,
 #: because that is what `repr` does. Rendered into a finding, that address makes
@@ -226,11 +226,27 @@ def listed_size(f) -> int:
     """
     w = f.where
     said = (f.message, f.detail or "", f.remedy)
+    located = [(_where_bytes(s)[0], _page_bytes(not_a_command(as_written(s))))
+               for s in (w.container or "", w.member or "")]
+    as_json = (sum(_json_bytes(s) for s in said) + sum(j for j, _t in located)
+               + _json_bytes(w.xpath or "") + _json_bytes(w.subject or ""))
+    as_page = (sum(_page_bytes(not_a_command(on_one_line(s))) for s in said)
+               + sum(t for _j, t in located))
+    return LISTED_ALLOWANCE + max(as_json, as_page)
+
+
+def _retained_size(f) -> int:
+    """Keep the collection allowance, and therefore JSON, at its existing contract.
+
+    The text renderer separately charges the visible spelling of runner syntax.
+    The stored strings and the JSON string escaping have not changed.
+    """
+    w = f.where
+    said = (f.message, f.detail or "", f.remedy)
     located = [_where_bytes(s) for s in (w.container or "", w.member or "")]
     as_json = (sum(_json_bytes(s) for s in said) + sum(j for j, _t in located)
                + _json_bytes(w.xpath or "") + _json_bytes(w.subject or ""))
-    as_page = (sum(_page_bytes(on_one_line(s)) for s in said)
-               + sum(t for _j, t in located))
+    as_page = (sum(_page_bytes(on_one_line(s)) for s in said) + sum(t for _j, t in located))
     return LISTED_ALLOWANCE + max(as_json, as_page)
 
 
@@ -303,7 +319,7 @@ class Report:
         # hundred million of them.
         size = 0 if rid in self.over_budget else least_size(f)
         if rid not in self.over_budget and self._spent.get(rid, 0) + size <= LISTING_BUDGET_PER_RULE:
-            size = listed_size(f)
+            size = _retained_size(f)
         if rid in self.over_budget or self._spent.get(rid, 0) + size > LISTING_BUDGET_PER_RULE:
             # Counted, not kept, for the same reason. And once a rule's listing
             # has stopped it stays stopped: a smaller finding after a larger one

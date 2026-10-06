@@ -13,6 +13,7 @@ the same string, and then these assertions pass while testing nothing.
 import re
 import unicodedata
 
+import pytest
 from vdi2770_validate.names import escaped
 
 
@@ -687,3 +688,101 @@ def test_no_line_of_the_page_begins_with_a_command_a_ci_runner_obeys():
                                detail=said, fix=said))
         for line in as_text(report, True).splitlines():
             assert not line.lstrip().startswith(RUNNER_COMMANDS), line
+
+
+LEGACY_LINES = [
+    pytest.param("##[warning]the sender's words", id="start"),
+    pytest.param("the sender's words ##[warning]in the middle", id="middle"),
+    pytest.param("::notice::new form ##[warning]old form ##[error]another", id="mixed"),
+]
+
+
+def legacy_report(site, value):
+    """The three text positions, populated through actual container checks."""
+    import io
+    import zipfile
+
+    from vdi2770_validate.runner import check_bytes
+
+    from conftest import CLEAN_DOCUMENT, FIXTURES
+
+    source = FIXTURES / "m11-refers-to-a-document-not-delivered.zip" if site == "M11" else CLEAN_DOCUMENT
+    with zipfile.ZipFile(source) as archive:
+        files = {name: archive.read(name) for name in archive.namelist()}
+    if site == "M11":
+        name = "VDI2770_Main.xml"
+        assert b'Type="RefersTo"' in files[name]
+        files[name] = files[name].replace(b'Type="RefersTo"', f'Type="{value}"'.encode(), 1)
+    elif site == "Z11":
+        name = "VDI2770_Metadata.xml"
+        child = value + ".zip"
+        files[name] = files[name].replace(
+            b"</DocumentVersion>",
+            f'<DigitalFile FileFormat="application/zip">{child}</DigitalFile></DocumentVersion>'.encode(), 1)
+        files[child] = CLEAN_DOCUMENT.read_bytes()
+    output = io.BytesIO()
+    with zipfile.ZipFile(output, "w", zipfile.ZIP_DEFLATED) as archive:
+        for name, data in files.items():
+            archive.writestr(name, data)
+    return check_bytes(output.getvalue(), value if site == "heading" else "delivery.zip")
+
+
+def legacy_as_text(value):
+    """Visible spelling retains every character in the value."""
+    if value.startswith("::"):
+        value = r"\u003a" + value[1:]
+    return value.replace("##[", r"\u0023#[")
+
+
+@pytest.mark.parametrize("value", LEGACY_LINES)
+@pytest.mark.parametrize("site", ["heading", "M11", "Z11"])
+def test_the_old_runner_form_is_text_wherever_it_occurs(site, value):
+    from vdi2770_validate.report import as_json, as_text
+
+    report = legacy_report(site, value)
+    if site == "heading":
+        assert report.target == value
+    else:
+        findings = [f for f in report.findings if f.rule.id == site]
+        assert len(findings) == 1 and findings[0].detail.startswith(value)
+    before_json = as_json(report)
+    page = as_text(report)
+    assert "##[" not in page, page
+    assert not any(line.lstrip().startswith(RUNNER_COMMANDS) for line in page.splitlines())
+    assert legacy_as_text(value) in page
+    assert as_json(report) == before_json and value in before_json
+
+
+def test_the_same_spelling_covers_every_text_field_and_every_occurrence():
+    from vdi2770_validate.catalog import rules
+    from vdi2770_validate.model import Finding, Location, Report
+    from vdi2770_validate.report import as_text
+
+    said = "before ##[warning]one ### [plain] ##[error]two ####[notice]three"
+    report = Report(target=said)
+    for r in rules().values():
+        report.add(Finding(r, said, Location(container=said, member=said), detail=said, fix=said))
+    page = as_text(report)
+    assert "##[" not in page
+    assert page.count(r"\u0023#[") == len(rules()) * 5 * 3 + 3
+    assert "### [plain]" in page
+
+
+def test_earlier_releases_spelled_the_start_but_left_the_old_form_in_the_middle():
+    import subprocess
+
+    from vdi2770_validate.names import not_a_command
+
+    from conftest import ROOT
+
+    copy = subprocess.run([
+        "git", "show", "v0.9.6:packages/vdi2770/src/vdi2770/validate/names.py"],
+        cwd=ROOT, capture_output=True, text=True)
+    if copy.returncode:
+        pytest.skip("the 0.9.6 release copy is not available here")
+    earlier = {"__name__": "earlier_names"}
+    exec(compile(copy.stdout, "v0.9.6/names.py", "exec"), earlier)
+    start, middle = "##[warning]words", "words ##[warning]in the middle"
+    assert earlier["not_a_command"](start) == legacy_as_text(start)
+    assert earlier["not_a_command"](middle) == middle
+    assert not_a_command(middle) == legacy_as_text(middle)

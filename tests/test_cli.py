@@ -95,6 +95,22 @@ def test_a_path_that_cannot_be_read_is_not_a_command_on_stderr(capsys):
             assert not line.lstrip().startswith(("::", "##")), line
 
 
+@pytest.mark.parametrize("path", [
+    "##[warning]missing.zip",
+    "missing ##[warning]middle.zip",
+    "::notice::new ##[warning]old ##[error]again.zip",
+], ids=["start", "middle", "mixed"])
+def test_the_old_runner_form_is_text_on_stderr(capsys, path):
+    assert main(["check", "--json", path]) == 2
+    captured = capsys.readouterr()
+    assert "cannot read it" in captured.err
+    assert "##[" not in captured.err
+    assert not any(line.lstrip().startswith(("::", "##")) for line in captured.err.splitlines())
+    assert r"\u0023#[" in captured.err
+    payload = json.loads(captured.out)[0]
+    assert payload["path"] == path and payload["unreadable"]
+
+
 def test_a_path_that_cannot_be_read_is_printed_as_it_was_typed(capsys):
     """A backslash is how Windows separates a path, and the line saying the path
     could not be read is where a reader looks for it. Written the way a name
