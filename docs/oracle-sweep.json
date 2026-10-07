@@ -2329,6 +2329,33 @@
           "P6"
         ]
       }
+    },
+    "xref-revisions-14.zip": {
+      "reference": {},
+      "ours": {
+        "info": [
+          "P4"
+        ]
+      }
+    },
+    "xref-revisions-20.zip": {
+      "reference": {},
+      "ours": {
+        "info": [
+          "P4"
+        ]
+      }
+    },
+    "xref-stream-section-limit.zip": {
+      "reference": {},
+      "ours": {
+        "info": [
+          "P4"
+        ],
+        "warning": [
+          "P6"
+        ]
+      }
     }
   },
   "_unswept": {
@@ -2390,6 +2417,9 @@
     "window-limit.zip": "New generated container; the pinned reference has not been run on it.",
     "xref-index-outside-size.zip": "New generated container; the pinned reference has not been run on it.",
     "xref-stream-indirect-length.zip": "New generated container; the pinned reference has not been run on it.",
-    "zero.zip": "New generated container; the pinned reference has not been run on it."
+    "zero.zip": "New generated container; the pinned reference has not been run on it.",
+    "xref-revisions-14.zip": "New generated container; the pinned reference has not been run on it.",
+    "xref-revisions-20.zip": "New generated container; the pinned reference has not been run on it.",
+    "xref-stream-section-limit.zip": "New generated container; the pinned reference has not been run on it."
   }
 }

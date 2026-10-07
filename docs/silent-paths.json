@@ -181,6 +181,20 @@
         "P5"
       ],
       "complete": false
+    },
+    {
+      "fixture": "tests/fixtures/pages/xref-revisions-14.zip",
+      "otherRules": [
+        "P4"
+      ],
+      "complete": true
+    },
+    {
+      "fixture": "tests/fixtures/pages/xref-revisions-20.zip",
+      "otherRules": [
+        "P4"
+      ],
+      "complete": true
     }
   ]
 }
