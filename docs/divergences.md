@@ -13,10 +13,10 @@ check that — the normative text is paywalled.
 
 ## How much of this was measured
 
-There are 93 containers in `corpus/` and
-`tests/fixtures/`. 60 of the 93 containers were put through the reference
+There are 119 containers in `corpus/` and
+`tests/fixtures/`. 60 of the 119 containers were put through the reference
 implementation at its pinned commit `e47c13c`, with locale `en_US`;
-their recorded reference column is unchanged. The 33 generated page-tree
+their recorded reference column is unchanged. The 59 generated page-tree
 fixtures have only our verdict and wait in the recording's `_unswept`
 block for a real reference run. No reference evidence is invented for them.
 [docs/oracle-sweep.json](oracle-sweep.json) records both states.
@@ -26,7 +26,7 @@ A container added after a sweep carries our column and an empty one for the
 reference until the next run, named in the sweep's `_unswept` block with the
 reason. **Every count on this page excludes those**, because an empty
 `reference` means "we never asked it", and reading that as "it reported nothing"
-invents a disagreement with a tool that has never seen the container. The 33 new containers are outstanding in _unswept.
+invents a disagreement with a tool that has never seen the container. The 59 new containers are outstanding in _unswept.
 
 The last container to be swept corrected this page, and the correction is worth
 keeping rather than editing away. `p5-unconfirmed-pdf.zip` was described here as

@@ -18,8 +18,12 @@ Who should take this release: readers comparing metadata with a PDF revision.
   and encryption checks keep running; encrypted files are not compared.
 - **PDF access is bounded**: last startxref, xref tables/streams, Root and Pages,
   incremental updates, object streams and Annex F ordering; no recovery scan.
-  The reader limits sections to 64, object interpretations to 16 and windows
-  to 64 KiB. Root Count zero is reported as declaring no pages.
+  The reader limits sections to 64, object interpretations to 16 and object,
+  subsection-header and trailer windows to 64 KiB. Classic sections have at
+  most 64 subsections and requested 20-byte rows are read by position. Hybrid
+  tables precede supplementary streams; object-stream lengths can name one
+  indirect integer within the object allowance. Root Count zero is reported
+  as declaring no pages.
 - **NumberOfPages keeps its original value** and both X2 and P6 use the XSD
   ASCII grammar without converting the metadata to int. Long finite positive
   values no longer depend on Python's decimal conversion limit; underscores

@@ -145,7 +145,7 @@ references — a 4.1 KiB archive — held 48 MB before this bound existed and ho
 23 MB now. The last two bound the
 attributes hung off it, which neither of the others sees: attributes are cheap
 to write and the schema check downstream is quadratic in how many sit on one
-element, so 12,000 of them in a 27 KiB archive cost 13.6 seconds. `vdi2770.pdfread` has fifteen of its own for the PDF scan:
+element, so 12,000 of them in a 27 KiB archive cost 13.6 seconds. `vdi2770.pdfread` has sixteen of its own for the PDF scan:
 `MAX_STREAMS` with the `MAX_STREAM_MARKERS` that bounds how many places are
 looked at to find that many — the second exists because a marker the scan
 rejects still costs it something — `MAX_STREAM_SCAN`, `MAX_INFLATED_PER_STREAM`,
@@ -156,8 +156,9 @@ the other how much all of them together may cost — and `MAX_LINE_LOOKBACK`, pl
 `MAX_PAGE_OBJECT_WINDOW` (64 KiB per object, subsection header or trailer).
 Classic tables use `MAX_XREF_SUBSECTIONS` (64 per section) and read requested
 20-byte entries by their positions; a whole table need not fit a window.
-The sixteen interpretations include integer objects used for stream Length. The page reader
-uses `MAX_TRAILERS` for at most 64 xref sections with a visited set.
+The sixteen interpretations include integer objects used for stream Length.
+The page reader uses `MAX_TRAILERS` for at most 64 xref sections, counted
+independently of the visited set that detects cycles.
 `MAX_LINE_LOOKBACK` bounds how
 far back a token looks for the start of its line, which is what examining one
 costs. That last is small on purpose: it divides into `MAX_TRAILER_BYTES` to

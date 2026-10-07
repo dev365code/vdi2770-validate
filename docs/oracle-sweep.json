@@ -2033,6 +2033,265 @@
           "P6"
         ]
       }
+    },
+    "classic-10000.zip": {
+      "reference": {},
+      "ours": {
+        "info": [
+          "P4"
+        ]
+      }
+    },
+    "classic-3300.zip": {
+      "reference": {},
+      "ours": {
+        "info": [
+          "P4"
+        ]
+      }
+    },
+    "classic-changed-generation.zip": {
+      "reference": {},
+      "ours": {
+        "info": [
+          "P4"
+        ],
+        "warning": [
+          "P6"
+        ]
+      }
+    },
+    "classic-free-object.zip": {
+      "reference": {},
+      "ours": {
+        "info": [
+          "P4"
+        ],
+        "warning": [
+          "P6"
+        ]
+      }
+    },
+    "classic-long-rows.zip": {
+      "reference": {},
+      "ours": {
+        "info": [
+          "P4"
+        ],
+        "warning": [
+          "P6"
+        ]
+      }
+    },
+    "classic-overlapping-subsections.zip": {
+      "reference": {},
+      "ours": {
+        "info": [
+          "P4"
+        ],
+        "warning": [
+          "P6"
+        ]
+      }
+    },
+    "classic-reversed-subsections.zip": {
+      "reference": {},
+      "ours": {
+        "info": [
+          "P4"
+        ]
+      }
+    },
+    "classic-short-rows.zip": {
+      "reference": {},
+      "ours": {
+        "info": [
+          "P4"
+        ],
+        "warning": [
+          "P6"
+        ]
+      }
+    },
+    "classic-small-size.zip": {
+      "reference": {},
+      "ours": {
+        "info": [
+          "P4"
+        ],
+        "warning": [
+          "P6"
+        ]
+      }
+    },
+    "classic-subsection-limit.zip": {
+      "reference": {},
+      "ours": {
+        "info": [
+          "P4"
+        ],
+        "warning": [
+          "P6"
+        ]
+      }
+    },
+    "classic-subsections.zip": {
+      "reference": {},
+      "ours": {
+        "info": [
+          "P4"
+        ]
+      }
+    },
+    "classic-wrong-object-generation.zip": {
+      "reference": {},
+      "ours": {
+        "info": [
+          "P4"
+        ],
+        "warning": [
+          "P6"
+        ]
+      }
+    },
+    "classic-wrong-object-number.zip": {
+      "reference": {},
+      "ours": {
+        "info": [
+          "P4"
+        ],
+        "warning": [
+          "P6"
+        ]
+      }
+    },
+    "compressed-nonzero-generation.zip": {
+      "reference": {},
+      "ours": {
+        "info": [
+          "P4"
+        ],
+        "warning": [
+          "P6"
+        ]
+      }
+    },
+    "hybrid-conflict.zip": {
+      "reference": {},
+      "ours": {
+        "info": [
+          "P4"
+        ]
+      }
+    },
+    "hybrid-hidden.zip": {
+      "reference": {},
+      "ours": {
+        "info": [
+          "P4"
+        ]
+      }
+    },
+    "hybrid-in-prev.zip": {
+      "reference": {},
+      "ours": {
+        "info": [
+          "P4"
+        ]
+      }
+    },
+    "hybrid-pages-in-stream.zip": {
+      "reference": {},
+      "ours": {
+        "info": [
+          "P4"
+        ]
+      }
+    },
+    "linearized-missing-root.zip": {
+      "reference": {},
+      "ours": {
+        "info": [
+          "P4"
+        ],
+        "warning": [
+          "P6"
+        ]
+      }
+    },
+    "object-stream-indirect-length.zip": {
+      "reference": {},
+      "ours": {
+        "info": [
+          "P4"
+        ]
+      }
+    },
+    "object-stream-missing-length.zip": {
+      "reference": {},
+      "ours": {
+        "info": [
+          "P4"
+        ],
+        "warning": [
+          "P6"
+        ]
+      }
+    },
+    "object-stream-noninteger-length.zip": {
+      "reference": {},
+      "ours": {
+        "info": [
+          "P4"
+        ],
+        "warning": [
+          "P6"
+        ]
+      }
+    },
+    "object-stream-reference-length.zip": {
+      "reference": {},
+      "ours": {
+        "info": [
+          "P4"
+        ],
+        "warning": [
+          "P6"
+        ]
+      }
+    },
+    "prev-section-limit.zip": {
+      "reference": {},
+      "ours": {
+        "info": [
+          "P4"
+        ],
+        "warning": [
+          "P6"
+        ]
+      }
+    },
+    "xref-index-outside-size.zip": {
+      "reference": {},
+      "ours": {
+        "info": [
+          "P4"
+        ],
+        "warning": [
+          "P6"
+        ]
+      }
+    },
+    "xref-stream-indirect-length.zip": {
+      "reference": {},
+      "ours": {
+        "info": [
+          "P4"
+        ],
+        "warning": [
+          "P6"
+        ]
+      }
     }
   },
   "_unswept": {
@@ -2068,6 +2327,32 @@
     "two-versions.zip": "New generated container; the pinned reference has not been run on it.",
     "unconfirmed.zip": "New generated container; the pinned reference has not been run on it.",
     "window-limit.zip": "New generated container; the pinned reference has not been run on it.",
-    "zero.zip": "New generated container; the pinned reference has not been run on it."
+    "zero.zip": "New generated container; the pinned reference has not been run on it.",
+    "classic-10000.zip": "New generated container; the pinned reference has not been run on it.",
+    "classic-3300.zip": "New generated container; the pinned reference has not been run on it.",
+    "classic-changed-generation.zip": "New generated container; the pinned reference has not been run on it.",
+    "classic-free-object.zip": "New generated container; the pinned reference has not been run on it.",
+    "classic-long-rows.zip": "New generated container; the pinned reference has not been run on it.",
+    "classic-overlapping-subsections.zip": "New generated container; the pinned reference has not been run on it.",
+    "classic-reversed-subsections.zip": "New generated container; the pinned reference has not been run on it.",
+    "classic-short-rows.zip": "New generated container; the pinned reference has not been run on it.",
+    "classic-small-size.zip": "New generated container; the pinned reference has not been run on it.",
+    "classic-subsection-limit.zip": "New generated container; the pinned reference has not been run on it.",
+    "classic-subsections.zip": "New generated container; the pinned reference has not been run on it.",
+    "classic-wrong-object-generation.zip": "New generated container; the pinned reference has not been run on it.",
+    "classic-wrong-object-number.zip": "New generated container; the pinned reference has not been run on it.",
+    "compressed-nonzero-generation.zip": "New generated container; the pinned reference has not been run on it.",
+    "hybrid-conflict.zip": "New generated container; the pinned reference has not been run on it.",
+    "hybrid-hidden.zip": "New generated container; the pinned reference has not been run on it.",
+    "hybrid-in-prev.zip": "New generated container; the pinned reference has not been run on it.",
+    "hybrid-pages-in-stream.zip": "New generated container; the pinned reference has not been run on it.",
+    "linearized-missing-root.zip": "New generated container; the pinned reference has not been run on it.",
+    "object-stream-indirect-length.zip": "New generated container; the pinned reference has not been run on it.",
+    "object-stream-missing-length.zip": "New generated container; the pinned reference has not been run on it.",
+    "object-stream-noninteger-length.zip": "New generated container; the pinned reference has not been run on it.",
+    "object-stream-reference-length.zip": "New generated container; the pinned reference has not been run on it.",
+    "prev-section-limit.zip": "New generated container; the pinned reference has not been run on it.",
+    "xref-index-outside-size.zip": "New generated container; the pinned reference has not been run on it.",
+    "xref-stream-indirect-length.zip": "New generated container; the pinned reference has not been run on it."
   }
 }

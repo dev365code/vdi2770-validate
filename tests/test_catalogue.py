@@ -4,7 +4,6 @@ import re
 from dataclasses import replace
 
 import pytest
-
 from vdi2770_validate.catalog import document_classes, rules
 from vdi2770_validate.model import Obligation
 
