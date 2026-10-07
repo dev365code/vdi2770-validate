@@ -768,6 +768,14 @@ def test_the_same_spelling_covers_every_text_field_and_every_occurrence():
     assert "### [plain]" in page
 
 
+def test_the_release_source_is_utf8_even_with_a_cp1252_locale(monkeypatch):
+    import locale
+
+    monkeypatch.setattr(locale, "getencoding", lambda: "cp1252", raising=False)
+    monkeypatch.setattr(locale, "getpreferredencoding", lambda *args: "cp1252")
+    test_earlier_releases_spelled_the_start_but_left_the_old_form_in_the_middle()
+
+
 def test_earlier_releases_spelled_the_start_but_left_the_old_form_in_the_middle():
     import subprocess
 
@@ -777,7 +785,7 @@ def test_earlier_releases_spelled_the_start_but_left_the_old_form_in_the_middle(
 
     copy = subprocess.run([
         "git", "show", "v0.9.6:packages/vdi2770/src/vdi2770/validate/names.py"],
-        cwd=ROOT, capture_output=True, text=True)
+        cwd=ROOT, capture_output=True, text=True, encoding="utf-8")
     if copy.returncode:
         pytest.skip("the 0.9.6 release copy is not available here")
     earlier = {"__name__": "earlier_names"}

@@ -334,7 +334,7 @@ def test_runner_spelling_keeps_json_identical_at_the_listing_boundary():
     from vdi2770_validate import model
 
     source = subprocess.run(["git", "show", "cc60e42:packages/vdi2770/src/vdi2770/validate/model.py"],
-                            cwd=ROOT, capture_output=True, text=True)
+                            cwd=ROOT, capture_output=True, text=True, encoding="utf-8")
     if source.returncode:
         pytest.skip("the base report model is not available here")
     nodes = [node for node in ast.parse(source.stdout).body
