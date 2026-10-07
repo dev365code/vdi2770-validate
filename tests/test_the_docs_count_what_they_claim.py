@@ -23,6 +23,17 @@ def containers():
     return sorted(CORPUS.rglob("*.zip")) + sorted(FIXTURES.rglob("*.zip"))
 
 
+def test_the_report_schema_example_names_the_current_tool_version():
+    from vdi2770_validate import __version__
+
+    page = (ROOT / "docs/report-schema.md").read_text(encoding="utf-8")
+    examples = re.findall(r"```json\n(.*?)\n```", page, re.S)
+    assert examples, "the report schema has no JSON example"
+    versions = [json.loads(example)["toolVersion"] for example in examples
+                if '"toolVersion"' in example]
+    assert versions and all(version == __version__ for version in versions)
+
+
 def worst_document_attributes() -> int:
     """The most attributes any `VDI2770_*.xml` in the corpus carries, counted the
     way the budget counts them: with expat and a namespace separator, so
