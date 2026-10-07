@@ -401,6 +401,17 @@ class PageReader:
                 dictionary, stream_at = self.object(Ref(uint(at, "object stream number"), 0))
                 if not isinstance(dictionary, dict) or dictionary.get("Type") != Name("ObjStm") or stream_at is None:
                     raise Declined("xref does not name an object stream")
+                length = dictionary.get("Length")
+                if isinstance(length, Ref):
+                    # §§7.3.8.1, 7.5.7: one uncompressed integer object; the
+                    # ordinary object allowance also pays for this lookup.
+                    try:
+                        if self.entry(length)[0] != 1:
+                            raise Declined("stream Length object cannot be compressed")
+                        length, _ = self.object(length)
+                    except Declined as error:
+                        raise Declined("stream Length: " + str(error)) from error
+                    dictionary = dict(dictionary, Length=uint(length, "stream Length"))
                 payload = self.inflate(dictionary, stream_at)
                 first = uint(dictionary.get("First"), "object stream First")
                 count = uint(dictionary.get("N"), "object stream N")

@@ -12,8 +12,9 @@ XMP = (b'<x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF '
        b'pdfaid:part="2" pdfaid:conformance="b"/></rdf:RDF></x:xmpmeta>')
 
 
-def stream(body, extra=b""):
-    return b"<< /Length " + str(len(body)).encode("ascii") + extra + b" >>\nstream\n" + body + b"\nendstream"
+def stream(body, extra=b"", length=None):
+    length = str(len(body)).encode("ascii") if length is None else length
+    return b"<< /Length " + length + extra + b" >>\nstream\n" + body + b"\nendstream"
 
 
 def objects(count, leaves=None, portfolio=False):
@@ -150,16 +151,32 @@ def hybrid(conflict=False, pages_in_stream=False, previous=False):
     return result
 
 
-def compressed(count=7, predictor=False, object_cycle=False, compressed_claim=False, overlap=False):
+def compressed(count=7, predictor=False, object_cycle=False, compressed_claim=False, overlap=False,
+               length_mode=None, xref_length=False, outside_index=False, nonzero_generation=False):
     values = objects(count)
     if compressed_claim:
         values[100] = stream(zlib.compress(XMP), b" /Type /Metadata /Subtype /XML /Filter /FlateDecode")
     catalog, pages = values.pop(1), values.pop(2)
+    if nonzero_generation:
+        catalog = catalog.replace(b"/Pages 2 0 R", b"/Pages 2 1 R")
     first_body = catalog + b"\n"
     header = f"1 0 2 {len(first_body)} ".encode("ascii")
     payload = header + first_body + pages
-    values[102] = stream(zlib.compress(payload),
-                         f" /Type /ObjStm /N 2 /First {len(header)} /Filter /FlateDecode".encode("ascii"))
+    packed = zlib.compress(payload)
+    length = None
+    if length_mode is not None:
+        length = b"999 0 R" if length_mode == "missing" else b"104 0 R"
+        if length_mode == "integer":
+            values[104] = str(len(packed)).encode("ascii")
+        elif length_mode == "noninteger":
+            values[104] = b"<< >>"
+        elif length_mode == "reference":
+            values[104] = b"105 0 R"
+            values[105] = str(len(packed)).encode("ascii")
+    if xref_length:
+        values[104] = b"0000000000"
+    values[102] = stream(packed,
+                         f" /Type /ObjStm /N 2 /First {len(header)} /Filter /FlateDecode".encode("ascii"), length)
     data = bytearray(b"%PDF-1.7\n")
     positions = {}
     for number, body in sorted(values.items()):
@@ -167,7 +184,8 @@ def compressed(count=7, predictor=False, object_cycle=False, compressed_claim=Fa
         data.extend(f"{number} 0 obj\n".encode("ascii") + body + b"\nendobj\n")
     at = positions[103] = len(data)
     rows = []
-    for number in range(104):
+    size = max(max(values) + 1, 104)
+    for number in range(size):
         if object_cycle and number == 102:
             row = b"\x02" + (102).to_bytes(4, "big") + b"\x00\x00"
         elif number in (1, 2):
@@ -178,9 +196,11 @@ def compressed(count=7, predictor=False, object_cycle=False, compressed_claim=Fa
             row = b"\x00" * 5 + b"\xff\xff"
         rows.append(row)
     payload = b"".join(rows)
-    extra = b" /Type /XRef /Size 104 /Root 1 0 R /W [1 4 2] /Index [0 104] /Filter /FlateDecode"
+    extra = f" /Type /XRef /Size {size} /Root 1 0 R /W [1 4 2] /Index [0 {size}] /Filter /FlateDecode".encode("ascii")
     if overlap:
         extra = extra.replace(b"/Index [0 104]", b"/Index [0 60 50 44]")
+    if outside_index:
+        extra = extra.replace(b"/Index [0 104]", b"/Index [0 105]")
     if predictor:
         previous = bytes(7)
         encoded = []
@@ -189,7 +209,11 @@ def compressed(count=7, predictor=False, object_cycle=False, compressed_claim=Fa
             previous = row
         payload = b"".join(encoded)
         extra += b" /DecodeParms << /Predictor 12 /Columns 7 >>"
-    data.extend(b"103 0 obj\n" + stream(zlib.compress(payload), extra) + b"\nendobj\n"
+    packed = zlib.compress(payload)
+    if xref_length:
+        at_length = positions[104] + len(b"104 0 obj\n")
+        data[at_length:at_length + 10] = f"{len(packed):010d}".encode("ascii")
+    data.extend(b"103 0 obj\n" + stream(packed, extra, b"104 0 R" if xref_length else None) + b"\nendobj\n"
                 + b"startxref\n" + str(at).encode("ascii") + b"\n%%EOF\n")
     return bytes(data)
 
@@ -267,4 +291,9 @@ def cases():
         "classic-short-rows": ("7", table_pdf(row_width=19), "damaged xref row"),
         "classic-long-rows": ("7", table_pdf(row_width=21), "damaged xref row"),
         "classic-subsection-limit": ("7", table_pdf(ranges=[(n, 1) for n in range(65)] + [(100, 1)]), "subsection limit"),
+        "object-stream-indirect-length": ("7", compressed(length_mode="integer"), 7),
+        "object-stream-noninteger-length": ("7", compressed(length_mode="noninteger"), "stream Length"),
+        "object-stream-missing-length": ("7", compressed(length_mode="missing"), "stream Length"),
+        "object-stream-reference-length": ("7", compressed(length_mode="reference"), "stream Length"),
+        "xref-stream-indirect-length": ("7", compressed(xref_length=True), "stream Length"),
     }

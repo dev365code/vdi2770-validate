@@ -78,3 +78,31 @@ def test_classic_lookup_cost_is_headers_and_requested_rows(generated):
         costs.append((total, len(body), len(body.sliced), sum(body.sliced), body.searched))
     assert costs[1][3] <= costs[0][3] + 128
     print("classic-xref-cost-coefficients", costs)
+
+
+def test_an_object_stream_length_can_be_one_indirect_integer(generated):
+    body = generated.compressed(length_mode="integer")
+    reader = _pdfpages.PageReader(body, None, [pdfread.MAX_INFLATED_TOTAL])
+    assert reader.count() == 7
+    direct = _pdfpages.PageReader(generated.compressed(), None, [pdfread.MAX_INFLATED_TOTAL])
+    assert direct.count() == 7
+    assert reader.objects == direct.objects + 1
+    assert _pdfpages.Ref(104, 0) in reader.cache
+
+
+def test_an_indirect_stream_length_spends_the_object_allowance(generated, monkeypatch):
+    monkeypatch.setattr(pdfread, "MAX_PAGE_OBJECTS", 4)
+    assert pdfread.read(generated.compressed(), page_count=True).page_count == 7
+    facts = pdfread.read(generated.compressed(length_mode="integer"), page_count=True)
+    assert facts.page_count is None and "object limit 4" in facts.page_count_why
+
+
+@pytest.mark.parametrize("mode", ["noninteger", "missing", "reference"])
+def test_an_object_stream_length_must_resolve_to_an_integer(generated, mode):
+    facts = pdfread.read(generated.compressed(length_mode=mode), page_count=True)
+    assert facts.page_count is None and "stream Length" in facts.page_count_why
+
+
+def test_a_cross_reference_stream_length_remains_direct(generated):
+    facts = pdfread.read(generated.compressed(xref_length=True), page_count=True)
+    assert facts.page_count is None and facts.page_count_why == "stream Length integer range or type"
