@@ -195,7 +195,8 @@ def test_a_latest_null_root_is_not_replaced_by_an_older_root(monkeypatch):
 QUIET = {"equal", "incremental-equal", "object-stream", "png-xref", "encrypted",
          "linearized", "plus", "space", "invalid-zero", "invalid-negative",
          "invalid-underscore", "invalid-unicode", "compressed-claim", "multiple-pdfs", "unconfirmed",
-         "padded-pdf-count"}
+         "padded-pdf-count", "hybrid-hidden", "hybrid-conflict", "hybrid-pages-in-stream",
+         "hybrid-in-prev"}
 
 
 @pytest.mark.parametrize("name", CASES)

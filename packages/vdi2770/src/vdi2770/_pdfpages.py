@@ -454,12 +454,10 @@ class PageReader:
             trailer = self.section(offset)
             if root is absent and "Root" in trailer:
                 root = trailer["Root"]
-            # Hybrid-reference streams supersede this table's entries.
+            # §7.5.8.4: this table, its supplementary stream, then Prev.
             extra = trailer.get("XRefStm")
             if extra is not None:
-                table = self.sections.pop()
                 self.section(uint(extra, "XRefStm offset", len(self.data) - 1))
-                self.sections.append(table)
             offset = uint(trailer.get("Prev", 0), "Prev offset", len(self.data) - 1)
         if not isinstance(root, Ref):
             raise Declined("trailer Root is not an indirect reference")

@@ -82,6 +82,74 @@ def prev_cycle():
     return base.replace(b" /Root 1 0 R", f" /Root 1 0 R /Prev {at}".encode("ascii"), 1)
 
 
+def _write_objects(data, values, headers=None):
+    positions = {}
+    for number, body in sorted(values.items()):
+        positions[number] = len(data)
+        identity, generation = (headers or {}).get(number, (number, 0))
+        data.extend(f"{identity} {generation} obj\n".encode("ascii") + body + b"\nendobj\n")
+    return positions
+
+
+def _write_table(data, positions, ranges=None, size=None, extra=b"", rows=None, row_width=20):
+    actual_size = max(positions) + 1
+    at = len(data)
+    data.extend(b"xref\n")
+    for first, count in ranges or [(0, actual_size)]:
+        data.extend(f"{first} {count}\n".encode("ascii"))
+        for number in range(first, first + count):
+            offset = positions.get(number, 0)
+            generation, kind = (rows or {}).get(number, (0, "n") if offset else (65535, "f"))
+            row = f"{offset:010d} {generation:05d} {kind} \n".encode("ascii")
+            if row_width == 19:
+                row = row[:-2] + b"\n"
+            elif row_width == 21:
+                row = row[:-1] + b" \n"
+            data.extend(row)
+    data.extend(f"trailer\n<< /Size {actual_size if size is None else size} /Root 1 0 R".encode("ascii")
+                + extra + b" >>\nstartxref\n" + str(at).encode("ascii") + b"\n%%EOF\n")
+    return bytes(data)
+
+
+def table_pdf(total=101, ranges=None, size=None, rows=None, headers=None, row_width=20):
+    """ISO 32000-1 §7.5.4: fixed-width rows, including sparse subsections."""
+    values = objects(7)
+    values.update({number: b"0" for number in range(10, total) if number != 100})
+    data = bytearray(b"%PDF-1.7\n")
+    positions = _write_objects(data, values, headers)
+    return _write_table(data, positions, ranges, size, rows=rows, row_width=row_width)
+
+
+def hybrid(conflict=False, pages_in_stream=False, previous=False):
+    """§7.5.8.4: table, its supplementary stream, then the previous section."""
+    data = bytearray(b"%PDF-1.7\n")
+    values = objects(7)
+    values[200] = b"<< /Marker /Hidden >>"
+    positions = _write_objects(data, values)
+    stream_positions = {200: positions[200]}
+    if conflict:
+        stream_positions[2] = len(data)
+        data.extend(b"2 0 obj\n<< /Type /Pages /Count 99 >>\nendobj\n")
+    elif pages_in_stream:
+        stream_positions[2] = positions[2]
+    index = b" ".join(f"{number} 1".encode("ascii") for number in sorted(stream_positions))
+    payload = b"".join(b"\x01" + stream_positions[number].to_bytes(4, "big") + b"\x00\x00"
+                       for number in sorted(stream_positions))
+    xref = len(data)
+    data.extend(b"103 0 obj\n" + stream(zlib.compress(payload),
+                b" /Type /XRef /Size 201 /W [1 4 2] /Index [" + index + b"] /Filter /FlateDecode")
+                + b"\nendobj\n")
+    table = {number: at for number, at in positions.items() if number != 200
+             and not (pages_in_stream and number == 2)}
+    table[103] = xref
+    result = _write_table(data, table, [(number, 1) for number in sorted(table)],
+                          size=201, extra=f" /XRefStm {xref}".encode("ascii"))
+    if previous:
+        at = int(re.findall(rb"startxref\n([0-9]+)", result)[-1])
+        result = append_revision(result, {201: b"0"}, root=None, prev=at)
+    return result
+
+
 def compressed(count=7, predictor=False, object_cycle=False, compressed_claim=False, overlap=False):
     values = objects(count)
     if compressed_claim:
@@ -188,4 +256,8 @@ def cases():
         "unconfirmed": ("8", classic(unconfirmed=True), None),
         "overlapping-index": ("7", compressed(overlap=True), "Index"),
         "padded-pdf-count": ("7", classic("0" * 4301 + "7", leaves=7), 7),
+        "hybrid-hidden": ("7", hybrid(), 7),
+        "hybrid-conflict": ("7", hybrid(conflict=True), 7),
+        "hybrid-pages-in-stream": ("7", hybrid(pages_in_stream=True), 7),
+        "hybrid-in-prev": ("7", hybrid(conflict=True, previous=True), 7),
     }
