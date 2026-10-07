@@ -260,4 +260,11 @@ def cases():
         "hybrid-conflict": ("7", hybrid(conflict=True), 7),
         "hybrid-pages-in-stream": ("7", hybrid(pages_in_stream=True), 7),
         "hybrid-in-prev": ("7", hybrid(conflict=True, previous=True), 7),
+        "classic-3300": ("7", table_pdf(3300), 7),
+        "classic-10000": ("7", table_pdf(10000), 7),
+        "classic-subsections": ("7", table_pdf(3300, ranges=[(0, 100), (100, 3200)]), 7),
+        "classic-reversed-subsections": ("7", table_pdf(3300, ranges=[(100, 3200), (0, 100)]), 7),
+        "classic-short-rows": ("7", table_pdf(row_width=19), "damaged xref row"),
+        "classic-long-rows": ("7", table_pdf(row_width=21), "damaged xref row"),
+        "classic-subsection-limit": ("7", table_pdf(ranges=[(n, 1) for n in range(65)] + [(100, 1)]), "subsection limit"),
     }

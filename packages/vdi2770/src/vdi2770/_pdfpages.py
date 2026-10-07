@@ -1,7 +1,7 @@
 """Bounded access to a PDF's declared root Count; no recovery or leaf scan.
 
 ISO 32000-1 §§7.5.4, 7.5.7, 7.5.8, 7.7.3.2 Table 29 and Annex F.
-Sections retain bounded bytes, not a map of every object in an xref stream.
+Sections retain bounded descriptors and inflated stream bytes, not an object map.
 Only the at most sixteen objects this read asks for are interpreted.
 """
 import re
@@ -281,29 +281,39 @@ class PageReader:
             if syntax.token() != b"xref":
                 raise Declined("damaged xref keyword")
             ranges = []
+            cursor = at + syntax.pos
             while True:
-                first = syntax.token()
+                syntax = Syntax(self.window(cursor))
+                try:
+                    first = syntax.token()
+                    if first != b"trailer":
+                        first = uint(first, "xref first object")
+                        count = uint(syntax.token(), "xref subsection count")
+                except Declined as error:
+                    raise Declined("damaged xref row or subsection header") from error
                 if first == b"trailer":
                     trailer = syntax.value()
                     if not isinstance(trailer, dict):
                         raise Declined("damaged xref trailer")
                     uint(trailer.get("Size"), "xref Size")
                     previous = 0
-                    for first, count, _ in ranges:
+                    # §7.5.4 permits any subsection order, but no duplicate number.
+                    for first, count, _ in sorted(ranges):
                         if first < previous or first + count > trailer["Size"]:
-                            raise Declined("xref table subsection order or range")
+                            raise Declined("xref table subsection overlap or Size range")
                         previous = first + count
-                    self.sections.append(("table", window, ranges))
+                    self.sections.append(("table", self.data, ranges))
                     return trailer
-                first = uint(first, "xref first object")
-                count = uint(syntax.token(), "xref subsection count")
+                if len(ranges) >= pdfread.MAX_XREF_SUBSECTIONS:
+                    raise Declined(f"xref subsection limit {pdfread.MAX_XREF_SUBSECTIONS}")
                 syntax.skip()
-                start = syntax.pos
+                start = cursor + syntax.pos
                 stop = start + 20 * count
-                if stop > len(window):
-                    raise Declined("xref table window limit")
+                if stop >= len(self.data):
+                    raise Declined("damaged xref row")
+                # Fixed-width entries are addressed; the table is not interpreted.
                 ranges.append((first, count, start))
-                syntax.pos = stop
+                cursor = stop
         try:
             dictionary, stream_at = self.indirect_at(at)
         except Declined as error:

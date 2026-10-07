@@ -153,7 +153,10 @@ rejects still costs it something — `MAX_STREAM_SCAN`, `MAX_INFLATED_PER_STREAM
 `MAX_TRAILER_SCAN` with `MAX_TRAILER_BYTES` and the `MAX_TRAILERS` the second is
 derived from — one bounds how much of a single trailer dictionary is read and
 the other how much all of them together may cost — and `MAX_LINE_LOOKBACK`, plus `MAX_PAGE_OBJECTS` (16 interpretations) and
-`MAX_PAGE_OBJECT_WINDOW` (64 KiB per object or xref table). The page reader
+`MAX_PAGE_OBJECT_WINDOW` (64 KiB per object, subsection header or trailer).
+Classic tables use `MAX_XREF_SUBSECTIONS` (64 per section) and read requested
+20-byte entries by their positions; a whole table need not fit a window.
+The sixteen interpretations include integer objects used for stream Length. The page reader
 uses `MAX_TRAILERS` for at most 64 xref sections with a visited set.
 `MAX_LINE_LOOKBACK` bounds how
 far back a token looks for the start of its line, which is what examining one

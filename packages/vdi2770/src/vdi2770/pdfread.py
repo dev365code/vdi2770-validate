@@ -414,6 +414,7 @@ MAX_INFLATED_PER_READ = 4 * 1024 * 1024 * 1024
 # ISO 32000-1's xref-selected page-tree path; these bound work, not validity.
 MAX_PAGE_OBJECTS = 16
 MAX_PAGE_OBJECT_WINDOW = 64 * 1024
+MAX_XREF_SUBSECTIONS = 64
 
 
 @dataclass(frozen=True)

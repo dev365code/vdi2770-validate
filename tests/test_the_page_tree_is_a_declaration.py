@@ -196,7 +196,8 @@ QUIET = {"equal", "incremental-equal", "object-stream", "png-xref", "encrypted",
          "linearized", "plus", "space", "invalid-zero", "invalid-negative",
          "invalid-underscore", "invalid-unicode", "compressed-claim", "multiple-pdfs", "unconfirmed",
          "padded-pdf-count", "hybrid-hidden", "hybrid-conflict", "hybrid-pages-in-stream",
-         "hybrid-in-prev"}
+         "hybrid-in-prev", "classic-3300", "classic-10000", "classic-subsections",
+         "classic-reversed-subsections"}
 
 
 @pytest.mark.parametrize("name", CASES)
