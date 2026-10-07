@@ -20,6 +20,7 @@ from functools import lru_cache
 from typing import Dict, List, Optional, Tuple
 
 from vdi2770.model import Defect, Location
+from vdi2770.model import _READ_INFLATION_STOP as _READ_INFLATION_STOP
 from vdi2770.xmlread import NS, UnsafeXml, XmlTooLarge
 from vdi2770.zipread import MAIN_PDF, MAIN_XML, METADATA_XML, Kind
 

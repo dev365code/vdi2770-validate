@@ -9,6 +9,7 @@ import zlib
 from dataclasses import dataclass
 
 from . import pdfread
+from .model import _READ_INFLATION_STOP
 
 _WS = b"\x00\t\n\f\r "
 _DELIMITERS = _WS + b"()<>[]{}/%"
@@ -205,7 +206,7 @@ class PageReader:
         cap = min(pdfread.MAX_INFLATED_PER_STREAM, file_cap)
         if self.allowance is not None:
             cap = min(cap, self.allowance[0])
-        reason = ("read inflation budget exhausted" if self.allowance is not None
+        reason = (_READ_INFLATION_STOP if self.allowance is not None
                   and self.allowance[0] < file_cap
                   and self.allowance[0] <= pdfread.MAX_INFLATED_PER_STREAM
                   else "file inflation budget exhausted" if file_cap <= pdfread.MAX_INFLATED_PER_STREAM

@@ -9,6 +9,9 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from typing import Optional
 
+# Shared refusal vocabulary; callers need not copy the reader's sentence.
+_READ_INFLATION_STOP = "read inflation budget exhausted"
+
 
 @dataclass(frozen=True, order=True)
 class Location:

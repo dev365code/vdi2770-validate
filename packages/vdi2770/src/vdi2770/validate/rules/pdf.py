@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from typing import Iterator
 
 from ..catalog import rule
-from ..model import MAIN_PDF, About, Finding, Kind
+from ..model import _READ_INFLATION_STOP, MAIN_PDF, About, Finding, Kind
 from ..names import Members, as_written, folder_path
 
 UNVERIFIED = "this tool cannot verify PDF/A conformance"
@@ -171,7 +171,7 @@ def check(container, document, facts_for) -> Iterator[Finding]:
             # are this file against a bounded scan, and `Z5` is an error on the
             # tool axis -- an ordinary multi-page PDF reaches them.
             if stopped.reason == "read" and (
-                    cut_short or facts.page_count_why == "read inflation budget exhausted"):
+                    cut_short or facts.page_count_why == _READ_INFLATION_STOP):
                 unopened.append((name, stopped))
                 reserved_cut = reserved_cut or why == RESERVED
         where = container.where.child(member=name, subject=name)

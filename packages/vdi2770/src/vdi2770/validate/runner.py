@@ -19,7 +19,16 @@ from vdi2770.zipread import Kind
 from . import xsdvalidate
 from .agreement import refuse_if_disagreeing
 from .catalog import rule
-from .model import MAIN_XML, METADATA_XML, NS, Finding, Location, Report, without_addresses
+from .model import (
+    _READ_INFLATION_STOP,
+    MAIN_XML,
+    METADATA_XML,
+    NS,
+    Finding,
+    Location,
+    Report,
+    without_addresses,
+)
 from .names import folder_path
 from .rules import container as r_container
 from .rules import delivery as r_delivery
@@ -165,7 +174,7 @@ def _facts_for(raw: bytes, accepted, read_pdf, unchecked=False, page_members=())
                 # page-tree read can each be cut short.
                 facts, cut_short = (read_pdf(member, page_count=True) if name in page_members
                                     else read_pdf(member))
-                if facts.page_count_why == "read inflation budget exhausted":
+                if facts.page_count_why == _READ_INFLATION_STOP:
                     cut_short = "read"
                 # Only the allowance spent across the read. A ceiling this file
                 # reached on its own is `P3` -- the rule written for exactly

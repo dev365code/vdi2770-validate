@@ -244,6 +244,46 @@ def test_page_inflation_refusal_is_reported_even_when_a_raw_pdfa_claim_exists(mo
     assert "page tree" in z5.detail and "Every other check" not in z5.remedy
 
 
+def test_changing_a_reader_refusal_sentence_does_not_remove_z5(tmp_path):
+    import os
+    import shutil
+    import subprocess
+    import sys
+
+    from conftest import ROOT
+
+    source = ROOT / "packages/vdi2770/src/vdi2770"
+    copied = tmp_path / "vdi2770"
+    shutil.copytree(source, copied, ignore=shutil.ignore_patterns("__pycache__"))
+    old, new = "read inflation budget exhausted", "read-wide expansion allowance exhausted"
+    changed = 0
+    # Change only the reader's sentence. Consumers must use its shared vocabulary.
+    for path in copied.glob("*.py"):
+        text = path.read_text(encoding="utf-8")
+        changed += text.count(old)
+        path.write_text(text.replace(old, new), encoding="utf-8")
+    assert changed == 1, "the reader's refusal sentence is not defined once"
+    program = """
+import json, sys
+from vdi2770 import pdfread
+from vdi2770.validate.runner import check_file
+from vdi2770.validate.report import as_json
+pdfread.MAX_INFLATED_PER_READ = 0
+report = check_file(sys.argv[1])
+print(as_json(report))
+"""
+    done = subprocess.run([sys.executable, "-B", "-c", program,
+                           str(FIXTURES / "pages/object-stream.zip")],
+                          cwd=tmp_path, env=dict(os.environ, PYTHONPATH=str(tmp_path)),
+                          capture_output=True, text=True)
+    assert done.returncode == 0, done.stdout + done.stderr
+    rendered = json.loads(done.stdout)
+    findings = rendered["findings"]
+    assert {"Z5", "P4", "P6"} <= {f["rule"] for f in findings}
+    assert new in next(f["detail"] for f in findings if f["rule"] == "P6")
+    assert rendered["read"]["complete"] is False
+
+
 def test_excel_template_page_declarations_produce_seven_true_warnings():
     from conftest import CORPUS
 
