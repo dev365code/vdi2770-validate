@@ -156,6 +156,7 @@ class PageReader:
         self.offsets = set()
         self.objects = 0
         self.xref_objects = 0
+        self.page_inflated = 0
         self.cache = {}
         self.streams = {}
         self.active = set()
@@ -194,7 +195,12 @@ class PageReader:
             raise Declined("damaged stream line ending")
         return value, at + pos
 
-    def inflate(self, dictionary, at):
+    def charge_page(self, amount):
+        if amount > pdfread.MAX_PAGE_INFLATED_TOTAL - self.page_inflated:
+            raise Declined("page inflation budget exhausted")
+        self.page_inflated += amount
+
+    def inflate(self, dictionary, at, expected=None):
         length = uint(dictionary.get("Length"), "stream Length")
         if at + length > len(self.data):
             raise Declined("stream Length outside file")
@@ -209,6 +215,11 @@ class PageReader:
             if length > pdfread.MAX_INFLATED_PER_STREAM:
                 raise Declined("stream window limit")
             return self.data[at:at + length]
+        remaining = pdfread.MAX_PAGE_INFLATED_TOTAL - self.page_inflated
+        # §7.5.8 gives the logical xref length from W and Index. If even that
+        # cannot fit, do not start another decompressor.
+        if expected is not None and expected > remaining:
+            raise Declined("page inflation budget exhausted")
         file_cap = self.file_left[0]
         cap = min(pdfread.MAX_INFLATED_PER_STREAM, file_cap)
         if self.allowance is not None:
@@ -218,6 +229,8 @@ class PageReader:
                   and self.allowance[0] <= pdfread.MAX_INFLATED_PER_STREAM
                   else "file inflation budget exhausted" if file_cap <= pdfread.MAX_INFLATED_PER_STREAM
                   else "stream inflation limit")
+        if remaining < cap:
+            cap, reason = remaining, "page inflation budget exhausted"
         if cap <= 0:
             raise Declined(reason)
         engine = zlib.decompressobj()
@@ -226,6 +239,7 @@ class PageReader:
         except zlib.error as error:
             raise Declined("damaged Flate stream") from error
         self.file_left[0] -= len(out)
+        self.charge_page(len(out))
         if self.allowance is not None:
             self.allowance[0] -= len(out)
         if not engine.eof:
@@ -248,6 +262,8 @@ class PageReader:
         width = uint(parameters.get("Columns", 1), "predictor Columns", pdfread.MAX_PAGE_OBJECT_WINDOW)
         if not width or len(data) % (width + 1):
             raise Declined("damaged predictor rows")
+        # Charge the encoded bytes before processing any PNG predictor row.
+        self.charge_page(len(data))
         previous = bytes(width)
         out = bytearray()
         for at in range(0, len(data), width + 1):
@@ -348,7 +364,7 @@ class PageReader:
             ranges.append((first, count, consumed))
             consumed += count
             previous = first + count
-        payload = self.inflate(dictionary, stream_at)
+        payload = self.inflate(dictionary, stream_at, expected=consumed * sum(widths))
         if consumed * sum(widths) != len(payload):
             raise Declined("damaged xref stream length")
         self.sections.append(("stream", payload, ranges, widths))

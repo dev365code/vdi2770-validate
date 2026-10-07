@@ -187,3 +187,79 @@ def test_seventeen_page_objects_are_not_given_the_xref_allowance(generated):
     values[124] = b"7"
     facts = pdfread.read(generated.append_revision(b"%PDF-1.7\n", values), page_count=True)
     assert facts.page_count is None and facts.page_count_why == "object limit 16"
+
+
+def measured_inflation(monkeypatch):
+    actual = pdfread.zlib.decompressobj
+    expanded = []
+
+    class Measured:
+        def __init__(self):
+            self.inner = actual()
+
+        def decompress(self, body, cap):
+            out = self.inner.decompress(body, cap)
+            expanded.append(len(out))
+            return out
+
+        @property
+        def eof(self):
+            return self.inner.eof
+
+    monkeypatch.setattr(pdfread.zlib, "decompressobj", Measured)
+    return expanded
+
+
+def test_page_inflation_stops_before_a_second_four_mb_xref(generated, monkeypatch):
+    body = generated.compressed_revisions(2, row_count=571428)
+    expanded = measured_inflation(monkeypatch)
+    reader = _pdfpages.PageReader(body, [pdfread.MAX_INFLATED_PER_READ],
+                                   [pdfread.MAX_INFLATED_TOTAL])
+    why = None
+    try:
+        reader.count()
+    except ValueError as error:
+        why = str(error)
+    print("page-inflation-counts", expanded, "reason", why)
+    assert why is not None and "inflation budget" in why
+    assert expanded == [3_999_996], "the second known-size xref must not be inflated"
+    assert reader.page_inflated == sum(expanded)
+    assert reader.page_inflated <= pdfread.MAX_PAGE_INFLATED_TOTAL
+
+
+def test_png_work_is_charged_with_xref_and_object_stream_inflation(generated, monkeypatch):
+    expanded = measured_inflation(monkeypatch)
+    reader = _pdfpages.PageReader(generated.compressed(predictor=True), None,
+                                   [pdfread.MAX_INFLATED_TOTAL])
+    actual = reader.predict
+    processed = []
+
+    def measured(data, parameters):
+        if parameters is not None:
+            processed.append(len(data))
+        return actual(data, parameters)
+
+    monkeypatch.setattr(reader, "predict", measured)
+    assert reader.count() == 7
+    assert len(expanded) == 2 and processed == [832]
+    print("page-work-counts", expanded, processed)
+    assert reader.page_inflated == sum(expanded) + sum(processed)
+
+
+def test_png_processing_uses_the_page_budget_and_reports_an_incomplete_read(generated, monkeypatch):
+    import json
+
+    from vdi2770_validate.model import About
+    from vdi2770_validate.report import as_json
+    from vdi2770_validate.runner import check_file
+
+    from conftest import FIXTURES
+
+    monkeypatch.setattr(pdfread, "MAX_PAGE_INFLATED_TOTAL", 1100, raising=False)
+    assert pdfread.read(generated.compressed(), page_count=True).page_count == 7
+    report = check_file(str(FIXTURES / "pages/png-xref.zip"))
+    pages = [f for f in report.findings if f.rule.id == "P6"]
+    assert len(pages) == 1 and pages[0].about is About.TOOL
+    assert "inflation budget" in pages[0].detail
+    assert json.loads(as_json(report))["read"]["complete"] is False
+    assert "Z5" not in {f.rule.id for f in report.findings}

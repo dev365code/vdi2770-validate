@@ -81,6 +81,12 @@ Security: [GHSA-62p8-4642-mwfp](https://github.com/dev365code/vdi2770-validate/s
   indirect integer within the object allowance. Root Count zero is reported
   as declaring no pages.
 
+- **Xref headers have their own allowance**: classic tables, xref streams,
+  Prev and supplementary streams use the 64-section ceiling; they do not
+  spend the sixteen page-object interpretations. A separate 4 MiB page-tree
+  allowance charges xref/object stream inflation and PNG predictor input
+  together. Reaching it is a tool-limit P6 and an incomplete read.
+
 ## 0.10.3 — 2026-09-25
 
 Who should take this release: nobody for what it judges. No rule, verdict, exit

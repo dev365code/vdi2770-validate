@@ -61,7 +61,9 @@ failure — files that never claimed at all.
   spend an object window. It supports
   ordinary tables, xref/object streams with FlateDecode and supported PNG
   predictors, incremental updates and Annex F's xref ordering. It does not
-  recover damaged xref. A portfolio's Count describes its cover, so /Collection
+  recover damaged xref. A page-tree read separately allows 4 MiB of combined
+  xref/object stream inflation and encoded PNG predictor processing, while
+  retaining the shared file/stream/read ceilings. A portfolio's Count describes its cover, so /Collection
   is reported as a declined comparison. Unsupported structures and limits
   produce P6 on the tool axis and make read.complete false.
 
