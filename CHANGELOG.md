@@ -32,7 +32,7 @@ Who should take this release: readers comparing metadata with a PDF revision.
   existing positional dataclass construction. The two distributions share
   version 0.11.0.
 
-Security: [GHSA-62p8-4642-mwfp](https://github.com/dev365code/vdi2770-validate/security/advisories/GHSA-62p8-4642-mwfp), for the runner's older syntax read anywhere in a text-report or stderr line: spell its first character so it remains text; reaching vdi2770-validate from 0.1.0 and vdi2770 from 0.8.0 before 0.11.0; fixed in 0.11.0.
+Security: [GHSA-62p8-4642-mwfp](https://github.com/dev365code/vdi2770-validate/security/advisories/GHSA-62p8-4642-mwfp), for the runner's older syntax read anywhere in a text-report or stderr line: spell its first character so it remains text; reaching vdi2770-validate from 0.1.0 and vdi2770 from 0.8.0 up to 0.10.3; fixed in 0.11.0.
 
 ## 0.10.3 — 2026-09-25
 

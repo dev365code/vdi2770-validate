@@ -2335,7 +2335,7 @@ LISTING_BUDGET_ROWS = [
     ("pages/a-closed-advisory-is-not-listed-as-open",
      "docs/advisories.json",
      '"through": "0.9.6",\n      "fixed_in": "0.9.7",\n      "corrections": []',
-     '"through": "0.11.0",\n      "fixed_in": null,\n      "open": "0.9.7 closed part of it; the rest is not yet closed by any release.",\n      "corrections": []',
+     '"through": "0.10.3",\n      "fixed_in": null,\n      "open": "0.9.7 closed part of it; the rest is not yet closed by any release.",\n      "corrections": []',
      ["tests/test_an_advisory_and_its_release_name_each_other.py::"
       "test_each_advisory_is_cited_where_the_record_puts_it"],
      "an advisory the changelog says a release fixed, recorded as open, "
@@ -2343,7 +2343,7 @@ LISTING_BUDGET_ROWS = [
 
     ("pages/a-fix-a-correction-took-back-is-not-named",
      "docs/advisories.json",
-     '"through": "0.11.0",\n      "fixed_in": "0.11.0",',
+     '"through": "0.10.3",\n      "fixed_in": "0.11.0",',
      '"through": "0.9.5",\n      "fixed_in": "0.9.6",',
      ["tests/test_an_advisory_and_its_release_name_each_other.py::"
       "test_each_advisory_is_cited_where_the_record_puts_it"],
@@ -2353,7 +2353,7 @@ LISTING_BUDGET_ROWS = [
 
     ("pages/the-closed-range-names-its-endpoint",
      "docs/advisories.json",
-     '"through": "0.11.0",',
+     '"through": "0.10.3",',
      '"through": "0.10.1",',
      ["tests/test_an_advisory_and_its_release_name_each_other.py::"
       "test_each_advisory_is_cited_where_the_record_puts_it"],
@@ -3022,7 +3022,6 @@ TABLE += FRONT_DOOR
 
 TABLE += [
     ('report/the-old-runner-form-is-spelled-anywhere', 'packages/vdi2770/src/vdi2770/validate/names.py', '    return line.replace("##[", _spelled("#") + "#[")', '    return line', ['tests/test_two_names_that_print_alike_are_told_apart.py::test_the_old_runner_form_is_text_wherever_it_occurs', 'tests/test_cli.py::test_the_old_runner_form_is_text_on_stderr'], 'the older form is read anywhere in a line, so every occurrence must remain text'),
-    ('pages/a-fixed-endpoint-is-excluded', 'docs/advisories.json', '"through_inclusive": false', '"through_inclusive": true', ['tests/test_an_advisory_and_its_release_name_each_other.py::test_each_advisory_is_cited_where_the_record_puts_it'], 'an endpoint shared with the fix excludes that release rather than including it'),
 ]
 
 CANARY = "canary/a-comment-nobody-reads"

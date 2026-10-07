@@ -18,7 +18,7 @@
         "vdi2770-validate": "0.1.0",
         "vdi2770": "0.8.0"
       },
-      "through": "0.11.0",
+      "through": "0.10.3",
       "fixed_in": "0.11.0",
       "corrections": [
         {
@@ -26,8 +26,7 @@
           "on": "2026-09-25",
           "took_back": true
         }
-      ],
-      "through_inclusive": false
+      ]
     },
     {
       "id": "GHSA-3pfq-57fx-w4q5",

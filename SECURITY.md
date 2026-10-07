@@ -73,7 +73,7 @@ same promise the table above makes.
   the file itself, the type a relationship names -- and a CI runner reads a
   line that begins in its own command syntax as an instruction rather than as
   text; the exit code and the JSON were not affected. `vdi2770-validate` from
-  0.1.0 and `vdi2770` from 0.8.0, before 0.11.0; fixed in 0.11.0.
+  0.1.0 and `vdi2770` from 0.8.0, up to 0.10.3; fixed in 0.11.0.
 
 - [GHSA-3pfq-57fx-w4q5](https://github.com/dev365code/vdi2770-validate/security/advisories/GHSA-3pfq-57fx-w4q5):
   a value the sender wrote -- a class id, a language, the identifier a
@@ -125,7 +125,7 @@ advisories written later reach those releases all the same —
 GHSA-xp97-jcmj-h45f every release of both up to 0.8.0, GHSA-6hqr-phm3-chpf
 every release of the command up to 0.9.4, GHSA-3pfq-57fx-w4q5 every release of
 the command up to 0.9.5, GHSA-h676-59p4-6632 every release of both up to 0.9.6,
-and GHSA-62p8-4642-mwfp every release of the command before 0.11.0, which
+and GHSA-62p8-4642-mwfp every release of the command up to 0.10.3, which
 closes it in full — so the release to move to is 0.11.0 or later.
 
 One thing about reading them: below 0.7.0 the reader and the command carried
