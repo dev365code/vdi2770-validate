@@ -13,13 +13,17 @@ from vdi2770.validate.runner import check_file
 OUT = ROOT / "docs/silent-paths.json"
 
 
+def fixture_key(path):
+    return path.as_posix()
+
+
 def build():
     cases = []
     for path in sorted((ROOT / "tests/fixtures/pages").glob("*.zip")):
         report = check_file(str(path))
         if not any(f.rule.id == "P6" for f in report.findings):
             cases.append({
-                "fixture": str(path.relative_to(ROOT)),
+                "fixture": fixture_key(path.relative_to(ROOT)),
                 "otherRules": sorted({f.rule.id for f in report.findings}),
                 "complete": json.loads(rendering.as_json(report))["read"]["complete"],
             })

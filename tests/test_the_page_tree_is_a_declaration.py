@@ -325,6 +325,20 @@ def test_overlapping_xref_indices_are_declined_before_inflation(monkeypatch):
     assert facts.page_count is None and "Index" in facts.page_count_why
 
 
+@pytest.mark.parametrize("flavour", ["windows", "posix"])
+def test_silent_path_keys_are_posix_on_every_platform(monkeypatch, flavour):
+    from pathlib import PurePosixPath, PureWindowsPath
+
+    from conftest import ROOT
+
+    monkeypatch.syspath_prepend(str(ROOT / "tools"))
+    from silent_paths import fixture_key
+
+    path = (PureWindowsPath(r"tests\fixtures\pages\x.zip") if flavour == "windows"
+            else PurePosixPath("tests/fixtures/pages/x.zip"))
+    assert fixture_key(path) == "tests/fixtures/pages/x.zip"
+
+
 def test_published_silent_paths_are_the_generated_verdicts():
     import subprocess
     import sys
