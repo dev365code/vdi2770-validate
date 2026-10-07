@@ -299,6 +299,25 @@ def main() -> int:
     add("z11-container-in-document.zip", f, "Z11", ["stowaway.zip"],
         "a document container carrying another container")
 
+    # Z14 — a declared payload, which is the document's content and not looked
+    # inside. Each holds a container whose metadata is not XML, zipped in one
+    # and unpacked into a folder in the other: what is inside a declared file
+    # is its own business in both shapes, so neither is judged, and the report
+    # says once, at the payload, that it did not look.
+    declaring = edit(base[META], ">B.pdf</DigitalFile>",
+                     '>B.pdf</DigitalFile>\n        '
+                     '<DigitalFile FileFormat="application/zip">cad.zip</DigitalFile>')
+    part = {META: b"not vdi metadata", "model.step": b"ISO-10303-21;\n"}
+    for shape, how, payload in (("zip", "zipped", {"partA.zip": write_bytes(part)}),
+                                ("folder", "unpacked into a folder",
+                                 {"partA/" + n: d for n, d in part.items()})):
+        f = dict(base)
+        f[META] = declaring
+        f["cad.zip"] = write_bytes(payload)
+        add(f"z14-{shape}-in-a-declared-payload.zip", f, "Z14", [META, "cad.zip"],
+            f"cad.zip declared as a DigitalFile, holding a container {how} whose "
+            f"metadata is not XML")
+
     # M9 — the same identifier twice
     f = dict(base)
     f[META] = edit(base[META], '<DocumentId DomainId="BSP-OEM">data-sheet-br-01-26</DocumentId>',
@@ -369,8 +388,11 @@ def main() -> int:
     add("z9-file-in-a-folder.zip", f, "Z9", ["B.docx", META],
         "B.docx moved into a folder, and its DigitalFile names it there")
 
-    # Z13 — the document container delivered as a folder of its members
-    # instead of as a .zip member, which this tool does not open.
+    # Z13 — the document container delivered as a folder of its members, which
+    # this tool reads like a .zip member -- except this one, whose metadata
+    # cannot be read: forty bytes of its deflate stream flipped, the shape of a
+    # damaged transfer. A folder that holds a container and was not opened.
+    # Written by hand: no ZIP writer produces a broken CRC on purpose.
     innerz = io.BytesIO(basen["documentcontainer.zip"])
     with zipfile.ZipFile(innerz) as src:
         parts = {n: src.read(n) for n in src.namelist()}
@@ -378,8 +400,18 @@ def main() -> int:
     f.pop("documentcontainer.zip")
     for n, d in parts.items():
         f["documentcontainer/" + n] = d
-    add("z13-document-as-a-folder.zip", f, "Z13", ["documentcontainer.zip"],
-        "the document container unpacked into a folder of the same name")
+    raw = bytearray(write_bytes(f))
+    damaged = "documentcontainer/" + META
+    info = zipfile.ZipFile(io.BytesIO(bytes(raw))).getinfo(damaged)
+    start = info.header_offset + 30 + len(info.filename) + 100
+    for k in range(start, start + 40):
+        raw[k] ^= 0xFF
+    (OUT / "z13-document-folder-unread.zip").write_bytes(bytes(raw))
+    made["z13-document-folder-unread.zip"] = {
+        "rule": "Z13", "basedOn": "documentationcontainer.zip",
+        "changed": ["documentcontainer.zip", damaged],
+        "note": "the document container unpacked into a folder, and forty bytes of the "
+                "folder's metadata stream flipped so it cannot be read"}
 
     # F1 — a file the metadata names that is not in the container
     f = dict(base)

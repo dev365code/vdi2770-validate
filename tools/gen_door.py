@@ -152,11 +152,9 @@ SHOT_LINES = [
     (19, [(172, N, "against the standard (REP_025)", 0)], "wrap"),
     (17, [(150, F, "-> Add the main document as VDI2770_Main.pdf at the root of the", 0)], "line"),
     (28, [(172, F, "documentation container, next to VDI2770_Main.xml.", 0)], "wrap"),
-    (30, [(46, D, "… 2 more errors (Z13) and 1 warning (Z9)", 0)], "elision"),
-    (17, [(28, T, "4 error(s), 1 warning(s), 0 note(s) ", 1),
-          (292, N, "— 2 of the errors are this tool", 0)], "line"),
-    (21, [(292, N, "declining to look, not the container", 0)], "wrap"),
-    (14, [(28, N, "read 1 of 1 archives, 1 of 3 metadata files", 0)], "line"),
+    (30, [(46, D, "… 2 more warnings (M13 Z9) and 2 notes (P4)", 0)], "elision"),
+    (17, [(28, T, "2 error(s), 2 warning(s), 2 note(s)", 1)], "line"),
+    (21, [(28, N, "read 3 of 3 archives, 3 of 3 metadata files", 0)], "line"),
 ]
 
 SHOT = '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 {h}" role="img" aria-label="Real vdi2770-validate output on a container that ships in this repository: error F1, a file named in the metadata is not in the container, with the line it is declared on and how to fix it; error Z7, the documentation container has no VDI2770_Main.pdf, with its remedy">

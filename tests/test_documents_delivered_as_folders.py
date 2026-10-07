@@ -18,6 +18,11 @@ recorded sweep has the reference implementation emitting, for that container,
 the codes it emits for containers that *do* hold document containers.
 
 Opening them is a feature. Not lying about them is not.
+
+0.11.0 opens them: a folder holding a reserved name is read as the container
+it is, and the example above draws `M2` and `M10`. What stays is the rule for a
+folder this tool could not open -- its metadata unreadable, a limit reached --
+and the tests of what `Z13` says build one with `unopened` below.
 """
 import io
 import zipfile
@@ -26,7 +31,7 @@ import pytest
 from vdi2770_validate.model import Severity
 from vdi2770_validate.runner import check_bytes
 
-from conftest import CLEAN_DOCUMENT, CLEAN_DOCUMENTATION
+from conftest import CLEAN_DOCUMENT, CLEAN_DOCUMENTATION, unopened
 
 DOC = zipfile.ZipFile(CLEAN_DOCUMENT)
 DOCN = zipfile.ZipFile(CLEAN_DOCUMENTATION)
@@ -56,7 +61,7 @@ def test_a_folder_that_holds_metadata_is_not_nothing():
 
 
 def test_it_says_that_it_did_not_look():
-    fired = {f.rule.id for f in report(foldered()).findings}
+    fired = {f.rule.id for f in report(unopened(foldered(), "AB393/VDI2770_Metadata.xml")).findings}
     # By name. "Some `about: tool` rule fired" is satisfied by `X5` — a bug
     # report about this tool — so renaming the rule to `X5` left all six tests in
     # this file green while the finding said something else entirely.
@@ -118,7 +123,8 @@ def test_a_dot_slash_prefix_is_not_a_folder():
 def test_it_says_one_folder_in_english():
     """`1 folder hold VDI2770_Metadata.xml` — the plural was on the noun and not
     on the verb. A sentence a person reads is part of the finding."""
-    fired = [f for f in report(foldered()).findings if f.rule.id == "Z13"]
+    fired = [f for f in report(unopened(foldered(), "AB393/VDI2770_Metadata.xml")).findings
+             if f.rule.id == "Z13"]
     assert fired, "the fixture no longer produces Z13"
     detail = fired[0].detail or ""
     assert " hold " not in detail or not detail.startswith("1 "), detail
@@ -147,7 +153,7 @@ def test_a_dot_slash_folder_still_suppresses_the_files_inside_it():
         for name in ("VDI2770_Metadata.xml", "B.pdf"):
             z.writestr(f"./AB393/{name}", body.read(name))
 
-    fired = [f.rule.id for f in report(buf.getvalue()).findings]
+    fired = [f.rule.id for f in report(unopened(buf.getvalue(), "./AB393/VDI2770_Metadata.xml")).findings]
     assert "Z13" in fired, fired
     assert "F2" not in fired, (
         "the files inside a folder this tool did not open were called undeclared: "
@@ -182,11 +188,18 @@ def test_a_folder_is_the_same_folder_however_its_members_are_spelled(meta_name, 
         z.writestr(meta_name, src.read("VDI2770_Metadata.xml"))
         z.writestr(file_name, src.read("B.pdf"))
 
-    fired = [f.rule.id for f in report(buf.getvalue()).findings]
-    assert "Z13" in fired, fired
+    found = report(buf.getvalue()).findings
+    fired = [f.rule.id for f in found]
+    # One folder however it is spelled, so it is opened as the container it is
+    # and B.pdf is in it -- not missing from the folder's own container, and not
+    # an undeclared file of the one around it.
+    assert "Z13" not in fired, fired
     assert "F2" not in fired, (
         f"{file_name} sits in the folder {meta_name} names, and was called "
         f"undeclared: {fired}")
+    assert not [f for f in found if f.rule.id == "F1" and "B.pdf" in (f.detail or "")], (
+        f"{file_name} sits in the folder {meta_name} names, and its container "
+        f"said it was not there: {fired}")
 
 
 
@@ -209,7 +222,10 @@ def test_a_folder_holding_two_reserved_names_is_still_one_folder():
         z.writestr("plantA/VDI2770_Main.xml", DOCN.read("VDI2770_Main.xml"))
         z.writestr("plantA/B.pdf", DOC.read("B.pdf"))
 
-    found = [f for f in report(buf.getvalue()).findings if f.rule.id == "Z13"]
+    # Both reserved names damaged: either one readable makes the folder a
+    # container this tool opens.
+    data = unopened(unopened(buf.getvalue(), "plantA/VDI2770_Metadata.xml"), "plantA/VDI2770_Main.xml")
+    found = [f for f in report(data).findings if f.rule.id == "Z13"]
     assert len(found) == 1, (
         f"one folder drew {len(found)} findings: "
         f"{[(f.where.member, f.detail) for f in found]}")
@@ -227,7 +243,7 @@ def test_two_rules_name_the_same_folder_the_same_way():
     because `files.py` matches it against the archive's member names to suppress
     `F2`; it is only the sentence that changes.
     """
-    found = [f for f in report(foldered("./AB393")).findings
+    found = [f for f in report(unopened(foldered("./AB393"), "./AB393/VDI2770_Metadata.xml")).findings
              if f.rule.id in ("Z9", "Z13")]
     assert {f.rule.id for f in found} == {"Z9", "Z13"}, found
 

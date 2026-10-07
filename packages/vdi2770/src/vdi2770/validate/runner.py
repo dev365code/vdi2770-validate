@@ -27,7 +27,7 @@ from .rules import files as r_files
 from .rules import metadata as r_metadata
 from .rules import pdf as r_pdf
 from .rules import schema as r_schema
-from .rules.container import _inside, folders_holding_metadata
+from .rules.container import _inside, folders_holding_metadata, sealed
 from .rules.pdf import Stopped
 
 
@@ -107,6 +107,17 @@ def _step(report, where, what: str, fn, *args, fix: Optional[str] = None):
         report.add(Finding(r, r.title, where, detail=f"the {what} step: {type(e).__name__}: {without_addresses(str(e))}",
                            fix=fix))
         return _CRASHED
+
+
+def _folder_again(data: bytes, c):
+    """A container delivered as a folder, put back together from its parent's
+    bytes the way the first read put it together: the same members, in the
+    same order, and none the reader refused."""
+    got = zipread.folder_bytes(data, c.member_name, list(c.folder_members))
+    if got is None:
+        raise RuntimeError(f"{c.member_name}: the reader read this folder once and could "
+                           f"not put it together a second time, so its PDFs are not checked")
+    return got
 
 
 def _read_again(data: bytes, name: str):
@@ -264,7 +275,50 @@ def check_bytes(data: bytes, name: str) -> Report:
     delivery = []
     declared_of = {}     # id(container) -> the names its metadata declares
 
+    beyond = set()       # id(container) of each declared payload and of all inside one
+
     for c in root.walk():
+        # Inside a declared payload: not this walk's to judge or to count. See
+        # `sealed`.
+        if c.parent is not None and id(c.parent) in beyond:
+            beyond.add(id(c))
+            continue
+        # `None` and "declares nothing" are different, and collapsing them is how
+        # a budget in the parent invented a finding about the child: `Z3` fires
+        # on an inner archive that is neither kind of container *and* was not
+        # declared as a file, and a parent we declined to model cannot say
+        # whether it declared this one. Unknown suppresses the rule; empty does
+        # not.
+        parent_declared = declared_of.get(id(c.parent))
+        # A member of a folder that holds its own metadata is governed by that
+        # metadata -- the file this tool did not open -- and not by the parent's.
+        # Judged against the parent's declarations, `AB393/cad.zip` drew `Z3`
+        # ("the parent modelled its metadata and did not declare this") beside
+        # the `Z13` saying `AB393/` was never read. Unknown, not undeclared.
+        # Not a folder the reader opened as a container: that folder is the
+        # container its metadata governs, not a member of it, and never a file
+        # the parent could have declared -- treated as unknown, one that turned
+        # out to be no container at all passed in silence.
+        governed_elsewhere = (
+            bool(c.member_name) and not c.member_name.endswith("/") and c.parent is not None
+            # By name, not through the module attribute: the crash-guard test
+            # replaces `r_container` wholesale with a stub that has only
+            # `check`, and reaching through the attribute made the runner
+            # itself fall over inside that test.
+            and _inside(
+                folder_path(c.member_name),
+                {folder_path(f)
+                 for f, _ in folders_holding_metadata(c.parent)} - {""}))
+        unknown_parent = (c.parent is not None
+                          and (parent_declared is None or governed_elsewhere))
+        is_payload = (bool(c.member_name) and parent_declared is not None
+                      and folder_path(c.member_name) in parent_declared)
+
+        # Asked here, before anything is counted, because the answer decides
+        # whether this container's own listing is there to be read at all.
+        payload = sealed(c, None if unknown_parent else is_payload)
+        if payload:
+            beyond.add(id(c))
         # Every container the walk reaches was opened, and every `.zip` member
         # inside one is an archive that was there to open whether or not this
         # read reached it. `UNREADABLE` is the one the walk still visits and
@@ -279,13 +333,35 @@ def check_bytes(data: bytes, name: str) -> Report:
         # tool sees it. Counting the reader's answer instead let refusing a
         # second metadata file turn `1 of 2` into `1 of 1`, which is this tool
         # grading itself on the work it agreed to do.
-        listed = c.present or c.file_names
-        report.read.archives_found += sum(
-            1 for n in listed if n.lower().endswith(".zip"))
+        # And nothing listed inside a declared payload: what is in it is not this
+        # read's to open, and counting it as found made a read that did not look
+        # call itself incomplete.
+        listed = () if payload else (c.present or c.file_names)
+        # A folder holding a reserved name is a container that was there to open,
+        # as a `.zip` member is; once opened, the metadata files in it are its
+        # own to count, not this listing's as well.
+        # Not from a name refused as unsafe: `../VDI2770_Metadata.xml` is a
+        # name that climbs out of the archive, not a folder holding a
+        # container, and counted as one it was an archive "found" that no
+        # finding explained.
+        in_folders = zipread.folders_holding_containers(
+            [n for n in listed if getattr(c.rejected.get(n), "kind", None) != "unsafe-member-name"])
+        # What an opened folder's archive holds, it counts; a second spelling
+        # of one of its names, which it does not hold, is still this listing's.
+        # And what this read refused under an opened folder it handed to that
+        # folder's container, whose listing counts it.
+        held = {member for ch in c.children if (ch.member_name or "").endswith("/")
+                for _name, member in zipread.folder_entries(ch.member_name, ch.folder_members)}
+        held |= {n for n in c.rejected for ch in c.children
+                 if (ch.member_name or "").endswith("/") and zipread.placed(n).startswith(ch.member_name)}
+        report.read.archives_found += len(in_folders) + sum(
+            1 for n in listed if n.lower().endswith(".zip")
+            and not any(zipread.placed(n).startswith(f) for f in in_folders))
         report.read.metadata_found += sum(
             1 for n in listed
             if folder_path(n).replace("\\", "/").rsplit("/", 1)[-1]
-            in (METADATA_XML, MAIN_XML))
+            in (METADATA_XML, MAIN_XML)
+            and n not in held)
         if c.metadata_bytes is not None:
             report.read.metadata_read += 1
         # Leaving a subtree: everything at this depth or below is finished.
@@ -304,7 +380,8 @@ def check_bytes(data: bytes, name: str) -> Report:
             raw = None
             if parent is not None and parent[1] is not None and c.member_name:
                 raw = _step(report, c.where, "member read",
-                            _read_again, parent[1], c.member_name)
+                            _folder_again if c.member_name.endswith("/") else _read_again,
+                            parent[1], c if c.member_name.endswith("/") else c.member_name)
                 if raw is _CRASHED:
                     raw = None
         raw_of[id(c)] = (c.depth, raw)
@@ -414,33 +491,6 @@ def check_bytes(data: bytes, name: str) -> Report:
         declared = frozenset(folder_path(f.file_name) for f in document.all_files
                              if f.file_name) if document else frozenset()
         declared_of[id(c)] = declared if modelled else None
-
-        # `None` and "declares nothing" are different, and collapsing them is how
-        # a budget in the parent invented a finding about the child: `Z3` fires
-        # on an inner archive that is neither kind of container *and* was not
-        # declared as a file, and a parent we declined to model cannot say
-        # whether it declared this one. Unknown suppresses the rule; empty does
-        # not.
-        parent_declared = declared_of.get(id(c.parent))
-        # A member of a folder that holds its own metadata is governed by that
-        # metadata -- the file this tool did not open -- and not by the parent's.
-        # Judged against the parent's declarations, `AB393/cad.zip` drew `Z3`
-        # ("the parent modelled its metadata and did not declare this") beside
-        # the `Z13` saying `AB393/` was never read. Unknown, not undeclared.
-        governed_elsewhere = (
-            bool(c.member_name) and c.parent is not None
-            # By name, not through the module attribute: the crash-guard test
-            # replaces `r_container` wholesale with a stub that has only
-            # `check`, and reaching through the attribute made the runner
-            # itself fall over inside that test.
-            and _inside(
-                folder_path(c.member_name),
-                {folder_path(f)
-                 for f, _ in folders_holding_metadata(c.parent)} - {""}))
-        unknown_parent = (c.parent is not None
-                          and (parent_declared is None or governed_elsewhere))
-        is_payload = (bool(c.member_name) and parent_declared is not None
-                      and folder_path(c.member_name) in parent_declared)
 
         # A container whose metadata we declined to model has an empty `declared`,
         # and the rules that read it then said things about the sender: a

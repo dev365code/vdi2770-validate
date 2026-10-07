@@ -11,7 +11,7 @@ import zipfile
 
 from vdi2770_validate.runner import check_bytes, check_file
 
-from conftest import CLEAN_DOCUMENT
+from conftest import CLEAN_DOCUMENT, unopened
 
 SRC = zipfile.ZipFile(CLEAN_DOCUMENT)
 META = SRC.read("VDI2770_Metadata.xml").decode()
@@ -180,6 +180,22 @@ def _handover_with_folder(folder):
     return buf.getvalue()
 
 
+def test_a_folder_this_tool_opened_is_still_not_to_be_flattened():
+    """`Z9`'s *store the members at the root of the archive* flattens a
+    document container. Once this tool opened the folder there was no `Z13`
+    beside it, so the sentence saying which remedy to follow went with it --
+    and the one left standing was the one that breaks the delivery."""
+    report = check_bytes(_handover_with_folder("docdir"), "plain.zip")
+    fired = {f.rule.id for f in report.findings}
+    assert "Z13" not in fired, f"the premise: this folder is opened: {sorted(fired)}"
+    z9 = [f for f in report.findings if f.rule.id == "Z9"]
+    assert len(z9) == 1, z9
+    assert "docdir/" in z9[0].remedy, z9[0].remedy
+    assert ".zip member" in z9[0].remedy, z9[0].remedy
+    assert "the finding beside this one" not in z9[0].remedy, (
+        f"the remedy points at a finding that is not there: {z9[0].remedy}")
+
+
 def test_one_folder_is_counted_once_however_its_name_is_spelled():
     """`Z9` said *2 folders: Prüfbericht/, Prüfbericht/* about one folder.
 
@@ -220,7 +236,8 @@ def test_a_folder_this_tool_did_not_open_says_which_remedy_to_follow():
     """
     from vdi2770_validate.runner import check_bytes
 
-    report = check_bytes(_handover_with_folder("docdir"), "plain.zip")
+    report = check_bytes(unopened(_handover_with_folder("docdir"), "docdir/VDI2770_Metadata.xml"),
+                         "plain.zip")
     # Grouped, not keyed by rule id: `Z13` fires once per folder, and a mapping
     # keyed on the id keeps whichever came last. This fixture has one folder, so
     # the shortcut was invisible and would stay invisible until the day it

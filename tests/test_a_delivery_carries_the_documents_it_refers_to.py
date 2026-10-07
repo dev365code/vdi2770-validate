@@ -139,8 +139,8 @@ def test_a_reference_is_not_dangling_when_this_tool_declined_to_read_the_deliver
     `corpus/examples/missingdocuments/folders.zip` delivers its documents as
     *folders* — `456-29201/` and `AB393/`, each with its own
     `VDI2770_Metadata.xml` — and its main document refers to exactly those two
-    ids. The documents are in the container. This tool does not open folders,
-    which is why `Z13` exists and why `Z13` is `about: tool`.
+    ids. The documents are in the container. This tool did not open folders
+    then, which is why `Z13` existed and why `Z13` is `about: tool`.
 
     So the first version of this rule reported two errors saying the delivery
     did not carry documents it was carrying, `about: container`, on a container
@@ -151,11 +151,20 @@ def test_a_reference_is_not_dangling_when_this_tool_declined_to_read_the_deliver
     The rule now speaks only when every metadata file the archive lists was
     read. A set of known identifiers assembled from half a delivery cannot say
     anything is missing from it.
-    """
-    from conftest import CORPUS
 
-    folders = CORPUS / "missingdocuments" / "folders.zip"
-    report = check_file(str(folders))
+    The sample itself is read in full now -- its verdict is on
+    `docs/official-samples.md` -- so the case is held on a copy of it that this
+    tool cannot read in full: both folders' metadata streams damaged, the
+    documents still listed.
+    """
+    from vdi2770_validate.runner import check_bytes
+
+    from conftest import CORPUS, unopened
+
+    data = (CORPUS / "missingdocuments" / "folders.zip").read_bytes()
+    for folder in ("456-29201", "AB393"):
+        data = unopened(data, f"{folder}/VDI2770_Metadata.xml")
+    report = check_bytes(data, "folders.zip")
     found = {f.rule.id for f in report.sorted()}
     assert "Z13" in found, "the fixture for this case no longer trips Z13"
     assert report.read.metadata_read < report.read.metadata_found, (

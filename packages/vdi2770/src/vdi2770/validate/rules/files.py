@@ -279,9 +279,10 @@ def check(container, document, foreign) -> Iterator[Finding]:
     # The archive's own spelling, not the canonical one: a name the user cannot
     # find in their ZIP listing is not a report they can act on.
     # A folder holding its own VDI2770_Metadata.xml is a document container that
-    # was not zipped. Its files are declared in metadata this tool never opened,
-    # so calling them undeclared is a statement about a file we did not read.
-    # `Z13` says we did not read it.
+    # was not zipped, and its files are declared in its own metadata, not in this
+    # container's. The reader opens it, and those files are that container's to
+    # judge; where it could not, `Z13` says so, and calling them undeclared here
+    # would be a statement about a file nobody read.
     from .container import folders_holding_metadata
     unopened = frozenset(folder_path(f)
                          for f, _ in folders_holding_metadata(container)) - {""}

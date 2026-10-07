@@ -56,10 +56,10 @@ def test_a_child_of_a_metadata_less_container_reads_its_own_archive(tmp_path):
                     ("X.pdf", b"this is not a PDF at all\n"), ("B.docx", DOCX)])
     a = zbytes([("VDI2770_Metadata.xml", META), ("B.pdf", PDF), ("B.docx", DOCX)])
     b = zbytes([("C.zip", inner), ("readme.txt", b"nothing here\n")])
-    main = MAINXML.replace(
-        MAIN_DECL, MAIN_DECL + '\n        <DigitalFile FileFormat="application/zip">B.zip</DigitalFile>')
+    # B is not declared. A declared `.zip` is one of a document's files, and
+    # what is inside it is not walked at all -- C would have nothing to read.
     got = report(tmp_path, "stale.zip", zbytes([
-        ("VDI2770_Main.xml", main), ("VDI2770_Main.pdf", MAINPDF),
+        ("VDI2770_Main.xml", MAINXML), ("VDI2770_Main.pdf", MAINPDF),
         ("A.zip", a), ("B.zip", b)]))
     assert ("P1", "stale.zip!/B.zip!/C.zip!/X.pdf") in got, got
     assert not any(r == "P4" and "C.zip" in w for r, w in got), (

@@ -266,9 +266,11 @@ def test_the_elision_in_the_shot_says_what_it_elided():
     said = [("".join(run[2] for run in runs))
             for _dy, runs, kind in module.SHOT_LINES if kind == "elision"]
     assert len(said) == 1, f"the shot has {len(said)} elisions and this reads one"
-    claim = re.search(r"…\s*(\d+) more errors? \(([^)]+)\) and (\d+) warnings? \(([^)]+)\)",
-                      said[0])
-    assert claim, f"the elision has been reworded: {said[0]!r}"
+    # Every severity it names, each with a count and the rule ids: the run it
+    # draws once ended in errors and warnings and now ends in warnings and
+    # notes, and a gap that could only be described one way forbade the other.
+    claims = re.findall(r"(\d+) (?:more )?(error|warning|note)s? \(([^)]+)\)", said[0])
+    assert claims, f"the elision has been reworded: {said[0]!r}"
 
     drawn = [re.match(r"(error|warn|note)\s+([A-Z]\d+)", line)
              for line in _logical_lines(module)]
@@ -279,20 +281,16 @@ def test_the_elision_in_the_shot_says_what_it_elided():
     rest = findings[len(shown):]
     assert rest, "the shot elides nothing, so it should not claim to"
 
-    errors = [f for f in rest if f.severity is Severity.ERROR]
-    warnings = [f for f in rest if f.severity is Severity.WARNING]
-    assert len(errors) == int(claim.group(1)) and len(warnings) == int(claim.group(3)), (
-        f"the elision claims {claim.group(1)} error(s) and {claim.group(3)} "
-        f"warning(s); what follows is {len(errors)} and {len(warnings)}")
-    assert sorted({f.rule.id for f in errors}) == sorted(claim.group(2).split()), (
-        f"the elision names {claim.group(2)!r} as the remaining errors; they are "
-        f"{sorted({f.rule.id for f in errors})}")
-    assert sorted({f.rule.id for f in warnings}) == sorted(claim.group(4).split()), (
-        f"the elision names {claim.group(4)!r} as the remaining warnings; they "
-        f"are {sorted({f.rule.id for f in warnings})}")
-    assert len(rest) == len(errors) + len(warnings), (
-        "something that is neither an error nor a warning follows, and the "
-        "elision does not mention it")
+    severity = {"error": Severity.ERROR, "warning": Severity.WARNING, "note": Severity.INFO}
+    for count, kind, named in claims:
+        followed = [f for f in rest if f.severity is severity[kind]]
+        assert len(followed) == int(count), (
+            f"the elision claims {count} {kind}(s); what follows is {len(followed)}")
+        assert sorted({f.rule.id for f in followed}) == sorted(named.split()), (
+            f"the elision names {named!r} as the remaining {kind}s; they are "
+            f"{sorted({f.rule.id for f in followed})}")
+    assert len(rest) == sum(int(count) for count, _kind, _named in claims), (
+        "something follows that the elision does not mention")
 
 
 def _pictures(page):

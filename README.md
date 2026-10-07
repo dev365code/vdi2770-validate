@@ -3,7 +3,7 @@
 
 [![CI](https://github.com/dev365code/vdi2770-validate/actions/workflows/ci.yml/badge.svg)](https://github.com/dev365code/vdi2770-validate/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/vdi2770-validate?label=PyPI&color=2f6fb3)](https://pypi.org/project/vdi2770-validate/)
-[![rules](https://img.shields.io/badge/rules-42_each_with_a_remedy-a8721c)](https://github.com/dev365code/vdi2770-validate/blob/main/docs/rules.md)
+[![rules](https://img.shields.io/badge/rules-43_each_with_a_remedy-a8721c)](https://github.com/dev365code/vdi2770-validate/blob/main/docs/rules.md)
 [![license](https://img.shields.io/badge/license-Apache--2.0-5f6a75)](https://github.com/dev365code/vdi2770-validate/blob/main/LICENSE)
 
 &nbsp;**Apache-2.0**&nbsp;·&nbsp;**Python 3.9 · 3.12 · 3.13**&nbsp;·&nbsp;**pure Python, nothing compiled**&nbsp;·&nbsp;**the check opens no socket**
@@ -14,7 +14,7 @@
 
 ## Ten seconds
 
-<img src="https://raw.githubusercontent.com/dev365code/vdi2770-validate/main/docs/assets/tenseconds.svg?v=14164ddf" alt="Real vdi2770-validate output: error F1, a file named in the metadata is not in the container, with the metadata line it is declared on and the remedy; error Z7, the documentation container has no VDI2770_Main.pdf, with its remedy; then a line saying how many findings follow and how many of them are this tool declining to look." width="100%">
+<img src="https://raw.githubusercontent.com/dev365code/vdi2770-validate/main/docs/assets/tenseconds.svg?v=9adb3519" alt="Real vdi2770-validate output: error F1, a file named in the metadata is not in the container, with the metadata line it is declared on and the remedy; error Z7, the documentation container has no VDI2770_Main.pdf, with its remedy; then a line saying how many findings follow, and one saying how much of the delivery was read." width="100%">
 
 ```console
 $ pip install vdi2770-validate
@@ -65,21 +65,16 @@ folders.zip
          at folders.zip
          per the reference implementation - observed there, not verified against the standard (REP_025)
          -> Add the main document as VDI2770_Main.pdf at the root of the documentation container, next to VDI2770_Main.xml.
-  error  Z13  Documents are delivered as folders, which this tool does not open
-         at folders.zip!/456-29201/
-         456-29201/ holds VDI2770_Metadata.xml, and nothing inside it was read
+  warn   M13  One identifier is called both a type and an individual
+         at folders.zip!/VDI2770_Main.xml:19:2
+         'ABC1223' is declared as Individual, Type in this delivery (folders.zip, folders.zip!/456-29201/, folders.zip!/AB393/); an identifier names one kind of thing
          per this tool's own rule
-         -> Nothing here is necessarily wrong with the container. Zip each document folder into its own .zip member if you want this tool to check it, or check those folders with something that reads them.
-  error  Z13  Documents are delivered as folders, which this tool does not open
-         at folders.zip!/AB393/
-         AB393/ holds VDI2770_Metadata.xml, and nothing inside it was read
-         per this tool's own rule
-         -> Nothing here is necessarily wrong with the container. Zip each document folder into its own .zip member if you want this tool to check it, or check those folders with something that reads them.
+         -> Decide which the identifier names and say the same thing in both places: ObjectType="Type" for a product model, ObjectType="Individual" for one manufactured item. If the two documents really are about different things, give them different identifiers.
 
-  … 1 more Z9 warning
+  … 1 more Z9 warning, then P4 and P4
 
-  4 error(s), 1 warning(s), 0 note(s) — 2 of the errors are this tool declining to look, not the container
-  read 1 of 1 archives, 1 of 3 metadata files
+  2 error(s), 2 warning(s), 2 note(s)
+  read 3 of 3 archives, 3 of 3 metadata files
 
 This tool does not verify PDF/A conformance. It reports the claim a file makes
 about itself where it finds one; only a PDF/A validator can say whether that
@@ -88,8 +83,8 @@ claim is true.
 
 The last line is there on every report. `0 error(s)` says what was found; that
 line says how much of the container was reached, counted over the names the
-archive itself lists — so a delivery whose documents are in folders this tool
-does not open cannot come back looking like one it read end to end.
+archive itself lists — so a delivery with a part this tool could not open cannot
+come back looking like one it read end to end.
 
 </details>
 
@@ -99,7 +94,7 @@ does not open cannot come back looking like one it read end to end.
 |---|---|
 | metadata that declares `VDI2770_Main.pdf`, and an archive without it | `error F1` — with the line and column of the declaration that has nothing behind it |
 | a class id outside the twelve VDI 2770 publishes | `error M2` — the id is quoted back, and the twelve are listed |
-| documents delivered as folders instead of nested containers | `error Z13` — and it says plainly that this is the tool declining to look, not the container being wrong |
+| documents delivered as folders instead of nested containers | `warn Z9` — and each folder is read as the container it holds, its findings under the folder's path; `error Z13` only for one this tool could not open, said plainly as this tool declining to look |
 | a member name that would escape the extraction directory | `error Z4` — refused, and nothing was ever written to disk to escape into |
 | a declared PDF the scan could not confirm is a PDF | `error P5` — reported as *not confirmed*, never as *not a PDF* |
 | a main document that refers to documents the handover does not contain | `error M11` — each dangling reference named, and silent when this tool did not read the whole delivery |
@@ -111,7 +106,7 @@ lists all of them.
 ## Where it stands
 
 <a href="https://github.com/dev365code/vdi2770-validate/blob/main/docs/what-it-catches.md">
-<img src="https://raw.githubusercontent.com/dev365code/vdi2770-validate/main/docs/capabilities.svg?v=a035c19a" alt="Coverage: 39 of 42 rules have a fixture pair; Explanation: what is wrong, evidence, remedy, source, line; Report contract: schemaVersion, golden, exit codes, schema; Entrances: command line, library, single file, Action; Input safety: read budgets, advisory, own mutations; Upstream: pinned by commit, checked weekly" width="100%">
+<img src="https://raw.githubusercontent.com/dev365code/vdi2770-validate/main/docs/capabilities.svg?v=0bfaec06" alt="Coverage: 40 of 43 rules have a fixture pair; Explanation: what is wrong, evidence, remedy, source, line; Report contract: schemaVersion, golden, exit codes, schema; Entrances: command line, library, single file, Action; Input safety: read budgets, advisory, own mutations; Upstream: pinned by commit, checked weekly" width="100%">
 </a>
 
 *Six things this tool holds itself to, measured on the code this page describes, against the conditions it has set for 1.0. The picture is drawn from [`docs/capabilities.json`](https://github.com/dev365code/vdi2770-validate/blob/main/docs/capabilities.json), and every item it marks done names a file in this repository that says so; the cases behind each axis are in [`docs/what-it-catches.md`](https://github.com/dev365code/vdi2770-validate/blob/main/docs/what-it-catches.md).*
@@ -167,14 +162,15 @@ Exit codes and a versioned JSON report make it a CI gate in one line.
 The step fails when the checker does, which is what a gate is for. If you want
 the *number* instead — `0` clean, `1` a finding or an unreadable path, `2`
 nothing readable at all, `3` the install disagreed with itself, `64` a mistyped
-command line or a `pyz:` that is not there — ask for it:
+command line or a `pyz:` that is not there, `70` this tool failed on a file —
+ask for it:
 
-*Coming in 0.11.0*: an exception raised by this tool's own code while checking
-a file, wherever the tool catches it, returns `70` (`EX_SOFTWARE`) instead of `1`
-or `2`, so a gate can tell a finding about your delivery from a failure of ours.
-A file that cannot be read — a path that does not exist, one you may not open —
-keeps the code it has now: `2` when nothing in the run could be read, `1` beside
-a path that could. A mistyped command line keeps `64`.
+`70` (`EX_SOFTWARE`) is an exception raised by this tool's own code while
+checking a file, wherever the tool caught it — out of the check, or inside it and
+reported as `X5` — so a gate can tell a finding about your delivery from a
+failure of ours. A file that cannot be read — a path that does not exist, one you
+may not open — is not ours: `2` when nothing in the run could be read, `1`
+beside a path that could.
 
 ```yaml
 - uses: dev365code/vdi2770-validate@v0.10.3
@@ -202,7 +198,7 @@ on to whatever reads the number; with the default you would add
 
 | Output | What it is |
 |---|---|
-| `exit-code` | what the checker returned: `0` nothing at the fail severity, `1` a finding or an unreadable path, `2` nothing could be read, `3` the install disagreed with itself, `64` a usage error |
+| `exit-code` | what the checker returned: `0` nothing at the fail severity, `1` a finding or an unreadable path, `2` nothing could be read, `3` the install disagreed with itself, `64` a usage error, `70` this tool failed on a file |
 | `pyz` | the single file this step ran, when it ran one; empty on the default path, which installs instead |
 | `version` | the release this step decided to run -- from `version`, from the ref you pinned, or from the tree the action came from; empty when `pyz` is given, since nothing was installed and the file answers `--version` itself |
 
@@ -235,7 +231,12 @@ three fields that say what produced the run, like every other entry: a run where
 some entries can be version-checked and some cannot is worse for a consumer than
 one where none can.
 
-**Documents delivered as folders.** They are reported, not opened — `Z13` above.
+**What is inside a file the metadata declares.** A `.zip` a document declares as one of its
+files is that document's content, the way a PDF's pages are, and nothing in it is judged as
+VDI 2770 — `Z14` says so on the report. How the archive stores its entries is still read.
+A declared `.zip` whose own root holds `VDI2770_Metadata.xml` or `VDI2770_Main.xml` is a
+container all the same, and is judged as one — `Z11` says it should not be inside a
+document container.
 
 **What the guideline text says.** It is sold by DIN Media and was not read. Every
 rule names a free source instead, or says the judgement is ours and explains
@@ -258,7 +259,7 @@ iiRDS, if that is the handover format you are on.
   rendered as [docs/rules.md](https://github.com/dev365code/vdi2770-validate/blob/main/docs/rules.md) — each
   rule carries where its requirement comes from, a remedy sentence, and — where the
   reference implementation checks the same thing — the message keys it uses.
-- **39 of 42 rules have a minimal fixture pair** — a container that violates the rule
+- **40 of 43 rules have a minimal fixture pair** — a container that violates the rule
   and a conforming one differing in as little as a single member. The other three
   cannot have one: two report a fault in this tool rather than in a file, and the third
   fires on every conforming container. A rule that fires nowhere fails
@@ -285,7 +286,7 @@ An item moves right when it is built and checked, not when it is decided.
 timeline
     title Where vdi2770-validate is going
     Shipped : Reader and rules, same version, one tag, one install
-            : 42 rules, each with a source and a remedy
+            : 43 rules, each with a source and a remedy
             : Versioned JSON report, exit codes, single-file offline build
     Building : An obligation index — what is asked for, and how much of it is covered
              : Deeper documentation-container checks
@@ -390,7 +391,7 @@ The readers and the rules used to be two distributions that had to match. From
 the pair be half-moved, and 0.7.0 pinned it exactly. They are one distribution
 now. `vdi2770-validate` is the old import
 name kept working: two lines that make it the same object as `vdi2770.validate`,
-asking for `vdi2770[validate]==0.10.3` — its own version, exactly. A floor
+asking for `vdi2770[validate]==0.11.0` — its own version, exactly. A floor
 would stop an older engine and let a newer one install beside it, and halves
 that disagree about which release they are do not judge.
 (This page follows the working tree, so the number is the release being
@@ -530,7 +531,7 @@ is finished.
 That is what 1.0 will mean, and not everything it waits for. The picture under
 *Where it stands* draws the rest; in words:
 
-Before it calls a release 1.0, this project asks of itself — Coverage: 39 of 42, every rule that can have one; Explanation: what is wrong, in one sentence · the evidence as read from the file · a remedy, for every rule · the source of every rule's requirement · the line, for every metadata finding; Report contract: schemaVersion in every report · a golden report held by a test · exit codes under test · a field-by-field schema page; Entrances: command line · Python library · single file, nothing to install · GitHub Action · browser, nothing installed; Input safety: read budgets, per member and per archive · a security fix ships with an advisory · tests verified against their own mutations · declared encodings read without loss; Upstream: upstream corpus pinned by commit · checked weekly for change.
+Before it calls a release 1.0, this project asks of itself — Coverage: 40 of 43, every rule that can have one; Explanation: what is wrong, in one sentence · the evidence as read from the file · a remedy, for every rule · the source of every rule's requirement · the line, for every metadata finding; Report contract: schemaVersion in every report · a golden report held by a test · exit codes under test · a field-by-field schema page; Entrances: command line · Python library · single file, nothing to install · GitHub Action · browser, nothing installed; Input safety: read budgets, per member and per archive · a security fix ships with an advisory · tests verified against their own mutations · declared encodings read without loss; Upstream: upstream corpus pinned by commit · checked weekly for change.
 
 ## The classification table, and a disagreement
 

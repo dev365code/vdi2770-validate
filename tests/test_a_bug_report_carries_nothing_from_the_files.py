@@ -185,13 +185,13 @@ def test_a_failure_of_this_tool_writes_a_bundle_and_keeps_its_exit_code(tmp_path
         raise KeyError(f"{CANARY} in the message")
     monkeypatch.setattr(cli, "check_file", breaks)
     monkeypatch.chdir(tmp_path)
-    assert cli.main(["check", path, "--no-bundle"]) == 2
+    assert cli.main(["check", path, "--no-bundle"]) == 70
     assert not list(tmp_path.glob("bug-report-*.json")), "--no-bundle wrote a bundle"
-    assert cli.main(["check", path, "--show-bundle"]) == 2
+    assert cli.main(["check", path, "--show-bundle"]) == 70
     assert not list(tmp_path.glob("bug-report-*.json")), "--show-bundle wrote a bundle"
     shown = capsys.readouterr().err
     assert cli.SHOWN in shown and '"trigger": "crash"' in shown, shown
-    assert cli.main(["check", path]) == 2, "writing the bundle changed the exit code"
+    assert cli.main(["check", path]) == 70, "writing the bundle changed the exit code"
     written = list(tmp_path.glob("bug-report-*.json"))
     assert len(written) == 1
     data = written[0].read_bytes()
@@ -264,6 +264,25 @@ def test_a_path_given_in_one_word_stays_out_too(spelling, tmp_path, capsys):
     data = written[0].read_bytes()
     assert not [form for form in _forms(CANARY) if form in data]
     assert "<out-1>" in json.loads(data)["invocation"]["argv"]
+
+
+def test_the_file_holds_the_bytes_the_limit_was_measured_on(tmp_path, monkeypatch):
+    """The limit is measured on the bundle's UTF-8 bytes, and the file has to
+    hold those bytes. Written as text, it did not on Windows: every line end
+    became two bytes on the way out, so a bundle measured just under 256 KiB
+    arrived over it. Held here by giving text written to a file what Windows
+    gives it: every line end as two bytes."""
+    made = bundling.build(path=str(FIXTURES / "m2-unknown-class-id.zip"), options=["--bug-report"],
+                          inputs=1, report=None, exit_code=0, seconds=0.0, trigger="manual")
+    as_bytes = Path.write_bytes
+
+    def as_windows_writes_text(self, data, encoding=None, errors=None, newline=None):
+        return as_bytes(self, data.replace("\n", "\r\n").encode(encoding or "utf-8"))
+    monkeypatch.setattr(Path, "write_text", as_windows_writes_text)
+    written = bundling.write(made, str(tmp_path))
+    monkeypatch.undo()
+    assert written.read_bytes() == bundling.dumps(made).encode("utf-8"), (
+        "the file is not the bytes the limit was measured on")
 
 
 def test_a_long_note_and_many_inputs_stay_within_the_limit(tmp_path, capsys):

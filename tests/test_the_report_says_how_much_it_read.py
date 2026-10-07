@@ -17,12 +17,14 @@ that deserves it least.
 from __future__ import annotations
 
 import io
+import os
 import zipfile
 
+import pytest
 from vdi2770_validate.report import as_text
 from vdi2770_validate.runner import check_bytes
 
-from conftest import CLEAN_DOCUMENT, CLEAN_DOCUMENTATION, counts_line
+from conftest import CLEAN_DOCUMENT, CLEAN_DOCUMENTATION, counts_line, unopened
 
 #: The report's own indent for a summary line. A finding's detail is indented
 #: nine, and `rules/container.py` builds one that opens with a member name the
@@ -67,13 +69,78 @@ def test_a_folder_this_tool_will_not_open_is_a_metadata_file_it_did_not_read():
             z.writestr(name, base.read(name))
         for folder in ("456-29201", "AB393"):
             z.writestr(f"{folder}/VDI2770_Metadata.xml", b"<x/>")
-    report = check_bytes(buf.getvalue(), "folders.zip")
+    data = buf.getvalue()
+    for folder in ("456-29201", "AB393"):
+        data = unopened(data, f"{folder}/VDI2770_Metadata.xml")
+    report = check_bytes(data, "folders.zip")
     assert "Z13" in {f.rule.id for f in report.findings}, "the premise"
     r = report.read
     assert r.metadata_found - r.metadata_read >= 2, (
         f"the two folders hold a metadata file each and neither was read: "
         f"{r.metadata_read} of {r.metadata_found}")
     assert f"{r.metadata_read} of {r.metadata_found} metadata files" in _line(report)
+
+
+def test_a_container_delivered_unpacked_is_counted_the_way_it_is_zipped():
+    """A folder holding a reserved name is a container there to open, as a `.zip`
+    member is -- one archive found, opened once, its metadata found and read
+    once. Counted from the listing alone it was no archive at all, and its
+    metadata file was counted twice: once in the listing it sits in, once by
+    the container it turned out to be. A `.zip` inside it is that container's
+    to count, and the reader's to open once.
+
+    Two shapes: the sample's document container unpacked, and a documentation
+    container unpacked with a `.zip` still inside it.
+    """
+    docn = zipfile.ZipFile(CLEAN_DOCUMENTATION)
+    members = {n: docn.read(n) for n in docn.namelist()}
+
+    def shaped(nest, unpacked):
+        outer = dict(members)
+        if nest == "document":
+            with zipfile.ZipFile(io.BytesIO(outer.pop("documentcontainer.zip"))) as z:
+                inner = {n: z.read(n) for n in z.namelist()}
+            name = "documentcontainer"
+        else:
+            inner, name = dict(members), "plantA"
+        if unpacked:
+            outer.update({f"{name}/{n}": d for n, d in inner.items()})
+        else:
+            packed = io.BytesIO()
+            with zipfile.ZipFile(packed, "w") as z:
+                for n, d in inner.items():
+                    z.writestr(n, d)
+            outer[f"{name}.zip"] = packed.getvalue()
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w") as z:
+            for n, d in outer.items():
+                z.writestr(n, d)
+        r = check_bytes(buf.getvalue(), "delivery.zip").read
+        return (r.archives_opened, r.archives_found, r.metadata_read, r.metadata_found)
+
+    for nest in ("document", "documentation"):
+        zipped, folder = shaped(nest, unpacked=False), shaped(nest, unpacked=True)
+        assert zipped[0] == zipped[1] and zipped[2] == zipped[3], ("the premise", nest, zipped)
+        assert folder == zipped, (
+            f"{nest} unpacked: {folder[0]} of {folder[1]} archives, {folder[2]} of "
+            f"{folder[3]} metadata files; zipped: {zipped[0]} of {zipped[1]}, "
+            f"{zipped[2]} of {zipped[3]}")
+
+
+def test_a_refused_name_that_ends_in_a_reserved_name_is_not_a_folder_to_open():
+    """`../VDI2770_Metadata.xml` and `/abs/VDI2770_Metadata.xml` are names the
+    reader refuses as unsafe, not folders holding a container -- counted as
+    folders, a delivery with none read `1 of 2 archives`, and nothing in the
+    report said what the second one was."""
+    doc = zipfile.ZipFile(CLEAN_DOCUMENT)
+    for bad in ("../VDI2770_Metadata.xml", "/abs/VDI2770_Metadata.xml"):
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w") as z:
+            for name in doc.namelist():
+                z.writestr(name, doc.read(name))
+            z.writestr(bad, doc.read("VDI2770_Metadata.xml"))
+        r = check_bytes(buf.getvalue(), "c.zip").read
+        assert (r.archives_opened, r.archives_found) == (1, 1), (bad, r.archives_opened, r.archives_found)
 
 
 def test_the_figure_does_not_improve_when_the_tool_does_less(monkeypatch):
@@ -236,6 +303,8 @@ def test_quiet_does_not_hide_the_line_from_the_page_either():
     assert "read 1 of 1 archives" in as_text(report, False)
 
 
+@pytest.mark.skipif(os.name == "nt", reason="zipfile turns a backslash in a member's name into / "
+                    "as it reads an archive on Windows, so there is no backslash name to refuse")
 def test_a_name_the_reader_refuses_for_a_backslash_is_still_counted():
     """`a\\b\\VDI2770_Metadata.xml` is refused as an unsafe name, and the
     predicate that recognises a metadata file split on `/` only — so the one

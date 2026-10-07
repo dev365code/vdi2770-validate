@@ -29,7 +29,7 @@ and the build fails when the two differ.
 | `issues/issue16container.zip` | 0 | 0 | 0 | 1 | P4 ×1 (ours) |
 | `missing_Maindocument.zip` | 1 | 1 | 1 | 2 | M13 ×1 (ours), P4 ×2 (ours), Z3 ×1 (reference) |
 | `missing_Metadata.zip` | 1 | 2 | 1 | 2 | M11 ×1 (reference), M13 ×1 (ours), P4 ×2 (ours), Z3 ×1 (reference) |
-| `missingdocuments/folders.zip` | 1 | 4 | 1 | 0 | F1 ×1 (reference), Z7 ×1 (reference), Z9 ×1 (reference), Z13 ×2 (ours) |
+| `missingdocuments/folders.zip` | 1 | 2 | 2 | 2 | F1 ×1 (reference), M13 ×1 (ours), P4 ×2 (ours), Z7 ×1 (reference), Z9 ×1 (reference) |
 
 Where a requirement comes from: **schema**, the XSD VDI publishes free; **table**,
 a table published free (IDTA 02004); **container**, the mechanics of ZIP and XML,

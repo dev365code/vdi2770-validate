@@ -52,11 +52,16 @@ def worst_document_attributes() -> int:
         return seen
 
     def walk(archive: zipfile.ZipFile):
+        import zlib
         nonlocal worst
         for name in archive.namelist():
             leaf = name.rsplit("/", 1)[-1]
             if leaf.startswith("VDI2770_") and leaf.endswith(".xml"):
-                worst = max(worst, count(archive.read(name)))
+                try:
+                    data = archive.read(name)
+                except (zipfile.BadZipFile, zlib.error, RuntimeError, OSError):
+                    continue          # a member damaged on purpose carries nothing to count
+                worst = max(worst, count(data))
             elif leaf.lower().endswith(".zip"):
                 import io
                 try:
@@ -247,7 +252,7 @@ def test_the_divergence_numbers_are_derived_from_the_sweep_and_the_catalogue():
              if n not in recorded.get("_unswept", {})}
     assert sweep, "every container is unswept; there is nothing to derive from"
 
-    words = {6: "Six", 13: "thirteen", 28: "Twenty-eight", 2: "two"}
+    words = {6: "Six", 13: "thirteen", 28: "Twenty-eight", 2: "two", 3: "three"}
 
     # `.get`: a rule may honestly cite nothing -- `M13` is our own reading of
     # a contradiction, with no observed key behind it -- and a docs gate that
@@ -928,7 +933,7 @@ def test_the_scope_page_quotes_what_the_tool_prints():
     assert said in printed, printed[-400:]
     assert said in page, "the page quotes a refusal the tool does not print"
 
-    shape = "  read 1 of 1 archives, 1 of 3 metadata files"
+    shape = "  read 3 of 3 archives, 3 of 3 metadata files"
     assert shape in printed, printed[-400:]
     assert shape.strip() in page, "the page quotes a figure the tool does not print"
 

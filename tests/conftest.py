@@ -38,6 +38,34 @@ def ordinal(n: int) -> str:
     return f"{n}{suffix}"
 
 
+def unopened(data: bytes, member: str) -> bytes:
+    """`data` with `member`'s stored bytes damaged, so the reader cannot read it
+    and a folder holding it is one this tool did not open -- what `Z13` is
+    about, now that a readable folder is opened as the container it is.
+
+    The damage stays inside the member's own bytes: where they start is read
+    from its local header, whose lengths may differ from the central
+    directory's, and a member of four stored bytes is damaged in those four
+    rather than in the header of the entry after it. Any change to the bytes
+    fails the CRC the reader checks, whatever the method.
+    """
+    import io
+    import zipfile
+
+    info = zipfile.ZipFile(io.BytesIO(data)).getinfo(member)
+    if not info.compress_size:
+        raise ValueError(f"{member} stores no bytes; there is nothing to damage")
+    head = info.header_offset
+    start = (head + 30 + int.from_bytes(data[head + 26:head + 28], "little")
+             + int.from_bytes(data[head + 28:head + 30], "little"))
+    n = min(24, info.compress_size)
+    begin = start + (info.compress_size - n) // 2
+    raw = bytearray(data)
+    for k in range(begin, begin + n):
+        raw[k] ^= 0xFF
+    return bytes(raw)
+
+
 def under_test(**kw):
     """Environment for a subprocess that must run *this* tree.
 

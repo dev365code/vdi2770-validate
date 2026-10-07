@@ -75,6 +75,7 @@ supplier archive does not cost you the other four hundred.
 | `present` | every file name the archive declares, including members that were refused. Whether a name is there is a fact about the directory; being unable to inflate the bytes behind it does not unsay it |
 | `metadata_bytes`, `metadata_name` | the metadata that was found, if any |
 | `children`, `walk()` | inner containers, opened to three levels |
+| `member_name`, `folder_members` | which member of the parent a child was read from — for a container delivered as a folder, the folder, ending in `/`, and the parent's members it was put together from; `zipread.folder_bytes(parent_bytes, child.member_name, child.folder_members)` gives its bytes again |
 | `defects` | what the reader could not do, and why |
 | `rejected` | members present in the archive but refused, and why |
 | `near_misses` | reserved name → `(kind, the member name that nearly matched, as the archive spells it)`, kind being `in-a-subfolder`, `path-prefixed`, `case-differs` or `case-differs-elsewhere`. `vdi2770_metadata.xml` in an archive with no metadata is worth saying; how to say it is yours, not ours |

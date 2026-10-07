@@ -180,7 +180,46 @@ def test_a_surprise_from_the_reader_does_not_stop_the_sweep(capsys, monkeypatch)
     captured = capsys.readouterr()
     assert "something a reader did not expect" in captured.err, captured.err
     assert "0 error(s)" in captured.out, "the sweep stopped at the bad path"
-    assert code == 1, "one unreadable path out of two is not a clean run"
+    # 70, not 1: this is this tool failing on a file, and a gate reading the
+    # number has to be told that apart from a finding about the delivery.
+    assert code == 70, "a failure of this tool beside a clean file is not a clean run"
+
+
+def test_a_failure_of_ours_exits_70_wherever_it_was_caught(capsys, monkeypatch):
+    """A gate reading the number has to tell a finding about the delivery from
+    a failure of this tool. An exception raised by this tool's own code while
+    checking a file returns 70 (EX_SOFTWARE), whether it stopped the file --
+    raised out of the check -- or was caught inside it and reported as `X5`. A
+    path that cannot be read keeps its own codes, 2 alone and 1 beside a file
+    that could be; a finding keeps 1."""
+    from vdi2770_validate import cli, runner
+
+    real = cli.check_file
+
+    def boom(path):
+        if "boom" in path:
+            raise ValueError("something a reader did not expect")
+        return real(path)
+
+    with monkeypatch.context() as m:
+        m.setattr(cli, "check_file", boom)
+        assert cli.main(["check", "--no-bundle", "boom.zip"]) == 70
+        assert cli.main(["check", "--no-bundle", "boom.zip", str(CLEAN_DOCUMENT)]) == 70
+        assert cli.main(["check", "--no-bundle", "boom.zip", "no-such-file.zip"]) == 70
+    capsys.readouterr()
+
+    def explodes(*a, **kw):
+        raise RuntimeError("a check fell over")
+        yield                     # never reached: it makes this a generator, as the checks are
+
+    with monkeypatch.context() as m:
+        m.setattr(runner.r_pdf, "check", explodes)
+        assert cli.main(["check", str(CLEAN_DOCUMENT)]) == 70
+        assert "X5" in capsys.readouterr().out
+    # And the codes that are not about this tool stay what they were.
+    assert cli.main(["check", "no-such-file.zip"]) == 2
+    assert cli.main(["check", "no-such-file.zip", str(CLEAN_DOCUMENT)]) == 1
+    assert cli.main(["check", str(FIXTURES / "m2-unknown-class-id.zip")]) == 1
 
 
 def test_a_missing_file_still_says_what_the_os_said(capsys, monkeypatch):
@@ -583,5 +622,5 @@ def test_help_shows_the_exit_codes_it_can_return(capsys):
         main(["--help"])
     out = capsys.readouterr().out
     assert "exit codes:" in out.lower(), out
-    for code in ("0", "1", "2", "3", "64"):
+    for code in ("0", "1", "2", "3", "64", "70"):
         assert code in out, (code, out)

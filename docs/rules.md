@@ -12,21 +12,21 @@ tool, because both are errors on purpose and severity cannot carry the differenc
 - **`table`** (2) — a freely published table says so (IDTA 02004)
 - **`container`** (4) — mechanics of ZIP and XML — true without VDI 2770
 - **`reference`** (14) — observed in the MIT reference implementation, **not** verified against the guideline, which is paywalled
-- **`ours`** (21) — our own judgement, and it carries a reason
+- **`ours`** (22) — our own judgement, and it carries a reason
 
-42 rules.
+43 rules.
 
 Where each layer stands:
 
 | layer | `schema` | `table` | `container` | `reference` | `ours` | total |
 |---|---|---|---|---|---|---|
-| `container` | 0 | 0 | 3 | 3 | 7 | 13 |
+| `container` | 0 | 0 | 3 | 3 | 8 | 14 |
 | `files` | 0 | 0 | 0 | 3 | 1 | 4 |
 | `metadata` | 0 | 2 | 0 | 7 | 4 | 13 |
 | `pdf` | 0 | 0 | 0 | 1 | 4 | 5 |
 | `schema` | 1 | 0 | 1 | 0 | 4 | 6 |
 | `tool` | 0 | 0 | 0 | 0 | 1 | 1 |
-| **total** | **1** | **2** | **4** | **14** | **21** | **42** |
+| **total** | **1** | **2** | **4** | **14** | **22** | **43** |
 
 ## container
 
@@ -126,13 +126,21 @@ Why this is ours: Document containers hold a document's files. A container insid
 
 **Remedy.** Re-create the archive and send it again. A member with a broken CRC is usually a truncated transfer; a member that needs a password has not been handed over, because the recipient cannot open it.
 
-### `Z13` — Documents are delivered as folders, which this tool does not open
+### `Z13` — A folder holds a container this tool did not open
 
 *error* · obligation `ours` · **about: this tool**
 
-Why this is ours: A folder holding VDI2770_Metadata.xml is a document container that was not zipped. This tool opens .zip members and nothing else, so everything inside was unchecked — and a report that said nothing would be telling the reader it passed. The reference implementation does read them, so this is a limit of ours rather than a fault of the delivery.
+Why this is ours: A folder holding VDI2770_Metadata.xml or VDI2770_Main.xml is a container that was not zipped, and this tool reads it as the container it is, as the reference implementation does. This one it did not open — its metadata could not be read, or a limit this tool puts on one read was reached: how deep, how large, how many containers — so everything inside is unchecked, and a report that said nothing would be telling the reader it passed. The limit is ours rather than a fault of the delivery.
 
-**Remedy.** Nothing here is necessarily wrong with the container. Zip each document folder into its own .zip member if you want this tool to check it, or check those folders with something that reads them.
+**Remedy.** Nothing here is necessarily wrong with the container. The finding beside this one says why the folder was not opened; once that is put right the folder is checked like any other container.
+
+### `Z14` — A declared file is an archive whose contents are not judged as VDI 2770
+
+*info* · obligation `ours`
+
+Why this is ours: A file the metadata declares is part of a document's content, not of the container's structure, so what is inside it is its own business, the way what is inside a PDF is: nothing in it is judged as VDI 2770, not a container and not a metadata file. The reference implementation reports nothing about what is inside one either. How the archive stores its entries is still reported -- a name that climbs out, an entry that cannot be read, a name stored twice -- because that is true of any archive handed over, whatever it holds. Saying so every time keeps a reader from taking the archive's contents as checked.
+
+**Remedy.** Nothing to change if the archive is the document's content. If it holds documents meant to be checked as VDI 2770 containers, put them in the documentation container as containers of their own rather than inside a document's file.
 
 ## files
 

@@ -10,7 +10,7 @@ container can come back 0 with findings in the report; 1 at least one finding at
 the chosen severity, or an unreadable path; 2 nothing could be read at all; 3
 this tool refused to judge, which is not a verdict on any container -- its two
 halves disagree about which release they are, and the line it prints begins
-`vdi2770-validate: INSTALLATION` so a log can tell the two apart; 64 a command-line usage error -- a bad option, a missing argument, or an unknown subcommand -- the caller getting the command wrong, not a verdict on any container. A run whose reader goes away -- `| head` -- ends by
+`vdi2770-validate: INSTALLATION` so a log can tell the two apart; 64 a command-line usage error -- a bad option, a missing argument, or an unknown subcommand -- the caller getting the command wrong, not a verdict on any container; 70 this tool's own code failed on a file, raised out of the check or caught inside it and reported as `X5` -- a failure of ours, not a verdict on the delivery. A run whose reader goes away -- `| head` -- ends by
 `SIGPIPE` where the platform has one and 141 where it does not, because it did
 not finish: any of 0, 1 or 2 would be a claim about containers nobody looked at.
 """
@@ -98,6 +98,10 @@ def _bundle(args, path, document, exit_code, started, *, trigger, error=None):
 def _cmd_check(args) -> int:
     worst = 0
     unreadable = 0
+    # A failure of this tool's own code on any file, wherever it was caught:
+    # raised out of the check, or caught inside it and reported as `X5`. A gate
+    # reading the number has to tell it from a finding about the delivery.
+    ours = False
     refused = False
     # `--json` is one document for the whole run. Printing one object per path
     # with no separator was neither JSON nor NDJSON, so the interface advertised
@@ -144,8 +148,9 @@ def _cmd_check(args) -> int:
             # A path that is not there, or not a file, is the caller's; anything
             # else raised here is this tool failing on a file it was given, and
             # that is the one case a bundle is written without being asked for.
+            ours = ours or not isinstance(e, OSError)
             if not isinstance(e, OSError) and not args.no_bundle:
-                where = _bundle(args, path, None, 2, started, trigger="crash", error=e)
+                where = _bundle(args, path, None, EX_SOFTWARE, started, trigger="crash", error=e)
                 if where is not None:
                     _say(CRASHED.format(path=where))
                     _say(SENT)
@@ -161,10 +166,13 @@ def _cmd_check(args) -> int:
         else:
             print(rendering.as_text(rep, not args.quiet))
         refused = refused or _refused(document)
+        crashed = any(f.rule.id == "X5" for f in rep.findings)
+        ours = ours or crashed
         if args.bug_report or args.show_bundle:
             failing = rep.count(Severity.ERROR) or (
                 args.fail_on == "warning" and rep.count(Severity.WARNING))
-            where = _bundle(args, path, document, 1 if failing else 0, started,
+            where = _bundle(args, path, document,
+                            EX_SOFTWARE if crashed else 1 if failing else 0, started,
                             trigger="refusal" if _refused(document) else "manual")
             if where is not None:
                 _say(f"A diagnostic bundle was written to {where}.")
@@ -209,6 +217,8 @@ def _cmd_check(args) -> int:
               "PDF/A validator can say whether that\nclaim is true.")
     if refused and not (args.bug_report or args.show_bundle):
         _say(REFUSED)
+    if ours:
+        return EX_SOFTWARE
     if unreadable:
         return 2 if unreadable == len(args.paths) else max(worst, 1)
     return worst
@@ -262,6 +272,7 @@ class _Version(argparse.Action):
 
 
 EX_USAGE = 64  # sysexits.h EX_USAGE: the command line itself was wrong
+EX_SOFTWARE = 70  # sysexits.h EX_SOFTWARE: this tool's own code failed on a file
 
 #: The `--help` epilog. `--help` said nothing about the exit codes a CI job
 #: reads, so they are printed with the usage.
@@ -272,7 +283,9 @@ EXIT_CODES = (
     "  2   nothing could be read at all\n"
     "  3   refused to judge: the installation's two halves disagree\n"
     "  64  a command-line usage error (EX_USAGE): a bad option, a missing\n"
-    "      argument, or an unknown subcommand")
+    "      argument, or an unknown subcommand\n"
+    "  70  this tool failed on a file (EX_SOFTWARE): its own error, not a\n"
+    "      verdict on the delivery")
 
 
 class _UsageParser(argparse.ArgumentParser):

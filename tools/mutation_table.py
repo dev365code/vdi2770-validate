@@ -702,7 +702,7 @@ TABLE = [
 
     ("gates/the-pin-names-the-reader-that-was-built",
      "packages/vdi2770/pyproject.toml",
-     'version = "0.10.3"',
+     'version = "0.11.0"',
      'version = "0.7.1"',
      ["tools/check_wheel.py"],
      "the two manifests agree with each other and the artifacts do not: the "
@@ -993,6 +993,312 @@ TABLE = [
      "at the depth limit an innermost documentation container holding only its "
      "declared payload delivered nothing, and nothing said so"),
 
+    ("rules/a-declared-payload-is-sealed",
+     "packages/vdi2770/src/vdi2770/validate/rules/container.py",
+     "    return container.kind is Kind.UNKNOWN and is_declared_payload is True",
+     "    return False",
+     ["tests/test_a_declared_zip_is_a_payload.py::test_z13_does_not_look_inside_a_declared_payload",
+      "tests/test_a_declared_zip_is_a_payload.py::"
+      "test_a_container_inside_a_declared_payload_is_not_judged_zipped_either"],
+     "a conforming document container drew `X1` and exit 1 for a metadata file "
+     "inside its declared parts bundle -- and only when the file sat in a `.zip` there"),
+
+    ("runner/the-walk-stops-at-a-declared-payload",
+     "packages/vdi2770/src/vdi2770/validate/runner.py",
+     "        if c.parent is not None and id(c.parent) in beyond:",
+     "        if False:",
+     ["tests/test_a_declared_zip_is_a_payload.py::test_z13_does_not_look_inside_a_declared_payload",
+      "tests/test_a_declared_zip_is_a_payload.py::"
+      "test_a_container_inside_a_declared_payload_is_not_judged_zipped_either"],
+     "the decision was made and the walk went on below it, judging a container "
+     "inside a declared file"),
+
+    ("runner/a-payloads-listing-is-not-there-to-read",
+     "packages/vdi2770/src/vdi2770/validate/runner.py",
+     "        listed = () if payload else (c.present or c.file_names)",
+     "        listed = c.present or c.file_names",
+     ["tests/test_a_declared_zip_is_a_payload.py::"
+      "test_a_container_inside_a_declared_payload_is_not_judged_zipped_either"],
+     "a read that did not look inside a declared file called itself incomplete "
+     "for it: an archive found there, and never opened"),
+
+    ("rules/a-declared-payload-is-said-to-be-one",
+     "packages/vdi2770/src/vdi2770/validate/rules/container.py",
+     '    if sealed(container, is_declared_payload):\n        r = rule("Z14")',
+     '    if False:\n        r = rule("Z14")',
+     ["tests/test_a_declared_zip_is_a_payload.py::test_z13_does_not_look_inside_a_declared_payload",
+      "tests/test_a_declared_zip_is_a_payload.py::"
+      "test_a_container_inside_a_declared_payload_is_not_judged_zipped_either"],
+     "the report passed over a declared archive in silence, and a reader takes "
+     "what is in it as checked"),
+
+    ('report/a-folder-holding-a-container-is-an-archive-found',
+     'packages/vdi2770/src/vdi2770/validate/runner.py',
+     '        report.read.archives_found += len(in_folders) + sum(',
+     '        report.read.archives_found += sum(',
+     ['tests/test_the_report_says_how_much_it_read.py::test_a_container_delivered_unpacked_is_counted_the_way_it_is_zipped'],
+     'a container delivered as a folder was no archive at all in the count, so the '
+     'read opened one more than it found'),
+
+    ('report/an-opened-folders-metadata-is-counted-once',
+     'packages/vdi2770/src/vdi2770/validate/runner.py',
+     '            and n not in held)',
+     '            )',
+     ['tests/test_the_report_says_how_much_it_read.py::test_a_container_delivered_unpacked_is_counted_the_way_it_is_zipped'],
+     'the metadata file in an opened folder was counted by the listing it sits in '
+     'and again by the container it turned out to be'),
+
+    ('report/a-zip-in-a-folder-is-that-containers-to-count',
+     'packages/vdi2770/src/vdi2770/validate/runner.py',
+     '            and not any(zipread.placed(n).startswith(f) for f in in_folders))',
+     '            )',
+     ['tests/test_the_report_says_how_much_it_read.py::test_a_container_delivered_unpacked_is_counted_the_way_it_is_zipped'],
+     'a `.zip` inside a folder container was counted by the outer listing and by the '
+     "folder's own"),
+
+    ('reader/a-documentation-folder-is-opened-too',
+     'packages/vdi2770/src/vdi2770/zipread.py',
+     ('        for reserved in (METADATA_XML, MAIN_XML):\n' '            if where.endswith'),
+     ('        for reserved in (METADATA_XML,):\n' '            if where.endswith'),
+     ['tests/test_a_document_delivered_as_a_folder_is_read.py::test_a_documentation_container_in_a_folder_draws_what_it_draws_zipped'],
+     'a documentation container unpacked into a folder went unchecked while the same '
+     'one zipped was read'),
+
+    ('model/a-path-in-a-folder-takes-no-archive-separator',
+     'packages/vdi2770/src/vdi2770/model.py',
+     '        s = "".join(parts) if len(parts) == 2 and parts[0].endswith("/") else "!/".join(parts)',
+     '        s = "!/".join(parts)',
+     ['tests/test_a_document_delivered_as_a_folder_is_read.py::test_a_documentation_container_in_a_folder_draws_what_it_draws_zipped'],
+     'a finding in a folder was printed at `plantA/!/VDI2770_Main.pdf`, inside an '
+     'archive called `plantA/` that does not exist'),
+
+    ('runner/a-folders-pdfs-are-read-from-the-folder',
+     'packages/vdi2770/src/vdi2770/validate/runner.py',
+     '    got = zipread.folder_bytes(data, c.member_name, list(c.folder_members))',
+     '    got = None',
+     ['tests/test_a_document_delivered_as_a_folder_is_read.py::test_a_document_container_in_a_folder_draws_what_it_draws_zipped'],
+     'the PDFs in a folder container went unchecked while the same PDFs zipped were '
+     'read'),
+
+    ('reader/a-zip-in-a-folder-container-is-opened-once',
+     'packages/vdi2770/src/vdi2770/zipread.py',
+     '                  and not any(placed(m.name).startswith(f) for f in folders)]',
+     '                  ]',
+     ['tests/test_the_report_says_how_much_it_read.py::test_a_container_delivered_unpacked_is_counted_the_way_it_is_zipped'],
+     'a `.zip` inside a folder container was opened by the outer archive and again '
+     'by the folder, and judged twice'),
+
+    ('reader/a-folder-is-charged-against-the-read-budget',
+     'packages/vdi2770/src/vdi2770/zipread.py',
+     '            if not budget.take_bytes(size):',
+     '            if False:',
+     ['tests/test_a_document_delivered_as_a_folder_is_read.py::test_a_folder_is_charged_against_the_budget_a_zip_is'],
+     'a folder was inflated a second time, into the archive read as its container, '
+     'for free'),
+
+    ('reader/a-folder-counts-as-a-container-opened',
+     'packages/vdi2770/src/vdi2770/zipread.py',
+     ('            if not budget.take_container():\n' '                c.defects.append(Defect(\n' '                    "container-budget-exhausted", c.where.child(member=folder),'),
+     ('            if False:\n' '                c.defects.append(Defect(\n' '                    "container-budget-exhausted", c.where.child(member=folder),'),
+     ['tests/test_a_document_delivered_as_a_folder_is_read.py::test_a_folder_counts_as_a_container_opened'],
+     'the limit on how many containers one read opens did not count folders'),
+
+    ('reader/a-folder-too-deep-is-said-to-be',
+     'packages/vdi2770/src/vdi2770/zipread.py',
+     ('        for folder in folders:\n' '            c.defects.append(Defect("nesting-too-deep"'),
+     ('        for folder in []:\n' '            c.defects.append(Defect("nesting-too-deep"'),
+     ['tests/test_a_document_delivered_as_a_folder_is_read.py::test_a_folder_too_deep_is_said_to_be_as_a_zip_is'],
+     'a folder past the depth limit was passed over where a `.zip` in its place was '
+     'reported'),
+
+    ('reader/a-folder-that-fails-a-second-read-is-refused',
+     'packages/vdi2770/src/vdi2770/zipread.py',
+     ('                archive = folder_archive(lambda n: _whole(zf, n), folder, inside)\n' '            except Exception as e:'),
+     ('                archive = folder_archive(lambda n: _whole(zf, n), folder, inside)\n' '            except ZeroDivisionError as e:'),
+     ['tests/test_a_document_delivered_as_a_folder_is_read.py::test_a_folder_that_reads_once_and_not_twice_is_refused_not_a_crash'],
+     'one folder whose member read once and not twice ended the whole run as a '
+     'failure of this tool'),
+
+    ('rules/an-opened-folder-draws-no-z13',
+     'packages/vdi2770/src/vdi2770/validate/rules/container.py',
+     '                                    if not _inside(folder_path(prefix), opened)]',
+     '                                    ]',
+     ['tests/test_a_document_delivered_as_a_folder_is_read.py::test_a_document_container_in_a_folder_draws_what_it_draws_zipped'],
+     'a folder read as the container it is was still reported as one this tool did '
+     'not open'),
+
+    ('rules/a-container-in-a-document-container-is-one-unpacked-too',
+     'packages/vdi2770/src/vdi2770/validate/rules/container.py',
+     ('        if declared is not None:\n' '            held: dict = {}'),
+     ('        if False:\n' '            held: dict = {}'),
+     ['tests/test_a_document_delivered_as_a_folder_is_read.py::test_a_container_inside_a_document_container_is_one_zipped_or_not'],
+     'a container unpacked into a folder inside a document container went unremarked '
+     'where the same one zipped drew `Z11`'),
+
+    ('rules/a-folder-this-tool-opened-is-not-flattened-either',
+     'packages/vdi2770/src/vdi2770/validate/rules/container.py',
+     '        opened_container = sorted(f for f in folders if folder_path(f) + "/" in opened_here)',
+     '        opened_container = []',
+     ['tests/test_a_folder_is_a_folder.py::test_a_folder_this_tool_opened_is_still_not_to_be_flattened'],
+     "once the folder was opened, `Z9`'s remedy said only to store the members at "
+     'the root, which flattens the container'),
+
+    ('rules/an-opened-folder-is-not-said-to-be-unopened',
+     'packages/vdi2770/src/vdi2770/validate/rules/container.py',
+     '                    if f not in opened_here and not _inside(f[:-1], within_opened)}',
+     '                    }',
+     ['tests/test_a_folder_is_a_folder.py::test_a_folder_this_tool_opened_is_still_not_to_be_flattened'],
+     "`Z9`'s remedy pointed at a `Z13` beside it for a folder this tool had opened, "
+     'and there was none'),
+
+    ('reader/a-folder-is-one-folder-however-its-members-are-spelled',
+     'packages/vdi2770/src/vdi2770/zipread.py',
+     '    return "/".join(seg for seg in nfc(name).split("/") if seg not in ("", "."))',
+     '    return nfc(name)',
+     ['tests/test_documents_delivered_as_folders.py'],
+     '`./docdir/` and `docdir/` in one archive made two folders of one, and the '
+     'files left out of it were reported missing'),
+
+    ('rules/a-folder-this-tool-could-not-open-is-said-so-in-any-container',
+     'packages/vdi2770/src/vdi2770/validate/rules/container.py',
+     ('    if as_folders:\n' '        r = rule("Z13")'),
+     ('    if False:\n' '        r = rule("Z13")'),
+     ['tests/test_a_finding_says_something_true.py::test_a_folder_we_did_not_open_is_said_so_in_any_container'],
+     'a folder nobody looked inside vanished from the report with nothing said'),
+
+    ('rules/files-in-a-folder-holding-metadata-are-not-called-undeclared',
+     'packages/vdi2770/src/vdi2770/validate/rules/files.py',
+     ('    unopened = frozenset(folder_path(f)\n' '                         for f, _ in folders_holding_metadata(container)) - {""}'),
+     '    unopened = frozenset()',
+     ['tests/test_a_finding_says_something_true.py::test_a_folder_we_did_not_open_is_said_so_in_any_container'],
+     'the files of a folder holding its own metadata were called undeclared by '
+     'metadata that does not govern them'),
+
+    ('report/the-summary-counts-the-errors-that-are-this-tool-declining',
+     'packages/vdi2770/src/vdi2770/validate/report.py',
+     ('    if ours:\n' '        said += (f" — {ours} of the errors "'),
+     ('    if False:\n' '        said += (f" — {ours} of the errors "'),
+     ['tests/test_a_finding_says_something_true.py::test_the_summary_says_how_many_errors_are_this_tool_declining'],
+     'a supplier read an error against their delivery, and the error was this tool '
+     'declining to look'),
+
+    ('rules/a-documentation-folder-is-a-folder-too',
+     'packages/vdi2770/src/vdi2770/validate/rules/container.py',
+     '        if not sep or leaf not in (METADATA_XML, MAIN_XML):',
+     '        if not sep or leaf not in (METADATA_XML,):',
+     ['tests/test_a_finding_says_something_true.py::test_a_documentation_folder_is_a_folder_this_tool_did_not_open_too'],
+     'a documentation container delivered as a folder was not a folder to the rules, '
+     'and a delivery nobody looked inside came back clean'),
+
+    ('reader/a-folders-members-are-named-from-the-folder',
+     'packages/vdi2770/src/vdi2770/zipread.py',
+     '    return "/".join(seg for seg in parts[position:] if seg)',
+     '    return name',
+     ['tests/test_a_document_delivered_as_a_folder_is_read.py::'
+      'test_a_member_refused_in_a_folder_is_refused_once_as_it_is_zipped'],
+     'the archive a folder was read as kept the folder in every name, so its '
+     'reserved file was not at its root and it was not the container it is'),
+
+    ('rules/a-folder-inside-an-opened-folder-is-that-folders-to-open',
+     'packages/vdi2770/src/vdi2770/validate/rules/container.py',
+     'if not _inside(folder_path(prefix), opened)]',
+     'if folder_path(prefix) not in opened]',
+     ['tests/test_a_document_delivered_as_a_folder_is_read.py::test_folders_inside_folders_draw_what_the_zips_inside_zips_draw'],
+     'a fully unpacked three-level delivery drew Z13 for every folder its inner '
+     'folders had opened'),
+
+    ('reader/a-container-inside-a-folder-is-at-a-path-in-it',
+     'packages/vdi2770/src/vdi2770/zipread.py',
+     '    return path + name if path.endswith("/") else f"{path}!/{name}"',
+     '    return f"{path}!/{name}"',
+     ['tests/test_a_document_delivered_as_a_folder_is_read.py::test_a_container_inside_a_folder_is_at_a_path_in_that_folder'],
+     'a finding in a container inside a folder was printed at `folder/!/inner.zip`, '
+     'and one report spelled one member two ways'),
+
+    ('reader/a-folder-knows-what-its-archive-refused',
+     'packages/vdi2770/src/vdi2770/zipread.py',
+     '        c.rejected.setdefault(name, defect)',
+     '        pass',
+     ['tests/test_a_document_delivered_as_a_folder_is_read.py::test_a_member_refused_in_a_folder_is_said_to_be_refused_not_missing',
+      'tests/test_a_document_delivered_as_a_folder_is_read.py::test_a_refusal_reaches_a_folder_inside_a_folder'],
+     'a member refused in a folder was reported as not sent, with a remedy telling '
+     'the sender to add it'),
+
+    ('reader/one-name-in-a-folder-is-one-entry',
+     'packages/vdi2770/src/vdi2770/zipread.py',
+     '        if relative not in seen:',
+     '        if True:',
+     ['tests/test_a_document_delivered_as_a_folder_is_read.py::test_two_spellings_of_one_path_in_a_folder_are_the_parents_to_report'],
+     'two spellings of one path became one name stored twice, both were refused, and '
+     'the document went unread'),
+
+    ('reader/a-pair-the-folder-holds-is-the-folders-to-report',
+     'packages/vdi2770/src/vdi2770/zipread.py',
+     '            if handed:',
+     '            if False:',
+     ['tests/test_a_document_delivered_as_a_folder_is_read.py::test_two_spellings_of_one_path_in_a_folder_are_the_parents_to_report'],
+     'a name composed and decomposed in a folder was reported by the archive and '
+     'again by the folder'),
+
+    ('rules/a-declared-payloads-depth-is-not-this-reports',
+     'packages/vdi2770/src/vdi2770/validate/rules/container.py',
+     ('        if (d.kind in ("nesting-too-deep", "container-budget-exhausted")\n' '                and sealed(container, is_declared_payload)):'),
+     ('        if (False\n' '                and sealed(container, is_declared_payload)):'),
+     ['tests/test_a_declared_zip_is_a_payload.py::test_a_declared_payload_one_level_down_is_not_looked_inside_either'],
+     'a parts bundle one level down drew Z6, an error, for a folder inside a file '
+     'the metadata declared'),
+
+    ('report/a-name-refused-as-unsafe-is-not-a-folder',
+     'packages/vdi2770/src/vdi2770/validate/runner.py',
+     '            [n for n in listed if getattr(c.rejected.get(n), "kind", None) != "unsafe-member-name"])',
+     '            list(listed))',
+     ['tests/test_the_report_says_how_much_it_read.py::test_a_refused_name_that_ends_in_a_reserved_name_is_not_a_folder_to_open'],
+     '`../VDI2770_Metadata.xml` was counted as a folder holding a container, an '
+     'archive found that no finding explained'),
+
+    ('reader/a-folder-is-held-to-the-nested-container-cap',
+     'packages/vdi2770/src/vdi2770/zipread.py',
+     '            if size > MAX_MEMBER_BYTES:',
+     '            if False:',
+     ['tests/test_a_document_delivered_as_a_folder_is_read.py::test_a_folder_is_held_to_the_size_a_nested_container_is_read_within'],
+     'a nested container over the member cap was refused zipped and read whole '
+     'unpacked'),
+
+    ('rules/a-declared-payload-is-not-searched-for-folders',
+     'packages/vdi2770/src/vdi2770/validate/rules/container.py',
+     '    as_folders = [] if opaque else [',
+     '    as_folders = [] if False else [',
+     ['tests/test_a_declared_zip_is_a_payload.py::'
+      'test_a_declared_payload_one_level_down_is_not_looked_inside_either'],
+     'a folder inside a parts bundle one level down, past the depth limit, was '
+     'reported as a folder holding a container this tool did not open'),
+
+    ('runner/a-folder-is-never-governed-elsewhere',
+     'packages/vdi2770/src/vdi2770/validate/runner.py',
+     '            bool(c.member_name) and not c.member_name.endswith("/") and c.parent is not None',
+     '            bool(c.member_name) and c.parent is not None',
+     ['tests/test_a_document_delivered_as_a_folder_is_read.py::'
+      'test_a_folder_whose_reserved_name_is_spelled_with_a_dot_is_judged_as_zipped'],
+     'a folder opened as a container that turned out to be none was treated as a '
+     'file nobody could tell about, and passed in silence where zipped it drew Z3'),
+
+    ('report/a-refusal-handed-to-a-folder-is-counted-there',
+     'packages/vdi2770/src/vdi2770/validate/runner.py',
+     '        held |= {n for n in c.rejected for ch in c.children',
+     '        held |= {n for n in () for ch in c.children',
+     ['tests/test_a_document_delivered_as_a_folder_is_read.py::'
+      'test_a_refused_metadata_file_in_a_folder_is_counted_once'],
+     'a metadata file refused under an opened folder was counted by the archive '
+     'and again by the folder it was handed to'),
+
+    ('rules/z13-names-the-file-the-folder-holds',
+     'packages/vdi2770/src/vdi2770/validate/rules/container.py',
+     '            held = ", ".join(sorted(set(leaves)))',
+     '            held = "VDI2770_Metadata.xml"',
+     ['tests/test_a_finding_says_something_true.py::test_z13_names_the_reserved_file_each_folder_actually_holds'],
+     'the sentence named `VDI2770_Metadata.xml` whichever file the folder held, and '
+     'a reader grepped their listing for a name that is not in it'),
+
     ("reader/a-near-miss-is-skipped-only-for-an-unsafe-name",
      "packages/vdi2770/src/vdi2770/zipread.py",
      '         if defect.kind == "unsafe-member-name"})',
@@ -1057,8 +1363,8 @@ TABLE = [
 
     ("report/the-figure-counts-what-the-archive-lists",
      "packages/vdi2770/src/vdi2770/validate/runner.py",
-     "        listed = c.present or c.file_names",
-     "        listed = c.file_names",
+     "        listed = () if payload else (c.present or c.file_names)",
+     "        listed = () if payload else c.file_names",
      ["tests/test_the_report_says_how_much_it_read.py"],
      "refusing a member took it out of the denominator, so the figure improved "
      "when this tool declined to look"),
@@ -1141,8 +1447,8 @@ FRONT_DOOR = [
 
     ("gates/the-elision-in-the-shot-says-what-it-elided",
      "tools/gen_door.py",
-     '"… 2 more errors (Z13) and 1 warning (Z9)"',
-     '"… 2 more errors (Z9) and 1 warning (Z13)"',
+     '"… 2 more warnings (M13 Z9) and 2 notes (P4)"',
+     '"… 2 more warnings (M13 P4) and 2 notes (Z9)"',
      ["tests/test_the_front_door_pictures_are_true.py::"
       "test_the_elision_in_the_shot_says_what_it_elided"],
      "a marked gap is a claim about the output, and this project has already "
@@ -1150,7 +1456,7 @@ FRONT_DOOR = [
 
     ("gates/the-page-quotes-the-requirement-the-project-declares",
      "README.md",
-     "`vdi2770[validate]==0.10.3`",
+     "`vdi2770[validate]==0.11.0`",
      "`vdi2770[validate]>=0.7.0`",
      ["tests/test_the_front_page_points_at_what_it_shows.py::"
       "test_the_requirement_the_page_quotes_is_the_one_the_project_declares"],
@@ -1159,7 +1465,7 @@ FRONT_DOOR = [
 
     ("gates/the-page-pypi-shows-quotes-the-requirement-the-project-declares",
      "README-vdi2770-validate.md",
-     "`vdi2770[validate]==0.10.3`",
+     "`vdi2770[validate]==0.11.0`",
      "`vdi2770[validate]==0.9.1`",
      ["tests/test_the_front_page_points_at_what_it_shows.py::"
       "test_the_requirement_the_page_quotes_is_the_one_the_project_declares"],
@@ -1168,8 +1474,8 @@ FRONT_DOOR = [
 
     ("gates/the-badge-counts-the-catalogue",
      "README.md",
+     "rules-43_each_with_a_remedy",
      "rules-42_each_with_a_remedy",
-     "rules-41_each_with_a_remedy",
      ["tests/test_the_front_page_points_at_what_it_shows.py::"
       "test_the_badge_that_counts_rules_counts_the_catalogue"],
      "a number inside a shields.io URL is not the shape the prose gate reads, "
@@ -1177,8 +1483,8 @@ FRONT_DOOR = [
 
     ("gates/the-gallery-shows-the-severity-the-tool-prints",
      "README.md",
-     "| `error Z13` — and it says plainly",
-     "| `warn Z13` — and it says plainly",
+     "; `error Z13` only for one this tool could not open",
+     "; `warn Z13` only for one this tool could not open",
      ["tests/test_the_front_page_points_at_what_it_shows.py::"
       "test_every_rule_the_gallery_names_is_a_rule_with_that_severity"],
      "the shortest promise on the page -- ship this, it says that -- advertises "
@@ -1656,8 +1962,8 @@ PLATFORM_ROWS = [
 
     ('docs/a-layer-total-is-checked-like-any-other-cell',
      'docs/rules.md',
-     '| `container` | 0 | 0 | 3 | 3 | 7 | 13 |',
-     '| `container` | 0 | 0 | 3 | 3 | 7 | 14 |',
+     '| `container` | 0 | 0 | 3 | 3 | 8 | 14 |',
+     '| `container` | 0 | 0 | 3 | 3 | 8 | 15 |',
      ['tests/test_the_rules_page_shows_where_each_layer_stands.py::test_every_number_in_the_table_is_the_number_in_the_data'],
      'the totals were skipped as sums of the cells above them, so a generator that miscounted them, regenerated, read as a page that matched its catalogue'),
 
@@ -1691,8 +1997,8 @@ PLATFORM_ROWS = [
 
     ('report/a-rules-location-behaviour-is-recorded',
      'tests/test_a_finding_says_where_it_is.py',
-     'NAMES_NO_MEMBER = {"Z1", "Z2", "Z3", "Z7", "Z8", "Z9"}',
-     'NAMES_NO_MEMBER = {"Z1", "Z2", "Z3", "Z7", "Z8", "Z9", "P4"}',
+     'NAMES_NO_MEMBER = {"Z1", "Z2", "Z3", "Z7", "Z8", "Z9", "Z14"}',
+     'NAMES_NO_MEMBER = {"Z1", "Z2", "Z3", "Z7", "Z8", "Z9", "Z14", "P4"}',
      ['tests/test_a_finding_says_where_it_is.py::test_which_rules_name_a_member_is_the_recorded_set'],
      'an excuse added for a rule that does name a member is how the set stops being a list of real debts and starts being a list of rules somebody once waved through'),
 
@@ -1763,8 +2069,8 @@ PLATFORM_ROWS = [
 
     ('runner/a-container-read-once-and-not-twice-is-a-failure-of-this-tool',
      'packages/vdi2770/src/vdi2770/validate/runner.py',
-     '    if got is None:',
-     '    if False:',
+     '    if got is None:\n        raise RuntimeError(f"{name}: the reader read this container once',
+     '    if False:\n        raise RuntimeError(f"{name}: the reader read this container once',
      ['tests/test_a_rule_that_crashes_does_not_kill_the_run.py::test_a_container_read_once_and_not_twice_is_a_failure_of_this_tool'],
      'without a nested container\'s bytes none of its PDFs are checked, and that happened with the delivery still reported clean'),
 
@@ -2335,7 +2641,7 @@ LISTING_BUDGET_ROWS = [
     ("pages/a-closed-advisory-is-not-listed-as-open",
      "docs/advisories.json",
      '"through": "0.9.6",\n      "fixed_in": "0.9.7",\n      "corrections": []',
-     '"through": "0.10.3",\n      "fixed_in": null,\n      "open": "0.9.7 closed part of it; the rest is not yet closed by any release.",\n      "corrections": []',
+     '"through": "0.11.0",\n      "fixed_in": null,\n      "open": "0.9.7 closed part of it; the rest is not yet closed by any release.",\n      "corrections": []',
      ["tests/test_an_advisory_and_its_release_name_each_other.py::"
       "test_each_advisory_is_cited_where_the_record_puts_it"],
      "an advisory the changelog says a release fixed, recorded as open, "
@@ -2343,7 +2649,7 @@ LISTING_BUDGET_ROWS = [
 
     ("pages/a-fix-a-correction-took-back-is-not-named",
      "docs/advisories.json",
-     '"through": "0.10.3",\n      "fixed_in": null,',
+     '"through": "0.11.0",\n      "fixed_in": null,',
      '"through": "0.9.5",\n      "fixed_in": "0.9.6",',
      ["tests/test_an_advisory_and_its_release_name_each_other.py::"
       "test_each_advisory_is_cited_where_the_record_puts_it"],
@@ -2353,7 +2659,7 @@ LISTING_BUDGET_ROWS = [
 
     ("pages/an-advisory-no-release-closes-reaches-the-one-being-written",
      "docs/advisories.json",
-     '"through": "0.10.3",',
+     '"through": "0.11.0",',
      '"through": "0.10.1",',
      ["tests/test_an_advisory_and_its_release_name_each_other.py::"
       "test_each_advisory_is_cited_where_the_record_puts_it"],
@@ -2464,8 +2770,8 @@ LISTING_BUDGET_ROWS = [
 
     ("gates/the-picture-draws-what-the-data-says",
      "docs/capabilities.json",
-     '"now": 39, "target": 39,',
-     '"now": 38, "target": 39,',
+     '"now": 40, "target": 40,',
+     '"now": 39, "target": 40,',
      ["tests/test_capabilities_current.py::test_rendered_files_match_the_data"],
      "a count on the front-page picture that the file it is drawn from no longer "
      "says, and no sentence in the repository says either"),
@@ -2489,8 +2795,8 @@ LISTING_BUDGET_ROWS = [
 
     ("gates/the-page-behind-the-picture-counts-what-it-draws",
      "docs/what-it-catches.md",
-     "**Now.** 39 of 42 rules have a minimal fixture pair",
-     "**Now.** 38 of 42 rules have a minimal fixture pair",
+     "**Now.** 40 of 43 rules have a minimal fixture pair",
+     "**Now.** 39 of 43 rules have a minimal fixture pair",
      ["tests/test_the_front_door_pictures_are_true.py::"
       "test_the_page_behind_the_picture_marks_what_the_picture_draws"],
      "the page behind the picture counts one rule fewer with a pair than the "
@@ -2625,6 +2931,37 @@ LISTING_BUDGET_ROWS = [
      "only a failed write is caught, and anything else that goes wrong in "
      "drawing the bundle stops the sweep and moves its exit code"),
 
+    ("gates/a-failure-of-ours-raised-out-of-the-check-exits-70",
+     "packages/vdi2770/src/vdi2770/validate/cli.py",
+     "            ours = ours or not isinstance(e, OSError)\n",
+     "            ours = ours\n",
+     ["tests/test_cli.py::test_a_failure_of_ours_exits_70_wherever_it_was_caught"],
+     "this tool raising on a file reads as a file that could not be read, 2 or 1, "
+     "and a gate takes a failure of ours for the delivery's"),
+
+    ("gates/a-failure-of-ours-caught-inside-the-check-exits-70",
+     "packages/vdi2770/src/vdi2770/validate/cli.py",
+     '        crashed = any(f.rule.id == "X5" for f in rep.findings)\n',
+     "        crashed = False\n",
+     ["tests/test_cli.py::test_a_failure_of_ours_exits_70_wherever_it_was_caught"],
+     "a check of this tool that raised, caught and reported as X5, exits 1 as if "
+     "it were a finding about the delivery"),
+
+    ("gates/a-failure-of-ours-is-not-told-as-a-finding",
+     "packages/vdi2770/src/vdi2770/validate/cli.py",
+     "    if ours:\n        return EX_SOFTWARE\n",
+     "    if False:\n        return EX_SOFTWARE\n",
+     ["tests/test_cli.py::test_a_failure_of_ours_exits_70_wherever_it_was_caught"],
+     "the run knows this tool failed and returns the code for a finding anyway"),
+
+    ("gates/a-path-that-cannot-be-opened-is-not-ours",
+     "packages/vdi2770/src/vdi2770/validate/cli.py",
+     "            ours = ours or not isinstance(e, OSError)\n",
+     "            ours = True\n",
+     ["tests/test_cli.py::test_a_failure_of_ours_exits_70_wherever_it_was_caught"],
+     "a path that does not exist exits 70, and a mistyped path in a pipeline "
+     "reads as a defect in this tool"),
+
     ("gates/a-line-for-a-person-stays-out-of-the-report",
      "packages/vdi2770/src/vdi2770/validate/cli.py",
      "    if sys.stderr is not None:\n        print(*parts, file=sys.stderr)\n",
@@ -2714,6 +3051,15 @@ LISTING_BUDGET_ROWS = [
      "the bundle fails to draw for every input with a finding that points at "
      "nothing in particular -- a refused file among them, the one a person is "
      "told to report"),
+
+    ("gates/a-bug-report-is-the-bytes-its-limit-measured",
+     "packages/vdi2770/src/vdi2770/validate/bundle.py",
+     '    target.write_bytes(dumps(bundle).encode("utf-8"))',
+     '    target.write_text(dumps(bundle), encoding="utf-8")',
+     ["tests/test_a_bug_report_carries_nothing_from_the_files.py::"
+      "test_the_file_holds_the_bytes_the_limit_was_measured_on"],
+     "the bundle written as text: on Windows each line end grows to two bytes and a "
+     "bundle measured under 256 KiB arrives over it"),
 
     ("gates/a-bug-report-carries-no-name-as-numbers",
      "packages/vdi2770/src/vdi2770/validate/bundle.py",
