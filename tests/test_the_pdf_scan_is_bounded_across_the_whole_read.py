@@ -140,7 +140,7 @@ def test_a_file_we_stopped_short_of_reading_is_not_called_claimless(counted,
 
     assert said + len(searched) == len(declared), (
         f"{len(declared)} declared, {len(searched)} searched, {said} said cut short")
-    named = re.search(r"cut short for: (.*?)\. Nothing is said", stopped[0].detail).group(1)
+    named = re.search(r"cut short for: (.*?)\. The report retains", stopped[0].detail).group(1)
     listed = named.replace(", ...", "").split(", ")
     for one in listed:
         assert one not in searched, f"{one} was both searched and counted"

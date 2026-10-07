@@ -24,6 +24,8 @@ import importlib.util
 import re
 from pathlib import Path
 
+import pytest
+
 from vdi2770_validate import __version__
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -90,6 +92,39 @@ ADVISORIES = _generator()
 def records():
     """The advisories as `docs/advisories.json` records them, in page order."""
     return ADVISORIES.load()
+
+
+def test_every_fix_follows_the_last_affected_release():
+    for record in records():
+        if record["fixed_in"] is not None:
+            assert as_number(record["fixed_in"]) > as_number(record["through"]), record["id"]
+
+
+def test_the_record_refuses_a_fix_at_the_last_affected_release(tmp_path):
+    import copy
+    import json
+
+    record = copy.deepcopy(records()[0])
+    record["fixed_in"] = record["through"]
+    path = tmp_path / "advisories.json"
+    path.write_text(json.dumps({"advisories": [record]}), encoding="utf-8")
+    with pytest.raises(SystemExit):
+        ADVISORIES.load(path)
+
+
+
+
+
+
+
+
+def test_a_later_correction_changes_advice_without_erasing_the_earlier_record():
+    old = "*(Correction 2026-09-24: move to 0.9.7 or later.)*"
+    newer = "*(Correction 2026-10-06: move to 0.11.0 or later.)*"
+    fact = "*(Correction 2026-09-25: the earlier wording describes this field.)*"
+    assert current_correction_advice({"0.9.1": "\n".join([old, fact, newer])}) == [fact, newer]
+    assert current_correction_advice({"0.9.1": old}) == [old]
+    assert current_correction_advice({"0.9.1": fact}) == [fact]
 
 
 def listed_advisories():
@@ -545,10 +580,20 @@ def what_a_reader_is_told():
         assert shown, f"{home}pyproject.toml no longer names the page PyPI shows"
         pages.add(home + shown.group(1))
     told = {page: (ROOT / page).read_text(encoding="utf-8") for page in sorted(pages)}
-    told["a correction in CHANGELOG.md"] = "\n".join(re.findall(
-        r"^\*\(Correct.*\)\*$", (ROOT / "CHANGELOG.md").read_text(encoding="utf-8"),
-        re.M))
+    told["a correction in CHANGELOG.md"] = "\n".join(current_correction_advice(changelog_sections()))
     return told
+
+
+def current_correction_advice(sections):
+    """A later correction of advice supersedes that section's earlier advice."""
+    current = []
+    for section in sections.values():
+        lines = correction_lines(section)
+        advice = [line for line in lines if re.search(r"\d+\.\d+\.\d+\**\s+or later", line)]
+        current.extend(line for line in lines if line not in advice or line == advice[-1])
+    return current
+
+
 
 
 def test_every_release_a_page_sends_a_reader_to_is_past_every_advisory():

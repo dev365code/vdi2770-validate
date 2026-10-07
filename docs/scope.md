@@ -19,6 +19,8 @@ failure — files that never claimed at all.
   and that what is in the archive can actually be decompressed.
 - Checking document classification against the twelve published classes.
 - Reading, but never verifying, a PDF's PDF/A claim; reporting encryption.
+- Comparing a version's NumberOfPages with its sole declared PDF's root page-tree
+  Count. These are two declarations; rendered pages are not counted.
 - One remedy sentence per finding, in both the text and the JSON output. A
   finding without an action is half a job.
 
@@ -29,7 +31,7 @@ failure — files that never claimed at all.
 | **Verifying PDF/A conformance** | Needs a full PDF/A validator. Reporting a claim as a verdict would be a lie. |
 | **Fetching anything while checking** | Nothing is fetched for any input, ever. The one exception is not the checker: the GitHub Action installs the checker it runs, unless you hand it one with `pyz:`. See `SECURITY.md`. |
 | **Which PDF/A level a document class may use** | The reference implementation treats PDF/A-*b* outside the certificate class as an error. This tool does not verify PDF/A at all, so enforcing which level is allowed would be a verdict about a property it never checked. `P4` reports the claim; whether your process requires a particular level is your rule to apply to it, and ours to stay out of. |
-| **Reading what a document says** | A PDF is opened to ask whether it is a PDF, whether it is encrypted, and whether it claims a PDF/A level. What the document *says* is never read: whether the drawing is the right drawing, whether the manual matches the machine, whether the text agrees with the metadata describing it. Those are questions about the content of a delivery, and a container validator cannot answer them — so this one does not try, and does not report on them either way. |
+| **Reading what a document says** | A PDF is opened for its basic PDF/encryption/PDF/A signals and, when a comparison is eligible, its root page-tree Count declaration. That structural number can be compared with NumberOfPages; the drawing, manual text, and whether those contents match the machine are never read or judged. |
 | **Building containers** | This is a referee, not an authoring tool. |
 | **Fixing anything** | A validator that edits your data is a validator you stop trusting. |
 | **Validating an unpacked directory** | ZIP only, for now. Halves the reader's surface. |
@@ -38,9 +40,29 @@ failure — files that never claimed at all.
 | **IEC 61406 identification links** | A self-contained URL-grammar problem with its own corpus needs. Named for a later milestone, not forgotten. |
 | **Rendering PDF reports** | Not a validator's job. |
 | **Container nesting beyond three levels** | Reported rather than opened. Three levels occur in real containers; deeper is a budget, not a verdict. |
-| **More than a thousand containers, 64 MiB of metadata, or 4 GiB inflated, in one read** | Same answer: reported, not opened. Every other limit bounds one archive; these three bound the tree, because a few hundred kilobytes of nested containers could otherwise ask for more memory — or more CPU — than the machine has. The third was missing until it was measured: a 6.4 MB file inflated two terabytes and returned a clean verdict. It is two ceilings, not one, because two layers inflate: the archive reader expands members, and the PDF scan then expands the streams *inside* a member it was handed. The second was charged per file and not per read, so 150 declared PDFs in a 5.7 MB archive inflated 4.47 GiB — past a ceiling that was only ever watching the other door — and returned exit 0. Each layer stops at 4 GiB. The PDF scan then keeps reading what costs no inflation — whether the file is a PDF at all, and whether it is encrypted — and gives up only on the search for a PDF/A claim, naming the files it gave up on. An ordinary delivery of a few hundred documents can reach that ceiling, because the scan stops early only on files that carry a claim. |
+| **More than a thousand containers, 64 MiB of metadata, or 4 GiB inflated, in one read** | These are tool limits, reported rather than turned into verdicts on the files. ZIP-member inflation and PDF-stream inflation each have a 4 GiB read allowance. Eligible page-tree reading runs before PDF/A claim search and shares the existing PDF file and stream ceilings. The header, indirect-object probe and encryption check still run without inflation. Z5 names the files whose inflation-backed work stopped; P6 names a page-count comparison it could not make, even when a raw PDF/A claim was found. A delivery of ordinary files can spend the allowance. |
 
 ## Known limits of what *is* in scope
+
+- **Text spelling at the listing limit**: the page charges the visible spelling
+  of runner syntax against the existing listing allowance. It can list fewer
+  findings at that limit and says how many; the stored report, JSON, counts and
+  exit code stay unchanged.
+
+- **Page declarations**: P6 compares only a version with exactly one distinct
+  application/pdf member. Several PDFs are not added together or compared.
+  Encrypted PDFs are not compared. The root Count is the file's declaration,
+  so a bad Count can disagree with the metadata even if rendered leaves agree.
+  The bounded reader follows the last startxref, up to 64 xref sections and
+  16 object interpretations, with 64 KiB windows for objects, subsection
+  headers and trailer dictionaries. Each classic section has at most 64
+  subsections; only requested 20-byte entries are read, so table size does not
+  spend an object window. It supports
+  ordinary tables, xref/object streams with FlateDecode and supported PNG
+  predictors, incremental updates and Annex F's xref ordering. It does not
+  recover damaged xref. A portfolio's Count describes its cover, so /Collection
+  is reported as a declined comparison. Unsupported structures and limits
+  produce P6 on the tool axis and make read.complete false.
 
 - **A rule is listed at most a hundred times per container**: one rule fires once
   per element, so a crafted file can make one rule true nearly a hundred thousand

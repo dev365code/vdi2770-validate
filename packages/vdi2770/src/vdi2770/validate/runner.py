@@ -19,7 +19,16 @@ from vdi2770.zipread import Kind
 from . import xsdvalidate
 from .agreement import refuse_if_disagreeing
 from .catalog import rule
-from .model import MAIN_XML, METADATA_XML, NS, Finding, Location, Report, without_addresses
+from .model import (
+    _READ_INFLATION_STOP,
+    MAIN_XML,
+    METADATA_XML,
+    NS,
+    Finding,
+    Location,
+    Report,
+    without_addresses,
+)
 from .names import folder_path
 from .rules import container as r_container
 from .rules import delivery as r_delivery
@@ -28,7 +37,7 @@ from .rules import metadata as r_metadata
 from .rules import pdf as r_pdf
 from .rules import schema as r_schema
 from .rules.container import _inside, folders_holding_metadata, sealed
-from .rules.pdf import Stopped
+from .rules.pdf import Stopped, page_targets
 
 
 def _into(report, findings, where, what: str) -> None:
@@ -135,7 +144,7 @@ def _read_again(data: bytes, name: str):
     return got
 
 
-def _facts_for(raw: bytes, accepted, read_pdf, unchecked=False):
+def _facts_for(raw: bytes, accepted, read_pdf, unchecked=False, page_members=()):
     """A PDF fact cache for one container, over one parse of its directory.
 
     A member the first read accepted was opened to its end and checked, so the
@@ -172,8 +181,12 @@ def _facts_for(raw: bytes, accepted, read_pdf, unchecked=False):
                 cache[name] = None
             else:
                 # The budget bounds inflating a file, not reading one, so the
-                # facts come back either way and only the claim search is lost.
-                facts, cut_short = read_pdf(member)
+                # basic facts come back either way; claim search and an eligible
+                # page-tree read can each be cut short.
+                facts, cut_short = (read_pdf(member, page_count=True) if name in page_members
+                                    else read_pdf(member))
+                if facts.page_count_why == _READ_INFLATION_STOP:
+                    cut_short = "read"
                 # Only the allowance spent across the read. A ceiling this file
                 # reached on its own is `P3` -- the rule written for exactly
                 # that, whose remedy already ends "if the file does carry one,
@@ -541,7 +554,8 @@ def check_bytes(data: bytes, name: str) -> Report:
 
         if raw is not None:
             unchecked = any(d.kind == "decompression-budget-exhausted" for d in c.defects)
-            facts = _facts_for(raw, set(c.file_names), read_pdf, unchecked)
+            page_members = frozenset(name for _, name, _ in page_targets(c, document))
+            facts = _facts_for(raw, set(c.file_names), read_pdf, unchecked, page_members)
             _into(report, r_pdf.check(c, document, facts), c.where, "pdf")
             for name in facts.failed:
                 r = rule("X5")

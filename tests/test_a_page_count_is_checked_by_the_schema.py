@@ -1,21 +1,11 @@
-"""`NumberOfPages` is checked here, and not by a rule of ours.
+"""X2 checks NumberOfPages' XSD value; P6 compares its PDF declaration.
 
-`docs/divergences.md` records that the reference's `DV_013` fires on
-`numberOfPages < 0` while its own message says "greater than zero", so `0`
-passes there. The sentence beside it used to add that this tool "has no
-numberOfPages rule yet" -- true about rules, and misleading about coverage: a
-reader of that line concludes the condition goes unreported here.
-
-It does not. The schema VDI publishes types the attribute `xs:positiveInteger`,
-so `0` and a negative are refused by the schema layer as `X2`, with the
-attribute named, the value quoted and the line given. That is a stronger basis
-than a rule of ours would have -- `schema` rather than `ours` -- and writing one
-would duplicate the check under a weaker obligation.
-
-This file is what stops that sentence from drifting: it is the measurement the
-sentence rests on: if the schema or the layer that reads it stops refusing a
-zero, the page becomes wrong and this fails with it rather than after somebody
-notices.
+Zero, negative and non-ASCII lexical values remain the schema's question, not
+a duplicate rule of ours. P6 is a different question: a valid declaration can
+disagree with the PDF root Count. The sample PDF declares one page; every valid
+value in CASES denotes seven or a much larger integer, so those full reports
+now carry exactly P4 and the new P6 warning. Invalid values still carry P4/X2.
+The full-set assertions below keep crashes and unrelated findings visible.
 """
 import io
 import json
@@ -83,9 +73,8 @@ def test_a_positive_page_count_is_left_alone():
 
 
 # XSD Part 2 §§3.3.13, 3.3.25 and 4.3.6: the contract is run on each Python.
-# The schema places no upper bound on the digits of an integer, so a finite
-# positive value is valid at any length and draws nothing. The 4300 that some
-# interpreters stop at is a defence of theirs, not a fact about the document.
+# A finite positive integer has no XSD upper digit bound. P6 separately
+# compares the normalized declaration without int(), including long values.
 LONG_PAGE_COUNT_FINDINGS = ()
 
 CASES = [
@@ -119,12 +108,24 @@ def container_with(value):
     return out.getvalue()
 
 
+def expected_findings(schema_findings):
+    # All schema-valid CASES denote >=7 beside this fixture's Count=1.
+    # This is an explicit new verdict, not filtering P6 out of the assertion.
+    return sorted(["P4", *schema_findings, *(("P6",) if not schema_findings else ())])
+
+
+def test_the_schema_contracts_pdf_fixture_declares_one_page():
+    with zipfile.ZipFile(CLEAN_DOCUMENT) as source:
+        facts = vdi2770.read_pdf(source.read("B.pdf"), page_count=True)
+    assert facts.page_count == 1
+
+
 @pytest.mark.parametrize("value, expected", CASES)
 def test_positive_integer_uses_the_xsd_lexical_and_value_spaces(value, expected):
     report = check_bytes(container_with(value), "pages.zip")
     # P4 is the sample's PDF/A claim note. Every other finding is part of this
     # contract, including a crash or an incomplete schema check.
-    assert sorted(f.rule.id for f in report.findings) == sorted(["P4", *expected])
+    assert sorted(f.rule.id for f in report.findings) == expected_findings(expected)
     for finding in report.findings:
         if finding.rule.id == "X2":
             assert "NumberOfPages" in finding.detail
@@ -142,7 +143,7 @@ def test_cli_verdict_is_independent_of_the_runtime_digit_limit(tmp_path, limit, 
         env=under_test(PYTHONINTMAXSTRDIGITS=limit), capture_output=True, text=True)
     assert done.returncode == (1 if expected else 0), done.stderr
     document = json.loads(done.stdout)[0]
-    assert sorted(f["rule"] for f in document["findings"]) == sorted(["P4", *expected])
+    assert sorted(f["rule"] for f in document["findings"]) == expected_findings(expected)
 
 
 @pytest.mark.parametrize("value, expected", CASES)
@@ -157,7 +158,7 @@ def test_the_original_attribute_never_reaches_the_integer_decoder(monkeypatch, v
 
     monkeypatch.setattr(integer, "to_python", counting)
     report = check_bytes(container_with(value), "pages.zip")
-    assert sorted(f.rule.id for f in report.findings) == sorted(["P4", *expected])
+    assert sorted(f.rule.id for f in report.findings) == expected_findings(expected)
     assert decoded == ["1"], "the original positiveInteger reached int()"
 
 

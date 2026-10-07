@@ -12,9 +12,9 @@ tool, because both are errors on purpose and severity cannot carry the differenc
 - **`table`** (2) — a freely published table says so (IDTA 02004)
 - **`container`** (4) — mechanics of ZIP and XML — true without VDI 2770
 - **`reference`** (14) — observed in the MIT reference implementation, **not** verified against the guideline, which is paywalled
-- **`ours`** (22) — our own judgement, and it carries a reason
+- **`ours`** (23) — our own judgement, and it carries a reason
 
-43 rules.
+44 rules.
 
 Where each layer stands:
 
@@ -23,10 +23,10 @@ Where each layer stands:
 | `container` | 0 | 0 | 3 | 3 | 8 | 14 |
 | `files` | 0 | 0 | 0 | 3 | 1 | 4 |
 | `metadata` | 0 | 2 | 0 | 7 | 4 | 13 |
-| `pdf` | 0 | 0 | 0 | 1 | 4 | 5 |
+| `pdf` | 0 | 0 | 0 | 1 | 5 | 6 |
 | `schema` | 1 | 0 | 1 | 0 | 4 | 6 |
 | `tool` | 0 | 0 | 0 | 0 | 1 | 1 |
-| **total** | **1** | **2** | **4** | **14** | **22** | **43** |
+| **total** | **1** | **2** | **4** | **14** | **23** | **44** |
 
 ## container
 
@@ -337,6 +337,16 @@ Why this is ours: Verifying PDF/A conformance needs a full PDF/A validator. Repo
 Why this is ours: The scan for an indirect object is bounded, and a file can end that scan without answering it -- a comment is legal between any two tokens, so a conforming file may in principle reach the bound. Reporting that as "not a PDF" would be a fact about our budget dressed as a fact about the file, and reporting nothing let a budget pass for a verdict: the sole declared rendition of a document could be a file nobody could confirm and the container came back clean. An error because that is this project's one policy for every limit it declines to spend -- if we did not look, exit 0 tells somebody we did -- and because every declared rendition owes something: `M6` says other formats may accompany a PDF and cannot replace it. The reserved main document draws `P1` instead, where the recipient's system will open the file as a PDF whatever we could confirm.
 
 **Remedy.** If this is a real PDF, re-export it and look at whatever wrote it: a file that fills its own beginning with `obj` before its first indirect object is not something a producer writes. If it is not a PDF, correct the declared FileFormat or replace the file. If you believe this is a conforming file this tool cannot read, please report it with the file.
+
+### `P6` — The metadata and the PDF's page tree declare different page counts
+
+*warning* · obligation `ours`
+
+Source: `ISO 32000-1:2008 §7.7.3.2 Table 29`.
+
+Why this is ours: This compares two declarations to surface a wrongly attached file, a revision mismatch, or a template placeholder. The public XSD gives NumberOfPages a positiveInteger type but does not establish this comparison as a VDI obligation. The PDF root Count is the file's declaration, not a count of rendered leaves, so this project's comparison is a warning.
+
+**Remedy.** Correct NumberOfPages if the metadata is wrong; otherwise check that this is the intended PDF revision and verify its page tree's Count. This compares declarations, not rendered pages.
 
 ## schema
 

@@ -3,10 +3,11 @@ says 'invalid' has done half the job."""
 from __future__ import annotations
 
 import json
+from collections import Counter
 from typing import Dict, List
 
 from . import __version__
-from .model import About, Obligation, Report, Severity
+from .model import LISTING_BUDGET_PER_RULE, About, Obligation, Report, Severity, listed_size
 from .names import as_written, not_a_command, on_one_line
 from .resources import schema_stamp
 
@@ -109,14 +110,37 @@ def stopped_said(rid: str, in_all: int, listed: int) -> str:
             f"counts every one")
 
 
+def _text_listing(report, show_info):
+    """Charge visible spelling on this page without changing the stored report."""
+    spent, kept = Counter(), Counter()
+    stopped = {rid: (total, listed) for rid, total, listed in report.stopped(show_info)}
+    blocked, findings = set(), []
+    totals = Counter(f.rule.id for f in report.findings)
+    for rid, total, _listed in report.stopped(show_info):
+        totals[rid] = total
+    for f in report.sorted():
+        if not show_info and f.severity is Severity.INFO:
+            continue
+        rid = f.rule.id
+        if rid not in blocked:
+            size = listed_size(f)
+            if spent[rid] + size <= LISTING_BUDGET_PER_RULE:
+                spent[rid] += size
+                kept[rid] += 1
+                findings.append(f)
+                continue
+            blocked.add(rid)
+        stopped[rid] = (report._in_all.get(rid, totals[rid]), kept[rid])
+    return findings, [(rid, *stopped[rid]) for rid in sorted(stopped)]
+
+
 def as_text(report: Report, show_info: bool = True) -> str:
     # The file's own name, which a drop folder hands over as it was sent,
     # written the way the `at` line writes the same path: kept to its line, a
     # name made of two spaces and the counts was the summary line, above the
     # real one.
     lines: List[str] = [as_written(f"{report.target}")]
-    findings = [f for f in report.sorted() if show_info or f.severity is not Severity.INFO]
-    stopped = report.stopped(show_info)
+    findings, stopped = _text_listing(report, show_info)
     # Not "no findings" over a listing that stopped before its first one: a
     # finding larger than the budget is counted and not listed, and the line
     # below says so.
@@ -186,8 +210,8 @@ def as_text(report: Report, show_info: bool = True) -> str:
     if r.archives_opened:
         parts.append(f"{r.metadata_read} of {r.metadata_found} metadata files")
     lines.append("  read " + ", ".join(parts))
-    # And no line leaves as a command to a CI runner: the heading and a detail
-    # begin with what the sender wrote.
+    # Keep every line as text to a CI runner, including its older syntax read
+    # anywhere in a line. The heading and details carry the sender's values.
     return "\n".join(not_a_command(line) for line in lines)
 
 

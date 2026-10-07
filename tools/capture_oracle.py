@@ -162,13 +162,19 @@ def ours_only(write: bool) -> int:
         return 1
 
     known = set(recorded["containers"])
-    if set(fresh) != known:
+    added = set(fresh) - known
+    if known - set(fresh) or (added and not write):
         print(f"the container set moved: only recorded {sorted(known - set(fresh))}, "
               f"only here {sorted(set(fresh) - known)}. Run a full sweep.", file=sys.stderr)
         return 1
 
-    moved = [n for n in sorted(fresh) if recorded["containers"][n]["ours"] != fresh[n]]
+    moved = [n for n in sorted(fresh)
+             if recorded["containers"].get(n, {}).get("ours") != fresh[n]]
     if write:
+        for n in sorted(added):
+            recorded["containers"][n] = {"reference": {}, "ours": {}}
+            recorded.setdefault("_unswept", {})[n] = (
+                "New generated container; the pinned reference has not been run on it.")
         for n in fresh:
             recorded["containers"][n]["ours"] = fresh[n]
         OUT.write_text(json.dumps(recorded, indent=2, ensure_ascii=False) + "\n",

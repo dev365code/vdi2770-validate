@@ -51,6 +51,9 @@ BUDGETS = {
     "MAX_TOTAL_MEMBERS": (10_000, 10_000_000),
 }
 PDF_BUDGETS = {
+    "MAX_PAGE_OBJECTS": (16, 16),
+    "MAX_PAGE_OBJECT_WINDOW": (65536, 65536),
+    "MAX_XREF_SUBSECTIONS": (64, 64),
     "MAX_STREAM_SCAN": (1 << 10, 8 << 20),
     "MAX_INFLATED_PER_STREAM": (1 << 20, 64 << 20),
     "MAX_INFLATED_TOTAL": (1 << 20, 256 << 20),
@@ -116,7 +119,7 @@ RULE_BUDGETS = {"MAX_FOLDER_DEPTH": (4, 256), "MAX_FOLDERS": (16, 4_096),
 # one finding about an exhausted budget names before it counts the rest. Its own
 # table, because the completeness sweep below reads each table against the module
 # that must declare every name in it.
-PDF_RULE_BUDGETS = {"MAX_NAMED": (1, 64)}
+PDF_RULE_BUDGETS = {"MAX_NAMED": (1, 64), "MAX_PAGE_NUMBER_QUOTE": (1, 80)}
 # The bytes were bounded and the tree built out of them was not. The corpus's
 # largest metadata file has 53 elements; the floor here is a thousand times that,
 # because a limit tight enough to refuse a real delivery is its own defect.
@@ -217,8 +220,9 @@ def test_pdf_inflation_stops_at_the_total_budget(monkeypatch):
     monkeypatch.setattr(pdfread, "MAX_INFLATED_TOTAL", 1000)
     bounded = inflated()
     assert 0 < bounded < unbounded, f"the budget must bite, and must not be a stub: {bounded}"
-    # One stream may overshoot the budget; the next must not start.
-    assert bounded <= 100_000, bounded
+    # Page-tree inflation and claim search share this ceiling: an overshoot
+    # in either would spend the other check's allowance before it starts.
+    assert bounded <= 1000, bounded
 
 
 def test_pdf_scanning_stops_after_the_stream_budget(monkeypatch):

@@ -176,3 +176,29 @@ def test_the_sweep_looks_at_every_container_the_coverage_gate_does():
     missed = sorted(str(p.relative_to(ROOT)) for p in everywhere - walked)
     assert not missed, (
         "containers the coverage gate counts and the sweep never sees: " + ", ".join(missed))
+
+
+def test_recording_a_new_ours_only_container_does_not_invent_reference_evidence(tmp_path, monkeypatch):
+    import importlib.util
+    import json
+
+    from conftest import ROOT
+
+    spec = importlib.util.spec_from_file_location("page_oracle", ROOT / "tools/capture_oracle.py")
+    oracle = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(oracle)
+    out = tmp_path / "oracle.json"
+    reference = {"INFO": ["known-reference-code"]}
+    out.write_text(json.dumps({"containers": {
+        "old.zip": {"reference": reference, "ours": {"info": ["P4"]}}}}), encoding="utf-8")
+    monkeypatch.setattr(oracle, "ROOT", tmp_path)
+    monkeypatch.setattr(oracle, "OUT", out)
+    monkeypatch.setattr(oracle, "containers", lambda: [])
+    monkeypatch.setattr(oracle, "our_verdicts", lambda paths: {
+        "old.zip": {"info": ["P4"]}, "new.zip": {"warning": ["P6"]}})
+    assert oracle.ours_only(write=True) == 0
+    recorded = json.loads(out.read_text(encoding="utf-8"))
+    assert recorded["containers"]["old.zip"]["reference"] == reference
+    assert recorded["containers"]["new.zip"]["reference"] == {}
+    assert recorded["containers"]["new.zip"]["ours"] == {"warning": ["P6"]}
+    assert "new.zip" in recorded["_unswept"]

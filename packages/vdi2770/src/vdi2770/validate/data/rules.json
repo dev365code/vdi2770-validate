@@ -346,6 +346,17 @@
       "about": "tool"
     },
     {
+      "id": "P6",
+      "layer": "pdf",
+      "severity": "warning",
+      "obligation": "ours",
+      "about": "container",
+      "title": "The metadata and the PDF's page tree declare different page counts",
+      "whyOurs": "This compares two declarations to surface a wrongly attached file, a revision mismatch, or a template placeholder. The public XSD gives NumberOfPages a positiveInteger type but does not establish this comparison as a VDI obligation. The PDF root Count is the file's declaration, not a count of rendered leaves, so this project's comparison is a warning.",
+      "remedy": "Correct NumberOfPages if the metadata is wrong; otherwise check that this is the intended PDF revision and verify its page tree's Count. This compares declarations, not rendered pages.",
+      "basis": "ISO 32000-1:2008 §7.7.3.2 Table 29"
+    },
+    {
       "id": "X0",
       "layer": "schema",
       "severity": "error",

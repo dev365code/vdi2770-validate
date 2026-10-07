@@ -143,6 +143,7 @@ def _cmd_check(args) -> int:
             # the machine-readable one, so a consumer diffing two runs of one
             # drop folder sees a change that is not about their files.
             why = getattr(e, "strerror", None) or without_addresses(str(e))
+            # Like the text report, keep the whole stderr line as text to a runner.
             _say(not_a_command(f"{on_one_line(path)}: cannot read it — {on_one_line(why)}"))
             unreadable += 1
             # A path that is not there, or not a file, is the caller's; anything
@@ -177,7 +178,7 @@ def _cmd_check(args) -> int:
             if where is not None:
                 _say(f"A diagnostic bundle was written to {where}.")
                 _say(SENT)
-        # Ten rules are warnings. They are warnings on purpose -- `P3` cannot
+        # Eleven rules are warnings. They are warnings on purpose -- `P3` cannot
         # be an error because this tool does not verify PDF/A -- so the number
         # does not move for them by default, and an intake gate that wants
         # none of them says so. The count is checked against the catalogue:

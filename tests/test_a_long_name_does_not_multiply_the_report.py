@@ -266,6 +266,7 @@ HOSTILE = {
     "wide": "설명서_Prüfbericht" * 20,
     "astral": "\U0001D400" * 60,
     "long": "M" * 4_000,
+    "runner": "words ##[warning]words ##[error]" * 128,
 }
 
 
@@ -322,6 +323,46 @@ def test_the_budget_charges_at_least_what_either_shape_prints(kind):
                     over.append(f"{entry['id']}, {kind} in {where}, {shape}: {printed:,} "
                                 f"printed, {listed_size(f):,} charged")
     assert not over, over[:5]
+
+
+def test_runner_spelling_keeps_json_identical_at_the_listing_boundary():
+    import ast
+    import subprocess
+    import sys
+    import types
+
+    from vdi2770_validate import model
+
+    source = subprocess.run(["git", "show", "cc60e42:packages/vdi2770/src/vdi2770/validate/model.py"],
+                            cwd=ROOT, capture_output=True, text=True)
+    if source.returncode:
+        pytest.skip("the base report model is not available here")
+    nodes = [node for node in ast.parse(source.stdout).body
+             if isinstance(node, (ast.FunctionDef, ast.ClassDef))
+             and node.name in {"_where_bytes", "listed_size", "Report"}]
+    assert len(nodes) == 3
+    name = "vdi2770.validate._base_report_model"
+    earlier = types.ModuleType(name)
+    earlier.__dict__.update(model.__dict__)
+    earlier.__name__ = name
+    sys.modules[name] = earlier
+    try:
+        exec(compile(ast.Module(body=nodes, type_ignores=[]), "cc60e42/model.py", "exec"), earlier.__dict__)
+        old, current = earlier.Report(target="delivery.zip"), Report(target="delivery.zip")
+        r = _rule("M11", Severity.ERROR)
+        for i in range(20):
+            f = Finding(r, "a relationship names a document", Location(container="delivery.zip", line=i),
+                        detail="words ##[warning]" * 10_000)
+            old.add(f)
+            current.add(f)
+        assert 0 < len(old.findings) < 20
+        assert as_json(current) == as_json(old)
+        text = as_text(current)
+        assert "##[" not in text
+        assert len(text.encode("utf-8")) < LISTING_BUDGET_PER_RULE + 1024
+        assert "20 error(s)" in text and "listing stopped at its size budget" in text
+    finally:
+        del sys.modules[name]
 
 
 def _every_input_the_repository_holds():

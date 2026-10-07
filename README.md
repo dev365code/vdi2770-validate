@@ -3,7 +3,7 @@
 
 [![CI](https://github.com/dev365code/vdi2770-validate/actions/workflows/ci.yml/badge.svg)](https://github.com/dev365code/vdi2770-validate/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/vdi2770-validate?label=PyPI&color=2f6fb3)](https://pypi.org/project/vdi2770-validate/)
-[![rules](https://img.shields.io/badge/rules-43_each_with_a_remedy-a8721c)](https://github.com/dev365code/vdi2770-validate/blob/main/docs/rules.md)
+[![rules](https://img.shields.io/badge/rules-44_each_with_a_remedy-a8721c)](https://github.com/dev365code/vdi2770-validate/blob/main/docs/rules.md)
 [![license](https://img.shields.io/badge/license-Apache--2.0-5f6a75)](https://github.com/dev365code/vdi2770-validate/blob/main/LICENSE)
 
 &nbsp;**Apache-2.0**&nbsp;·&nbsp;**Python 3.9 · 3.12 · 3.13**&nbsp;·&nbsp;**pure Python, nothing compiled**&nbsp;·&nbsp;**the check opens no socket**
@@ -106,7 +106,7 @@ lists all of them.
 ## Where it stands
 
 <a href="https://github.com/dev365code/vdi2770-validate/blob/main/docs/what-it-catches.md">
-<img src="https://raw.githubusercontent.com/dev365code/vdi2770-validate/main/docs/capabilities.svg?v=0bfaec06" alt="Coverage: 40 of 43 rules have a fixture pair; Explanation: what is wrong, evidence, remedy, source, line; Report contract: schemaVersion, golden, exit codes, schema; Entrances: command line, library, single file, Action; Input safety: read budgets, advisory, own mutations; Upstream: pinned by commit, checked weekly" width="100%">
+<img src="https://raw.githubusercontent.com/dev365code/vdi2770-validate/main/docs/capabilities.svg?v=d18d3d17" alt="Coverage: 41 of 44 rules have a fixture pair; Explanation: what is wrong, evidence, remedy, source, line; Report contract: schemaVersion, golden, exit codes, schema; Entrances: command line, library, single file, Action; Input safety: read budgets, advisory, own mutations; Upstream: pinned by commit, checked weekly" width="100%">
 </a>
 
 *Six things this tool holds itself to, measured on the code this page describes, against the conditions it has set for 1.0. The picture is drawn from [`docs/capabilities.json`](https://github.com/dev365code/vdi2770-validate/blob/main/docs/capabilities.json), and every item it marks done names a file in this repository that says so; the cases behind each axis are in [`docs/what-it-catches.md`](https://github.com/dev365code/vdi2770-validate/blob/main/docs/what-it-catches.md).*
@@ -130,7 +130,7 @@ flowchart LR
 | Terminal | build scripts, people | `vdi2770-validate check handover.zip` |
 | Python | your own tooling | `import vdi2770` / `import vdi2770_validate` |
 | Single file | closed networks, approvals | `python vdi2770.pyz check handover.zip` |
-| GitHub Action | a workflow that blocks a bad delivery | `uses: dev365code/vdi2770-validate@v0.10.3` |
+| GitHub Action | a workflow that blocks a bad delivery | `uses: dev365code/vdi2770-validate@v0.11.0` |
 
 No route to a package index? No pip, no virtual environment, no rights to make
 one? Carry **one file** in instead. It still needs a Python — that is the one
@@ -154,7 +154,7 @@ Exit codes and a versioned JSON report make it a CI gate in one line.
 ### In a workflow
 
 ```yaml
-- uses: dev365code/vdi2770-validate@v0.10.3
+- uses: dev365code/vdi2770-validate@v0.11.0
   with:
     paths: handover.zip nameplate.zip
 ```
@@ -173,7 +173,7 @@ may not open — is not ours: `2` when nothing in the run could be read, `1`
 beside a path that could.
 
 ```yaml
-- uses: dev365code/vdi2770-validate@v0.10.3
+- uses: dev365code/vdi2770-validate@v0.11.0
   id: vdi
   with:
     paths: handover.zip
@@ -190,7 +190,7 @@ on to whatever reads the number; with the default you would add
 | Input | What it is |
 |---|---|
 | `paths` | the containers to check, separated by spaces |
-| `version` | which release to install. Left empty it is the ref you pinned — `@v0.10.3` installs 0.10.3 — falling back to the version the action's own checkout publishes, so `@main` may name a version not on the index yet. **The rules travel with the engine**: an older `version` is an older rule set and may return a different verdict. Four releases cannot be asked for at all: 0.8.0, 0.8.1, 0.8.2 and 0.9.0 name their engine with a floor, so installing one brings a newer engine beside it and the tool refuses to judge a pair that disagrees with itself (exit 3). Ask for 0.9.7 or later: every earlier release is inside the range of GHSA-h676-59p4-6632 |
+| `version` | which release to install. Left empty it is the ref you pinned — `@v0.11.0` installs 0.11.0 — falling back to the version the action's own checkout publishes, so `@main` may name a version not on the index yet. **The rules travel with the engine**: an older `version` is an older rule set and may return a different verdict. Four releases cannot be asked for at all: 0.8.0, 0.8.1, 0.8.2 and 0.9.0 name their engine with a floor, so installing one brings a newer engine beside it and the tool refuses to judge a pair that disagrees with itself (exit 3). Ask for 0.11.0 or later, which closes every advisory this repository lists |
 | `pyz` | a `vdi2770.pyz` you already have. Given, **this action installs nothing and fetches nothing** |
 | `sha256` | the hash `pyz` must have. For a file carried into a closed network; the default path does not need it, because `pip` checks the index's own hashes |
 | `args` | anything else for `check`, such as `--json` |
@@ -259,7 +259,7 @@ iiRDS, if that is the handover format you are on.
   rendered as [docs/rules.md](https://github.com/dev365code/vdi2770-validate/blob/main/docs/rules.md) — each
   rule carries where its requirement comes from, a remedy sentence, and — where the
   reference implementation checks the same thing — the message keys it uses.
-- **40 of 43 rules have a minimal fixture pair** — a container that violates the rule
+- **41 of 44 rules have a minimal fixture pair** — a container that violates the rule
   and a conforming one differing in as little as a single member. The other three
   cannot have one: two report a fault in this tool rather than in a file, and the third
   fires on every conforming container. A rule that fires nowhere fails
@@ -286,7 +286,7 @@ An item moves right when it is built and checked, not when it is decided.
 timeline
     title Where vdi2770-validate is going
     Shipped : Reader and rules, same version, one tag, one install
-            : 43 rules, each with a source and a remedy
+            : 44 rules, each with a source and a remedy
             : Versioned JSON report, exit codes, single-file offline build
     Building : An obligation index — what is asked for, and how much of it is covered
              : Deeper documentation-container checks
@@ -359,9 +359,9 @@ What has not moved, and what a build script can rely on:
 - **The verdicts, within a release.** Across releases they move, and never
   quietly: the CHANGELOG section for the release that moves one names it. `0.7.0`
   is the example to read — `Z6` went from warning to error there, and `F2` and
-  `Z8` stopped firing on files inside folders. Forty of the
-  42 fire on a container in the corpus and are compared against the reference
-  implementation, with the divergences published rather than reconciled; the
+  `Z8` stopped firing on files inside folders. 42 of the
+  44 fire on a container in the corpus or fixtures. Comparisons with the reference
+  implementation publish divergences and identify inputs not yet compared; the
   other two — `X0` and `X5` — say that this tool could not run a check, which no
   container can cause, and they are exercised by breaking the installation, by
   making each step raise, and by making the reader hand back nothing for a
@@ -498,16 +498,16 @@ it is not a promise that nothing your pipeline reads can change.
 verdict your pipeline has not seen, and the point of a validator is that the
 answer it gives today is the answer it gave when you signed off on it. From
 0.9.1 this package names the engine it was built with exactly, so
-`vdi2770-validate==0.10.3` installs one matching pair.
+`vdi2770-validate==0.11.0` installs one matching pair.
 
 Four releases cannot be pinned that way: 0.8.0, 0.8.1, 0.8.2 and 0.9.0 name
 their engine with a floor, and a floor stops holding the moment a newer engine
-exists. Move to 0.9.7 or later, which pins both halves exactly — and pinning
+exists. Move to 0.11.0 or later, which pins both halves exactly — and pinning
 one of those four by both names is not a way to stay put, because every release
 from 0.8.0 to 0.9.1 is inside the range of GHSA-f9xw-89gp-x52p:
 
 ```
-pip install "vdi2770-validate==0.10.3"
+pip install "vdi2770-validate==0.11.0"
 ```
 
 Move there from any release, not only those four. Every release up to 0.9.6
@@ -515,8 +515,8 @@ is inside GHSA-h676-59p4-6632, every one up to 0.9.5 inside GHSA-3pfq-57fx-w4q5,
 every one up to 0.9.4 inside GHSA-6hqr-phm3-chpf, and every one before 0.9.2
 inside another advisory as well — GHSA-xp97-jcmj-h45f reaches every release up
 to 0.8.0, and GHSA-f9xw-89gp-x52p every release from 0.8.0 to 0.9.1 — so 0.9.7
-is the first release outside all of them except GHSA-62p8-4642-mwfp, which no
-release yet closes in full. The pin runs one way: the engine does not
+is the first release outside those five. GHSA-62p8-4642-mwfp reaches releases
+up to 0.10.3, which closes it in full. The pin runs one way: the engine does not
 name this package back, so upgrading the engine alone beside an older command
 leaves a mismatched pair, and a command from 0.8.0 on refuses that pair rather
 than judging with it (exit `3`).
@@ -531,7 +531,7 @@ is finished.
 That is what 1.0 will mean, and not everything it waits for. The picture under
 *Where it stands* draws the rest; in words:
 
-Before it calls a release 1.0, this project asks of itself — Coverage: 40 of 43, every rule that can have one; Explanation: what is wrong, in one sentence · the evidence as read from the file · a remedy, for every rule · the source of every rule's requirement · the line, for every metadata finding; Report contract: schemaVersion in every report · a golden report held by a test · exit codes under test · a field-by-field schema page; Entrances: command line · Python library · single file, nothing to install · GitHub Action · browser, nothing installed; Input safety: read budgets, per member and per archive · a security fix ships with an advisory · tests verified against their own mutations · declared encodings read without loss; Upstream: upstream corpus pinned by commit · checked weekly for change.
+Before it calls a release 1.0, this project asks of itself — Coverage: 41 of 44, every rule that can have one; Explanation: what is wrong, in one sentence · the evidence as read from the file · a remedy, for every rule · the source of every rule's requirement · the line, for every metadata finding; Report contract: schemaVersion in every report · a golden report held by a test · exit codes under test · a field-by-field schema page; Entrances: command line · Python library · single file, nothing to install · GitHub Action · browser, nothing installed; Input safety: read budgets, per member and per archive · a security fix ships with an advisory · tests verified against their own mutations · declared encodings read without loss; Upstream: upstream corpus pinned by commit · checked weekly for change.
 
 ## The classification table, and a disagreement
 

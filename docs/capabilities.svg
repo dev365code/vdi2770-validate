@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="950" height="330" viewBox="0 0 950 330" role="img" aria-labelledby="t d">
 <title id="t">vdi2770-validate: six capability axes, what is checked now against the 1.0 condition</title>
-<desc id="d">Coverage: 40 of 43 rules have a fixture pair (1.0: 40 of 43, every rule that can have one); Explanation: what is wrong, evidence, remedy, source, line (1.0: met); Report contract: schemaVersion, golden, exit codes, schema (1.0: met); Entrances: command line, library, single file, Action (1.0: + browser, nothing installed); Input safety: read budgets, advisory, own mutations (1.0: + declared encodings read without loss); Upstream: pinned by commit, checked weekly (1.0: met); as of 0.11.0</desc>
+<desc id="d">Coverage: 41 of 44 rules have a fixture pair (1.0: 41 of 44, every rule that can have one); Explanation: what is wrong, evidence, remedy, source, line (1.0: met); Report contract: schemaVersion, golden, exit codes, schema (1.0: met); Entrances: command line, library, single file, Action (1.0: + browser, nothing installed); Input safety: read budgets, advisory, own mutations (1.0: + declared encodings read without loss); Upstream: pinned by commit, checked weekly (1.0: met); as of 0.11.0</desc>
 <rect x="0.5" y="0.5" width="949" height="329" rx="10" fill="#0b0f14" stroke="#2a3238"/>
 <polygon points="232.0,136.0 254.5,149.0 254.5,175.0 232.0,188.0 209.5,175.0 209.5,149.0" fill="none" stroke="#2a3238" stroke-width="1" stroke-dasharray="3 3"/>
 <polygon points="232.0,110.0 277.0,136.0 277.0,188.0 232.0,214.0 187.0,188.0 187.0,136.0" fill="none" stroke="#2a3238" stroke-width="1" stroke-dasharray="3 3"/>
@@ -34,8 +34,8 @@
 <text x="450" y="62" font-family="-apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" fill="#9da7b1">Checked now, and what this project asks of itself for 1.0.</text>
 <line x1="450" y1="72" x2="926" y2="72" stroke="#2a3238"/>
 <text x="450" y="92" font-family="-apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="600" fill="#e6edf3">Coverage</text>
-<text x="600" y="92" font-family="-apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" fill="#e6edf3">40 of 43 rules have a fixture pair</text>
-<text x="600" y="106" font-family="-apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="11" fill="#9da7b1">1.0: 40 of 43, every rule that can have one</text>
+<text x="600" y="92" font-family="-apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" fill="#e6edf3">41 of 44 rules have a fixture pair</text>
+<text x="600" y="106" font-family="-apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="11" fill="#9da7b1">1.0: 41 of 44, every rule that can have one</text>
 <text x="450" y="128" font-family="-apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="600" fill="#e6edf3">Explanation</text>
 <text x="600" y="128" font-family="-apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" fill="#e6edf3">what is wrong, evidence, remedy, source, line</text>
 <text x="600" y="142" font-family="-apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="11" fill="#9da7b1">1.0: met</text>

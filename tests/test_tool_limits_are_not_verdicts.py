@@ -37,7 +37,7 @@ def test_the_could_not_run_finding_points_at_the_tool_not_the_document(monkeypat
     assert "correct the element" not in remedy
 
 
-@pytest.mark.parametrize("rule_id", ["P2", "P3", "X0", "Z5", "Z6"])
+@pytest.mark.parametrize("rule_id", ["P2", "P3", "P6", "X0", "Z5", "Z6"])
 def test_a_rule_about_our_own_limits_says_so(rule_id):
     """`container` means "mechanics of ZIP and XML that hold without knowing
     VDI 2770 at all". A byte scan for /Encrypt is neither."""
@@ -48,7 +48,7 @@ def test_a_rule_about_our_own_limits_says_so(rule_id):
         assert r.why_ours
 
 
-@pytest.mark.parametrize("rule_id", ["P2", "P3"])
+@pytest.mark.parametrize("rule_id", ["P2", "P3", "P6"])
 def test_a_pattern_match_does_not_carry_error_severity(rule_id):
     """scope.md admits both of these can be wrong. A finding that can be wrong
     in both directions should not fail someone's build on its own."""

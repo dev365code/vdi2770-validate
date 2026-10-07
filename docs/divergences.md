@@ -13,21 +13,20 @@ check that — the normative text is paywalled.
 
 ## How much of this was measured
 
-It is measured now. All 62 containers in `corpus/` and
-`tests/fixtures/` were put through the reference implementation at its pinned commit
-`e47c13c`, with the locale forced to `en_US`, and the result is checked in at
-[`docs/oracle-sweep.json`](oracle-sweep.json). `tools/capture_oracle.py --check`
-re-runs it and fails if either side has moved, and
-[`.github/workflows/oracle.yml`](../.github/workflows/oracle.yml) is that run:
-a pinned JDK, the reference checked out at the commit above, and the result
-uploaded for a human to read. It is a URL, not three shell lines in a README.
+There are 121 containers in `corpus/` and
+`tests/fixtures/`. 62 of the 121 containers were put through the reference
+implementation at its pinned commit `e47c13c`, with locale `en_US`;
+their recorded reference column is unchanged. The 59 generated page-tree
+fixtures have only our verdict and wait in the recording's `_unswept`
+block for a real reference run. No reference evidence is invented for them.
+[docs/oracle-sweep.json](oracle-sweep.json) records both states.
+The pinned oracle workflow can run the reference; this work does not trigger it.
 
 A container added after a sweep carries our column and an empty one for the
 reference until the next run, named in the sweep's `_unswept` block with the
 reason. **Every count on this page excludes those**, because an empty
 `reference` means "we never asked it", and reading that as "it reported nothing"
-invents a disagreement with a tool that has never seen the container. Nothing is
-outstanding now.
+invents a disagreement with a tool that has never seen the container. The 59 new containers are outstanding in _unswept.
 
 The last container to be swept corrected this page, and the correction is worth
 keeping rather than editing away. `p5-unconfirmed-pdf.zip` was described here as
@@ -182,12 +181,15 @@ Java toolchain — so the summaries below are not checkable from a clone:
 
 - `DV_013` fires on `numberOfPages < 0`, though its message says "greater than
   zero" — so `0` passes there. (Checked in the English, German and Chinese
-  bundles; only the English one is vendored here.) This tool has no
-  `numberOfPages` rule and does not need one: the schema types the attribute
-  `xs:positiveInteger`, so a zero and a negative are both refused as `X2`, with
-  the attribute named and the line given. The basis is the schema VDI publishes
-  rather than a judgement of ours, which is the stronger of the two — and it
-  means this tool refuses the `0` the reference lets through.
+  bundles; only the English one is vendored here.) This tool uses X2 for the schema's positiveInteger lexical
+  and value spaces, including zero and negative values. P6 asks a separate
+  question: whether a valid NumberOfPages declaration agrees with the sole
+  PDF's root page-tree Count. It is warning/ours, cites no reference message
+  key, and compares declarations rather than rendered leaves.
+  The seven versions in vdi2770_excel.zip say 10 (three), 100 (three), or 4
+  (one), while each PDF root declares 1. P6 adds seven true warnings for these
+  template placeholders; the default exit remains 0. The generated official
+  samples table records 0 errors, 7 warnings and 7 notes.
 - `MainDocument.validate` throws `IndexOutOfBoundsException` on an empty version
   list, discarding the `MD_001` it had just recorded.
 - `MainDocument` overrides only the two-argument `validate`, so main-document rules

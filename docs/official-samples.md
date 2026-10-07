@@ -22,7 +22,7 @@ and the build fails when the two differ.
 | `container/morethanonepdfcontainer.zip` | 0 | 0 | 1 | 2 | P3 ×1 (ours), P4 ×2 (ours) |
 | `container/objectreferences.zip` | 0 | 0 | 1 | 3 | M13 ×1 (ours), P4 ×3 (ours) |
 | `container/vdi2770_demo.zip` | 0 | 0 | 1 | 3 | M13 ×1 (ours), P4 ×3 (ours) |
-| `container/vdi2770_excel.zip` | 0 | 0 | 0 | 7 | P4 ×7 (ours) |
+| `container/vdi2770_excel.zip` | 0 | 0 | 7 | 7 | P4 ×7 (ours), P6 ×7 (ours) |
 | `demo_invalid_doc_type_names.zip` | 0 | 0 | 2 | 4 | M3 ×1 (table), M4 ×1 (ours), M13 ×1 (ours), P4 ×3 (ours) |
 | `demo_vdi.zip` | 0 | 0 | 1 | 3 | M13 ×1 (ours), P4 ×3 (ours) |
 | `empty.zip` | 1 | 1 | 0 | 0 | Z2 ×1 (container) |

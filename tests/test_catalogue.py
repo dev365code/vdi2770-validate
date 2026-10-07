@@ -1,7 +1,9 @@
 """The rule catalogue is data, so it can be checked like data."""
 import json
 import re
+from dataclasses import replace
 
+import pytest
 from vdi2770_validate.catalog import document_classes, rules
 from vdi2770_validate.model import Obligation
 
@@ -47,6 +49,9 @@ def test_a_basis_can_actually_be_looked_up():
             continue
         if (data / r.basis).exists():
             continue
+        if re.fullmatch(r"ISO [0-9]+(?:-[0-9]+)?:[0-9]{4} §[0-9]+(?:\.[0-9]+)*(?: Table [0-9]+)?",
+                        r.basis):
+            continue
         assert re.match(r"^IDTA \d{5} v\d+\.\d+(\.\d+)? Table \d+$", r.basis), (
             f"{r.id} basis {r.basis!r} names neither a bundled file nor a citable edition")
 
@@ -56,6 +61,26 @@ def test_every_published_table_citation_is_the_same_edition():
     of them is stale."""
     cited = {r.basis for r in rules().values() if r.basis.startswith("IDTA")}
     assert len(cited) <= 1, f"rules cite more than one edition: {sorted(cited)}"
+
+
+@pytest.mark.parametrize("basis", ["ISO 32000-1:2008 §7.5.4",
+                                  "ISO 32000-1:2008 §7.7.3.2 Table 29",
+                                  "ISO 9001:2015 §4.1"])
+def test_an_iso_citation_names_an_edition_and_a_clause(monkeypatch, basis):
+    changed = dict(rules())
+    changed["P6"] = replace(changed["P6"], basis=basis)
+    monkeypatch.setitem(globals(), "rules", lambda: changed)
+    test_a_basis_can_actually_be_looked_up()
+
+
+@pytest.mark.parametrize("basis", ["ISO 32000-1 §7.5.4", "ISO 32000-1:2008",
+                                  "ISO 32000-1:2008 §7..5", "ISO 32000-1:2008 §7.5.4 extra"])
+def test_an_iso_citation_without_a_precise_receipt_is_refused(monkeypatch, basis):
+    changed = dict(rules())
+    changed["P6"] = replace(changed["P6"], basis=basis)
+    monkeypatch.setitem(globals(), "rules", lambda: changed)
+    with pytest.raises(AssertionError):
+        test_a_basis_can_actually_be_looked_up()
 
 
 def test_class_table_is_keyed_on_what_the_sources_agree_about():

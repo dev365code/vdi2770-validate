@@ -1474,8 +1474,8 @@ FRONT_DOOR = [
 
     ("gates/the-badge-counts-the-catalogue",
      "README.md",
-     "rules-43_each_with_a_remedy",
-     "rules-42_each_with_a_remedy",
+     "rules-44_each_with_a_remedy",
+     "rules-41_each_with_a_remedy",
      ["tests/test_the_front_page_points_at_what_it_shows.py::"
       "test_the_badge_that_counts_rules_counts_the_catalogue"],
      "a number inside a shields.io URL is not the shape the prose gate reads, "
@@ -2593,7 +2593,7 @@ LISTING_BUDGET_ROWS = [
 
     ("pages/a-pin-a-reader-runs-is-past-every-advisory",
      "README.md",
-     'pip install "vdi2770-validate==0.10.3"',
+     'pip install "vdi2770-validate==0.11.0"',
      'pip install "vdi2770-validate==0.7.0"',
      ["tests/test_an_advisory_and_its_release_name_each_other.py::"
       "test_every_pin_a_page_hands_a_reader_is_past_every_advisory"],
@@ -2603,7 +2603,7 @@ LISTING_BUDGET_ROWS = [
 
     ("pages/an-action-ref-a-reader-copies-is-past-every-advisory",
      "README.md",
-     "| `uses: dev365code/vdi2770-validate@v0.10.3` |",
+     "| `uses: dev365code/vdi2770-validate@v0.11.0` |",
      "| `uses: dev365code/vdi2770-validate@v0.7.0` |",
      ["tests/test_an_advisory_and_its_release_name_each_other.py::"
       "test_every_pin_a_page_hands_a_reader_is_past_every_advisory"],
@@ -2613,7 +2613,7 @@ LISTING_BUDGET_ROWS = [
 
     ("pages/a-ref-written-alone-is-past-every-advisory",
      "README.md",
-     "`@v0.10.3` installs 0.10.3",
+     "`@v0.11.0` installs 0.11.0",
      "`@v0.7.0` installs 0.7.0",
      ["tests/test_an_advisory_and_its_release_name_each_other.py::"
       "test_every_pin_a_page_hands_a_reader_is_past_every_advisory"],
@@ -2622,17 +2622,17 @@ LISTING_BUDGET_ROWS = [
 
     ("pages/a-pin-in-a-sentence-is-past-every-advisory",
      "README.md",
-     "`vdi2770-validate==0.10.3` installs one matching pair.",
+     "`vdi2770-validate==0.11.0` installs one matching pair.",
      "`vdi2770-validate==0.9.6` installs one matching pair.",
      ["tests/test_an_advisory_and_its_release_name_each_other.py::"
       "test_every_pin_a_page_hands_a_reader_is_past_every_advisory"],
      "a sentence recommends an exact pin inside an advisory's range, with no "
      "command around it to read it as one"),
 
-    ("pages/an-open-advisory-names-no-fix",
+    ("pages/a-fixed-advisory-does-not-also-call-it-open",
      "docs/advisories.json",
-     '"fixed_in": null,\n      "open":',
-     '"fixed_in": "0.9.6",\n      "open":',
+     '"fixed_in": "0.11.0",\n      "corrections": [',
+     '"fixed_in": "0.11.0",\n      "open": "not yet closed by any release",\n      "corrections": [',
      ["tests/test_an_advisory_and_its_release_name_each_other.py::"
       "test_the_two_pages_name_the_same_advisories"],
      "an entry that names a fix and says no release closes it yet tells a "
@@ -2649,7 +2649,7 @@ LISTING_BUDGET_ROWS = [
 
     ("pages/a-fix-a-correction-took-back-is-not-named",
      "docs/advisories.json",
-     '"through": "0.11.0",\n      "fixed_in": null,',
+     '"through": "0.10.3",\n      "fixed_in": "0.11.0",',
      '"through": "0.9.5",\n      "fixed_in": "0.9.6",',
      ["tests/test_an_advisory_and_its_release_name_each_other.py::"
       "test_each_advisory_is_cited_where_the_record_puts_it"],
@@ -2657,14 +2657,14 @@ LISTING_BUDGET_ROWS = [
      "release closes the rest, and a record naming that release as the fix "
      "contradicts it"),
 
-    ("pages/an-advisory-no-release-closes-reaches-the-one-being-written",
+    ("pages/the-closed-range-names-its-endpoint",
      "docs/advisories.json",
-     '"through": "0.11.0",',
+     '"through": "0.10.3",',
      '"through": "0.10.1",',
      ["tests/test_an_advisory_and_its_release_name_each_other.py::"
       "test_each_advisory_is_cited_where_the_record_puts_it"],
-     "an advisory no release closes reaches every release so far, and a range "
-     "that stops one short tells a reader on the newest one they are clear of it"),
+     "a closed range must name the same endpoint in the record and the changelog, and a range "
+     "that stops one short records a different boundary"),
 
     ("gates/a-sentence-is-read-apart-from-its-paragraph",
      "tests/test_an_advisory_and_its_release_name_each_other.py",
@@ -2770,16 +2770,16 @@ LISTING_BUDGET_ROWS = [
 
     ("gates/the-picture-draws-what-the-data-says",
      "docs/capabilities.json",
-     '"now": 40, "target": 40,',
-     '"now": 39, "target": 40,',
+     '"now": 41,\n      "target": 41,',
+     '"now": 40,\n      "target": 41,',
      ["tests/test_capabilities_current.py::test_rendered_files_match_the_data"],
      "a count on the front-page picture that the file it is drawn from no longer "
      "says, and no sentence in the repository says either"),
 
     ("gates/a-done-item-points-at-a-file-that-says-it",
      "docs/capabilities.json",
-     '{"file": "action.yml",',
-     '{"file": "pyproject.toml",',
+     '"file": "action.yml",',
+     '"file": "pyproject.toml",',
      ["tests/test_capabilities_current.py::test_every_piece_of_evidence_says_what_it_is_cited_for"],
      "an entrance drawn as done on the strength of a file that does not say "
      "what it is cited for"),
@@ -2795,8 +2795,8 @@ LISTING_BUDGET_ROWS = [
 
     ("gates/the-page-behind-the-picture-counts-what-it-draws",
      "docs/what-it-catches.md",
-     "**Now.** 40 of 43 rules have a minimal fixture pair",
-     "**Now.** 39 of 43 rules have a minimal fixture pair",
+     "**Now.** 41 of 44 rules have a minimal fixture pair",
+     "**Now.** 38 of 42 rules have a minimal fixture pair",
      ["tests/test_the_front_door_pictures_are_true.py::"
       "test_the_page_behind_the_picture_marks_what_the_picture_draws"],
      "the page behind the picture counts one rule fewer with a pair than the "
@@ -3186,7 +3186,7 @@ LISTING_BUDGET_ROWS = [
 
     ("report/the-budget-charges-a-sentence-as-the-page-prints-it",
      "packages/vdi2770/src/vdi2770/validate/model.py",
-     '    as_page = (sum(_page_bytes(on_one_line(s)) for s in said)',
+     '    as_page = (sum(_page_bytes(not_a_command(on_one_line(s))) for s in said)',
      '    as_page = (sum(_page_bytes(s) for s in said)',
      ["tests/test_a_long_name_does_not_multiply_the_report.py::test_the_budget_charges_at_least_what_either_shape_prints"],
      "a sentence full of what draws nothing prints six times its length once it "
@@ -3202,8 +3202,8 @@ LISTING_BUDGET_ROWS = [
 
     ("report/the-budget-charges-the-page-as-printed",
      "packages/vdi2770/src/vdi2770/validate/model.py",
-     '    return _json_bytes(s), _page_bytes(as_written(s))',
-     '    return _json_bytes(s), len(s)',
+     'located = [(_where_bytes(s)[0], _page_bytes(not_a_command(as_written(s))))',
+     'located = [(_where_bytes(s)[0], len(s))',
      ["tests/test_a_long_name_does_not_multiply_the_report.py::test_the_budget_charges_at_least_what_either_shape_prints"],
      "the page spells an invisible symbol as ten characters, and a budget that "
      "counted it as one let such a name print thirteen times what it held"),
@@ -3365,6 +3365,10 @@ TABLE += BASIS_ROWS
 TABLE += RELATIONSHIPS
 
 TABLE += FRONT_DOOR
+
+TABLE += [
+    ('report/the-old-runner-form-is-spelled-anywhere', 'packages/vdi2770/src/vdi2770/validate/names.py', '    return line.replace("##[", _spelled("#") + "#[")', '    return line', ['tests/test_two_names_that_print_alike_are_told_apart.py::test_the_old_runner_form_is_text_wherever_it_occurs', 'tests/test_cli.py::test_the_old_runner_form_is_text_on_stderr'], 'the older form is read anywhere in a line, so every occurrence must remain text'),
+]
 
 CANARY = "canary/a-comment-nobody-reads"
 

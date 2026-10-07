@@ -46,10 +46,40 @@ folders rather than zipped: they are read now, and judged.
 - **A bug report is the bytes its size limit was measured on.** It was written
   as text, and on Windows every line end became two bytes on the way to the
   file, so a bundle measured just under 256 KiB arrived over it.
-- **GHSA-62p8-4642-mwfp is still not closed in full**: it reaches
-  `vdi2770-validate` from 0.1.0 and `vdi2770` from 0.8.0 up to 0.11.0, and the
-  older form of the runner's command syntax, which the runner reads anywhere in
-  a line, is not yet closed by any release.
+- **NumberOfPages keeps its original value** and both X2 and P6 use the XSD
+  ASCII grammar without converting the metadata to int. Long finite positive
+  values no longer depend on Python's decimal conversion limit; underscores
+  and non-ASCII digits remain X2 errors. Comparison and quoting are bounded.
+
+Who should take this release: readers comparing metadata with a PDF revision.
+
+- **P6 compares page declarations**: a version's NumberOfPages and its sole
+  declared PDF's root page-tree Count. A mismatch is warning/ours; rendered
+  pages are not counted. The seven versions in vdi2770_excel.zip use template
+  values 10, 100 and 4 beside PDFs declaring one page: seven new warnings,
+  with the default exit unchanged at 0. The generated table in `docs/official-samples.md`
+  records them. Other existing corpus verdicts do not move.
+- **A declined page-tree comparison says why** through P6 on the tool axis
+  and read.complete=false. Page-tree reading runs before PDF/A claim search
+  and shares the file/stream/read inflation ceilings. Header, indirect-object
+  and encryption checks keep running; encrypted files are not compared.
+- **The metadata attribute allowance remains 100,000**: 1,600× above the worst document
+  **64** attributes in the current corpus and fixtures, with neither the
+  per-element nor the total cap increased.
+- **The reader API adds optional page_count/page_count_why** and preserves
+  existing positional dataclass construction. The two distributions share
+  version 0.11.0.
+
+Security: [GHSA-62p8-4642-mwfp](https://github.com/dev365code/vdi2770-validate/security/advisories/GHSA-62p8-4642-mwfp), for the runner's older syntax read anywhere in a text-report or stderr line: spell its first character so it remains text; reaching vdi2770-validate from 0.1.0 and vdi2770 from 0.8.0 up to 0.10.3; fixed in 0.11.0.
+
+- **PDF access is bounded**: last startxref, xref tables/streams, Root and Pages,
+  incremental updates, object streams and Annex F ordering; no recovery scan.
+  The reader limits sections to 64, object interpretations to 16 and object,
+  subsection-header and trailer windows to 64 KiB. Classic sections have at
+  most 64 subsections and requested 20-byte rows are read by position. Hybrid
+  tables precede supplementary streams; object-stream lengths can name one
+  indirect integer within the object allowance. Root Count zero is reported
+  as declaring no pages.
 
 ## 0.10.3 — 2026-09-25
 
@@ -706,6 +736,8 @@ No verdict moves in this release. A container judged by 0.9.0 is judged the
 same way here; the only difference a report shows is `toolVersion`.
 
 *(Correction 2026-09-24: pinning 0.8.0, 0.8.1, 0.8.2 or 0.9.0 by both names, as advised above, keeps a release inside the range of five security advisories published since, which SECURITY.md lists; move to 0.9.7 or later instead, which pins both halves exactly.)*
+
+*(Correction 2026-10-06: the version advice in the correction above is superseded; move to 0.11.0 or later, which closes every advisory SECURITY.md lists and pins both halves exactly.)*
 
 ## 0.9.0 — 2026-09-20
 

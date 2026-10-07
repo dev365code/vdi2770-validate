@@ -5,14 +5,14 @@ from dataclasses import dataclass
 from typing import Iterator
 
 from ..catalog import rule
-from ..model import MAIN_PDF, About, Finding, Kind
+from ..model import _READ_INFLATION_STOP, MAIN_PDF, About, Finding, Kind
 from ..names import Members, as_written, folder_path
 
 UNVERIFIED = "this tool cannot verify PDF/A conformance"
 
 @dataclass(frozen=True)
 class Stopped:
-    """A declared PDF whose *claim search* this read stopped short of running.
+    """A declared PDF whose inflation-backed work was cut short.
 
     Not "a file nobody opened": the allowance bounds inflating streams, and the
     header, the indirect objects and the encryption flag are all read from bytes
@@ -21,7 +21,8 @@ class Stopped:
     the `P3` this class was invented to prevent, which is "this scan found no
     PDF/A claim in the file" over a scan that did not happen.
 
-    So the facts travel with it and every rule but `P3` is judged from them. It
+    Page-count refusal travels in page_count_why, including when a raw claim
+    was found. The basic facts travel with it and other rules use them. It
     carries the ceiling rather than reading it, because a rule module may not
     import a parser: the layer that spends a budget knows what it was, and this
     one only says so.
@@ -51,6 +52,63 @@ MAX_NAMED = 5
 #: to, and one of the two rules that reads it is the one that decides whether an
 #: unconfirmed PDF is a finding.
 RESERVED = "the reserved main document"
+
+# XSD Part 2 §§3.3.13, 3.3.25, 4.3.6. This is eligibility for comparing,
+# not another finding for the lexical/value-space violations X2 already names.
+MAX_PAGE_NUMBER_QUOTE = 80
+
+
+def page_targets(container, document):
+    """Version-level declarations; the document-wide _targets dedup is different."""
+    members = Members(container.file_names)
+    for version in document.versions:
+        raw = version.number_of_pages
+        if raw is None:
+            continue
+        digits = raw.strip(" \t\r\n")
+        if digits.startswith("+"):
+            digits = digits[1:]
+        if not digits or not all("0" <= c <= "9" for c in digits):
+            continue
+        digits = digits.lstrip("0")
+        if not digits:
+            continue
+        names = {members.resolve(f.file_name) for f in version.files
+                 if f.file_format.split(";")[0].strip().lower() == "application/pdf"}
+        if len(names) == 1 and None not in names:
+            yield version, next(iter(names)), digits
+
+
+def _page_findings(container, document, facts_for):
+    for version, name, digits in page_targets(container, document):
+        facts = facts_for(name)
+        if isinstance(facts, Stopped):
+            facts = facts.facts
+        if facts is None or facts.is_pdf is not True or facts.encrypted:
+            continue
+        where = version.src.child(subject=name)
+        r = rule("P6")
+        if facts.page_count_why:
+            yield Finding(
+                r, "The PDF's page tree could not be read", where,
+                detail=f"{as_written(name)}: the page tree could not be read: {facts.page_count_why}",
+                fix="Check that this is the intended PDF and verify its xref and page tree. "
+                    "Re-export it if appropriate; this bounded reader does not recover damaged "
+                    "xref data or evaluate structures beyond its limits. No page-count "
+                    "comparison was made.",
+                as_about=About.TOOL)
+        elif facts.page_count is not None:
+            declared = str(facts.page_count)
+            # No int(raw): positiveInteger is unbounded and Python's grammar
+            # and decimal conversion limit are not the XSD's.
+            if (len(digits), digits) == (len(declared), declared):
+                continue
+            number = (digits if len(digits) <= MAX_PAGE_NUMBER_QUOTE else
+                      digits[:MAX_PAGE_NUMBER_QUOTE] + f"... ({len(digits)} digits)")
+            count = f"declares {declared}" if facts.page_count else "declares no pages"
+            yield Finding(r, r.title, where,
+                          detail=f"{as_written(name)}: the metadata says {number} pages; "
+                                 f"the PDF's page tree {count}")
 
 
 def _targets(container, document):
@@ -92,6 +150,7 @@ def _targets(container, document):
 
 
 def check(container, document, facts_for) -> Iterator[Finding]:
+    yield from _page_findings(container, document, facts_for)
     unopened = []
     reserved_cut = False
     for name, why in _targets(container, document):
@@ -111,7 +170,8 @@ def check(container, document, facts_for) -> Iterator[Finding]:
             # Only the read's allowance is somebody else's doing. The other two
             # are this file against a bounded scan, and `Z5` is an error on the
             # tool axis -- an ordinary multi-page PDF reaches them.
-            if cut_short and stopped.reason == "read":
+            if stopped.reason == "read" and (
+                    cut_short or facts.page_count_why == _READ_INFLATION_STOP):
                 unopened.append((name, stopped))
                 reserved_cut = reserved_cut or why == RESERVED
         where = container.where.child(member=name, subject=name)
@@ -276,14 +336,15 @@ def check(container, document, facts_for) -> Iterator[Finding]:
         yield Finding(
             r, r.title, container.where,
             detail=f"this read spent its {gib:g} GiB budget for inflating PDF "
-                   f"streams, so the search for a PDF/A claim inside "
+                   f"streams, so page tree reading or the search for a PDF/A claim inside "
                    f"{len(unopened)} {'PDF' if reserved_cut else 'declared PDF'} "
                    f"file{'' if one else 's'} was cut short for: "
                    + ", ".join(as_written(n) for n, _ in unopened[:MAX_NAMED])
                    + (", ..." if len(unopened) > MAX_NAMED else "")
-                   + f". Nothing is said about whether "
-                     f"{'it carries' if one else 'they carry'} one",
-            fix="Split the delivery into several containers, or produce the "
-                "documents as PDF/A: the scan stops at the first PDF/A claim it "
-                "finds, so a delivery of conforming files does not approach this "
-                "budget. Every other check on these files still ran.")
+                   + ". The report retains any declarations it did read; "
+                     "this is a limit on the comparison or search",
+            fix="Split the delivery into several containers, or re-export PDFs with "
+                "smaller compressed structures. The PDF/A claim search stops once "
+                "it finds a claim, but page-tree reading may also need inflation. "
+                "The header, indirect-object probe and encryption check still ran; "
+                "P6 names any page-count comparison this budget prevented.")

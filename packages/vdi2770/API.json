@@ -284,6 +284,10 @@
           "str",
           "no-default"
         ],
+        "number_of_pages": [
+          "Optional[str]",
+          "has-default"
+        ],
         "relationships": [
           "Tuple[DocumentRelationship, ...]",
           "no-default"
@@ -486,6 +490,14 @@
           "Optional[bool]",
           "no-default"
         ],
+        "page_count": [
+          "Optional[int]",
+          "has-default"
+        ],
+        "page_count_why": [
+          "Optional[str]",
+          "has-default"
+        ],
         "pdfa_claim": [
           "Optional[str]",
           "has-default"
@@ -567,7 +579,7 @@
       "signature": "(path: 'str') -> 'Container'"
     },
     "read_pdf": {
-      "signature": "(data: 'bytes') -> 'PdfFacts'"
+      "signature": "(data: 'bytes', *, page_count: 'bool' = False) -> 'PdfFacts'"
     },
     "reader": {
       "signature": "(allowance: 'int') -> 'Callable[[bytes], tuple]'"
