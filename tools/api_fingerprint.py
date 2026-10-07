@@ -385,12 +385,14 @@ def main() -> int:
             if why:
                 print(why, file=sys.stderr)
                 return 1
-        BASELINE.write_text(json.dumps(now, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
-                            encoding="utf-8")
+        BASELINE.write_bytes((json.dumps(now, ensure_ascii=False, indent=2, sort_keys=True) + "\n").encode("utf-8"))
         print(f"wrote {BASELINE.relative_to(ROOT)} for {now['version']}")
         return 0
 
     if a.check:
+        if BASELINE.exists() and b"\r" in BASELINE.read_bytes():
+            print("API.json has non-LF line endings; restore its committed bytes", file=sys.stderr)
+            return 1
         if recorded is None:
             print(f"{BASELINE.relative_to(ROOT)} missing — run --write", file=sys.stderr)
             return 1

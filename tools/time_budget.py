@@ -244,7 +244,7 @@ def main(argv=None) -> int:
             "yardstick_seconds": round(now["yardstick_seconds"], 6),
             "absolute_seconds": now["absolute_seconds"],
         }
-        BUDGET_FILE.write_text(json.dumps({
+        BUDGET_FILE.write_bytes((json.dumps({
             "_about": "Budgets are ratios against a yardstick measured in the same run "
                       "(zlib over fixed bytes, never this project's code), because seconds "
                       "recorded on one machine cannot gate another. One entry per operating "
@@ -254,7 +254,7 @@ def main(argv=None) -> int:
             "budgets": budgets,
             "recorded_on": recorded_on,
             "thresholds": {"warn_at": WARN_AT, "fail_at": FAIL_AT},
-        }, indent=1) + "\n", encoding="utf-8")
+        }, indent=1) + "\n").encode("utf-8"))
         print(f"recorded {key} {now['budgets']} from {now['containers']} containers "
               f"({now['absolute_seconds']['corpus_pass']}s) and {now['pdfs']} PDFs "
               f"({now['absolute_seconds']['pdf_layer']}s)")
@@ -271,6 +271,9 @@ def main(argv=None) -> int:
           f"yardstick {now['yardstick_seconds'] * 1000:.3f}ms "
           f"({now['containers']} containers, {now['pdfs']} PDFs) -> {now['budgets']}")
 
+    if BUDGET_FILE.exists() and b"\r" in BUDGET_FILE.read_bytes():
+        print("docs/time-budget.json has non-LF line endings; restore its committed bytes", file=sys.stderr)
+        return 1
     recorded = budgets_for(load(), key)
     if not recorded:
         raise NoBaseline(

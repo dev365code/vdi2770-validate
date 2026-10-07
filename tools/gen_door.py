@@ -204,6 +204,8 @@ def main(argv) -> int:
     OUT.mkdir(parents=True, exist_ok=True)
     page = README.read_text(encoding="utf-8") if README.is_file() else None
     stale = []
+    if checking and page is not None and README.read_bytes() != page.encode("utf-8"):
+        stale.append("README.md (line endings differ from the generated page)")
     for name, draw in PICTURES.items():
         drawn = draw()
         path = OUT / name
@@ -215,13 +217,13 @@ def main(argv) -> int:
                     README.read_text(encoding="utf-8"):
                 stale.append(f"{name} (the front page's ?v= is not its hash)")
         if checking:
-            if not path.is_file() or path.read_text(encoding="utf-8") != drawn:
+            if not path.is_file() or path.read_bytes() != drawn.encode("utf-8"):
                 stale.append(name)
             continue
-        path.write_text(drawn, encoding="utf-8")
+        path.write_bytes(drawn.encode("utf-8"))
         print(f"{name}  {len(drawn) // 1024} KB")
     if page is not None and not checking:
-        README.write_text(page, encoding="utf-8")
+        README.write_bytes(page.encode("utf-8"))
     if stale:
         print("out of date, regenerate with tools/gen_door.py: "
               + ", ".join(stale), file=sys.stderr)

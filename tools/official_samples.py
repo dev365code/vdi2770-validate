@@ -125,13 +125,13 @@ def main(argv=None) -> int:
     args = ap.parse_args(argv)
     page = render()
     if args.check:
-        if not PAGE.exists() or PAGE.read_text(encoding="utf-8") != page:
+        if not PAGE.exists() or PAGE.read_bytes() != page.encode("utf-8"):
             print("docs/official-samples.md is not what this tool says about the samples; "
                   "run python tools/official_samples.py --write", file=sys.stderr)
             return 1
         print("docs/official-samples.md is what this tool says about the samples")
         return 0
-    PAGE.write_text(page, encoding="utf-8")
+    PAGE.write_bytes(page.encode("utf-8"))
     print("wrote docs/official-samples.md")
     return 0
 

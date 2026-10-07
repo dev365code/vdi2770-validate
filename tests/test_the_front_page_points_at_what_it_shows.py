@@ -25,6 +25,117 @@ from conftest import ROOT
 README = (ROOT / "README.md").read_text(encoding="utf-8")
 
 
+def test_generators_keep_committed_bytes_with_windows_newlines(tmp_path):
+    import io
+    import shutil
+    import subprocess
+    import sys
+    import tarfile
+    from pathlib import Path
+
+    def git(where, *arguments):
+        return subprocess.run(["git", *arguments], cwd=where, capture_output=True, check=True).stdout
+
+    tree = tmp_path / "tree"
+    tree.mkdir()
+    with tarfile.open(fileobj=io.BytesIO(git(ROOT, "archive", "HEAD"))) as archive:
+        for member in archive:
+            target = tree / member.name
+            assert target.resolve().is_relative_to(tree.resolve())
+            if member.isdir():
+                target.mkdir(parents=True, exist_ok=True)
+            else:
+                assert member.isfile(), member.name
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(archive.extractfile(member).read())
+    # Only a temporary index and refs; the original object store is read-only.
+    git(tree, "init", "--quiet")
+    common = Path(git(ROOT, "rev-parse", "--git-common-dir").decode().strip())
+    if not common.is_absolute():
+        common = ROOT / common
+    (tree / ".git/objects/info/alternates").write_bytes(
+        (str(common.resolve() / "objects") + "\n").encode("utf-8"))
+    git(tree, "update-ref", "HEAD", git(ROOT, "rev-parse", "HEAD").decode().strip())
+    for line in git(ROOT, "for-each-ref", "--format=%(refname) %(objectname)", "refs/tags").decode().splitlines():
+        ref, object_id = line.split()
+        git(tree, "update-ref", ref, object_id)
+    git(tree, "read-tree", "HEAD")
+    for source in (ROOT / "tools").glob("*.py"):
+        shutil.copyfile(source, tree / "tools" / source.name)
+    tracked = git(tree, "ls-files", "-z").decode().split("\0")[:-1]
+    before = {name: (tree / name).read_bytes() for name in tracked}
+    driver = tmp_path / "windows_newlines.py"
+    driver.write_bytes(b'''import builtins, pathlib, runpy, sys
+original_open = builtins.open
+def windows_open(file, mode="r", buffering=-1, encoding=None, errors=None,
+                 newline=None, closefd=True, opener=None):
+    if "b" not in mode and any(char in mode for char in "wa+") and newline is None:
+        newline = "\\r\\n"
+    return original_open(file, mode, buffering, encoding, errors, newline, closefd, opener)
+def windows_write(path, data, encoding=None, errors=None, newline=None):
+    with path.open("w", encoding=encoding, errors=errors,
+                   newline="\\r\\n" if newline is None else newline) as stream:
+        return stream.write(data)
+builtins.open = windows_open
+pathlib.Path.write_text = windows_write
+sys.argv = sys.argv[1:]
+sys.path.insert(0, str(pathlib.Path(sys.argv[0]).resolve().parent))
+runpy.run_path(sys.argv[0], run_name="__main__")
+''')
+
+    def run(*arguments):
+        return subprocess.run([sys.executable, "-B", str(driver), *arguments], cwd=tree,
+                              capture_output=True, encoding="utf-8")
+
+    commands = [
+        ("tools/make_fixtures.py",), ("tools/api_fingerprint.py", "--write"),
+        ("tools/advisories.py", "--write"), ("tools/capture_oracle.py", "--write-ours"),
+        ("tools/rule_coverage.py", "--write"), ("tools/rules_doc.py", "--write"),
+        ("tools/official_samples.py", "--write"), ("tools/page_summary.py",),
+        ("tools/capabilities_svg.py", "docs/capabilities.json"), ("tools/gen_door.py",),
+        ("tools/golden_report.py",), ("tools/silent_paths.py", "--write"),
+    ]
+    for command in commands:
+        done = run(*command)
+        assert done.returncode == 0, (command, done.stdout, done.stderr)
+    changed = [name for name, raw in before.items() if (tree / name).read_bytes() != raw]
+    assert not changed, f"Windows default newlines changed committed bytes: {changed}"
+    generated = ["README.md", "SECURITY.md", "packages/vdi2770/API.json",
+                 "docs/oracle-sweep.json", "docs/rule-coverage.json", "docs/rules.md",
+                 "docs/official-samples.md", "docs/what-it-catches.md", "docs/capabilities.json",
+                 "docs/capabilities.svg", "docs/capabilities.md", "docs/assets/door.svg",
+                 "docs/assets/tenseconds.svg", "docs/golden-report.json", "docs/silent-paths.json",
+                 "corpus/MANIFEST.json", "docs/time-budget.json"]
+    git(tree, "diff", "--exit-code", "--", *generated)
+    for name in generated:
+        raw = before[name]
+        assert b"\n" in raw and b"\r" not in raw, name
+        (tree / name).write_bytes(raw.replace(b"\n", b"\r\n"))
+    checks = [("tools/gen_door.py", "--check"), ("tools/api_fingerprint.py", "--check"),
+              ("tools/advisories.py", "--check"), ("tools/capture_oracle.py", "--check-ours"),
+              ("tools/rule_coverage.py", "--check"), ("tools/rules_doc.py", "--check"),
+              ("tools/official_samples.py", "--check"),
+              ("tools/capabilities_svg.py", "docs/capabilities.json", "--check"),
+              ("tools/golden_report.py", "--check"), ("tools/silent_paths.py",),
+              ("tools/vendor_corpus.py", "--check"), ("tools/time_budget.py", "--check")]
+    accepted = []
+    for command in checks:
+        done = run(*command)
+        assert done.returncode in (0, 1), (command, done.stdout, done.stderr)
+        if done.returncode == 0:
+            accepted.append(command)
+    assert not accepted, f"Checks accepted CRLF drift: {accepted}"
+    # Each front-door output must fail on its own; a CRLF page must not hide
+    # a picture comparison that still normalizes its input.
+    for name in generated:
+        (tree / name).write_bytes(before[name])
+    for name in ("docs/assets/door.svg", "docs/assets/tenseconds.svg", "README.md"):
+        (tree / name).write_bytes(before[name].replace(b"\n", b"\r\n"))
+        done = run("tools/gen_door.py", "--check")
+        assert done.returncode == 1, (name, done.stdout, done.stderr)
+        (tree / name).write_bytes(before[name])
+
+
 def _home():
     project = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
     home = re.search(r'(?m)^Homepage = "https://github\.com/([^/"]+)/([^/"]+)"',

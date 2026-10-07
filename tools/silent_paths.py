@@ -39,10 +39,10 @@ def main():
     args = parser.parse_args()
     payload = json.dumps(build(), ensure_ascii=False, indent=2) + "\n"
     if args.write:
-        OUT.write_text(payload, encoding="utf-8")
+        OUT.write_bytes(payload.encode("utf-8"))
         print(f"wrote {OUT.relative_to(ROOT)}")
         return 0
-    if not OUT.exists() or OUT.read_text(encoding="utf-8") != payload:
+    if not OUT.exists() or OUT.read_bytes() != payload.encode("utf-8"):
         print("docs/silent-paths.json is stale; run tools/silent_paths.py --write", file=sys.stderr)
         return 1
     print("silent P6 paths match their generated fixtures")

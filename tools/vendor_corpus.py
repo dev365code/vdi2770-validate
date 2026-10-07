@@ -46,17 +46,20 @@ def do_vendor(src: Path) -> int:
         shutil.copy2(f, dst)
         entries[rel] = {"sha256": sha256(dst), "bytes": dst.stat().st_size}
     MANIFEST.parent.mkdir(parents=True, exist_ok=True)
-    MANIFEST.write_text(json.dumps({
+    MANIFEST.write_bytes((json.dumps({
         "_upstream": {"repo": UPSTREAM, "commit": commit, "path": "examples/",
                       "licence": "MIT, Copyright (C) 2021 Johannes Schmidt"},
         "_note": "Copied verbatim. Not modified. Used as fixtures under the MIT licence.",
         "files": entries,
-    }, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    }, ensure_ascii=False, indent=2) + "\n").encode("utf-8"))
     print(f"vendored {len(entries)} files from {UPSTREAM}@{commit[:7]}")
     return 0
 
 
 def do_check() -> int:
+    if MANIFEST.exists() and b"\r" in MANIFEST.read_bytes():
+        print("corpus/MANIFEST.json has non-LF line endings; restore its committed bytes", file=sys.stderr)
+        return 1
     if not MANIFEST.exists():
         print("corpus/MANIFEST.json missing — run --from first", file=sys.stderr)
         return 1

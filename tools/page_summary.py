@@ -24,7 +24,7 @@ def main():
         text = re.sub(r"rules-\d+_each", f"rules-{total}_each", text)
         text = re.sub(r": \d+ rules, each", f": {total} rules, each", text)
         text = re.sub(r"(?:Forty(?:-one)?|\d+) of the\s+\d+ fire", f"{fired} of the\n  {total} fire", text)
-        path.write_text(text, encoding="utf-8")
+        path.write_bytes(text.encode("utf-8"))
     path = ROOT / "docs/capabilities.json"
     data = json.loads(path.read_text(encoding="utf-8"))
     data["as_of"] = __version__
@@ -32,7 +32,7 @@ def main():
     coverage.update(now=paired, target=paired, now_text=f"{paired} of {total} rules have a fixture pair",
                     target_text=f"{paired} of {total}, every rule that can have one")
     coverage["evidence"] = [{"file": "README.md", "says": f"{paired} of {total} rules have a minimal fixture pair"}]
-    path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    path.write_bytes((json.dumps(data, ensure_ascii=False, indent=2) + "\n").encode("utf-8"))
     print(f"summary: {paired}/{total} fixture pairs")
 
 

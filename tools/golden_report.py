@@ -97,7 +97,7 @@ def main() -> int:
 
     fresh = json.dumps(report(), indent=1, sort_keys=True) + "\n"
     if not args.check:
-        GOLDEN.write_text(fresh, encoding="utf-8")
+        GOLDEN.write_bytes(fresh.encode("utf-8"))
         print(f"{GOLDEN.relative_to(ROOT)}: written")
         return 0
 
@@ -105,7 +105,7 @@ def main() -> int:
         print(f"{GOLDEN.relative_to(ROOT)} does not exist; "
               f"run tools/golden_report.py", file=sys.stderr)
         return 1
-    stored = GOLDEN.read_text(encoding="utf-8")
+    stored = GOLDEN.read_bytes().decode("utf-8")
     if stored == fresh:
         print("the stored report is the one this tree produces")
         return 0

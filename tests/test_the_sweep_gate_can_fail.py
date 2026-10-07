@@ -27,8 +27,7 @@ def swept(tmp_path, doctor):
     (tree / "docs").mkdir(parents=True, exist_ok=True)
     body = json.loads(RECORDING.read_text(encoding="utf-8"))
     doctor(body)
-    (tree / "docs" / "oracle-sweep.json").write_text(json.dumps(body, indent=2),
-                                                     encoding="utf-8")
+    (tree / "docs" / "oracle-sweep.json").write_bytes((json.dumps(body, indent=2)).encode("utf-8"))
     return subprocess.run([sys.executable, "tools/capture_oracle.py", "--check-swept"],
                           cwd=tree, capture_output=True, text=True, env=under_test())
 
@@ -140,8 +139,7 @@ def test_a_sweep_of_nothing_over_nothing_is_not_a_complete_sweep(tmp_path):
     body = json.loads(RECORDING.read_text(encoding="utf-8"))
     body["containers"] = {}
     body.pop("_unswept", None)
-    (tree / "docs" / "oracle-sweep.json").write_text(json.dumps(body, indent=2),
-                                                     encoding="utf-8")
+    (tree / "docs" / "oracle-sweep.json").write_bytes((json.dumps(body, indent=2)).encode("utf-8"))
 
     done = subprocess.run([sys.executable, "tools/capture_oracle.py", "--check-swept"],
                           cwd=tree, capture_output=True, text=True, env=under_test())

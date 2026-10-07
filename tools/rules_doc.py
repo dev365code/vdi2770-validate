@@ -121,14 +121,14 @@ def main() -> int:
     a = ap.parse_args()
     made = page()
     if a.write:
-        OUT.write_text(made, encoding="utf-8")
+        OUT.write_bytes(made.encode("utf-8"))
         print(f"wrote {OUT.relative_to(ROOT)}")
         return 0
     if a.check:
         if not OUT.exists():
             print(f"{OUT.relative_to(ROOT)} missing — run --write", file=sys.stderr)
             return 1
-        if OUT.read_text(encoding="utf-8") != made:
+        if OUT.read_bytes() != made.encode("utf-8"):
             print(f"{OUT.relative_to(ROOT)} is not what the catalogue renders. "
                   f"Run `python tools/rules_doc.py --write`.", file=sys.stderr)
             return 1

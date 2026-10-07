@@ -162,13 +162,13 @@ def main(argv=None) -> int:
     page = PAGE.read_text(encoding="utf-8")
     want = page_with(page, listing(load(), repo()))
     if args.check:
-        if want != page:
+        if PAGE.read_bytes() != want.encode("utf-8"):
             print("SECURITY.md's list of advisories is not what docs/advisories.json "
                   "says; run python tools/advisories.py --write", file=sys.stderr)
             return 1
         print("SECURITY.md lists the advisories docs/advisories.json records")
         return 0
-    PAGE.write_text(want, encoding="utf-8")
+    PAGE.write_bytes(want.encode("utf-8"))
     print("wrote the list in SECURITY.md")
     return 0
 

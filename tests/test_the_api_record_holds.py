@@ -94,7 +94,7 @@ def stage_at_its_release(tree) -> str:
     body = json.loads(record.read_text(encoding="utf-8"))
     body["version"] = version
     body["surface"]["__version__"]["value"] = repr(version)
-    record.write_text(json.dumps(body, indent=2) + "\n", encoding="utf-8")
+    record.write_bytes((json.dumps(body, indent=2) + "\n").encode("utf-8"))
     return version
 
 
@@ -155,7 +155,7 @@ def test_editing_the_record_does_not_steer_the_refusal(tmp_path, field, value):
     body[field] = value
     if field == "version":
         subprocess.run(["git", "tag", tag_for(value)], cwd=tree, check=True)
-    baseline.write_text(json.dumps(body, indent=2), encoding="utf-8")
+    baseline.write_bytes((json.dumps(body, indent=2)).encode("utf-8"))
     done = subprocess.run([sys.executable, "tools/api_fingerprint.py", "--write"],
                           cwd=tree, env=_cold(),
                           capture_output=True, text=True)
@@ -315,7 +315,7 @@ def test_a_baseline_that_is_not_what_its_tag_published_is_refused(tmp_path):
     body = json.loads(baseline.read_text(encoding="utf-8"))
     body["version"] = "0.0.9"                       # tagged below, and a minor behind
     subprocess.run(["git", "tag", tag_for("0.0.9")], cwd=tree, check=True)
-    baseline.write_text(json.dumps(body, indent=2), encoding="utf-8")
+    baseline.write_bytes((json.dumps(body, indent=2)).encode("utf-8"))
 
     done = subprocess.run([sys.executable, "tools/api_fingerprint.py", "--write"],
                           cwd=tree, env=_cold(),
@@ -440,7 +440,7 @@ def test_pointing_the_record_at_a_tag_that_does_not_exist_is_refused(tmp_path):
     baseline = tree / "packages" / "vdi2770" / "API.json"
     body = json.loads(baseline.read_text(encoding="utf-8"))
     body["version"] = "0.0.5"                    # deliberately never tagged
-    baseline.write_text(json.dumps(body, indent=2), encoding="utf-8")
+    baseline.write_bytes((json.dumps(body, indent=2)).encode("utf-8"))
 
     done = subprocess.run([sys.executable, "tools/api_fingerprint.py", "--write"],
                           cwd=tree, env=_cold(),
@@ -460,7 +460,7 @@ def test_a_baseline_that_differs_from_its_tag_is_refused(tmp_path):
 
     # The tag holds the real baseline; the tree's copy claims one more name.
     body["surface"]["SNEAK"] = {"kind": "str", "value": "'x'"}
-    baseline.write_text(json.dumps(body, indent=2), encoding="utf-8")
+    baseline.write_bytes((json.dumps(body, indent=2)).encode("utf-8"))
     bumped = ".".join([*version.split(".")[:2], str(int(version.split(".")[2]) + 1)])
     p = tree / "packages" / "vdi2770" / "src" / "vdi2770" / "__init__.py"
     p.write_text(p.read_text(encoding="utf-8").replace(f'"{version}"', f'"{bumped}"'),

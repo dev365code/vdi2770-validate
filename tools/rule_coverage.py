@@ -146,11 +146,14 @@ def main() -> int:
 
     if a.write:
         BASELINE.parent.mkdir(parents=True, exist_ok=True)
-        BASELINE.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        BASELINE.write_bytes((json.dumps(payload, ensure_ascii=False, indent=2) + "\n").encode("utf-8"))
         print(f"wrote {BASELINE.relative_to(ROOT)}")
         return 0
 
     if a.check:
+        if BASELINE.exists() and b"\r" in BASELINE.read_bytes():
+            print("docs/rule-coverage.json has non-LF line endings; restore its committed bytes", file=sys.stderr)
+            return 1
         if not BASELINE.exists():
             print("docs/rule-coverage.json missing — run --write", file=sys.stderr)
             return 1

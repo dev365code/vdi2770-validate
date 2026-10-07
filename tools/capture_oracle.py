@@ -151,6 +151,9 @@ def ours_only(write: bool) -> int:
     if not OUT.exists():
         print(f"{OUT.relative_to(ROOT)} missing — run a full sweep first", file=sys.stderr)
         return 1
+    if not write and b"\r" in OUT.read_bytes():
+        print("docs/oracle-sweep.json has non-LF line endings; restore its committed bytes", file=sys.stderr)
+        return 1
     recorded = json.loads(OUT.read_text(encoding="utf-8"))
     fresh = our_verdicts(containers())
 
@@ -177,8 +180,7 @@ def ours_only(write: bool) -> int:
                 "New generated container; the pinned reference has not been run on it.")
         for n in fresh:
             recorded["containers"][n]["ours"] = fresh[n]
-        OUT.write_text(json.dumps(recorded, indent=2, ensure_ascii=False) + "\n",
-                       encoding="utf-8")
+        OUT.write_bytes((json.dumps(recorded, indent=2, ensure_ascii=False) + "\n").encode("utf-8"))
         print(f"wrote our half of {OUT.relative_to(ROOT)}"
               + (f": {len(moved)} container(s) moved" if moved else ": nothing moved"))
         return 0
@@ -209,6 +211,12 @@ def main() -> int:
     ap.add_argument("--check-messages", action="store_true",
                     help="compare the vendored messages against the reference")
     a = ap.parse_args()
+    if (a.check or a.check_swept) and OUT.exists() and b"\r" in OUT.read_bytes():
+        print("docs/oracle-sweep.json has non-LF line endings; restore its committed bytes", file=sys.stderr)
+        return 1
+    if a.check_messages and MESSAGES.exists() and b"\r" in MESSAGES.read_bytes():
+        print("oracle-messages.json has non-LF line endings; restore its committed bytes", file=sys.stderr)
+        return 1
 
     if a.check_swept:
         # No JDK, no Maven, no network: this reads the recorded file and nothing
@@ -266,8 +274,7 @@ def main() -> int:
             print(f"the vendored messages match the reference: {len(fresh)}")
             return 0
         recorded["messages"], recorded["count"] = fresh, len(fresh)
-        MESSAGES.write_text(json.dumps(recorded, indent=2, ensure_ascii=False) + "\n",
-                            encoding="utf-8")
+        MESSAGES.write_bytes((json.dumps(recorded, indent=2, ensure_ascii=False) + "\n").encode("utf-8"))
         print(f"wrote {MESSAGES.relative_to(ROOT)}: {len(fresh)} messages")
         return 0
 
@@ -279,7 +286,7 @@ def main() -> int:
 
     fresh = build(a.reference, a.java_home)
     if not a.check:
-        OUT.write_text(json.dumps(fresh, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        OUT.write_bytes((json.dumps(fresh, indent=2, ensure_ascii=False) + "\n").encode("utf-8"))
         print(f"wrote {OUT.relative_to(ROOT)}: {len(fresh['containers'])} containers")
         return 0
 
