@@ -20,6 +20,65 @@ from .resources import schema_text
 
 _SEG = re.compile(r"^(?:\{(?P<ns>[^}]*)\})?(?P<tag>[^\[/]+)(?:\[(?P<idx>\d+)\])?$")
 
+# XML Schema Part 2 §§3.3.13, 3.3.25 and 4.3.6. Python's \d and \s
+# admit characters outside the XSD digit and whitespace alphabets; int() also
+# accepts underscores and depends on the interpreter's decimal digit limit.
+_POSITIVE_INTEGER = re.compile(r"[ \t\r\n]*\+?[0-9]+[ \t\r\n]*")
+_POSITIVE_INTEGER_TYPE = "{http://www.w3.org/2001/XMLSchema}positiveInteger"
+
+
+def _positive_integer_hooks():
+    """Check exact xs:positiveInteger attributes before xmlschema decodes them.
+
+    The bundled XSD declares this unconstrained type on NumberOfPages, with no
+    fixed value or identity constraint. Once its lexical and value spaces have
+    been checked, a valid token stands in for it during decoding, so even a
+    long, finite positive integer never reaches int(). The schema still checks
+    every element and every other attribute. Originals are restored before
+    complaints are rendered; the reader's tree and the input bytes are untouched.
+
+    No decimal conversion is needed: an ASCII digit sequence denotes a value
+    >= 1 exactly when at least one digit remains after leading zeros are removed.
+    """
+    from xmlschema import XMLSchemaValidationError
+    from xmlschema.validators import XsdAttribute
+
+    originals = {}
+
+    def before_decode(element, xsd_element):
+        saved = []
+        for name, attribute in xsd_element.attributes.items():
+            # The table also holds an attribute wildcard, which has no type, and
+            # may hold a declaration the schema prohibits, which it refuses on its
+            # own. Both are stepped over: the one would be a crash reported as the
+            # document's fault, the other a second complaint about one mistake.
+            if not isinstance(attribute, XsdAttribute) or attribute.type is None:
+                continue
+            if attribute.type.name != _POSITIVE_INTEGER_TYPE or attribute.use == "prohibited":
+                continue
+            if name not in element.attrib:
+                continue
+            value = element.attrib[name]
+            valid = (_POSITIVE_INTEGER.fullmatch(value) is not None
+                     and bool(value.strip(" \t\r\n").lstrip("+").lstrip("0")))
+            saved.append((name, value, valid, attribute))
+            element.attrib[name] = "1"
+        if saved:
+            originals[element] = saved
+
+    def after_decode(element, xsd_element):
+        for name, value, valid, attribute in originals.pop(element, ()):
+            element.attrib[name] = value
+            if not valid:
+                # State the condition before quoting a possibly long value: the
+                # report bounds reasons to 300 characters.
+                reason = (f"attribute {name}: expected xs:positiveInteger "
+                          "(ASCII digits, optional '+', value at least 1); "
+                          f"got {value!r}")
+                yield XMLSchemaValidationError(attribute, element, reason=reason)
+
+    return before_decode, after_decode
+
 
 #: Schema complaints we will walk through the document. `xmlschema.iter_errors`
 #: is super-linear on its own and `_resolve` was quadratic on top of it: 410 KB
@@ -145,7 +204,11 @@ def validate(data: bytes, tree: Node) -> List[dict]:
         # `islice`, not `list`: the generator is bounded here rather than
         # materialised and then thrown away by the report's listing cap.
         errors = []
-        for err in islice(schema.iter_errors(io.BytesIO(data)), MAX_SCHEMA_ERRORS + 1):
+        before_decode, after_decode = _positive_integer_hooks()
+        for err in islice(schema.iter_errors(io.BytesIO(data),
+                                            validation_hook=before_decode,
+                                            extra_validator=after_decode),
+                          MAX_SCHEMA_ERRORS + 1):
             # Appended one at a time so a crash part-way keeps what came before.
             # `list(...)` threw the whole generator away, and the reader was told
             # only "we gave up" — while `runner._into`, three files along, states
