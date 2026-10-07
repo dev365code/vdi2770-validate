@@ -106,3 +106,58 @@ def test_an_object_stream_length_must_resolve_to_an_integer(generated, mode):
 def test_a_cross_reference_stream_length_remains_direct(generated):
     facts = pdfread.read(generated.compressed(xref_length=True), page_count=True)
     assert facts.page_count is None and facts.page_count_why == "stream Length integer range or type"
+
+
+@pytest.mark.parametrize("row", [(0, "f"), (1, "n")])
+def test_a_classic_lookup_refuses_a_free_or_changed_generation(generated, row):
+    facts = pdfread.read(generated.table_pdf(rows={2: row}), page_count=True)
+    assert facts.page_count is None and facts.page_count_why == "xref object is free or its generation changed"
+
+
+@pytest.mark.parametrize("options", [{"size": 2}, {"ranges": [(0, 101), (2, 1)]}])
+def test_classic_subsections_do_not_overlap_or_exceed_size(generated, options):
+    facts = pdfread.read(generated.table_pdf(**options), page_count=True)
+    assert facts.page_count is None and facts.page_count_why == "xref table subsection overlap or Size range"
+
+
+@pytest.mark.parametrize("header", [(20, 0), (2, 1)])
+def test_an_object_header_has_the_requested_number_and_generation(generated, header):
+    facts = pdfread.read(generated.table_pdf(headers={2: header}), page_count=True)
+    assert facts.page_count is None and facts.page_count_why == "xref does not point to the declared object header"
+
+
+def test_a_stream_index_stays_inside_its_size(generated):
+    facts = pdfread.read(generated.compressed(outside_index=True), page_count=True)
+    assert facts.page_count is None and facts.page_count_why == "xref Index order, overlap or Size range"
+
+
+def test_a_compressed_object_has_generation_zero(generated):
+    facts = pdfread.read(generated.compressed(nonzero_generation=True), page_count=True)
+    assert facts.page_count is None and facts.page_count_why == "compressed object generation is not zero"
+
+
+def test_the_section_allowance_does_not_depend_on_the_visit_set(generated, monkeypatch):
+    class Untracked(set):
+        def add(self, item):
+            pass
+
+    reader = _pdfpages.PageReader(generated.prev_cycle(), None, [pdfread.MAX_INFLATED_TOTAL])
+    reader.offsets = Untracked()
+    section = reader.section
+    attempts = []
+
+    def counted(at):
+        attempts.append(at)
+        # Bound the red run too; the test never depends on a timeout.
+        assert len(attempts) <= pdfread.MAX_TRAILERS + 1, "the section cap was bypassed"
+        return section(at)
+
+    monkeypatch.setattr(reader, "section", counted)
+    with pytest.raises(ValueError, match=f"xref section limit {pdfread.MAX_TRAILERS}"):
+        reader.count()
+    assert len(attempts) == pdfread.MAX_TRAILERS + 1
+
+
+def test_a_linearized_trailer_without_root_names_the_missing_root(generated):
+    facts = pdfread.read(generated.linearized(root=False), page_count=True)
+    assert facts.page_count is None and facts.page_count_why == "trailer Root is missing"

@@ -152,6 +152,7 @@ class PageReader:
         self.allowance = allowance
         self.file_left = file_left
         self.sections = []
+        self.section_count = 0
         self.offsets = set()
         self.objects = 0
         self.cache = {}
@@ -272,8 +273,9 @@ class PageReader:
     def section(self, at):
         if at in self.offsets:
             raise Declined("xref /Prev cycle")
-        if len(self.offsets) >= pdfread.MAX_TRAILERS:
+        if self.section_count >= pdfread.MAX_TRAILERS:
             raise Declined(f"xref section limit {pdfread.MAX_TRAILERS}")
+        self.section_count += 1
         self.offsets.add(at)
         window = self.window(at)
         if window.startswith(b"xref"):
@@ -480,6 +482,8 @@ class PageReader:
             if extra is not None:
                 self.section(uint(extra, "XRefStm offset", len(self.data) - 1))
             offset = uint(trailer.get("Prev", 0), "Prev offset", len(self.data) - 1)
+        if root is absent:
+            raise Declined("trailer Root is missing")
         if not isinstance(root, Ref):
             raise Declined("trailer Root is not an indirect reference")
         visited = set()

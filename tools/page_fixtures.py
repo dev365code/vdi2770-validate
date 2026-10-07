@@ -83,6 +83,14 @@ def prev_cycle():
     return base.replace(b" /Root 1 0 R", f" /Root 1 0 R /Prev {at}".encode("ascii"), 1)
 
 
+def previous_chain(sections=65):
+    data = classic()
+    for _ in range(sections - 1):
+        previous = int(re.findall(rb"startxref\n([0-9]+)", data)[-1])
+        data = append_revision(data, {200: b"0"}, root=None, prev=previous)
+    return data
+
+
 def _write_objects(data, values, headers=None):
     positions = {}
     for number, body in sorted(values.items()):
@@ -218,14 +226,15 @@ def compressed(count=7, predictor=False, object_cycle=False, compressed_claim=Fa
     return bytes(data)
 
 
-def linearized():
+def linearized(root=True):
     """Annex F's first-page xref -> forward Prev -> main xref layout."""
     values = objects(7)
     prefix = (b"%PDF-1.7\n150 0 obj\n<< /Linearized 1 /L 0000000000 /H [0 0] "
               b"/O 3 /E 0000000000 /N 7 /T 0000000000 >>\nendobj\n")
     first = len(prefix)
     front = (b"xref\n1 2\n0000000000 00000 n \n0000000000 00000 n \n"
-             b"trailer\n<< /Size 151 /Root 1 0 R /Prev 0000000000 >>\n")
+             b"trailer\n<< /Size 151" + (b" /Root 1 0 R" if root else b" " * 12)
+             + b" /Prev 0000000000 >>\n")
     data = bytearray(prefix + front)
     positions = {150: 9}
     for number, body in sorted(values.items()):
@@ -296,4 +305,14 @@ def cases():
         "object-stream-missing-length": ("7", compressed(length_mode="missing"), "stream Length"),
         "object-stream-reference-length": ("7", compressed(length_mode="reference"), "stream Length"),
         "xref-stream-indirect-length": ("7", compressed(xref_length=True), "stream Length"),
+        "classic-free-object": ("7", table_pdf(rows={2: (0, "f")}), "free or its generation changed"),
+        "classic-changed-generation": ("7", table_pdf(rows={2: (1, "n")}), "free or its generation changed"),
+        "classic-small-size": ("7", table_pdf(size=2), "subsection overlap or Size range"),
+        "classic-overlapping-subsections": ("7", table_pdf(ranges=[(0, 101), (2, 1)]), "subsection overlap or Size range"),
+        "classic-wrong-object-number": ("7", table_pdf(headers={2: (20, 0)}), "declared object header"),
+        "classic-wrong-object-generation": ("7", table_pdf(headers={2: (2, 1)}), "declared object header"),
+        "xref-index-outside-size": ("7", compressed(outside_index=True), "Index order, overlap or Size range"),
+        "compressed-nonzero-generation": ("7", compressed(nonzero_generation=True), "compressed object generation"),
+        "prev-section-limit": ("7", previous_chain(), "xref section limit"),
+        "linearized-missing-root": ("7", linearized(root=False), "trailer Root is missing"),
     }
