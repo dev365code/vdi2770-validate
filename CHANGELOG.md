@@ -25,9 +25,8 @@ Who should take this release: readers comparing metadata with a PDF revision.
   values no longer depend on Python's decimal conversion limit; underscores
   and non-ASCII digits remain X2 errors. Comparison and quoting are bounded.
 - **The metadata attribute allowance remains 100,000**: 1,600× above the worst document
-  **64** attributes in the current corpus and fixtures. The same 100,000
-  allowance is 1,600× the worst document when the per-element and total caps
-  are considered together; neither cap was increased.
+  **64** attributes in the current corpus and fixtures, with neither the
+  per-element nor the total cap increased.
 - **The reader API adds optional page_count/page_count_why** and preserves
   existing positional dataclass construction. The two distributions share
   version 0.11.0.

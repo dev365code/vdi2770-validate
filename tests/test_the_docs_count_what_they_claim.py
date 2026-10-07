@@ -815,32 +815,14 @@ def test_the_readme_describes_the_json_entries_the_tool_actually_emits():
         "the README no longer says what an entry for an unopenable path carries")
 
 
-def test_the_changelog_multiplies_the_attribute_caps_the_same_way_twice():
-    """One release section said `2,000×` in one entry and `1,900×` in another.
-
-    Both are the same division — `MAX_ATTRIBUTES` over the worst document the
-    corpus holds, which the entry beside them says is 49. `100000 / 49` is
-    2,040.8, so one of the two was rounded and the other was wrong, and nothing
-    noticed because the two sentences are two hundred lines apart. A figure
-    stated twice is a figure that will be stated two ways.
-    """
-    import re
-
+def test_the_changelog_states_the_attribute_allowance_once_and_derives_its_multiple():
     from vdi2770.xmlread import MAX_ATTRIBUTES
 
-    unreleased = next((text for _heading, text in changelog_sections()
-                       if re.search(r"×\*{0,2} (?:above )?the worst document", text)),
-                      "")
-    # `\*{0,2}` because one of the two is bold and the other is not. A pattern
-    # that matched only the plain one found a single value, agreed with itself,
-    # and could not have failed -- which is the shape of defect this gate exists
-    # to catch, so the count of matches is asserted before their agreement is.
+    unreleased = newest_changelog_section()
     said = re.findall(r"([\d,]+)×\*{0,2} (?:above )?the worst document", unreleased)
-    assert len(said) >= 2, (
-        f"this gate compares two sentences and found {len(said)}; the CHANGELOG "
-        f"has been reworded: {said}")
-    assert len(set(said)) == 1, (
-        f"the same multiple is written two ways: {sorted(set(said))}")
+    assert len(said) == 1, f"the attribute multiple must be stated once: {said}"
+    allowance = re.findall(r"100,000", unreleased)
+    assert len(allowance) == 1, "the attribute allowance must be stated once"
 
     # `\s*` because the sentence wraps: the count sits on the next line.
     worst = re.search(r"the worst document\s*\*\*(\d+)\*\*", unreleased)
