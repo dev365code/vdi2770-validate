@@ -2,93 +2,78 @@
  "_about": "Budgets are ratios against a yardstick measured in the same run (zlib over fixed bytes, never this project's code), because seconds recorded on one machine cannot gate another. One entry per operating system: the ratio travels only part of the way -- a Linux runner read 0.56x of the laptop's budget -- so each platform carries what was measured on it. The seconds are for a reader, not what is compared.",
  "budgets": {
   "Darwin": {
-   "corpus_over_reference": 431.1,
-   "pdf_layer_over_reference": 143.6
+   "corpus_over_reference": 419.6,
+   "pdf_layer_over_reference": 144.3
   },
   "Linux": {
-   "corpus_over_reference": 244.9,
-   "pdf_layer_over_reference": 61.5
+   "corpus_over_reference": 398.1,
+   "pdf_layer_over_reference": 122.4
   },
   "Windows": {
-   "corpus_over_reference": 307.6,
-   "pdf_layer_over_reference": 78.6
+   "corpus_over_reference": 513.7,
+   "pdf_layer_over_reference": 149.9
   }
  },
  "recorded_on": {
   "Darwin": {
    "machine": "arm64",
    "python": "3.13.15",
-   "containers": 119,
-   "pdfs": 115,
-   "yardstick_seconds": 0.0008,
+   "containers": 124,
+   "pdfs": 120,
+   "yardstick_seconds": 0.000788,
    "absolute_seconds": {
-    "corpus_pass": 0.3448,
-    "pdf_layer": 0.1149
+    "corpus_pass": 0.3305,
+    "pdf_layer": 0.1137
    }
   },
   "Linux": {
    "machine": "x86_64 (github ubuntu-latest)",
    "python": "3.9, 3.12 and 3.13",
-   "containers": 49,
-   "pdfs": 47,
+   "containers": 124,
+   "pdfs": 120,
    "absolute_seconds": {
     "corpus_pass": [
-     0.6974,
-     0.5397,
-     0.768
+     1.4747,
+     0.973,
+     1.1331
     ],
     "pdf_layer": [
-     0.1928,
-     0.1449,
-     0.1563
+     0.3881,
+     0.3146,
+     0.3701
     ]
    },
    "yardstick_seconds": [
-    0.002991,
-    0.001972,
-    0.003369
+    0.004397,
+    0.002076,
+    0.002904
    ],
-   "_from": "read out of CI run 35358714204, one measurement per interpreter, and averaged. The three agreed within 20% on the corpus and 58% on the PDF layer, so the mean sits where no healthy interpreter warns; recording the lowest would have left 3.12's ordinary PDF pass reading 1.58x."
+   "_from": "read out of CI run 37641047851, one measurement per interpreter, and averaged. The maximum/minimum spread is 39.7% on the corpus and 71.6% on the PDF layer; the mean includes all three interpreters."
   },
   "Windows": {
    "machine": "x86_64 (github windows-latest)",
    "python": "3.12",
-   "containers": 49,
-   "pdfs": 47,
+   "containers": 124,
+   "pdfs": 120,
    "samples": {
     "corpus_over_reference": [
-     285.2,
-     333.5,
-     277.9,
-     334.0
+     513.7
     ],
     "pdf_layer_over_reference": [
-     75.5,
-     84.7,
-     75.8,
-     78.4
+     149.9
     ]
    },
-   "_from": "four measurements on that runner -- CI runs 35358714204, 35366103013, 35368187722 and 35371208576 -- averaged. The first version recorded the first of them alone, and it sat at the low end: healthy runs came back at 1.17x, close enough to the warning line that ordinary runner noise would have started reporting a regression nobody caused.",
+   "_from": "read out of CI run 37641047851. A single sample on this runner, not an average over multiple runs. The previous 4 samples used 49 containers and 47 PDFs and are discarded because they measured a different input set.",
    "absolute_seconds": {
     "corpus_pass": [
-     0.7119,
-     0.4117,
-     0.6913,
-     0.7601
+     1.2527
     ],
     "pdf_layer": [
-     0.1885,
-     0.1045,
-     0.1887,
-     0.1783
+     0.3655
     ]
    },
    "yardstick_seconds": [
-    0.002496,
-    0.001235,
-    0.002488,
-    0.002276
+    0.002439
    ]
   }
  },
