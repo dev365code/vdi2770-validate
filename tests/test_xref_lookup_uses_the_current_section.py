@@ -91,10 +91,10 @@ def test_an_object_stream_length_can_be_one_indirect_integer(generated):
 
 
 def test_an_indirect_stream_length_spends_the_object_allowance(generated, monkeypatch):
-    monkeypatch.setattr(pdfread, "MAX_PAGE_OBJECTS", 4)
+    monkeypatch.setattr(pdfread, "MAX_PAGE_OBJECTS", 3)
     assert pdfread.read(generated.compressed(), page_count=True).page_count == 7
     facts = pdfread.read(generated.compressed(length_mode="integer"), page_count=True)
-    assert facts.page_count is None and "object limit 4" in facts.page_count_why
+    assert facts.page_count is None and "object limit 3" in facts.page_count_why
 
 
 @pytest.mark.parametrize("mode", ["noninteger", "missing", "reference"])
@@ -161,3 +161,29 @@ def test_the_section_allowance_does_not_depend_on_the_visit_set(generated, monke
 def test_a_linearized_trailer_without_root_names_the_missing_root(generated):
     facts = pdfread.read(generated.linearized(root=False), page_count=True)
     assert facts.page_count is None and facts.page_count_why == "trailer Root is missing"
+
+
+@pytest.mark.parametrize("revisions", [14, 20])
+def test_xref_stream_revisions_do_not_spend_page_object_interpretations(generated, revisions):
+    reader = _pdfpages.PageReader(generated.compressed_revisions(revisions), None,
+                                   [pdfread.MAX_INFLATED_TOTAL])
+    assert reader.count() == 7
+    assert reader.xref_objects == revisions + 1
+    assert reader.objects == 3, "one ObjStm and its two requested objects"
+    assert reader.section_count == revisions + 1
+
+
+def test_xref_stream_revisions_still_stop_at_the_section_allowance(generated):
+    facts = pdfread.read(generated.compressed_revisions(pdfread.MAX_TRAILERS), page_count=True)
+    assert facts.page_count is None and facts.page_count_why == f"xref section limit {pdfread.MAX_TRAILERS}"
+
+
+def test_seventeen_page_objects_are_not_given_the_xref_allowance(generated):
+    values = generated.objects(7)
+    values[2] = b"<< /Type /Pages /Count 110 0 R >>"
+    # Catalog + Pages + fifteen integer/reference objects: seventeen reads.
+    for number in range(110, 124):
+        values[number] = f"{number + 1} 0 R".encode("ascii")
+    values[124] = b"7"
+    facts = pdfread.read(generated.append_revision(b"%PDF-1.7\n", values), page_count=True)
+    assert facts.page_count is None and facts.page_count_why == "object limit 16"

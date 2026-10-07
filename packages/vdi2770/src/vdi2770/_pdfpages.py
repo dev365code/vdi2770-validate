@@ -155,6 +155,7 @@ class PageReader:
         self.section_count = 0
         self.offsets = set()
         self.objects = 0
+        self.xref_objects = 0
         self.cache = {}
         self.streams = {}
         self.active = set()
@@ -164,10 +165,15 @@ class PageReader:
             raise Declined("xref or object offset range")
         return self.data[at:at + pdfread.MAX_PAGE_OBJECT_WINDOW]
 
-    def indirect_at(self, at, expected=None):
-        if self.objects >= pdfread.MAX_PAGE_OBJECTS:
-            raise Declined(f"object limit {pdfread.MAX_PAGE_OBJECTS}")
-        self.objects += 1
+    def indirect_at(self, at, expected=None, *, xref=False):
+        if xref:
+            if self.xref_objects >= pdfread.MAX_TRAILERS:
+                raise Declined(f"xref section limit {pdfread.MAX_TRAILERS}")
+            self.xref_objects += 1
+        else:
+            if self.objects >= pdfread.MAX_PAGE_OBJECTS:
+                raise Declined(f"object limit {pdfread.MAX_PAGE_OBJECTS}")
+            self.objects += 1
         syntax = Syntax(self.window(at))
         number, generation, marker = syntax.token(), syntax.token(), syntax.token()
         reference = Ref(uint(number, "object number"), uint(generation, "generation", 65535))
@@ -317,7 +323,7 @@ class PageReader:
                 ranges.append((first, count, start))
                 cursor = stop
         try:
-            dictionary, stream_at = self.indirect_at(at)
+            dictionary, stream_at = self.indirect_at(at, xref=True)
         except Declined as error:
             raise Declined("xref: " + str(error)) from error
         if not isinstance(dictionary, dict) or dictionary.get("Type") != Name("XRef") or stream_at is None:

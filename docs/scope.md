@@ -54,7 +54,8 @@ failure — files that never claimed at all.
   Encrypted PDFs are not compared. The root Count is the file's declaration,
   so a bad Count can disagree with the metadata even if rendered leaves agree.
   The bounded reader follows the last startxref, up to 64 xref sections and
-  16 object interpretations, with 64 KiB windows for objects, subsection
+  16 page-object interpretations; xref stream headers spend the section
+  allowance instead. It uses 64 KiB windows for objects, subsection
   headers and trailer dictionaries. Each classic section has at most 64
   subsections; only requested 20-byte entries are read, so table size does not
   spend an object window. It supports

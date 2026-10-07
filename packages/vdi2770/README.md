@@ -158,6 +158,7 @@ the other how much all of them together may cost — and `MAX_LINE_LOOKBACK`, pl
 Classic tables use `MAX_XREF_SUBSECTIONS` (64 per section) and read requested
 20-byte entries by their positions; a whole table need not fit a window.
 The sixteen interpretations include integer objects used for stream Length.
+Xref stream headers spend the 64-section allowance instead of those sixteen.
 The page reader uses `MAX_TRAILERS` for at most 64 xref sections, counted
 independently of the visited set that detects cycles.
 `MAX_LINE_LOOKBACK` bounds how

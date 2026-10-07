@@ -226,6 +226,29 @@ def compressed(count=7, predictor=False, object_cycle=False, compressed_claim=Fa
     return bytes(data)
 
 
+def compressed_revisions(revisions=14, row_count=None):
+    """§7.5.8: incremental xref streams retain the same live page tree."""
+    data = bytearray(compressed())
+    positions = {number: data.index(f"{number} 0 obj\n".encode("ascii"))
+                 for number in [*range(3, 10), 100, 102, 103]}
+    previous = int(re.findall(rb"startxref\n([0-9]+)", data)[-1])
+    for revision in range(revisions):
+        number = 104 + revision
+        at = positions[number] = len(data)
+        size = max(number + 1, row_count or 0)
+        payload = bytearray(b"\x00\x00\x00\x00\x00\xff\xff" * size)
+        for item in (1, 2):
+            payload[7 * item:7 * (item + 1)] = b"\x02" + (102).to_bytes(4, "big") + (item - 1).to_bytes(2, "big")
+        for item, offset in positions.items():
+            payload[7 * item:7 * (item + 1)] = b"\x01" + offset.to_bytes(4, "big") + b"\x00\x00"
+        extra = (f" /Type /XRef /Size {size} /Root 1 0 R /W [1 4 2] "
+                 f"/Index [0 {size}] /Prev {previous} /Filter /FlateDecode").encode("ascii")
+        data.extend(f"{number} 0 obj\n".encode("ascii") + stream(zlib.compress(payload), extra)
+                    + b"\nendobj\nstartxref\n" + str(at).encode("ascii") + b"\n%%EOF\n")
+        previous = at
+    return bytes(data)
+
+
 def linearized(root=True):
     """Annex F's first-page xref -> forward Prev -> main xref layout."""
     values = objects(7)
@@ -315,4 +338,7 @@ def cases():
         "compressed-nonzero-generation": ("7", compressed(nonzero_generation=True), "compressed object generation"),
         "prev-section-limit": ("7", previous_chain(), "xref section limit"),
         "linearized-missing-root": ("7", linearized(root=False), "trailer Root is missing"),
+        "xref-revisions-14": ("7", compressed_revisions(14), 7),
+        "xref-revisions-20": ("7", compressed_revisions(20), 7),
+        "xref-stream-section-limit": ("7", compressed_revisions(64), "xref section limit"),
     }
