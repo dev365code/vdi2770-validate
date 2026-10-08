@@ -117,6 +117,10 @@ the folder with the reason beside it.
 This block exists because a report that says "0 errors" over a container it
 could not open is the most expensive sentence this tool could print.
 
+PDF page-count comparisons allow 16 page-object interpretations and, separately,
+at most 16 levels of syntax nesting within one object. Unsupported structures,
+including an indirect xref stream Length, produce a P6 finding with `about: tool`.
+
 ### `where`
 
 Every field may be `null`. `container` and `member` name the archive and the

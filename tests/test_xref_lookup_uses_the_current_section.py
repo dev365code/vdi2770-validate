@@ -103,8 +103,16 @@ def test_an_object_stream_length_must_resolve_to_an_integer(generated, mode):
     assert facts.page_count is None and "stream Length" in facts.page_count_why
 
 
-def test_a_cross_reference_stream_length_remains_direct(generated):
+def test_an_indirect_cross_reference_stream_length_is_not_supported(generated):
+    """Table 5 allows an indirect Length; this bounded reader does not resolve it."""
     facts = pdfread.read(generated.compressed(xref_length=True), page_count=True)
+    assert facts.page_count is None and facts.page_count_why == "indirect stream Length is not supported"
+
+
+@pytest.mark.parametrize("length", [b"-1", b"2.0", b"true"])
+def test_other_stream_length_type_or_range_errors_keep_their_reason(generated, length):
+    body = generated.compressed(xref_length=True).replace(b"/Length 104 0 R", b"/Length " + length)
+    facts = pdfread.read(body, page_count=True)
     assert facts.page_count is None and facts.page_count_why == "stream Length integer range or type"
 
 

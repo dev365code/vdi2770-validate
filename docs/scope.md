@@ -55,7 +55,8 @@ failure — files that never claimed at all.
   so a bad Count can disagree with the metadata even if rendered leaves agree.
   The bounded reader follows the last startxref, up to 64 xref sections and
   16 page-object interpretations; xref stream headers spend the section
-  allowance instead. It uses 64 KiB windows for objects, subsection
+  allowance instead. Syntax nesting within one object has a separate limit of 16 levels.
+  It uses 64 KiB windows for objects, subsection
   headers and trailer dictionaries. Each classic section has at most 64
   subsections; only requested 20-byte entries are read, so table size does not
   spend an object window. It supports
@@ -66,6 +67,8 @@ failure — files that never claimed at all.
   retaining the shared file/stream/read ceilings. A portfolio's Count describes its cover, so /Collection
   is reported as a declined comparison. Unsupported structures and limits
   produce P6 on the tool axis and make read.complete false.
+  An indirect xref stream Length is an unsupported structure in this reader,
+  although ISO 32000-1 §7.5.8.2 permits it as a Table 5 entry.
 
 - **A rule is listed at most a hundred times per container**: one rule fires once
   per element, so a crafted file can make one rule true nearly a hundred thousand

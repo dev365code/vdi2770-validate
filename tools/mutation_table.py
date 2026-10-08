@@ -3386,6 +3386,18 @@ TABLE += [
      ["tests/test_the_page_tree_is_a_declaration.py::test_only_a_required_out_of_size_object_declines_the_comparison",
       "tests/test_xref_lookup_uses_the_current_section.py::test_a_current_missing_entry_does_not_resurrect_an_older_pages_object"],
      "ignoring the required-entry boundary could read a Count from a missing object"),
+    ("pages/syntax-does-not-share-the-object-allowance",
+     "packages/vdi2770/src/vdi2770/_pdfpages.py",
+     "                if depth > MAX_SYNTAX_DEPTH:\n",
+     "                if depth > pdfread.MAX_PAGE_OBJECTS:\n",
+     ["tests/test_page_syntax_has_its_own_allowance.py"],
+     "literal string nesting is not a count of interpreted page objects"),
+    ("pages/containers-have-their-own-syntax-allowance",
+     "packages/vdi2770/src/vdi2770/_pdfpages.py",
+     "        if depth >= MAX_SYNTAX_DEPTH:\n",
+     "        if depth >= pdfread.MAX_PAGE_OBJECTS:\n",
+     ["tests/test_page_syntax_has_its_own_allowance.py"],
+     "array and dictionary nesting is not a count of interpreted page objects"),
 ]
 
 

@@ -158,6 +158,8 @@ the other how much all of them together may cost — and `MAX_LINE_LOOKBACK`, pl
 Classic tables use `MAX_XREF_SUBSECTIONS` (64 per section) and read requested
 20-byte entries by their positions; a whole table need not fit a window.
 The sixteen interpretations include integer objects used for stream Length.
+The private page reader's `MAX_SYNTAX_DEPTH` separately limits nesting within
+one object's syntax to 16 levels; it does not spend object interpretations.
 Xref stream headers spend the 64-section allowance instead of those sixteen.
 `MAX_PAGE_INFLATED_TOTAL` (4 MiB per page-tree read) charges xref/object stream
 inflation and the encoded bytes processed by PNG predictors together. The

@@ -18,7 +18,7 @@ from vdi2770_validate.rules import container as r_container
 from vdi2770_validate.rules import pdf as r_pdf
 
 from conftest import CLEAN_DOCUMENT, under_test
-from vdi2770 import pdfread, xmlread, zipread
+from vdi2770 import _pdfpages, pdfread, xmlread, zipread
 from vdi2770_validate import model, xsdvalidate
 
 BASE = {n: zipfile.ZipFile(CLEAN_DOCUMENT).read(n)
@@ -82,6 +82,7 @@ PDF_BUDGETS = {
     # value was folded away. The floor is one; the ceiling keeps it a bound.
     "MAX_OBJ_PROBES": (1, 1 << 20),
 }
+SYNTAX_BUDGETS = {"MAX_SYNTAX_DEPTH": (16, 16)}
 
 
 def test_every_budget_constant_is_in_one_of_those_tables():
@@ -92,7 +93,7 @@ def test_every_budget_constant_is_in_one_of_those_tables():
     # by listing them: `MAX_SCHEMA_ERRORS` was added to `xsdvalidate.py` and that
     # module was not on the list, so a new cap went unpinned in the gate whose
     # whole job is to notice a new cap.
-    for module, table in ((zipread, BUDGETS), (pdfread, PDF_BUDGETS),
+    for module, table in ((zipread, BUDGETS), (pdfread, PDF_BUDGETS), (_pdfpages, SYNTAX_BUDGETS),
                           (model, REPORT_BUDGETS), (r_container, RULE_BUDGETS),
                           (r_pdf, PDF_RULE_BUDGETS), (xsdvalidate, SCHEMA_BUDGETS)):
         declared = {n for n in vars(module)
@@ -167,6 +168,12 @@ def test_an_xml_budget_is_a_budget(name, bounds):
     value = getattr(xmlread, name)
     assert low <= value <= high, (
         f"xmlread.{name} is {value}; outside {low}..{high} it is not protecting anyone")
+
+
+@pytest.mark.parametrize("name,bounds", sorted(SYNTAX_BUDGETS.items()))
+def test_syntax_budget_sizes_are_in_the_defended_range(name, bounds):
+    value = getattr(_pdfpages, name)
+    assert bounds[0] <= value <= bounds[1], f"{name}={value}, defended range {bounds}"
 
 
 @pytest.mark.parametrize("name,bounds", sorted(PDF_BUDGETS.items()))
@@ -361,7 +368,7 @@ def test_no_module_in_either_package_holds_an_unpinned_budget():
                 seen[info.name] = caps
 
     pinned = set(BUDGETS) | set(PDF_BUDGETS) | set(REPORT_BUDGETS) | set(RULE_BUDGETS) | set(PDF_RULE_BUDGETS) \
-        | set(SCHEMA_BUDGETS) | set(XML_BUDGETS) | set(RUNNER_BUDGETS)
+        | set(SCHEMA_BUDGETS) | set(XML_BUDGETS) | set(RUNNER_BUDGETS) | set(SYNTAX_BUDGETS)
     unpinned = {m: sorted(c - pinned) for m, c in seen.items() if c - pinned}
     assert not unpinned, f"budgets no table pins: {unpinned}"
 

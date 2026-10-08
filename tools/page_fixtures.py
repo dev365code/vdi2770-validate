@@ -340,7 +340,7 @@ def cases():
         "object-stream-noninteger-length": ("7", compressed(length_mode="noninteger"), "stream Length"),
         "object-stream-missing-length": ("7", compressed(length_mode="missing"), "stream Length"),
         "object-stream-reference-length": ("7", compressed(length_mode="reference"), "stream Length"),
-        "xref-stream-indirect-length": ("7", compressed(xref_length=True), "stream Length"),
+        "xref-stream-indirect-length": ("7", compressed(xref_length=True), "indirect stream Length is not supported"),
         "classic-free-object": ("7", table_pdf(rows={2: (0, "f")}), "free or its generation changed"),
         "classic-changed-generation": ("7", table_pdf(rows={2: (1, "n")}), "free or its generation changed"),
         "classic-small-size": ("7", table_pdf(size=2), "xref object is missing (outside Size)"),

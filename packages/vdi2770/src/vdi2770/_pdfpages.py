@@ -21,6 +21,9 @@ _ROW = re.compile(rb"([0-9]{10}) ([0-9]{5}) ([nf])(?: \r| \n|\r\n)")
 # This private reader introduces no new exception type in the public API.
 Declined = ValueError
 
+# Nesting within one object is independent of how many objects are interpreted.
+MAX_SYNTAX_DEPTH = 16
+
 
 class Name(str):
     pass
@@ -76,7 +79,7 @@ class Syntax:
                     self.pos += 2
                     continue
                 depth += (byte == 40) - (byte == 41)
-                if depth > pdfread.MAX_PAGE_OBJECTS:
+                if depth > MAX_SYNTAX_DEPTH:
                     raise Declined("object syntax depth limit")
                 self.pos += 1
             if depth:
@@ -112,7 +115,7 @@ class Syntax:
         return {b"true": True, b"false": False, b"null": None}.get(raw, raw)
 
     def value(self, depth=0):
-        if depth >= pdfread.MAX_PAGE_OBJECTS:
+        if depth >= MAX_SYNTAX_DEPTH:
             raise Declined("object syntax depth limit")
         item = self.token()
         if item == b"<<":
@@ -201,6 +204,8 @@ class PageReader:
         self.page_inflated += amount
 
     def inflate(self, dictionary, at, expected=None):
+        if isinstance(dictionary.get("Length"), Ref):
+            raise Declined("indirect stream Length is not supported")
         length = uint(dictionary.get("Length"), "stream Length")
         if at + length > len(self.data):
             raise Declined("stream Length outside file")
