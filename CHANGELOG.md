@@ -6,6 +6,16 @@ Sections through 0.7.0 had their wording tidied after their tags; the text each 
 
 - **An unrelated xref entry outside Size no longer prevents page-count comparison.**
   A required object outside Size is still missing and draws P6 on the tool axis.
+- **Page-reading limits are described separately.** Syntax nesting within one
+  object remains limited to 16 levels; indirect xref stream Length remains
+  unsupported and its refusal says so. Report reading counts describe archive
+  and metadata scope, and tool findings explain declined PDF comparisons.
+- **Generator maintenance shipped in 0.11.0:** committed text is written as LF
+  bytes on Windows, and `--check` compares bytes. This maintenance does not
+  change user verdicts or exit codes.
+- **Contributor portability maintenance shipped in 0.11.0:** silent-path
+  generation uses POSIX keys, and release-source checks decode UTF-8. This
+  maintenance does not change user verdicts or exit codes.
 
 ## 0.11.0 — 2026-10-08
 

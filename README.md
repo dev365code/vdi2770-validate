@@ -231,6 +231,10 @@ three fields that say what produced the run, like every other entry: a run where
 some entries can be version-checked and some cannot is worse for a consumer than
 one where none can.
 
+Page-count comparison is a bounded read, and reaching a limit is reported as
+P6 on the tool axis; [scope](https://github.com/dev365code/vdi2770-validate/blob/main/docs/scope.md)
+gives the limits.
+
 **What is inside a file the metadata declares.** A `.zip` a document declares as one of its
 files is that document's content, the way a PDF's pages are, and nothing in it is judged as
 VDI 2770 — `Z14` says so on the report. How the archive stores its entries is still read.

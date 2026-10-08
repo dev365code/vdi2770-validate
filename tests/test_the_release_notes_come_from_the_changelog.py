@@ -122,5 +122,7 @@ def test_it_runs_against_this_repository_s_own_changelog():
 
 def test_this_repository_s_pending_release_cannot_be_described_as_shipped():
     changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+    # Keep exercising this boundary after the current section is dated at cut.
+    pending = re.sub(r"(?m)^(## \S+) — .*", r"\1 — unreleased", changelog, count=1)
     with pytest.raises(release_notes.CannotDescribe, match="carries no date"):
-        release_notes.body("0.11.1", SHA, changelog)
+        release_notes.body("0.11.1", SHA, pending)

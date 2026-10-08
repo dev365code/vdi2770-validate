@@ -110,9 +110,11 @@ is read from the findings instead: any rule that is `about: tool` is this tool
 saying it stopped, and one of those is enough to make `complete` false.
 
 When it is `false`, the verdict covers less than the whole delivery, and the
-numbers say how much less. A folder holding a container that this tool could not
-open — its metadata unreadable, say — reads `complete: false`, and `Z13` names
-the folder with the reason beside it.
+four numbers describe only the archive and metadata reading scope. PDF
+page-count comparison refusals are explained by the reasons in `about: tool`
+findings. A folder holding a container that this tool could not open — its
+metadata unreadable, say — reads `complete: false`, and `Z13` names the folder
+with the reason beside it.
 
 This block exists because a report that says "0 errors" over a container it
 could not open is the most expensive sentence this tool could print.

@@ -3370,6 +3370,15 @@ TABLE += [
     ('report/the-old-runner-form-is-spelled-anywhere', 'packages/vdi2770/src/vdi2770/validate/names.py', '    return line.replace("##[", _spelled("#") + "#[")', '    return line', ['tests/test_two_names_that_print_alike_are_told_apart.py::test_the_old_runner_form_is_text_wherever_it_occurs', 'tests/test_cli.py::test_the_old_runner_form_is_text_on_stderr'], 'the older form is read anywhere in a line, so every occurrence must remain text'),
 ]
 
+TABLE += [
+    ('docs/the-advisory-describes-both-runner-forms',
+     'docs/advisories.json',
+     '"the heading of the text report, a detail line, and the line on stderr saying a path could not be read could carry values the sender wrote, and a CI runner reads its newer command form at the beginning of a line and its older form anywhere within a line as an instruction rather than as text. Version 0.9.6 neutralized only the newer form at the beginning of a line; the older form remained through 0.10.3. Version 0.11.0 neutralizes both forms in these outputs. This escaping change preserves the JSON report and does not alter the check\'s exit-code decisions."',
+     '"the heading of the text report, a detail line, and the line on stderr saying a path could not be read began with a value the sender wrote -- the name of the file itself, the type a relationship names -- and a CI runner reads a line that begins in its own command syntax as an instruction rather than as text; the exit code and the JSON were not affected."',
+     ['tests/test_an_advisory_and_its_release_name_each_other.py::test_the_runner_advisory_explains_both_forms_and_the_remaining_range'],
+     'the remaining affected range concerns the older form read inside a line'),
+]
+
 CANARY = "canary/a-comment-nobody-reads"
 
 TABLE += [

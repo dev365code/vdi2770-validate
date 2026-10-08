@@ -94,6 +94,17 @@ def records():
     return ADVISORIES.load()
 
 
+def test_the_runner_advisory_explains_both_forms_and_the_remaining_range():
+    record = next(row for row in records() if row["id"] == "GHSA-62p8-4642-mwfp")
+    text = " ".join(record["text"].split())
+    assert "newer command form at the beginning of a line" in text
+    assert "older form anywhere within a line" in text
+    assert "0.9.6 neutralized only the newer form at the beginning of a line" in text
+    assert "older form remained through 0.10.3" in text
+    assert record["from"] == {"vdi2770-validate": "0.1.0", "vdi2770": "0.8.0"}
+    assert record["through"] == "0.10.3" and record["fixed_in"] == "0.11.0"
+
+
 def test_every_fix_follows_the_last_affected_release():
     for record in records():
         if record["fixed_in"] is not None:
