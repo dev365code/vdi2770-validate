@@ -14,19 +14,15 @@ check that — the normative text is paywalled.
 ## How much of this was measured
 
 There are 124 containers in `corpus/` and
-`tests/fixtures/`. 62 of the 124 containers were put through the reference
-implementation at its pinned commit `e47c13c`, with locale `en_US`;
-their recorded reference column is unchanged. The 62 generated page-tree
-fixtures have only our verdict and wait in the recording's `_unswept`
-block for a real reference run. No reference evidence is invented for them.
-[docs/oracle-sweep.json](oracle-sweep.json) records both states.
-The pinned oracle workflow can run the reference; this work does not trigger it.
+`tests/fixtures/`. All 124 containers were put through the reference
+implementation at its pinned commit `e47c13c`, with locale `en_US`.
+[docs/oracle-sweep.json](oracle-sweep.json) records both implementations' verdicts.
 
 A container added after a sweep carries our column and an empty one for the
 reference until the next run, named in the sweep's `_unswept` block with the
 reason. **Every count on this page excludes those**, because an empty
 `reference` means "we never asked it", and reading that as "it reported nothing"
-invents a disagreement with a tool that has never seen the container. The 62 new containers are outstanding in _unswept.
+invents a disagreement with a tool that has never seen the container.
 
 The last container to be swept corrected this page, and the correction is worth
 keeping rather than editing away. `p5-unconfirmed-pdf.zip` was described here as
@@ -38,12 +34,9 @@ are about is not something this repository can print — §4 says why — but th
 sentence was wrong, and wrong in the direction this whole page exists to guard
 against: an assertion about the other implementation that nobody had asked it.
 
-Two things the CI runs settled that no local run could. The reference's verdicts
-came back **byte-identical** to the ones captured on a maintainer's laptop; and
-the sweep that filled the last column reproduced all 46 that were already
-recorded, unchanged, on a later run of the same pinned environment. The pinned
-commit and the pinned locale really do produce the same answer on another
-machine and on another day, which is the property the whole comparison rests on.
+The reference columns for the 62 previously recorded containers were reproduced
+**byte-identically** with the same pinned commit and locale; our columns for all
+124 containers are unchanged.
 `tools/oracle/README.md` says what you need to repeat it, including the two
 things that will bite you.
 
@@ -58,11 +51,10 @@ What the sweep settled:
   agreement are not — the same limitation §4 discloses, and it applies here too.) The `refKeys`/`refCodes` split earns its keep:
   thirteen of the reference's displayed codes are emitted from more than one key
   with different meanings, so a comparison keyed on the code alone is unsound.
-- **5 containers where it reports an error and we do not**, and **seven where we
-  do and it does not**. Neither list is a surprise — they are the severity
-  policies in §1 and §2 below, our own budget rules, and the archives the
-  reference throws on rather than reports (§3) — but they were assumed before
-  and are counted now.
+- **61 containers where it reports an error and we do not**, and **seven where we
+  do and it does not**. The differences include the policies in §1 and §2,
+  the PDF/A identification and text-reading checks in §5, our own budget rules,
+  and the archives the reference throws on rather than reports (§3).
 - **It throws rather than reports on three of our fixtures.** More on that in §3.
 
 The remaining "read from its source" claims in this document are marked where
@@ -180,7 +172,8 @@ Those reproductions live with that project, not here — this repository has no
 Java toolchain — so the summaries below are not checkable from a clone:
 
 - `DV_013` fires on `numberOfPages < 0`, though its message says "greater than
-  zero" — so `0` passes there. (Checked in the English, German and Chinese
+  zero" — so `0` passes that model check, not the XML schema. (Checked in the
+  English, German and Chinese
   bundles; only the English one is vendored here.) This tool uses X2 for the schema's positiveInteger lexical
   and value spaces, including zero and negative values. P6 asks a separate
   question: whether a valid NumberOfPages declaration agrees with the sole
@@ -190,6 +183,14 @@ Java toolchain — so the summaries below are not checkable from a clone:
   (one), while each PDF root declares 1. P6 adds seven true warnings for these
   template placeholders; the default exit remains 0. The generated official
   samples table records 0 errors, 7 warnings and 7 notes.
+  On `long-number.zip`, the sweep records `DV_013` for a 4301-digit positive
+  NumberOfPages value. The reference model stores an `Integer` and applies the
+  negative-value check after mapping the XML. Here X2 accepts that valid XSD
+  value and P6 warns that the two declarations disagree.
+  On `p6-page-declaration-mismatch.zip`, the pinned reference emits no error or
+  warning; our P6 warning reports the metadata/page-tree disagreement. This is
+  an observed result on that container, not an inventory of the reference's
+  rules.
 - `MainDocument.validate` throws `IndexOutOfBoundsException` on an empty version
   list, discarding the `MD_001` it had just recorded.
 - `MainDocument` overrides only the two-argument `validate`, so main-document rules
@@ -226,12 +227,50 @@ alongside `refCodes` (display only).
 
 ## 5. What the reference reports that we do not
 
-**Nothing is on this list any more.** No container in the sweep draws a warning
-or an error from the reference while we say nothing louder than a note. The list
-held three, and the two rules in this release are why — measured on the sweep
-this release records rather than predicted from what the rules were meant to do.
+**21 containers draw reference errors or warnings while we report only notes.**
+They are generated page-tree fixtures: the pinned reference reports `REP_017`
+and `REP_044`, while our report contains a `P4` note. These are different
+questions from whether a metadata page declaration agrees with a PDF's Count.
 
-`REP_018` was the largest of the three. The reference warns it on five
+Across the 62 generated fixtures whose reference column was empty, `REP_017`
+is an error on 57. Its key, `processor:REP_MESSAGE_017`, is emitted when reading
+the PDF/A identification fails. The pinned source follows the catalog's XMP
+metadata and checks its part and conformance level against a supported list;
+this code does not establish the result of a full PDF/A preflight. The generated
+PDFs exercise page-tree declarations, with a minimal 2b claim and no page text,
+and do not establish PDF/A conformance. Our `P4` reports the claim it can find,
+without verifying it or applying the level policy of §2. `P6` compares the two
+page declarations when its conditions hold, or reports its own reading limit;
+neither is a PDF/A conformance check.
+
+Seven of those 57 also draw `REP_042` and `REP_045` errors. Read from the pinned
+source, `processor:REP_MESSAGE_042` catches an I/O failure while reading
+encryption status; `processor:REP_MESSAGE_045` catches one while extracting
+text. They do not prove encryption or a page-count mismatch. Here six of the
+seven draw a P6 tool-limit warning, and the fixture with an encryption declaration
+draws P2. Our reader reports the declaration or its bounded reading failure
+instead of making a verdict from a full PDF load or text extraction.
+
+On 50 of the generated fixtures, the reference also warns `REP_044`.
+`processor:REP_MESSAGE_044` follows a text-extraction pass that found no text;
+the class-dependent policy makes it a warning. We do not extract page text.
+Of these 50, 21 draw only P4 here, 28 also draw a P6 warning, and one draws a
+P5 error because our bounded scan cannot confirm the PDF. These findings answer
+separate questions from whether its pages contain text.
+
+Four generated fixtures with invalid NumberOfPages values draw both `REP_023`
+and `REP_039` errors; six other containers in the sweep carry the same pair.
+Read from the pinned source, `processor:REP_MESSAGE_023` turns XML schema errors
+into report entries, while `processor:REP_MESSAGE_039` follows a failure to read
+the metadata object. On these four fixtures it also warns `REP_016` for schema
+faults and `REP_027`/`REP_028` because the metadata object is unavailable for
+relation checks (keys `processor:REP_MESSAGE_016`, `processor:REP_MESSAGE_027`
+and `processor:REP_MESSAGE_028`). Here X2 rejects zero, negative values,
+underscores and non-ASCII digits in the schema's positiveInteger declaration;
+P4 remains a note about the PDF's claim. We report the invalid value without
+turning the unavailable relation checks into additional verdicts.
+
+`REP_018` concerns a declared file format. The reference warns it on five
 containers, and every one of those now draws a finding here. Three draw `F3`,
 which asks whether a declared media type and the file's own name agree — that
 rule existed and knew two media types, so a `.docx` declared as RTF passed it.
@@ -241,12 +280,10 @@ a member so large the budget refuses it, which `Z5` and `F1` report without ever
 decompressing it — `P1` never sees those bytes, by design. Two halves, two
 rules, a finding on all five.
 
-An empty list is this page's gate finishing its work, not a premise breaking.
-The test that reads this page does not require the list to have an entry; it
-requires that the reference said something louder than a note *somewhere* in the
-sweep, because without that there was no comparison to make. It still fails if
-the sweep ever grows an entry this page does not
-name.
+The test that reads this page requires a measured reference verdict louder than
+a note somewhere in the sweep, and a container name or recorded reference code
+for every case where we report only notes. The grouped entries above name those
+codes rather than treating our silence as agreement.
 
 `document-invalid-pdfa-b.zip` left this list in the same change and for the same
 reason — `M13` now reports a contradiction inside it — and the PDF/A policy
