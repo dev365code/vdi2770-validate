@@ -2,7 +2,7 @@
 
 Sections through 0.7.0 had their wording tidied after their tags; the text each version carried when it was published is in that tag's own `CHANGELOG.md`. From 0.8.0 on, a released section is frozen at its tag and takes only appended `*(Correction ...)*` lines.
 
-## 0.11.0 — unreleased
+## 0.11.0 — 2026-10-08
 
 Who should take this release: anyone whose pipeline reads the exit code. A
 failure of this tool's own code on a file no longer reads as a finding or as a
