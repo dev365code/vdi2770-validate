@@ -147,6 +147,13 @@
       "complete": true
     },
     {
+      "fixture": "tests/fixtures/pages/out-of-size-irrelevant.zip",
+      "otherRules": [
+        "P4"
+      ],
+      "complete": true
+    },
+    {
       "fixture": "tests/fixtures/pages/padded-pdf-count.zip",
       "otherRules": [
         "P4"

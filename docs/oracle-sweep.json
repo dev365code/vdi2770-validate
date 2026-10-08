@@ -2267,6 +2267,65 @@
         ]
       }
     },
+    "out-of-size-irrelevant.zip": {
+      "reference": {
+        "ERROR": [
+          "REP_017"
+        ],
+        "INFO": [
+          "REP_003",
+          "REP_005",
+          "REP_008",
+          "REP_009",
+          "REP_010",
+          "REP_011",
+          "REP_020",
+          "REP_028",
+          "REP_036",
+          "REP_041",
+          "ZU_005"
+        ],
+        "WARN": [
+          "REP_044"
+        ]
+      },
+      "ours": {
+        "info": [
+          "P4"
+        ]
+      }
+    },
+    "out-of-size-pages.zip": {
+      "reference": {
+        "ERROR": [
+          "REP_017"
+        ],
+        "INFO": [
+          "REP_003",
+          "REP_005",
+          "REP_008",
+          "REP_009",
+          "REP_010",
+          "REP_011",
+          "REP_020",
+          "REP_028",
+          "REP_036",
+          "REP_041",
+          "ZU_005"
+        ],
+        "WARN": [
+          "REP_044"
+        ]
+      },
+      "ours": {
+        "info": [
+          "P4"
+        ],
+        "warning": [
+          "P6"
+        ]
+      }
+    },
     "overlapping-index.zip": {
       "reference": {
         "ERROR": [

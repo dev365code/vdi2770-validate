@@ -198,7 +198,23 @@ QUIET = {"equal", "incremental-equal", "object-stream", "png-xref", "encrypted",
          "padded-pdf-count", "hybrid-hidden", "hybrid-conflict", "hybrid-pages-in-stream",
          "hybrid-in-prev", "classic-3300", "classic-10000", "classic-subsections",
          "classic-reversed-subsections", "object-stream-indirect-length",
-         "xref-revisions-14", "xref-revisions-20"}
+         "xref-revisions-14", "xref-revisions-20", "out-of-size-irrelevant"}
+
+
+@pytest.mark.parametrize("name,count,complete,p6", [
+    ("out-of-size-irrelevant", 7, True, 0),
+    ("out-of-size-pages", None, False, 1),
+])
+def test_only_a_required_out_of_size_object_declines_the_comparison(name, count, complete, p6):
+    facts = vdi2770.read_pdf(pdf(name), page_count=True)
+    assert facts.page_count == count
+    assert facts.page_count_why == (None if complete else "xref object is missing (outside Size)")
+    report = check_file(str(FIXTURES / "pages" / (name + ".zip")))
+    findings = [f for f in report.findings if f.rule.id == "P6"]
+    assert len(findings) == p6
+    assert json.loads(rendering.as_json(report))["read"]["complete"] is complete
+    for finding in findings:
+        assert finding.about is About.TOOL and finding.severity is Severity.WARNING
 
 
 @pytest.mark.parametrize("name", CASES)

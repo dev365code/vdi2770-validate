@@ -114,10 +114,14 @@ def test_a_classic_lookup_refuses_a_free_or_changed_generation(generated, row):
     assert facts.page_count is None and facts.page_count_why == "xref object is free or its generation changed"
 
 
-@pytest.mark.parametrize("options", [{"size": 2}, {"ranges": [(0, 101), (2, 1)]}])
-def test_classic_subsections_do_not_overlap_or_exceed_size(generated, options):
-    facts = pdfread.read(generated.table_pdf(**options), page_count=True)
+def test_classic_subsections_do_not_overlap_even_outside_size(generated):
+    facts = pdfread.read(generated.table_pdf(size=2, ranges=[(0, 101), (2, 1)]), page_count=True)
     assert facts.page_count is None and facts.page_count_why == "xref table subsection overlap or Size range"
+
+
+def test_a_required_classic_entry_at_size_is_missing(generated):
+    facts = pdfread.read(generated.table_pdf(size=2), page_count=True)
+    assert facts.page_count is None and facts.page_count_why == "xref object is missing (outside Size)"
 
 
 @pytest.mark.parametrize("header", [(20, 0), (2, 1)])
@@ -126,9 +130,55 @@ def test_an_object_header_has_the_requested_number_and_generation(generated, hea
     assert facts.page_count is None and facts.page_count_why == "xref does not point to the declared object header"
 
 
-def test_a_stream_index_stays_inside_its_size(generated):
+def test_a_stream_index_still_requires_all_its_encoded_rows(generated):
     facts = pdfread.read(generated.compressed(outside_index=True), page_count=True)
-    assert facts.page_count is None and facts.page_count_why == "xref Index order, overlap or Size range"
+    assert facts.page_count is None and facts.page_count_why == "damaged xref stream length"
+
+
+@pytest.mark.parametrize("size,count,reason", [
+    (103, 7, None), (2, None, "xref object is missing (outside Size)"),
+    (0, None, "xref object is missing (outside Size)"),
+    (-1, None, "xref Size integer range or type"),
+    ("2.0", None, "xref Size integer range or type"),
+])
+def test_stream_index_entries_outside_size_are_missing_only_when_requested(generated, size, count, reason):
+    body = generated.compressed().replace(b"/Size 104", f"/Size {size}".encode("ascii"))
+    facts = pdfread.read(body, page_count=True)
+    assert facts.page_count == count and facts.page_count_why == reason
+
+
+@pytest.mark.parametrize("size,reason", [
+    (0, "xref object is missing (outside Size)"),
+    (-1, "xref Size integer range or type"),
+    ("2.0", "xref Size integer range or type"),
+])
+def test_invalid_or_empty_table_size_is_a_catchable_refusal(generated, size, reason):
+    facts = pdfread.read(generated.table_pdf(size=size), page_count=True)
+    assert facts.page_count is None and facts.page_count_why == reason
+
+
+@pytest.mark.parametrize("required,count,reason", [
+    (False, 7, None), (True, None, "xref object is missing (outside Size)"),
+])
+def test_an_older_out_of_size_entry_does_not_poison_other_lookups(generated, required, count, reason):
+    import re
+
+    initial = generated.outside_size(required=required)
+    previous = int(re.findall(rb"startxref\n([0-9]+)", initial)[-1])
+    body = generated.append_revision(initial, {1000: b"0"}, root=None, prev=previous)
+    facts = pdfread.read(body, page_count=True)
+    assert facts.page_count == count and facts.page_count_why == reason
+
+
+def test_a_current_missing_entry_does_not_resurrect_an_older_pages_object(generated):
+    import re
+
+    initial = generated.classic()
+    previous = int(re.findall(rb"startxref\n([0-9]+)", initial)[-1])
+    body = generated.append_revision(initial, {2: b"<< /Count 9 >>"}, prev=previous)
+    body = body[:len(initial)] + body[len(initial):].replace(b"/Size 101", b"/Size 2")
+    facts = pdfread.read(body, page_count=True)
+    assert facts.page_count is None and facts.page_count_why == "xref object is missing (outside Size)"
 
 
 def test_a_compressed_object_has_generation_zero(generated):

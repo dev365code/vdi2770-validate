@@ -8,6 +8,7 @@ than improvising -- a release that describes itself wrongly is worse than a
 release nobody could cut.
 """
 import importlib.util
+import re
 
 import pytest
 
@@ -108,12 +109,18 @@ def test_it_runs_against_this_repository_s_own_changelog():
     actually has. A generator that only works on its own fixture is one that
     will be found out on a tag.
 
-    The top section here is the release being written, so it is dated the way a
-    tag would date it, and the generator is asked about that.
+    The section being written may have only items until the release is cut.
+    Ask about the newest dated section, whose opening paragraph has shipped.
     """
     changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
-    dated = changelog.replace(" — unreleased", " — 2026-01-01", 1)
+    dated = re.sub(r"\A.*?(?=^## \S+ — \d{4}-\d{2}-\d{2})", "", changelog, flags=re.S | re.M)
     version, _ = release_notes.top_section(dated)
     body = release_notes.body(version, SHA, dated)
     assert body.startswith("**Who should take this release:**")
     assert f"section {version}" in body
+
+
+def test_this_repository_s_pending_release_cannot_be_described_as_shipped():
+    changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+    with pytest.raises(release_notes.CannotDescribe, match="carries no date"):
+        release_notes.body("0.11.1", SHA, changelog)

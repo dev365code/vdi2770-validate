@@ -3372,6 +3372,22 @@ TABLE += [
 
 CANARY = "canary/a-comment-nobody-reads"
 
+TABLE += [
+    ("pages/irrelevant-missing-entries-do-not-stop-the-comparison",
+     "packages/vdi2770/src/vdi2770/_pdfpages.py",
+     "                        if first < previous:\n",
+     '                        if first < previous or first + count > trailer["Size"]:\n',
+     ["tests/test_the_page_tree_is_a_declaration.py::test_only_a_required_out_of_size_object_declines_the_comparison"],
+     "an unrelated entry outside Size must not suppress the declared Count comparison"),
+    ("pages/a-required-out-of-size-entry-is-missing",
+     "packages/vdi2770/src/vdi2770/_pdfpages.py",
+     "                if reference.number >= section[-1]:\n",
+     "                if False:\n",
+     ["tests/test_the_page_tree_is_a_declaration.py::test_only_a_required_out_of_size_object_declines_the_comparison",
+      "tests/test_xref_lookup_uses_the_current_section.py::test_a_current_missing_entry_does_not_resurrect_an_older_pages_object"],
+     "ignoring the required-entry boundary could read a Count from a missing object"),
+]
+
 
 def clear(tree: Path) -> None:
     for cache in tree.rglob("__pycache__"):

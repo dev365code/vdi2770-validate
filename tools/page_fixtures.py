@@ -129,6 +129,17 @@ def table_pdf(total=101, ranges=None, size=None, rows=None, headers=None, row_wi
     return _write_table(data, positions, ranges, size, rows=rows, row_width=row_width)
 
 
+def outside_size(required=False):
+    """Table 15: ignore an irrelevant entry, but do not resolve missing Pages."""
+    values = objects(7)
+    values[999] = values.pop(2) if required else b"0"
+    if required:
+        values[1] = values[1].replace(b"/Pages 2 0 R", b"/Pages 999 0 R")
+    data = bytearray(b"%PDF-1.7\n")
+    positions = _write_objects(data, values)
+    return _write_table(data, positions, [(0, 101), (999, 1)], size=101)
+
+
 def hybrid(conflict=False, pages_in_stream=False, previous=False):
     """§7.5.8.4: table, its supplementary stream, then the previous section."""
     data = bytearray(b"%PDF-1.7\n")
@@ -281,6 +292,8 @@ def cases():
     """name -> (metadata count, PDF bytes, expected count or refusal reason)."""
     return {
         "equal": ("7", classic(), 7),
+        "out-of-size-irrelevant": ("7", outside_size(), 7),
+        "out-of-size-pages": ("7", outside_size(required=True), "xref object is missing (outside Size)"),
         "different": ("8", classic(), 7),
         "incremental-equal": ("3", incremental(), 3),
         "incremental-different": ("2", incremental(), 3),
@@ -330,11 +343,11 @@ def cases():
         "xref-stream-indirect-length": ("7", compressed(xref_length=True), "stream Length"),
         "classic-free-object": ("7", table_pdf(rows={2: (0, "f")}), "free or its generation changed"),
         "classic-changed-generation": ("7", table_pdf(rows={2: (1, "n")}), "free or its generation changed"),
-        "classic-small-size": ("7", table_pdf(size=2), "subsection overlap or Size range"),
+        "classic-small-size": ("7", table_pdf(size=2), "xref object is missing (outside Size)"),
         "classic-overlapping-subsections": ("7", table_pdf(ranges=[(0, 101), (2, 1)]), "subsection overlap or Size range"),
         "classic-wrong-object-number": ("7", table_pdf(headers={2: (20, 0)}), "declared object header"),
         "classic-wrong-object-generation": ("7", table_pdf(headers={2: (2, 1)}), "declared object header"),
-        "xref-index-outside-size": ("7", compressed(outside_index=True), "Index order, overlap or Size range"),
+        "xref-index-outside-size": ("7", compressed(outside_index=True), "damaged xref stream length"),
         "compressed-nonzero-generation": ("7", compressed(nonzero_generation=True), "compressed object generation"),
         "prev-section-limit": ("7", previous_chain(), "xref section limit"),
         "linearized-missing-root": ("7", linearized(root=False), "trailer Root is missing"),

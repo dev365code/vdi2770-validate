@@ -534,8 +534,9 @@ def test_no_document_cites_a_file_that_is_not_here():
     # the picture names the test that holds them to it.
     # 52 to 54 when every finding in the metadata came to be held to its line:
     # the page behind the picture and the table beside it name that test.
-    assert seen == 54, (
-        f"{seen} citations found, not 54. If you added or removed one, say so "
+    # The pending section omits the released sample-table citation.
+    assert seen == 53, (
+        f"{seen} citations found, not 53. If you added or removed one, say so "
         f"here; if you did not, some of them just stopped being checked.")
 
 
@@ -821,9 +822,11 @@ def test_the_readme_describes_the_json_entries_the_tool_actually_emits():
 
 
 def test_the_changelog_states_the_attribute_allowance_once_and_derives_its_multiple():
+    from conftest import changelog_sections
     from vdi2770.xmlread import MAX_ATTRIBUTES
 
-    unreleased = newest_changelog_section()
+    unreleased = next((text for _heading, text in changelog_sections()
+                       if "the worst document" in text), "")
     said = re.findall(r"([\d,]+)×\*{0,2} (?:above )?the worst document", unreleased)
     assert len(said) == 1, f"the attribute multiple must be stated once: {said}"
     allowance = re.findall(r"100,000", unreleased)

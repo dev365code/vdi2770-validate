@@ -60,9 +60,13 @@ def test_generators_keep_committed_bytes_with_windows_newlines(tmp_path):
         ref, object_id = line.split()
         git(tree, "update-ref", ref, object_id)
     git(tree, "read-tree", "HEAD")
-    for source in (ROOT / "tools").glob("*.py"):
-        shutil.copyfile(source, tree / "tools" / source.name)
     tracked = git(tree, "ls-files", "-z").decode().split("\0")[:-1]
+    # The generators and their inputs must come from the same working tree.
+    # Copying only tools paired a new fixture generator with HEAD's old reader
+    # and sweep, so a semantic update was reported as a newline change.
+    for name in tracked:
+        shutil.copyfile(ROOT / name, tree / name)
+    git(tree, "add", "--all")
     before = {name: (tree / name).read_bytes() for name in tracked}
     driver = tmp_path / "windows_newlines.py"
     driver.write_bytes(b'''import builtins, pathlib, runpy, sys

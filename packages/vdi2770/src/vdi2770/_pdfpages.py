@@ -322,11 +322,13 @@ class PageReader:
                     uint(trailer.get("Size"), "xref Size")
                     previous = 0
                     # §7.5.4 permits any subsection order, but no duplicate number.
+                    # Table 15's Size excludes individual entries at lookup;
+                    # an irrelevant missing object does not stop the page read.
                     for first, count, _ in sorted(ranges):
-                        if first < previous or first + count > trailer["Size"]:
+                        if first < previous:
                             raise Declined("xref table subsection overlap or Size range")
                         previous = first + count
-                    self.sections.append(("table", self.data, ranges))
+                    self.sections.append(("table", self.data, ranges, trailer["Size"]))
                     return trailer
                 if len(ranges) >= pdfread.MAX_XREF_SUBSECTIONS:
                     raise Declined(f"xref subsection limit {pdfread.MAX_XREF_SUBSECTIONS}")
@@ -359,7 +361,7 @@ class PageReader:
         for i in range(0, len(index), 2):
             first = uint(index[i], "xref Index")
             count = uint(index[i + 1], "xref Index")
-            if first < previous or first + count > size:
+            if first < previous:
                 raise Declined("xref Index order, overlap or Size range")
             ranges.append((first, count, consumed))
             consumed += count
@@ -367,7 +369,7 @@ class PageReader:
         payload = self.inflate(dictionary, stream_at, expected=consumed * sum(widths))
         if consumed * sum(widths) != len(payload):
             raise Declined("damaged xref stream length")
-        self.sections.append(("stream", payload, ranges, widths))
+        self.sections.append(("stream", payload, ranges, widths, size))
         return dictionary
 
     def entry(self, reference):
@@ -376,6 +378,8 @@ class PageReader:
             for first, count, at in ranges:
                 if not first <= reference.number < first + count:
                     continue
+                if reference.number >= section[-1]:
+                    raise Declined("xref object is missing (outside Size)")
                 index = reference.number - first
                 if kind == "table":
                     row = _ROW.fullmatch(data[at + 20 * index:at + 20 * (index + 1)])

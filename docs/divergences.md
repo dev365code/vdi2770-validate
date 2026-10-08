@@ -13,8 +13,8 @@ check that — the normative text is paywalled.
 
 ## How much of this was measured
 
-There are 124 containers in `corpus/` and
-`tests/fixtures/`. All 124 containers were put through the reference
+There are 126 containers in `corpus/` and
+`tests/fixtures/`. All 126 containers were put through the reference
 implementation at its pinned commit `e47c13c`, with locale `en_US`.
 [docs/oracle-sweep.json](oracle-sweep.json) records both implementations' verdicts.
 
@@ -51,7 +51,7 @@ What the sweep settled:
   agreement are not — the same limitation §4 discloses, and it applies here too.) The `refKeys`/`refCodes` split earns its keep:
   thirteen of the reference's displayed codes are emitted from more than one key
   with different meanings, so a comparison keyed on the code alone is unsound.
-- **61 containers where it reports an error and we do not**, and **seven where we
+- **63 containers where it reports an error and we do not**, and **seven where we
   do and it does not**. The differences include the policies in §1 and §2,
   the PDF/A identification and text-reading checks in §5, our own budget rules,
   and the archives the reference throws on rather than reports (§3).

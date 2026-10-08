@@ -7,6 +7,8 @@ disagree is a release nobody can reason about afterwards.
 """
 import re
 
+from packaging.version import Version
+
 from conftest import ROOT
 from vdi2770_validate import __version__
 
@@ -36,15 +38,45 @@ def test_the_package_and_the_project_agree():
 
 
 def test_the_changelog_top_section_matches_the_version():
-    """`Unreleased` is allowed only while the version is a pre-release. Once it
-    is not, the top of the changelog has to name it."""
+    """A dated release matches the package; a numbered pending section may
+    lead the version that will be assigned when that release is cut."""
     top = changelog_heading()
     if top.lower().startswith("unreleased"):
         assert any(k in __version__ for k in ("dev", "a", "b", "rc")), (
             f"version {__version__} looks releasable but the changelog still says {top!r}")
+    elif top.endswith(" — unreleased"):
+        planned = top.split()[0].lstrip("v")
+        assert VERSION.fullmatch(planned), planned
+        assert Version(planned) >= Version(__version__), (
+            f"pending changelog {planned} is older than package {__version__}")
     else:
         assert top.split()[0].lstrip("v") == __version__, (
             f"changelog says {top!r}, package says {__version__}")
+
+
+def test_pending_and_dated_changelog_versions_keep_their_order(monkeypatch):
+    import sys
+
+    import pytest
+
+    module = sys.modules[__name__]
+    for top, version, accepts in [
+        ("0.11.1 — unreleased", "0.11.0", True),
+        ("0.11.1 — unreleased", "0.11.1", True),
+        ("0.10.3 — unreleased", "0.11.0", False),
+        ("invalid — unreleased", "0.11.0", False),
+        ("0.11.0 — 2026-10-08", "0.11.0", True),
+        ("0.11.1 — 2026-10-08", "0.11.0", False),
+        ("Unreleased", "0.11.1.dev1", True),
+        ("Unreleased", "0.11.0", False),
+    ]:
+        monkeypatch.setattr(module, "changelog_heading", lambda top=top: top)
+        monkeypatch.setattr(module, "__version__", version)
+        if accepts:
+            test_the_changelog_top_section_matches_the_version()
+        else:
+            with pytest.raises(AssertionError):
+                test_the_changelog_top_section_matches_the_version()
 
 
 def test_a_release_workflow_exists_and_is_triggered_by_a_tag():

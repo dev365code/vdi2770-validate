@@ -675,8 +675,8 @@ def test_the_code_in_this_tree_is_the_code_its_version_names():
 
     A version is a promise about what you get, not only about what you can call.
     Both halves of the distribution, because they share one number now: a commit
-    to `src/` after the tag is the same broken promise as a commit to the
-    reader's, and only the reader's half was ever watched.
+    to `src/` after the tag needs its own release. A newer unreleased CHANGELOG
+    section records work awaiting the cut; its version is assigned at that cut.
     """
     import subprocess
 
@@ -706,10 +706,42 @@ def test_the_code_in_this_tree_is_the_code_its_version_names():
                             "src", "packages/vdi2770/src"],
                            cwd=ROOT, capture_output=True, text=True)
     changed = [p for p in moved.stdout.split() if p]
-    assert not changed, (
-        f"this tree says it is {here}, `{tag}` is published, and these have "
-        f"moved since: {changed}. Whoever installs {here} does not get them. "
-        f"Bump the version.")
+    heading = re.search(r"^## (\S+) — (\S+)", (ROOT / "CHANGELOG.md").read_text(encoding="utf-8"), re.M)
+    if heading and heading[2] == "unreleased":
+        assert tuple(map(int, heading[1].split("."))) > tuple(map(int, here.split("."))), (
+            "pending changes must name a release newer than the published version")
+    else:
+        assert not changed, (
+            f"this tree says it is {here}, `{tag}` is published, and these have "
+            f"moved since: {changed}. Whoever installs {here} does not get them. "
+            f"Bump the version.")
+
+
+def test_published_code_equality_and_pending_version_order_are_both_enforced(monkeypatch, tmp_path):
+    import subprocess
+    import sys
+
+    import pytest
+
+    monkeypatch.setattr(sys.modules[__name__], "ROOT", tmp_path)
+    (tmp_path / "pyproject.toml").write_text('version = "0.11.0"\n', encoding="utf-8")
+    for heading, changed, accepts in [
+        ("0.11.1 — unreleased", True, True),
+        ("0.11.0 — unreleased", True, False),
+        ("0.10.3 — unreleased", True, False),
+        ("0.11.0 — 2026-10-08", False, True),
+        ("0.11.0 — 2026-10-08", True, False),
+        ("", True, False),
+    ]:
+        (tmp_path / "CHANGELOG.md").write_text("## " + heading + "\n", encoding="utf-8")
+        results = {"tag": "v0.11.0\n", "diff": "packages/vdi2770/src/vdi2770/_pdfpages.py\n" if changed else ""}
+        monkeypatch.setattr(subprocess, "run", lambda command, results=results, **kw: subprocess.CompletedProcess(
+            command, 0, stdout=results[command[1]], stderr=""))
+        if accepts:
+            test_the_code_in_this_tree_is_the_code_its_version_names()
+        else:
+            with pytest.raises(AssertionError):
+                test_the_code_in_this_tree_is_the_code_its_version_names()
 
 
 def test_a_gate_that_starts_python_does_not_leave_bytecode_behind():
