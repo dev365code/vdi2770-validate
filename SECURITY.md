@@ -69,11 +69,14 @@ same promise the table above makes.
 
 - [GHSA-62p8-4642-mwfp](https://github.com/dev365code/vdi2770-validate/security/advisories/GHSA-62p8-4642-mwfp):
   the heading of the text report, a detail line, and the line on stderr saying
-  a path could not be read began with a value the sender wrote -- the name of
-  the file itself, the type a relationship names -- and a CI runner reads a
-  line that begins in its own command syntax as an instruction rather than as
-  text; the exit code and the JSON were not affected. `vdi2770-validate` from
-  0.1.0 and `vdi2770` from 0.8.0, up to 0.10.3; fixed in 0.11.0.
+  a path could not be read could carry values the sender wrote, and a CI runner
+  reads its newer command form at the beginning of a line and its older form
+  anywhere within a line as an instruction rather than as text. Version 0.9.6
+  neutralized only the newer form at the beginning of a line; the older form
+  remained through 0.10.3. Version 0.11.0 neutralizes both forms in these
+  outputs. This escaping change preserves the JSON report and does not alter
+  the check's exit-code decisions. `vdi2770-validate` from 0.1.0 and `vdi2770`
+  from 0.8.0, up to 0.10.3; fixed in 0.11.0.
 
 - [GHSA-3pfq-57fx-w4q5](https://github.com/dev365code/vdi2770-validate/security/advisories/GHSA-3pfq-57fx-w4q5):
   a value the sender wrote -- a class id, a language, the identifier a

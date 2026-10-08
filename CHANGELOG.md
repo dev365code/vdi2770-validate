@@ -48,8 +48,9 @@ folders rather than zipped: they are read now, and judged.
   file, so a bundle measured just under 256 KiB arrived over it.
 - **NumberOfPages keeps its original value** and both X2 and P6 use the XSD
   ASCII grammar without converting the metadata to int. Long finite positive
-  values no longer depend on Python's decimal conversion limit; underscores
-  and non-ASCII digits remain X2 errors. Comparison and quoting are bounded.
+  values no longer depend on Python's decimal conversion limit. Underscores and
+  non-ASCII digits now draw X2 errors; affected containers can change from exit 0
+  to exit 1. Comparison and quoting are bounded.
 
 Who should take this release: readers comparing metadata with a PDF revision.
 

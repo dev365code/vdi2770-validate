@@ -516,10 +516,10 @@ every one up to 0.9.4 inside GHSA-6hqr-phm3-chpf, and every one before 0.9.2
 inside another advisory as well — GHSA-xp97-jcmj-h45f reaches every release up
 to 0.8.0, and GHSA-f9xw-89gp-x52p every release from 0.8.0 to 0.9.1 — so 0.9.7
 is the first release outside those five. GHSA-62p8-4642-mwfp reaches releases
-up to 0.10.3, which closes it in full. The pin runs one way: the engine does not
-name this package back, so upgrading the engine alone beside an older command
-leaves a mismatched pair, and a command from 0.8.0 on refuses that pair rather
-than judging with it (exit `3`).
+up to 0.10.3 and is closed in full by 0.11.0. The pin runs one way: the engine
+does not name this package back, so upgrading the engine alone beside an older
+command leaves a mismatched pair, and a command from 0.8.0 on refuses that pair
+rather than judging with it (exit `3`).
 
 **1.0 means one thing that is not true yet.** This page will say which parts of
 VDI 2770 are checked and to what depth, so that "checks VDI 2770 containers"
