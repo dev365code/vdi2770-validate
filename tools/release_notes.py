@@ -37,8 +37,8 @@ def top_section(changelog: str) -> tuple[str, str]:
 
     A released section carries a date; the section being written carries the
     word "unreleased". Describing the second as a release is the last hand step
-    before a tag that nothing else checks -- the version matches, the prose
-    reads right, and the page says a release happened that did not.
+    before a release is described. The publishing workflow checks the cut
+    shape before building; this generator also refuses an undated section.
     """
     heads = list(re.finditer(r"^## +(\S+)(.*)$", changelog, re.M))
     if not heads:

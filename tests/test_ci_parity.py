@@ -677,6 +677,7 @@ def test_the_code_in_this_tree_is_the_code_its_version_names():
     Both halves of the distribution, because they share one number now: a commit
     to `src/` after the tag needs its own release. A newer unreleased CHANGELOG
     section records work awaiting the cut; its version is assigned at that cut.
+    The tag-time guarantee is enforced by check_changelog_is_cut.py in release.yml.
     """
     import subprocess
 
@@ -1466,3 +1467,20 @@ def test_the_harness_numbers_a_selected_case_by_its_own_number(monkeypatch, caps
         assert wanted in printed, (
             f"the report does not number the case by what was asked for; it "
             f"said:\n{printed}")
+
+
+def test_the_reader_publication_checks_the_changelog_cut_before_building():
+    body = (ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
+    matched = re.search(r"(?ms)^  build-reader:\n(.*?)(?=^  [\w-]+:|\Z)", body)
+    assert matched, "release.yml has no build-reader job"
+    reader = matched[1]
+    command = 'python tools/check_changelog_is_cut.py --tag "${GITHUB_REF_NAME#v}"'
+    assert command in reader, "build-reader publishes without checking the changelog cut"
+    assert (ROOT / "tools/check_changelog_is_cut.py").is_file()
+    assert reader.index("check_tag_is_the_version.py") < reader.index(command) < reader.index("- name: Build")
+    steps = re.split(r"\n      - name: ", reader)
+    guarded = [step for step in steps if command in step or "check_tag_is_the_version.py" in step]
+    assert len(guarded) == 2
+    for step in guarded:
+        assert "if: ${{ github.event_name != 'workflow_dispatch' || !inputs.dry_run }}" in step
+    assert "check_changelog_is_cut.py" not in body.replace(reader, "")

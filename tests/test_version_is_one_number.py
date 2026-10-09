@@ -39,7 +39,8 @@ def test_the_package_and_the_project_agree():
 
 def test_the_changelog_top_section_matches_the_version():
     """A dated release matches the package; a numbered pending section may
-    lead the version that will be assigned when that release is cut."""
+    lead the version that will be assigned when that release is cut.
+    The tag-time guarantee is enforced by check_changelog_is_cut.py in release.yml."""
     top = changelog_heading()
     if top.lower().startswith("unreleased"):
         assert any(k in __version__ for k in ("dev", "a", "b", "rc")), (
@@ -174,3 +175,25 @@ def test_a_released_section_is_frozen_at_its_tag():
     assert not wrong, (
         "a released changelog section must be the text that went out under its "
         f"tag; only `*(Correction ...)*` may be appended: {wrong}")
+
+
+def test_the_tree_has_at_most_one_pending_changelog_section():
+    text = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+    pending = re.findall(r"^## +.* +— +unreleased\s*$", text, re.M)
+    assert len(pending) <= 1, f"multiple sections are still being written: {pending}"
+
+
+def test_pending_heading_count_is_a_tree_policy(monkeypatch, tmp_path):
+    import sys
+
+    import pytest
+
+    monkeypatch.setattr(sys.modules[__name__], "ROOT", tmp_path)
+    for count in (0, 1, 2):
+        (tmp_path / "CHANGELOG.md").write_text(
+            "".join(f"## 0.11.{n} — unreleased\n\n" for n in range(count)), encoding="utf-8")
+        if count <= 1:
+            test_the_tree_has_at_most_one_pending_changelog_section()
+        else:
+            with pytest.raises(AssertionError, match="multiple sections"):
+                test_the_tree_has_at_most_one_pending_changelog_section()

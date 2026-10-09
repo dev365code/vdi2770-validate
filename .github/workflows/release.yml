@@ -150,6 +150,9 @@ jobs:
       - name: The tag must be the version
         if: ${{ github.event_name != 'workflow_dispatch' || !inputs.dry_run }}
         run: python tools/check_tag_is_the_version.py --tag "${GITHUB_REF_NAME#v}" --project packages/vdi2770
+      - name: The changelog must be cut for the tag
+        if: ${{ github.event_name != 'workflow_dispatch' || !inputs.dry_run }}
+        run: python tools/check_changelog_is_cut.py --tag "${GITHUB_REF_NAME#v}"
       - name: Build
         run: python -m build packages/vdi2770 --outdir dist/
       # Recorded outside `dist/`. The publish action uploads everything it

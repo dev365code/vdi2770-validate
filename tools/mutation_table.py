@@ -2237,8 +2237,8 @@ PUBLISHING_PATH_ROWS = [
 
     ('release/the-tag-check-stands-before-every-upload',
      '.github/workflows/release.yml',
-     '      - name: The tag must be the version\n        if: ${{ github.event_name != \'workflow_dispatch\' || !inputs.dry_run }}\n        run: python tools/check_tag_is_the_version.py --tag "${GITHUB_REF_NAME#v}" --project packages/vdi2770\n      - name: Build\n',
-     '      - name: Build\n',
+     '      - name: The tag must be the version\n        if: ${{ github.event_name != \'workflow_dispatch\' || !inputs.dry_run }}\n        run: python tools/check_tag_is_the_version.py --tag "${GITHUB_REF_NAME#v}" --project packages/vdi2770\n',
+     '',
      ['tests/test_the_tag_is_the_version_it_publishes.py::'
       'test_the_check_runs_before_every_upload'],
      'once the first upload has happened a refusal cannot undo it and can only '
@@ -3407,6 +3407,12 @@ TABLE += [
      "        if depth >= pdfread.MAX_PAGE_OBJECTS:\n",
      ["tests/test_page_syntax_has_its_own_allowance.py"],
      "array and dictionary nesting is not a count of interpreted page objects"),
+]
+
+
+TABLE += [
+    ('gates/a-publishing-tag-cannot-pass-an-undated-top', 'tools/check_changelog_is_cut.py', '        version = check_cut(changelog, args.tag)\n', '        version = check_cut(changelog.replace(" — unreleased", " — 2099-01-01"), args.tag)\n', ['tests/test_the_release_notes_come_from_the_changelog.py::test_the_tag_requires_a_cut_changelog'], 'an undated top is still development even when the manifest and tag agree'),
+    ('gates/the-reader-checks-the-changelog-before-building', '.github/workflows/release.yml', '      - name: The changelog must be cut for the tag\n        if: ${{ github.event_name != \'workflow_dispatch\' || !inputs.dry_run }}\n        run: python tools/check_changelog_is_cut.py --tag "${GITHUB_REF_NAME#v}"\n', '', ['tests/test_ci_parity.py::test_the_reader_publication_checks_the_changelog_cut_before_building'], 'the publication job must enforce the cut before building artifacts'),
 ]
 
 

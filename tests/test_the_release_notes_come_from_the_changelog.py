@@ -111,6 +111,7 @@ def test_it_runs_against_this_repository_s_own_changelog():
 
     The section being written may have only items until the release is cut.
     Ask about the newest dated section, whose opening paragraph has shipped.
+    The tag-time guarantee is enforced by check_changelog_is_cut.py in release.yml.
     """
     changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
     dated = re.sub(r"\A.*?(?=^## \S+ — \d{4}-\d{2}-\d{2})", "", changelog, flags=re.S | re.M)
@@ -126,3 +127,47 @@ def test_this_repository_s_pending_release_cannot_be_described_as_shipped():
     pending = re.sub(r"(?m)^(## \S+) — .*", r"\1 — unreleased", changelog, count=1)
     with pytest.raises(release_notes.CannotDescribe, match="carries no date"):
         release_notes.body("0.11.1", SHA, pending)
+
+@pytest.fixture
+def cut_gate(monkeypatch):
+    monkeypatch.syspath_prepend(str(ROOT / "tools"))
+    spec = importlib.util.spec_from_file_location(
+        "cut_gate", ROOT / "tools" / "check_changelog_is_cut.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+@pytest.mark.parametrize("text,tag,expected,reason", [
+    ("## 0.11.1 — unreleased\n\nWho should take this release: readers.\n", "0.11.1", 1, "unreleased"),
+    ("## 0.11.1 — unreleased\n\nWho should take this release: readers.\n\n## 0.11.2 — unreleased\n", "0.11.1", 1, "unreleased"),
+    ("## 0.11.0 — 2026-10-09\n\nWho should take this release: readers.\n\n## 0.11.1 — unreleased\n", "0.11.1", 1, "unreleased"),
+    ("## 0.11.1 — 2026-10-09\n\n- Changes.\n", "0.11.1", 1, "Who should take this release"),
+    ("## 0.11.0 — 2026-10-09\n\nWho should take this release: readers.\n", "0.11.1", 1, "tag"),
+    ("## 0.11.1 — 2026-10-09\n\nWho should take this release: readers.\n", "0.11.1", 0, "ready"),
+    ("## 0.11.1 — 2026-10-09\r\n\r\nWho should take this release: readers.\r\n", "0.11.1", 0, "ready"),
+    ("##  0.11.1  —  2026-10-09\n\nWho should take this release: readers.\n", "0.11.1", 0, "ready"),
+    ("## 0.11.1 — 2026-10-09\n\nWho should take this release: readers.\n", "v0.11.1", 0, "ready"),
+    ("## v0.11.1 — 2026-10-09\n\nWho should take this release: readers.\n", "0.11.1", 1, "heading"),
+    ("## 0.11.1 — 2026-10-9\n\nWho should take this release: readers.\n", "0.11.1", 1, "date"),
+    ("## 0.11.1 — 2026-10-09\n\nWho should take this release: readers.\n\n## 0.11.1 — 2026-10-08\n", "0.11.1", 1, "once"),
+    ("", "0.11.1", 1, "heading"),
+    ("## 0.11.1 — 2026-10-09\n\nWho should take this release: readers.\n", "invalid", 1, "tag"),
+])
+def test_the_tag_requires_a_cut_changelog(cut_gate, monkeypatch, tmp_path, capsys,
+                                         text, tag, expected, reason):
+    monkeypatch.setattr(cut_gate, "ROOT", tmp_path)
+    (tmp_path / "CHANGELOG.md").write_bytes(text.encode("utf-8"))
+    # Matching manifests do not make an undated changelog ready to publish.
+    (tmp_path / "pyproject.toml").write_text('version = "0.11.1"\n', encoding="utf-8")
+    assert cut_gate.main(["--tag", tag]) == expected
+    captured = capsys.readouterr()
+    said = captured.err if expected else captured.out
+    assert reason in said, said
+    assert len(said.strip().splitlines()) == 1, said
+
+
+def test_a_missing_changelog_refuses_the_cut(cut_gate, monkeypatch, tmp_path, capsys):
+    monkeypatch.setattr(cut_gate, "ROOT", tmp_path)
+    assert cut_gate.main(["--tag", "0.11.1"]) == 1
+    assert "cannot read" in capsys.readouterr().err
