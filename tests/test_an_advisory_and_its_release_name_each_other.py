@@ -672,3 +672,20 @@ def test_every_pin_a_page_hands_a_reader_is_past_every_advisory():
               for a, r in sorted(reach.items())
               if as_number(v) <= as_number(r)]
     assert not inside, inside
+
+
+def test_an_open_advisory_record_says_that_no_release_closes_it(tmp_path):
+    """The generator keeps the open ending even when published records are closed."""
+    import copy
+    import json
+
+    record = copy.deepcopy(records()[0])
+    record["fixed_in"] = None
+    record["through"] = __version__
+    record["open"] = "not yet closed by any release; a repair is still required."
+    path = tmp_path / "advisories.json"
+    path.write_text(json.dumps({"advisories": [record]}), encoding="utf-8")
+    loaded = ADVISORIES.load(path)
+    shown = " ".join(ADVISORIES.entry(loaded[0], "owner/project").split())
+    assert "not yet closed by any release" in shown, shown
+    assert "fixed in" not in shown, shown

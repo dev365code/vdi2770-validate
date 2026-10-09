@@ -2514,14 +2514,12 @@ DELIVERY_REGRESSION_ROWS = [
      "a list shorter than the count clause says it is sends the reader looking "
      "for containers the sentence claims to name"),
 
-    ("rules/what-m13-lists-is-shown-as-written",
-     "packages/vdi2770/src/vdi2770/validate/rules/delivery.py",
-     "    items = [as_written(i) for i in items]",
-     "    items = list(items)",
-     ["tests/test_two_names_that_print_alike_are_told_apart.py::"
-      "test_no_archive_controlled_string_can_forge_lines_in_the_report"],
-     "a newline in a container's name or a kind put a forged summary and a "
-     "clean verdict on the page through M13's detail"),
+    ('rules/what-m13-lists-is-shown-as-written',
+     'packages/vdi2770/src/vdi2770/validate/rules/delivery.py',
+     '    items = [as_written(i) for i in items]',
+     '    items = list(items)',
+     ['tests/test_two_names_that_print_alike_are_told_apart.py::test_m13_details_spell_sender_values_before_text_rendering'],
+     'a sender-controlled name loses its visible spelling in Finding.detail before text rendering'),
 
     ("rules/a-long-name-is-not-repeated-once-per-container",
      "packages/vdi2770/src/vdi2770/validate/rules/delivery.py",
@@ -2582,14 +2580,12 @@ LISTING_BUDGET_ROWS = [
      "the correction appended to 0.9.4 stops naming the advisory, and the "
      "record still says 0.9.4's claim to fix it was taken back"),
 
-    ("pages/a-correction-sends-a-reader-past-every-advisory",
-     "CHANGELOG.md",
-     "move to 0.9.7 or later instead, which pins both halves exactly.)*",
-     "move to 0.9.6 or later instead, which pins both halves exactly.)*",
-     ["tests/test_an_advisory_and_its_release_name_each_other.py::"
-      "test_every_release_a_page_sends_a_reader_to_is_past_every_advisory"],
-     "one release earlier is inside an advisory's range, and a correction that "
-     "sends a reader there moves them onto an affected release"),
+    ('pages/a-correction-sends-a-reader-past-every-advisory',
+     'CHANGELOG.md',
+     'move to 0.11.0 or later, which closes every advisory SECURITY.md lists and pins both halves exactly.)*',
+     'move to 0.10.3 or later, which closes every advisory SECURITY.md lists and pins both halves exactly.)*',
+     ['tests/test_an_advisory_and_its_release_name_each_other.py::test_every_release_a_page_sends_a_reader_to_is_past_every_advisory'],
+     "one release earlier is inside an advisory's range, and a correction that sends a reader there moves them onto an affected release"),
 
     ("pages/a-pin-a-reader-runs-is-past-every-advisory",
      "README.md",
@@ -2732,14 +2728,12 @@ LISTING_BUDGET_ROWS = [
      "a later section states a range for the advisory that runs up to the "
      "release the record says fixed it"),
 
-    ("pages/every-section-naming-an-open-advisory-says-so",
-     "CHANGELOG.md",
-     "is not yet closed by any release, and GHSA-62p8-4642-mwfp now reaches up to 0.9.7.)*",
-     "is closed as well, and GHSA-62p8-4642-mwfp now reaches up to 0.9.7.)*",
-     ["tests/test_an_advisory_and_its_release_name_each_other.py::"
-      "test_each_advisory_is_cited_where_the_record_puts_it"],
-     "a section naming an advisory no release closes says only a range, which "
-     "the next release makes too short"),
+    ('pages/every-section-naming-an-open-advisory-says-so',
+     'tools/advisories.py',
+     '    tail = f"; fixed in {a[\'fixed_in\']}." if a["fixed_in"] else f". {a[\'open\']}"',
+     '    tail = f"; fixed in {a[\'fixed_in\']}." if a["fixed_in"] else "."',
+     ['tests/test_an_advisory_and_its_release_name_each_other.py::test_an_open_advisory_record_says_that_no_release_closes_it'],
+     'a synthetic open record must retain the sentence saying that no release closes it'),
 
     ("gates/a-range-past-the-fix-is-not-a-claim-about-it",
      "tests/test_an_advisory_and_its_release_name_each_other.py",
@@ -3416,6 +3410,15 @@ TABLE += [
 ]
 
 
+
+def give_history(tree: Path) -> None:
+    """Give a copied candidate a private index and refs over shared, read-only objects."""
+    history = tree.parent / "history"
+    subprocess.run(["git", "clone", "--shared", "--no-checkout", str(ROOT), str(history)],
+                   check=True, capture_output=True)
+    shutil.move(str(history / ".git"), str(tree / ".git"))
+    subprocess.run(["git", "read-tree", "HEAD"], cwd=tree, check=True, capture_output=True)
+
 def clear(tree: Path) -> None:
     for cache in tree.rglob("__pycache__"):
         shutil.rmtree(cache, ignore_errors=True)
@@ -3457,13 +3460,11 @@ def run(tree: Path, checks: list) -> tuple:
 def _ran(said: str) -> bool:
     """Whether pytest actually asserted anything.
 
-    This sweep runs in a copy of the tree with `.git` left out, and a test that
-    reads the tag history skips there. `pytest` exits 0 on a run that skipped
-    everything, so the mutation was applied, nothing objected, and the row was
-    reported as *survived* -- a real finding, but pointing at the workflow
-    rather than at the row, and the fix would have been to weaken the gate.
-    Exit code 5 already covers "collected nothing"; this covers "collected it
-    and declined to run it", which looks exactly like a pass from outside.
+    The copied candidate has private Git refs and an index over read-only
+    shared objects, so history checks can assert there. A check can still skip
+    for another missing prerequisite: pytest exits 0 when everything skipped.
+    Exit code 5 covers "collected nothing"; this guard covers a selection that
+    collected tests but asserted nothing, and reports it as broken.
     """
     return re.search(r"\b\d+ passed", said) is not None
 
@@ -3505,6 +3506,10 @@ def main() -> int:
         tree = Path(tmp) / "tree"
         shutil.copytree(ROOT, tree, ignore=shutil.ignore_patterns(
             ".git", "__pycache__", "build", "dist", "*.egg-info", ".pytest_cache", ".ruff_cache"))
+        # Keep the source's Git metadata out of the candidate. One shared clone
+        # gives the copy its own refs and index; read-tree preserves the copied
+        # candidate files while the original objects are only read.
+        give_history(tree)
         # `env=` here too. The run below sets it for every check it starts and
         # this one, which builds the fixtures the whole sweep is measured
         # against, did not -- so the copy this sweep runs in was seeded with

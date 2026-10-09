@@ -81,7 +81,10 @@ def test_the_contradiction_is_reported_without_reading_the_whole_delivery(tmp_pa
     p = _delivery(tmp_path, "partial.zip",
                   [("Type", "ABC1223"), ("Individual", "ABC1223")],
                   unreadable=True)
-    assert "M13" in ids(p), (
+    report = check_file(p)
+    assert report.read.metadata_read < report.read.metadata_found, report.read
+    assert (report.read.metadata_read, report.read.metadata_found) == (3, 4)
+    assert "M13" in {f.rule.id for f in report.findings}, (
         "the contradiction was already in hand and went unreported because some "
         "other part of the delivery could not be read")
 
@@ -100,14 +103,17 @@ def _delivery(tmp_path, name, objects, unreadable=False):
 
     entries = [("VDI2770_Main.xml", MAINXML), ("VDI2770_Main.pdf", MAINPDF)] + inner
     if unreadable:
-        # A *folder*, not a broken archive. An unopenable nested zip contributes
-        # nothing to either side of the read count -- it is invisible to the
-        # completeness question -- so a fixture built that way reports a
-        # complete read and pins nothing. A metadata file delivered in a folder
-        # is listed and never opened (`Z13`), which is what actually makes
-        # `read_everything` false. Measured: 3 of 4 metadata files read.
-        entries.append(("sub/VDI2770_Metadata.xml", MAINXML))
-        entries.append(("sub/B.pdf", MAINPDF))
+        # An unreadable nested ZIP has no metadata directory to count. Keep
+        # this ZIP readable and its reserved metadata listed, but damage that
+        # member's CRC: runner counts it as found while metadata_bytes stays
+        # None. The two declarations above are still read: metadata 3 of 4.
+        from conftest import unopened
+
+        extra = io.BytesIO()
+        with zipfile.ZipFile(extra, "w") as z:
+            z.writestr("VDI2770_Metadata.xml", MAINXML)
+            z.writestr("B.pdf", MAINPDF)
+        entries.append(("unreadable.zip", unopened(extra.getvalue(), "VDI2770_Metadata.xml")))
     p = tmp_path / name
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:

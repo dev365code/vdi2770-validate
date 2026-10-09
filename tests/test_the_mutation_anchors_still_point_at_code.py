@@ -69,3 +69,38 @@ def test_every_row_names_a_test_that_exists():
         "mutation rows naming a test that is not there — pytest exits non-zero "
         "on a selection that matches nothing, so each of these reads as proven "
         "while nothing ran:\n  " + "\n  ".join(missing))
+
+
+def test_the_mutation_copy_reads_history_without_writing_the_source(tmp_path, monkeypatch):
+    """Only the copy owns the new refs and index; its candidate files stay in place."""
+    import importlib
+    import subprocess
+
+    harness = importlib.import_module("mutation_table")
+    source = tmp_path / "source"
+    source.mkdir()
+    subprocess.run(["git", "init", str(source)], check=True, capture_output=True)
+    (source / "tracked.txt").write_text("published\n", encoding="utf-8")
+    subprocess.run(["git", "add", "tracked.txt"], cwd=source, check=True)
+    subprocess.run(["git", "-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid",
+                    "commit", "-s", "-m", "Record a fixture"], cwd=source, check=True,
+                   capture_output=True)
+
+    def stored():
+        return {str(p.relative_to(source)): (p.read_bytes(), p.stat().st_mtime_ns)
+                for p in (source / ".git").rglob("*") if p.is_file()}
+
+    before = stored()
+    tree = tmp_path / "tree"
+    tree.mkdir()
+    (tree / "tracked.txt").write_text("candidate\n", encoding="utf-8")
+    monkeypatch.setattr(harness, "ROOT", source)
+    harness.give_history(tree)
+    log = subprocess.run(["git", "log", "--format=%s"], cwd=tree,
+                         capture_output=True, text=True)
+    assert log.returncode == 0 and log.stdout.strip() == "Record a fixture"
+    changed = subprocess.check_output(["git", "diff", "--name-only"], cwd=tree).decode()
+    assert changed.strip() == "tracked.txt"
+    assert (tree / "tracked.txt").read_text(encoding="utf-8") == "candidate\n"
+    assert (tree / ".git/objects/info/alternates").exists()
+    assert stored() == before, "cloning or indexing the copy wrote to source history"

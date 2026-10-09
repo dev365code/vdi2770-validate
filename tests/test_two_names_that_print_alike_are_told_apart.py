@@ -794,3 +794,23 @@ def test_earlier_releases_spelled_the_start_but_left_the_old_form_in_the_middle(
     assert earlier["not_a_command"](start) == legacy_as_text(start)
     assert earlier["not_a_command"](middle) == middle
     assert not_a_command(middle) == legacy_as_text(middle)
+
+
+def test_m13_details_spell_sender_values_before_text_rendering():
+    """Finding details keep each listed name visible before report rendering."""
+    from vdi2770.domain import Document, ObjectId
+    from vdi2770.validate.rules import delivery
+    from vdi2770.zipread import Container
+
+    documents = [
+        (Container("first\ncontainer.zip"),
+         Document((), (), (), objects=(ObjectId("kind\none", "", "SHARED"),))),
+        (Container("second.zip"),
+         Document((), (), (), objects=(ObjectId("other", "", "SHARED"),))),
+    ]
+    findings = list(delivery.check(documents, False))
+    assert len(findings) == 1 and findings[0].rule.id == "M13"
+    detail = findings[0].detail
+    assert "first\\u000acontainer.zip" in detail, detail
+    assert "kind\\u000aone" in detail, detail
+    assert detail.splitlines() == [detail], detail
