@@ -56,6 +56,8 @@ failure — files that never claimed at all.
   The bounded reader follows the last startxref, up to 64 xref sections and
   16 page-object interpretations; xref stream headers spend the section
   allowance instead. Syntax nesting within one object has a separate limit of 16 levels.
+  The value parser allows 16 value levels including the root and terminal value;
+  literal strings allow 16 nested parentheses.
   It uses 64 KiB windows for objects, subsection
   headers and trailer dictionaries. Each classic section has at most 64
   subsections; only requested 20-byte entries are read, so table size does not
@@ -69,6 +71,12 @@ failure — files that never claimed at all.
   produce P6 on the tool axis and make read.complete false.
   An indirect xref stream Length is an unsupported structure in this reader,
   although ISO 32000-1 §7.5.8.2 permits it as a Table 5 entry.
+
+  This reader treats object numbers at or above the section's Size as missing.
+  Size is defined as the highest object number plus one; treating equality as
+  missing is this reader's consistency boundary, while Table 15's explicit ignore
+  wording refers to numbers greater than Size. An unrelated entry does not
+  prevent comparison; a required entry causes a P6 tool warning.
 
 - **A rule is listed at most a hundred times per container**: one rule fires once
   per element, so a crafted file can make one rule true nearly a hundred thousand

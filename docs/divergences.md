@@ -191,6 +191,12 @@ Java toolchain — so the summaries below are not checkable from a clone:
   warning; our P6 warning reports the metadata/page-tree disagreement. This is
   an observed result on that container, not an inventory of the reference's
   rules.
+
+  This reader treats object numbers at or above the section's Size as missing.
+  Size is defined as the highest object number plus one; treating equality as
+  missing is this reader's consistency boundary, while Table 15's explicit ignore
+  wording refers to numbers greater than Size. An unrelated entry does not
+  prevent comparison; a required entry causes a P6 tool warning.
 - `MainDocument.validate` throws `IndexOutOfBoundsException` on an empty version
   list, discarding the `MD_001` it had just recorded.
 - `MainDocument` overrides only the two-argument `validate`, so main-document rules

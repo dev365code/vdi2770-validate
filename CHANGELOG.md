@@ -5,7 +5,13 @@ Sections through 0.7.0 had their wording tidied after their tags; the text each 
 ## 0.11.1 — unreleased
 
 - **An unrelated xref entry outside Size no longer prevents page-count comparison.**
-  A required object outside Size is still missing and draws P6 on the tool axis.
+  Files whose page-count comparison was previously declined because of an
+  unrelated xref entry outside Size are now compared. When NumberOfPages differs
+  from the root page tree's Count, P6 now reports a container warning where it
+  reported a tool refusal. P6 remains a warning: the default exit code is
+  unchanged, and with `--fail-on warning` matching declarations now pass while
+  mismatches still fail. A required object outside Size is still missing and
+  draws P6 on the tool axis.
 - **Page-reading limits are described separately.** Syntax nesting within one
   object remains limited to 16 levels; indirect xref stream Length remains
   unsupported and its refusal says so. Report reading counts describe archive

@@ -6,7 +6,7 @@ from vdi2770 import _pdfpages, pdfread
 
 @pytest.mark.parametrize("opening,closing", [(b"[", b"]"), (b"<< /Key ", b" >>")])
 @pytest.mark.parametrize("levels", [15, 16])
-def test_one_object_stops_at_sixteen_syntax_levels(opening, closing, levels):
+def test_sixteen_value_levels_include_the_root_and_terminal_value(opening, closing, levels):
     body = opening * levels + b"0" + closing * levels
     if levels == 15:
         assert _pdfpages.Syntax(body).value() is not None
