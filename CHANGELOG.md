@@ -2,7 +2,14 @@
 
 Sections through 0.7.0 had their wording tidied after their tags; the text each version carried when it was published is in that tag's own `CHANGELOG.md`. From 0.8.0 on, a released section is frozen at its tag and takes only appended `*(Correction ...)*` lines.
 
-## 0.11.1 — unreleased
+## 0.11.1 — 2026-10-10
+
+Who should take this release: anyone who uses the page-count comparison.
+PDFs previously declined because of an unrelated xref entry outside Size
+are now compared, so a mismatch can be reported as a P6 container warning;
+matching declarations now pass with `--fail-on warning`. Release cuts are
+now checked for a dated, complete changelog section before anything is
+published.
 
 - **An unrelated xref entry outside Size no longer prevents page-count comparison.**
   Files whose page-count comparison was previously declined because of an
