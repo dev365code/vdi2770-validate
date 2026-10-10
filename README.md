@@ -106,7 +106,7 @@ lists all of them.
 ## Where it stands
 
 <a href="https://github.com/dev365code/vdi2770-validate/blob/main/docs/what-it-catches.md">
-<img src="https://raw.githubusercontent.com/dev365code/vdi2770-validate/main/docs/capabilities.svg?v=d18d3d17" alt="Coverage: 41 of 44 rules have a fixture pair; Explanation: what is wrong, evidence, remedy, source, line; Report contract: schemaVersion, golden, exit codes, schema; Entrances: command line, library, single file, Action; Input safety: read budgets, advisory, own mutations; Upstream: pinned by commit, checked weekly" width="100%">
+<img src="https://raw.githubusercontent.com/dev365code/vdi2770-validate/main/docs/capabilities.svg?v=920980c4" alt="Coverage: 41 of 44 rules have a fixture pair; Explanation: what is wrong, evidence, remedy, source, line; Report contract: schemaVersion, golden, exit codes, schema; Entrances: command line, library, single file, Action; Input safety: read budgets, advisory, own mutations; Upstream: pinned by commit, checked weekly" width="100%">
 </a>
 
 *Six things this tool holds itself to, measured on the code this page describes, against the conditions it has set for 1.0. The picture is drawn from [`docs/capabilities.json`](https://github.com/dev365code/vdi2770-validate/blob/main/docs/capabilities.json), and every item it marks done names a file in this repository that says so; the cases behind each axis are in [`docs/what-it-catches.md`](https://github.com/dev365code/vdi2770-validate/blob/main/docs/what-it-catches.md).*
@@ -395,7 +395,7 @@ The readers and the rules used to be two distributions that had to match. From
 the pair be half-moved, and 0.7.0 pinned it exactly. They are one distribution
 now. `vdi2770-validate` is the old import
 name kept working: two lines that make it the same object as `vdi2770.validate`,
-asking for `vdi2770[validate]==0.11.0` — its own version, exactly. A floor
+asking for `vdi2770[validate]==0.11.1` — its own version, exactly. A floor
 would stop an older engine and let a newer one install beside it, and halves
 that disagree about which release they are do not judge.
 (This page follows the working tree, so the number is the release being
@@ -467,7 +467,7 @@ with it, says so in a paragraph addressed to whoever gates a build on the
 number. That is the paragraph to read before upgrading; it is the one place this
 project undertakes to be exhaustive.
 
-**A patch release repairs — and four of the thirteen patch releases of this package
+**A patch release repairs — and five of the fourteen patch releases of this package
 changed what a pipeline sees:**
 
 - `0.5.1` asked for a fixed reader instead of merely permitting one. Until it,
@@ -481,6 +481,9 @@ changed what a pipeline sees:**
 - `0.9.7` reads an archive from the start of the file, so a container cut short,
   or with bytes in front of it, which was read as an archive it held and passed,
   is now `Z1`, not a readable ZIP archive.
+- `0.11.1` compares page counts previously declined because of an unrelated
+  xref entry outside Size. A mismatch now produces a `P6` container warning;
+  matching declarations now pass with `--fail-on warning`.
 
 The other nine moved no verdict at all: `0.9.1`; `0.9.2`, which repaired what
 a delivery costs to check and left every finding, every location and every exit
@@ -502,7 +505,7 @@ it is not a promise that nothing your pipeline reads can change.
 verdict your pipeline has not seen, and the point of a validator is that the
 answer it gives today is the answer it gave when you signed off on it. From
 0.9.1 this package names the engine it was built with exactly, so
-`vdi2770-validate==0.11.0` installs one matching pair.
+`vdi2770-validate==0.11.1` installs one matching pair.
 
 Four releases cannot be pinned that way: 0.8.0, 0.8.1, 0.8.2 and 0.9.0 name
 their engine with a floor, and a floor stops holding the moment a newer engine
@@ -511,7 +514,7 @@ one of those four by both names is not a way to stay put, because every release
 from 0.8.0 to 0.9.1 is inside the range of GHSA-f9xw-89gp-x52p:
 
 ```
-pip install "vdi2770-validate==0.11.0"
+pip install "vdi2770-validate==0.11.1"
 ```
 
 Move there from any release, not only those four. Every release up to 0.9.6
