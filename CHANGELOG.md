@@ -2,6 +2,20 @@
 
 Sections through 0.7.0 had their wording tidied after their tags; the text each version carried when it was published is in that tag's own `CHANGELOG.md`. From 0.8.0 on, a released section is frozen at its tag and takes only appended `*(Correction ...)*` lines.
 
+## 0.12.0 — unreleased
+
+Who should take this release: anyone running the checker on Pyodide or another
+Emscripten build of Python, where every container, a clean one included, was
+reported as this tool failing on it.
+
+- **A Python with `O_NONBLOCK` and no `fcntl` read every path as this tool's own
+  failure.** The open that keeps a named pipe with no writer from stalling a
+  sweep asked whether the platform had the flag, then imported the module.
+  Emscripten — the build of Python that runs in a browser — has the one and not
+  the other, so a clean container came back `cannot read it — No module named
+  'fcntl'`, exit `70`, with a diagnostic bundle. The open now asks for the module
+  itself; where it is missing, a path has to be a regular file, as on Windows.
+
 ## 0.11.1 — 2026-10-10
 
 Who should take this release: anyone who uses the page-count comparison.

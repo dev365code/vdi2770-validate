@@ -592,16 +592,22 @@ def check_file(path: str) -> Report:
     # Cleared straight after, so a writer that is merely slow is waited for.
     # `fcntl` is Unix-only, and importing it at module scope made the whole
     # package fail to import on Windows -- in the release whose headline fix is
-    # the Windows console. The platform that has no `O_NONBLOCK` also has no
-    # FIFO to hang on, so it keeps the earlier refusal.
-    if not hasattr(os, "O_NONBLOCK"):
+    # the Windows console. A platform without it keeps the earlier refusal.
+    #
+    # Asked of the module itself, not of `os.O_NONBLOCK`. Emscripten -- the
+    # interpreter a browser runs this in -- has the flag and not the module, and
+    # taking one for the other made every path there, a clean container
+    # included, `cannot read it -- No module named 'fcntl'`, exit 70.
+    try:
+        import fcntl
+    except ImportError:
+        fcntl = None
+    if fcntl is None or not hasattr(os, "O_NONBLOCK"):
         if not stat.S_ISREG(os.stat(path).st_mode):
             raise OSError(errno.EINVAL, "not a regular file", path)
         with open(path, "rb") as fh:
             data = fh.read()
     else:
-        import fcntl
-
         fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK)
         try:
             flags = fcntl.fcntl(fd, fcntl.F_GETFL)

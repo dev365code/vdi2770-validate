@@ -427,6 +427,34 @@ def test_a_pipe_that_has_a_writer_is_read(tmp_path):
     assert done.returncode == 0, done.stdout + done.stderr
 
 
+def test_a_platform_with_nonblocking_opens_and_no_fcntl_still_reads_a_file(tmp_path, monkeypatch):
+    """`O_NONBLOCK` is not a promise that `fcntl` exists.
+
+    The open above asked for one and imported the other. Emscripten -- the
+    interpreter a browser runs this tool in -- has `os.O_NONBLOCK` and no
+    `fcntl`, so every path, a clean container included, became `cannot read it
+    -- No module named 'fcntl'` with a crash bundle and exit 70: a verdict of
+    "this tool failed" on a file nothing was wrong with. Simulated here on any
+    platform: the flag present, the module absent.
+    """
+    import json
+    import sys
+
+    from vdi2770_validate.runner import check_bytes, check_file
+
+    from vdi2770_validate import report as rendering
+
+    monkeypatch.setitem(sys.modules, "fcntl", None)       # `import fcntl` raises
+    monkeypatch.setattr(os, "O_NONBLOCK", getattr(os, "O_NONBLOCK", 0o4000), raising=False)
+    good = tmp_path / "good.zip"
+    good.write_bytes(CLEAN_DOCUMENT.read_bytes())
+
+    # The same report the bytes give, not merely "a report": how a file is
+    # opened must change nothing about what is said of it.
+    got = json.loads(rendering.as_json(check_file(str(good))))
+    want = json.loads(rendering.as_json(check_bytes(good.read_bytes(), "good.zip")))
+    assert got == want
+
 def test_a_container_we_declined_to_parse_is_not_then_schema_checked(monkeypatch):
     """The budget refuses the parse; the schema check must not run anyway.
 
