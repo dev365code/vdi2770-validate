@@ -135,6 +135,37 @@ def main() -> int:
     f[META] = xxe
     add("x3-entity-expansion.zip", f, "X3", [META], "DOCTYPE with an external entity")
 
+    # A metadata file in four encodings that take more than one byte for a
+    # character, each read: the German class name is replaced by one in that
+    # encoding's own script, which is wrong for the class id, so `M3` fires and
+    # quotes it. And each again with one byte the encoding has no character
+    # for, which is `X1` -- bytes that are not legal in the declared encoding
+    # are a fatal error (XML 1.0, 4.3.3). What the sample says that an encoding
+    # has no bytes for, its German, is written as character references, which
+    # read back as the same characters.
+    declared_in = (("Shift_JIS", "shift_jis", "shift-jis", "技術仕様書"),
+                   ("EUC-KR", "euc_kr", "euc-kr", "기술 사양서"),
+                   ("GB2312", "gb2312", "gb2312", "技术规格书"),
+                   ("Big5", "big5", "big5", "技術規格書"))
+    for declared, codec, slug, class_name in declared_in:
+        text = base[META].decode("utf-8")
+        for old, new in (('encoding="UTF-8"', f'encoding="{declared}"'),
+                         ('<ClassName Language="de">Technische Spezifikation</ClassName>',
+                          f'<ClassName Language="de">{class_name}</ClassName>')):
+            assert text.count(old) == 1, f"anchor not found once: {old!r}"
+            text = text.replace(old, new)
+        written = text.encode(codec, "xmlcharrefreplace")
+        f = dict(base)
+        f[META] = written
+        add(f"m3-class-name-in-{slug}.zip", f, "M3", [META],
+            f"metadata declared and written in {declared}, the German class name "
+            f"replaced by one in that encoding's script")
+        at = written.index(class_name.encode(codec))
+        f = dict(base)
+        f[META] = written[:at] + b"\xff" + written[at:]
+        add(f"x1-bytes-that-are-not-{slug}.zip", f, "X1", [META],
+            f"the same metadata with one byte that is not {declared}")
+
     # F3 — declared media type disagrees with the file name
     f = dict(base)
     f[META] = edit(base[META], '<DigitalFile FileFormat="application/pdf">B.pdf</DigitalFile>',

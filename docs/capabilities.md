@@ -4,7 +4,7 @@
 | Explanation | what is wrong, evidence, remedy, source, line | met |
 | Report contract | schemaVersion, golden, exit codes, schema | met |
 | Entrances | command line, library, single file, Action, browser | met |
-| Input safety | read budgets, advisory, own mutations | + declared encodings read without loss |
+| Input safety | read budgets, advisory, own mutations, encodings | met |
 | Upstream | pinned by commit, checked weekly | met |
 
 **Explanation** — 5 of 5:
@@ -27,11 +27,11 @@
 - GitHub Action — done (`action.yml`: "Check VDI 2770 document containers in a workflow")
 - browser, nothing installed — done (`tools/build_browser.py`: "one page that checks a container where it is opened")
 
-**Input safety** — 3 of 4:
+**Input safety** — 4 of 4:
 - read budgets, per member and per archive — done (`SECURITY.md`: "Per-member size, total size, member count and compression-ratio caps")
 - a security fix ships with an advisory — done (`SECURITY.md`: "a security fix that ships in a release gets a GitHub security advisory")
 - tests verified against their own mutations — done (`tools/mutation_table.py`: "Every claim this project makes about a gate, as a mutation somebody can run")
-- declared encodings read without loss — not yet
+- declared encodings read without loss — done (`tests/test_a_document_is_read_in_the_encoding_it_declares.py`: "metadata in each encoding a declaration can name is read")
 
 **Upstream** — 2 of 2:
 - upstream corpus pinned by commit — done (`corpus/MANIFEST.json`: ""repo": "DigitalDataChainConsortium/vdi2770", "commit":")

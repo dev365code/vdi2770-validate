@@ -5,9 +5,11 @@ Sections through 0.7.0 had their wording tidied after their tags; the text each 
 ## 0.12.0 — unreleased
 
 Who should take this release: anyone who has to check a delivery on a machine
-where nothing may be installed, which a page in the browser now does; and anyone
-running the checker on Pyodide or another Emscripten build of Python, where
-every container, a clean one included, was reported as this tool failing on it.
+where nothing may be installed, which a page in the browser now does; anyone
+receiving metadata declared in a Japanese, Korean or Chinese encoding, which was
+reported as not well-formed XML; and anyone running the checker on Pyodide or
+another Emscripten build of Python, where every container, a clean one included,
+was reported as this tool failing on it.
 
 - **The check runs in a browser, from one page.** `vdi2770.html` carries the
   reader, the rules, `xmlschema` and Pyodide -- a build of CPython for the
@@ -20,6 +22,23 @@ every container, a clean one included, was reported as this tool failing on it.
   rule, verdict, exit code or report field moves: every official sample and
   every container here is checked through the page and through the command, and
   the two are compared as bytes.
+- **A metadata file is read in the encoding it declares.** One declaring
+  Shift_JIS, EUC-JP, EUC-KR, GB2312, GBK, GB18030, Big5 or UTF-7 -- encodings
+  that take more than one byte for a character -- was reported as `X1`, not
+  well-formed XML, with `multi-byte encodings are not supported`: a limit of
+  this parser, put on the sender. One declaring ISO-2022-JP or HZ-GB-2312, whose
+  escape sequences change what the bytes after them mean, was read a byte at a
+  time and drew `X1` wherever it held anything but ASCII. Each is now decoded in
+  the encoding it declares, strictly, and checked as the document it is, and the
+  schema check reads the same text. **This moves verdicts:** such a document
+  draws the findings its content earns where it drew `X1`. Bytes that are not
+  the declared encoding are still `X1`, which now names the encoding and the
+  bytes, at their position. A declaration naming one of Python's own transforms
+  -- `unicode_escape`, `idna` -- is not read through it, and is treated as it
+  was before. The budget of elements a read may build is charged from the text
+  such a document is decoded to, because there a `<` need not be the byte that
+  spells it in ASCII, and a document that writes its markup another way costs
+  what it holds.
 - **A Python with `O_NONBLOCK` and no `fcntl` read every path as this tool's own
   failure.** The open that keeps a named pipe with no writer from stalling a
   sweep asked whether the platform had the flag, then imported the module.

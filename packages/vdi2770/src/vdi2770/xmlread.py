@@ -9,9 +9,10 @@ make this process open a file or reach a host.
 """
 from __future__ import annotations
 
+import codecs
 import re
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 from xml.parsers import expat
 
 NS = "http://www.vdi.de/schemas/vdi2770"
@@ -142,8 +143,108 @@ class Node:
         return n.text.strip() if n else None
 
 
+#: The encodings expat reads by itself, by the names it knows them by.
+_EXPAT_READS = {"utf-8", "utf-16", "utf-16be", "utf-16le", "iso-8859-1", "us-ascii"}
+
+#: The start of an XML declaration that names an encoding -- productions 23, 24,
+#: 25, 26, 80 and 81 of XML 1.0 -- read off the bytes of a document whose first
+#: characters are ASCII, as they are in every encoding a declaration can be
+#: read in without knowing the encoding first. `EncName` is that production's
+#: own alphabet.
+_DECLARATION = re.compile(
+    rb"<\?xml[ \t\r\n]+version[ \t\r\n]*=[ \t\r\n]*(?:\"1\.[0-9]+\"|'1\.[0-9]+')"
+    rb"[ \t\r\n]+encoding[ \t\r\n]*=[ \t\r\n]*"
+    rb"(?:\"([A-Za-z][A-Za-z0-9._-]*)\"|'([A-Za-z][A-Za-z0-9._-]*)')")
+
+_LINE_BREAK = re.compile(r"\r\n|\r|\n")
+
+#: Codecs Python carries that are not encodings a document is written in: its
+#: own escape and domain-name transforms, and the two whose meaning is whatever
+#: the machine's Windows code page is. A declaration naming one is a name this
+#: reader does not use, which XML 1.0 (4.3.3) allows, and it is left to expat
+#: exactly as before.
+_NOT_FOR_DOCUMENTS = {"unicode-escape", "raw-unicode-escape", "idna", "punycode",
+                      "undefined", "mbcs", "oem"}
+
+
+def _readable(data: bytes) -> Union[bytes, str]:
+    """The document as the parser is handed it: its bytes, or its text.
+
+    expat reads UTF-8, UTF-16, ISO-8859-1 and US-ASCII itself, and a document in
+    one of those -- or one that declares no encoding -- is handed over as the
+    bytes it is. So is one that starts with a byte order mark: the declaration is
+    looked for at the first byte, the mark settles the encoding before any
+    declaration is read (Appendix F), and expat holds the declaration to it.
+
+    For any other encoding a declaration names, pyexpat lends expat a table it
+    builds by decoding each byte on its own, which is a reading only where every
+    character is one byte and no byte changes how the next one reads. Where a
+    character takes more than one, it refused -- Shift_JIS, EUC-KR, GB2312 and
+    Big5 came back `multi-byte encodings are not supported`, a limit of this
+    parser that reached the caller as the document's own malformation -- and
+    ISO-2022-JP, whose escape sequences change what the bytes after them mean, it
+    read a byte at a time, and wrongly.
+
+    So the declared encoding is decoded here, by the codec Python has for that
+    name, and strictly: bytes that are not legal in the declared encoding are
+    the fatal error XML 1.0 (4.3.3) says they are, and nothing is replaced. The
+    parser is then handed text, which it reads as the characters it holds
+    whatever the declaration says -- so the declaration is applied once, here.
+    A name nobody has a codec for -- or one whose codec is not of text, like
+    `rot13` -- is handed on as bytes, and expat refuses it as it always has.
+    """
+    found = _DECLARATION.match(data)
+    if not found:
+        return data
+    name = (found.group(1) or found.group(2)).decode("ascii")
+    if name.lower() in _EXPAT_READS:
+        return data
+    try:
+        codec = codecs.lookup(name).name
+    except LookupError:
+        return data
+    if codec in _NOT_FOR_DOCUMENTS:
+        return data
+    try:
+        return data.decode(codec)
+    except LookupError:
+        return data
+    except UnicodeDecodeError as e:
+        read = data[:e.start].decode(codec, "replace")     # only counted, for where
+        breaks = list(_LINE_BREAK.finditer(read))
+        line = len(breaks) + 1
+        column = len(read) - (breaks[-1].end() if breaks else 0)
+        raise XmlError(f"the document declares {name}, and the bytes here are not "
+                       f"{name}: {data[e.start:e.end].hex(' ')}", line, column) from None
+    except (UnicodeError, ValueError) as e:
+        raise XmlError(f"the document declares {name}, and it cannot be read as "
+                       f"{name}: {e}", 1, 0) from None
+
+
+def _markup_charge(data: bytes) -> int:
+    """The most elements `data` can make the parser build, counted from what the
+    parser is handed -- before it is handed it.
+
+    Every element has an opening `<`, so counting those bounds the cost of a
+    parse whether it succeeds, refuses, or dies on a malformed token. Counted in
+    the bytes where expat reads them itself; in the text where the document was
+    decoded first, because there a `<` need not be the byte 0x3C -- mac-arabic
+    has a byte of its own for it, and UTF-7 can write one in base64 -- and a
+    count of bytes charged nothing for exactly the markup they do not show. A
+    document whose bytes are not its declared encoding builds nothing.
+    """
+    try:
+        source = _readable(data)
+    except XmlError:
+        return 0
+    if isinstance(source, str):
+        return source.count("<") - source.count("</")
+    return source.count(b"<") - source.count(b"</")
+
+
 def parse(data: bytes) -> Node:
     """Parse VDI 2770 metadata bytes. Raises XmlError with a line number."""
+    source = _readable(data)
     root: Optional[Node] = None
     stack: List[Node] = []
     p = expat.ParserCreate(namespace_separator="\x01")
@@ -233,7 +334,7 @@ def parse(data: bytes) -> Node:
     p.CharacterDataHandler = chars
 
     try:
-        p.Parse(data, True)
+        p.Parse(source, True)
     except XmlError:
         # `UnsafeXml` and `XmlTooLarge` are raised from inside the handlers and
         # travel out through `Parse`. Re-raising them unchanged keeps the

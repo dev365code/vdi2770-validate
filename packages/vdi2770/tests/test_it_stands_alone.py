@@ -16,7 +16,9 @@ SRC = HERE / "src" / "vdi2770"
 # rather than "is it in the standard library?" for two reasons: it works on the
 # oldest Python we support, where `sys.stdlib_module_names` does not exist, and
 # it makes *adding* an import a decision someone has to make on purpose.
-ALLOWED = {"collections", "dataclasses", "enum", "io", "re", "typing",
+# `codecs` was one: a document is read in the encoding it declares, and for one
+# expat does not read itself the reader looks that encoding up and decodes it.
+ALLOWED = {"codecs", "collections", "dataclasses", "enum", "io", "re", "typing",
            "unicodedata", "xml", "zipfile", "zlib"}
 
 

@@ -430,11 +430,15 @@ def check_bytes(data: bytes, name: str) -> Report:
             # per-document cap first. A thousand of those was a 280 KiB archive
             # that cost 51 seconds with the counter reading 2.
             #
-            # From the bytes, because they are the only thing known before the
-            # work: every element the parser can build has an opening `<` in
-            # them, so this bounds what the parse can cost whether it succeeds,
-            # refuses, or dies on a malformed token. `bytes.count` is a memchr.
-            elements += (c.metadata_bytes.count(b"<") - c.metadata_bytes.count(b"</"))
+            # From what the parser will be handed, because that is known before
+            # the work: every element the parser can build has an opening `<` in
+            # it, so this bounds what the parse can cost whether it succeeds,
+            # refuses, or dies on a malformed token. That is the bytes where expat
+            # reads the encoding itself -- `bytes.count` is a memchr -- and the
+            # decoded text where it does not, because a `<` there need not be the
+            # byte 0x3C, and counting bytes charged such a document nothing for
+            # its markup however much of it there was.
+            elements += xmlread._markup_charge(c.metadata_bytes)
             try:
                 tree = xmlread.parse(c.metadata_bytes)
             except xmlread.XmlError as e:

@@ -465,7 +465,12 @@ def test_every_node_carries_the_namespace_it_was_written_in():
     assert kids["other"] == "urn:something-else", kids
 
 
-@pytest.mark.parametrize("declared", ["XXXX", "utf-7", "utf-32", "cp99999"])
+#: `utf-7` was the example of an encoding expat will not decode. It is read now
+#: -- a document is read in the encoding it declares when Python has a codec for
+#: it -- so the examples are names that are still refused: none at all, a codec
+#: that is not of text, one that is no document's encoding, and a body its
+#: declared encoding does not describe.
+@pytest.mark.parametrize("declared", ["XXXX", "rot13", "idna", "utf-32", "cp99999"])
 def test_an_encoding_this_parser_will_not_use_is_the_documents_problem(declared):
     """expat raises `LookupError` for an encoding nobody has and `ValueError`
     for one it will not decode, and neither is an `ExpatError`. Both escaped

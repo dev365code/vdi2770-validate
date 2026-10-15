@@ -58,8 +58,14 @@ def worst_document_attributes() -> int:
         parser.StartElementHandler = start
         # Some fixtures are malformed on purpose. What they carry up to the point
         # they break still counts; what they do not is not this gate's business.
-        with contextlib.suppress(xml.parsers.expat.ExpatError):
-            parser.Parse(data, True)
+        # Handed over the way the reader hands a document over -- as text when
+        # it declares an encoding expat does not read itself -- so this counts
+        # what the budget counts, and a fixture whose bytes are not the encoding
+        # it declares carries nothing to count.
+        from vdi2770.xmlread import XmlError, _readable
+
+        with contextlib.suppress(xml.parsers.expat.ExpatError, XmlError):
+            parser.Parse(_readable(data), True)
         return seen
 
     def walk(archive: zipfile.ZipFile):
@@ -539,8 +545,11 @@ def test_no_document_cites_a_file_that_is_not_here():
     # its builder as the entrance's evidence, the newest changelog section names
     # the builder, and THIRD_PARTY.md names it twice -- as what checks the
     # runtime's digest, and as where its licences are pinned.
-    assert seen == 57, (
-        f"{seen} citations found, not 57. If you added or removed one, say so "
+    # 57 to 59 when metadata came to be read in the encoding it declares: the
+    # page behind the picture names the test that holds it to that, and the
+    # table beside the picture cites the same test as the item's evidence.
+    assert seen == 59, (
+        f"{seen} citations found, not 59. If you added or removed one, say so "
         f"here; if you did not, some of them just stopped being checked.")
 
 

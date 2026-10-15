@@ -13,7 +13,7 @@ from functools import lru_cache
 from itertools import islice
 from typing import List, Optional
 
-from vdi2770.xmlread import Node
+from vdi2770.xmlread import Node, _readable
 
 from .model import without_addresses
 from .resources import schema_text
@@ -198,14 +198,18 @@ def validate(data: bytes, tree: Node) -> List[dict]:
 
     out: List[dict] = []
     try:
-        # Hand it the bytes, not a decoded string: the document declares its own
-        # encoding and decoding it as UTF-8 "with replacement" silently hands the
-        # schema a different document than the one the model layer read.
+        # Hand it what the reader was handed, from the same function: the bytes
+        # where expat reads the encoding itself, the text where the document
+        # declares one it does not. Decoding it here some other way -- as UTF-8
+        # "with replacement" -- silently hands the schema a different document
+        # than the one the model layer read.
         # `islice`, not `list`: the generator is bounded here rather than
         # materialised and then thrown away by the report's listing cap.
         errors = []
         before_decode, after_decode = _positive_integer_hooks()
-        for err in islice(schema.iter_errors(io.BytesIO(data),
+        source = _readable(data)
+        stream = io.StringIO(source) if isinstance(source, str) else io.BytesIO(source)
+        for err in islice(schema.iter_errors(stream,
                                             validation_hook=before_decode,
                                             extra_validator=after_decode),
                           MAX_SCHEMA_ERRORS + 1):

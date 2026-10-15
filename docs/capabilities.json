@@ -183,11 +183,15 @@
         },
         {
           "text": "declared encodings read without loss",
-          "done": false
+          "done": true,
+          "evidence": {
+            "file": "tests/test_a_document_is_read_in_the_encoding_it_declares.py",
+            "says": "metadata in each encoding a declaration can name is read"
+          }
         }
       ],
-      "now_text": "read budgets, advisory, own mutations",
-      "target_text": "+ declared encodings read without loss"
+      "now_text": "read budgets, advisory, own mutations, encodings",
+      "target_text": "met"
     },
     {
       "key": "upstream",
