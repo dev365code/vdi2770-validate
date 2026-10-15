@@ -143,11 +143,15 @@
         },
         {
           "text": "browser, nothing installed",
-          "done": false
+          "done": true,
+          "evidence": {
+            "file": "tools/build_browser.py",
+            "says": "one page that checks a container where it is opened"
+          }
         }
       ],
-      "now_text": "command line, library, single file, Action",
-      "target_text": "+ browser, nothing installed"
+      "now_text": "command line, library, single file, Action, browser",
+      "target_text": "met"
     },
     {
       "key": "input",

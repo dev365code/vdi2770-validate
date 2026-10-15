@@ -351,10 +351,16 @@ jobs:
       # the network, and a job holding a token that publishes should run as
       # little as it can. The builder refuses on its own if the bundle names the
       # machine that made it.
-      - name: Build the single file
+      #
+      # The browser page beside it, for the same reason: the front page points
+      # at `releases/latest/download/vdi2770.html`. Built here and not judged
+      # again -- the commit this tags has to have passed the `check` workflow,
+      # whose page job opened it and compared it with the command.
+      - name: Build the single file and the browser page
         run: |
           python tools/build_zipapp.py --check -o pyz/vdi2770.pyz
-          (cd pyz && sha256sum vdi2770.pyz | tee SHA256SUMS)
+          python tools/build_browser.py -o pyz/vdi2770.html
+          (cd pyz && sha256sum vdi2770.pyz vdi2770.html | tee SHA256SUMS)
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
           name: dist-single-file

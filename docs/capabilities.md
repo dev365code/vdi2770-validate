@@ -3,7 +3,7 @@
 | Coverage | 41 of 44 rules have a fixture pair | 41 of 44, every rule that can have one |
 | Explanation | what is wrong, evidence, remedy, source, line | met |
 | Report contract | schemaVersion, golden, exit codes, schema | met |
-| Entrances | command line, library, single file, Action | + browser, nothing installed |
+| Entrances | command line, library, single file, Action, browser | met |
 | Input safety | read budgets, advisory, own mutations | + declared encodings read without loss |
 | Upstream | pinned by commit, checked weekly | met |
 
@@ -20,12 +20,12 @@
 - exit codes under test — done (`tests/test_cli.py`: "is where the exit codes are written down")
 - a field-by-field schema page — done (`docs/report-schema.md`: "This page is what is in an element")
 
-**Entrances** — 4 of 5:
+**Entrances** — 5 of 5:
 - command line — done (`pyproject.toml`: "vdi2770-validate = "vdi2770_validate.entry:run"")
 - Python library — done (`README.md`: "from vdi2770 import read_container_file")
 - single file, nothing to install — done (`tools/build_zipapp.py`: "Build the single-file form")
 - GitHub Action — done (`action.yml`: "Check VDI 2770 document containers in a workflow")
-- browser, nothing installed — not yet
+- browser, nothing installed — done (`tools/build_browser.py`: "one page that checks a container where it is opened")
 
 **Input safety** — 3 of 4:
 - read budgets, per member and per archive — done (`SECURITY.md`: "Per-member size, total size, member count and compression-ratio caps")

@@ -315,6 +315,30 @@ def test_the_release_builds_the_single_file_it_hands_out():
         "the workflow builds the single file and does not name it as an asset")
 
 
+
+def test_the_release_builds_the_browser_page_it_hands_out():
+    """The same promise, made for the page: the front page points at
+    `releases/latest/download/vdi2770.html`, which resolves against whichever
+    release is newest, so a release without that asset breaks the link the
+    moment it exists. It is built where the single file is built, and both go
+    into the one list of digests the release page prints."""
+    page = (ROOT / "README.md").read_text(encoding="utf-8")
+    if "releases/latest/download/vdi2770.html" not in page:
+        return                       # the page stopped promising it
+    doc = workflow(RELEASE)
+    builds = [(name, step) for name, job in doc["jobs"].items()
+              for step in job.get("steps", [])
+              if "build_browser.py" in (step.get("run") or "")]
+    assert builds, (
+        "the front page points at `vdi2770.html` in the latest release and the "
+        "release workflow does not build one, so creating a release breaks "
+        "that link")
+    for name, step in builds:
+        assert not switched_off(step) and not switched_off(doc["jobs"][name]), (
+            f"{name} builds the page behind an `if:` that is never true")
+        assert "vdi2770.html" in step["run"] and "SHA256SUMS" in step["run"], (
+            "the page is built and not named, or not in the digests the release prints")
+
 def test_the_release_asks_the_index_about_itself_after_publishing():
     """The rows that consult the index go stale the moment a release lands.
 

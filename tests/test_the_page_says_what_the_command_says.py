@@ -1,0 +1,307 @@
+"""The page is the command, run where the page was opened.
+
+`tools/browser_gates.py` opens the built page in a browser and holds it to two
+things, over every container this repository has: that once it has loaded it
+sends nothing anywhere, and that what it reports is what the command reports,
+byte for byte. It needs a browser and, once, the network, so it runs in a job of
+its own.
+
+What can be asked without either is asked here, on every run. That the code the
+page runs is the command and nothing beside it -- the same entry point, the same
+arguments, the same bytes on each stream. That the comparison the page is judged
+by can see a difference, on each of the three things it compares. That a
+counter which saw nothing is not taken for a page that sent nothing. And that the
+runtime the page carries is the one this repository names, to the byte.
+"""
+import bz2
+import hashlib
+import importlib.util
+import io
+import os
+import subprocess
+import sys
+import tarfile
+
+import pytest
+
+from conftest import CLEAN_DOCUMENT, CORPUS, FIXTURES, ROOT, under_test
+
+
+def _load(path, name):
+    """A file that is not on the import path, as a module. The page's Python
+    lives with the page, and the two tools live in `tools/`, which nothing puts
+    on the path for the suite."""
+    sys.path.insert(0, str(ROOT / "tools"))
+    try:
+        spec = importlib.util.spec_from_file_location(name, path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+    finally:
+        sys.path.remove(str(ROOT / "tools"))
+    return module
+
+
+PAGE = _load(ROOT / "browser" / "vdi2770_page.py", "vdi2770_page")
+GATES = _load(ROOT / "tools" / "browser_gates.py", "browser_gates")
+BUILD = _load(ROOT / "tools" / "build_browser.py", "build_browser")
+
+
+def command(argv, cwd):
+    """The command line, as somebody at a UTF-8 console runs it."""
+    done = subprocess.run([sys.executable, "-m", "vdi2770_validate", *argv],
+                          cwd=cwd, capture_output=True, timeout=180,
+                          env=under_test(PYTHONIOENCODING="utf-8",
+                                         PYTHONDONTWRITEBYTECODE="1"))
+    return done.stdout, done.stderr, done.returncode
+
+
+#: One of each kind of answer the command gives: a container with nothing wrong,
+#: one with an error, an official sample that is not an archive at all (whose
+#: hint goes to stderr), and two names the page has to pass on with care -- one
+#: a shell would read as an option, and one that is not ASCII.
+CASES = [
+    (CLEAN_DOCUMENT, CLEAN_DOCUMENT.name),
+    (FIXTURES / "x3-entity-expansion.zip", "x3-entity-expansion.zip"),
+    (CORPUS / "Valid.pdf", "Valid.pdf"),
+    (CLEAN_DOCUMENT, "-looks-like-an-option.zip"),
+    (CLEAN_DOCUMENT, "Prüfbericht.zip"),
+]
+
+
+@pytest.mark.parametrize("as_json", [False, True], ids=["text", "json"])
+@pytest.mark.parametrize("source,name", CASES, ids=[name for _, name in CASES])
+def test_the_page_runs_the_command_on_what_it_is_handed(source, name, as_json, tmp_path):
+    """Same argv, same stdout, same stderr, same exit code, as bytes.
+
+    The page writes the bytes it was handed to a file, calls the function the
+    console script calls, and keeps what that function wrote. Here it does so on
+    this interpreter, against the command run in a directory holding the same
+    file under the same name; the browser gate asks the same of the runtime the
+    page carries.
+    """
+    data = source.read_bytes()
+    room = tmp_path / "room"
+    argv, out, err, code = PAGE.check(name, data, as_json, room=str(room))
+
+    beside = tmp_path / "beside"
+    beside.mkdir()
+    (beside / name).write_bytes(data)
+    assert argv == PAGE.argv_for(name, as_json)
+    assert (out, err, code) == command(argv, beside)
+    assert out, "the command said nothing about a file it was asked to check"
+
+
+def test_a_name_that_reads_as_an_option_is_passed_as_a_file():
+    """`-x.zip` on its own is an option to argparse, and the command refuses it
+    with a usage error -- about a file somebody dropped, which is not something
+    they typed. A shell user writes `./-x.zip`; so does the page."""
+    assert PAGE.argv_for("-x.zip", False) == ["check", "--no-bundle", "./-x.zip"]
+    assert PAGE.argv_for("x.zip", True) == ["check", "--no-bundle", "--json", "x.zip"]
+
+
+@pytest.mark.parametrize("name", ["", ".", "..", "a/b.zip", "a\0b.zip"])
+def test_what_is_not_a_file_name_is_refused_before_anything_is_written(name, tmp_path):
+    """A browser hands over a leaf name and nothing else. Anything that could
+    name a different place is refused rather than written somewhere."""
+    with pytest.raises(ValueError):
+        PAGE.check(name, b"PK", False, room=str(tmp_path))
+    assert not any(tmp_path.iterdir())
+
+
+def test_the_page_leaves_nothing_behind(tmp_path):
+    """The file is removed, the streams are put back, and so is the directory
+    the interpreter was in -- the page checks container after container in one
+    interpreter, and anything a run leaves is something the next run sees."""
+    here = os.getcwd()
+    streams = sys.stdout, sys.stderr
+    PAGE.check(CLEAN_DOCUMENT.name, CLEAN_DOCUMENT.read_bytes(), False, room=str(tmp_path))
+    assert not any(tmp_path.iterdir())
+    assert os.getcwd() == here
+    assert (sys.stdout, sys.stderr) == streams
+
+
+def test_the_page_reports_the_code_a_process_would_exit_with(tmp_path, monkeypatch):
+    """A `SystemExit` from inside the command is how argparse ends a run. The
+    process turns it into an exit status, so the page has to turn it into the
+    same one -- not into a failure of the page."""
+    import vdi2770.validate.entry as entry
+
+    def stops(argv):
+        print("usage: vdi2770-validate check", file=sys.stderr)
+        raise SystemExit(2)
+
+    monkeypatch.setattr(entry, "run", stops)
+    _, out, err, code = PAGE.check("x.zip", b"PK", False, room=str(tmp_path))
+    assert (out, code) == (b"", 2)
+    assert err == ("usage: vdi2770-validate check" + os.linesep).encode()
+
+
+RUN = GATES.Run
+
+
+def test_the_comparison_sees_a_difference_on_each_stream():
+    """The gate is a comparison, and a comparison that cannot fail is a
+    sentence. One difference at a time, each has to be named."""
+    argv = ["check", "--no-bundle", "a.zip"]
+    same = RUN(argv, b"report\n", b"hint\n", 1)
+    assert GATES.differences(same, RUN(argv, b"report\n", b"hint\n", 1)) == []
+    assert "stdout" in " ".join(GATES.differences(same, RUN(argv, b"report!\n", b"hint\n", 1)))
+    assert "stderr" in " ".join(GATES.differences(same, RUN(argv, b"report\n", b"", 1)))
+    assert "exit" in " ".join(GATES.differences(same, RUN(argv, b"report\n", b"hint\n", 0)))
+
+
+def test_two_runs_of_different_commands_are_not_compared():
+    """Equal output from two different commands proves nothing about either."""
+    page = RUN(["check", "--no-bundle", "a.zip"], b"x", b"", 0)
+    cli = RUN(["check", "--no-bundle", "--json", "a.zip"], b"x", b"", 0)
+    assert "argv" in " ".join(GATES.differences(page, cli))
+
+
+def test_a_counter_that_missed_the_control_is_blind_not_quiet():
+    """Zero requests after load is the claim, and a counter attached to the
+    wrong thing also reads zero. Each counter is shown requests it must see; one
+    that does not is named, and the zero it reported earlier is worth nothing."""
+    expected = {"browser": 2, "server": 2, "page timing": 1, "worker timing": 1}
+    assert GATES.blind(expected, dict(expected)) == []
+    assert GATES.blind(expected, {**expected, "worker timing": 0}) == ["worker timing"]
+    assert GATES.blind(expected, {"browser": 2}) == ["server", "page timing", "worker timing"]
+
+
+def test_every_container_and_every_official_sample_is_compared():
+    """The comparison is over everything this repository checks containers
+    with: every container the oracle sweep walks, and every file copied from
+    the reference implementation's examples, archive or not."""
+    sys.path.insert(0, str(ROOT / "tools"))
+    try:
+        import capture_oracle
+    finally:
+        sys.path.remove(str(ROOT / "tools"))
+    found = GATES.inputs()
+    assert len(found) == len(set(found))
+    assert set(capture_oracle.containers()) <= set(found)
+    samples = {p for p in CORPUS.rglob("*") if p.is_file()}
+    assert samples <= set(found)
+    assert any(p.suffix != ".zip" for p in samples)
+
+
+def test_the_runtime_is_the_one_this_repository_names():
+    """The page carries a Python that nobody here compiled. Its digest is
+    written down, and anything else is refused, not built."""
+    data = b"a runtime"
+    assert BUILD.verified(data, hashlib.sha256(data).hexdigest(), "a runtime") == data
+    with pytest.raises(SystemExit, match=hashlib.sha256(data).hexdigest()):
+        BUILD.verified(data, hashlib.sha256(b"another").hexdigest(), "a runtime")
+
+
+def _tarball(names):
+    raw = io.BytesIO()
+    with tarfile.open(fileobj=raw, mode="w") as tar:
+        for name in names:
+            body = f"contents of {name}".encode()
+            info = tarfile.TarInfo(f"pyodide/{name}")
+            info.size = len(body)
+            tar.addfile(info, io.BytesIO(body))
+    return bz2.compress(raw.getvalue())
+
+
+def test_the_runtime_files_are_taken_by_name():
+    """Five files out of the release, each by the name the loader asks for."""
+    got = BUILD.runtime_files(_tarball(list(BUILD.RUNTIME_FILES) + ["python.exe"]))
+    assert sorted(got) == sorted(BUILD.RUNTIME_FILES)
+    assert got["pyodide.asm.wasm"] == b"contents of pyodide.asm.wasm"
+    with pytest.raises(SystemExit, match="pyodide.asm.wasm"):
+        BUILD.runtime_files(_tarball([n for n in BUILD.RUNTIME_FILES if n != "pyodide.asm.wasm"]))
+
+
+def test_each_place_in_the_page_is_filled_exactly_once():
+    """A marker left in the page is a page that does not start, and one filled
+    twice is a second copy of something nobody meant to ship twice."""
+    marks = BUILD.MARKS
+    template = "<html>" + "".join(marks) + "</html>"
+    filled = BUILD.assemble(template, {m: f"[{n}]" for n, m in enumerate(marks)})
+    assert filled == "<html>" + "".join(f"[{n}]" for n in range(len(marks))) + "</html>"
+    with pytest.raises(SystemExit, match="once"):
+        BUILD.assemble(template + marks[0], dict.fromkeys(marks, "x"))
+    with pytest.raises(SystemExit, match="once"):
+        BUILD.assemble(template.replace(marks[-1], ""), dict.fromkeys(marks, "x"))
+
+
+def test_nothing_put_in_a_script_block_can_end_it():
+    """The worker's source and the embedded runtime sit inside `<script>`
+    elements. A `</script` inside one ends it early, and the rest of the page is
+    whatever the parser makes of the remainder."""
+    with pytest.raises(SystemExit, match="script"):
+        BUILD.script_safe("x = '</SCRIPT>'", "the worker")
+    assert BUILD.script_safe("x = 1", "the worker") == "x = 1"
+
+
+def test_the_job_installs_the_browser_the_gate_was_written_against():
+    """The gate is a Playwright program, and Playwright moves its API between
+    releases. The version the gate names is the version CI installs."""
+    ci = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    assert f'"playwright=={GATES.PLAYWRIGHT}"' in ci
+
+
+def test_the_job_runs_the_python_the_page_carries():
+    """Two interpreters of different minor versions can word one standard-library
+    error differently, and a comparison across them could not say which door a
+    difference came through. So the command runs on the Python the page runs."""
+    ci = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    job = ci[ci.index("\n  the-page-this-repo-offers:"):]
+    minor = ".".join(BUILD.RUNTIME["python"].split(".")[:2])
+    assert f'python-version: "{minor}"' in job.split("\n  the-", 2)[1]
+
+
+def test_the_gate_refuses_to_compare_across_interpreters():
+    """Asked to compare a page and a command on two different Pythons, it says
+    so rather than reporting the differences as the page's."""
+    page = {"python": "3.13.2", "vdi2770": "0.12.0", "xmlschema": "4.2.0", "elementpath": "5.1.4"}
+    assert GATES.unlike(page, dict(page, python="3.13.9")) == []
+    assert GATES.unlike(page, dict(page, python="3.12.4")) == ["python"]
+    assert GATES.unlike(page, dict(page, elementpath="5.2.0")) == ["elementpath"]
+
+
+def test_the_page_is_built_from_files_that_are_here():
+    """The builder reads the page, its worker and its Python from `browser/`."""
+    for name in ("page.html", "worker.js", "vdi2770_page.py"):
+        assert (ROOT / "browser" / name).is_file(), name
+
+
+def test_what_is_bundled_is_resolved_for_the_python_that_runs_it(tmp_path, monkeypatch):
+    """The single file is resolved for the oldest Python this project supports,
+    because it is copied to machines nobody here has seen. The page is not: it
+    carries its own Python, and a dependency chosen for another one is a
+    dependency the command running beside it may not have chosen. And the
+    staging removes each bundled distribution's `.dist-info` -- which is where
+    its licence is -- so the page keeps those texts before they go."""
+    zipapp = _load(ROOT / "tools" / "build_zipapp.py", "build_zipapp")
+    asked = []
+
+    def pip(cmd, **kwargs):
+        asked.append(cmd[cmd.index("--python-version") + 1])
+        target = cmd[cmd.index("--target") + 1]
+        info = os.path.join(target, "somepkg-1.2.dist-info")
+        os.makedirs(os.path.join(info, "licenses"))
+        with open(os.path.join(info, "METADATA"), "w", encoding="utf-8") as fh:
+            fh.write("Metadata-Version: 2.4\nName: somepkg\nVersion: 1.2\nLicense-Expression: MIT\n")
+        with open(os.path.join(info, "licenses", "LICENSE"), "w", encoding="utf-8") as fh:
+            fh.write("the MIT text\n")
+        os.makedirs(os.path.join(target, "somepkg"))
+
+    monkeypatch.setattr(zipapp.subprocess, "run", pip)
+    notices = []
+    zipapp.stage(tmp_path, python_version="3.13", notices=notices)
+    assert asked == ["3.13"]
+    assert notices == [{"name": "somepkg", "version": "1.2", "licence": "MIT",
+                        "texts": {"licenses/LICENSE": "the MIT text\n"}}]
+    assert not list(tmp_path.glob("*.dist-info"))
+
+    asked.clear()
+    for leftover in tmp_path.iterdir():
+        if leftover.is_dir():
+            import shutil
+            shutil.rmtree(leftover)
+        else:
+            leftover.unlink()
+    zipapp.stage(tmp_path)
+    assert asked == [zipapp.python_floor()]

@@ -6,7 +6,7 @@ RUFF_VERSION   := 0.16.3
 PYTEST_VERSION := 8.3.4
 XMLSCHEMA_VERSION := 4.2.0
 
-.PHONY: paths-disjoint upgrade-paths wheels installed-runs upgrade-paths-from-wheels zipapp check lint test fixtures corpus coverage-check rules-doc golden-report time-budget oracle-half sdist-runs-its-own-tests wheel-installs-and-runs reader-api-matches-its-version mutations standalone clean oracle-fully-swept
+.PHONY: paths-disjoint upgrade-paths wheels installed-runs upgrade-paths-from-wheels zipapp check lint test fixtures corpus coverage-check rules-doc golden-report time-budget oracle-half sdist-runs-its-own-tests wheel-installs-and-runs reader-api-matches-its-version mutations standalone clean oracle-fully-swept browser
 
 check: lint fixtures test corpus coverage-check rules-doc golden-report time-budget oracle-half reader-api-matches-its-version sdist-runs-its-own-tests wheel-installs-and-runs
 
@@ -17,7 +17,7 @@ check: lint fixtures test corpus coverage-check rules-doc golden-report time-bud
 # The comment lives above the recipe: a `#` line inside one is a command as far
 # as anything reading recipes is concerned, and the parity gate read it as one.
 lint:
-	$(PYTHON) -m ruff check --no-cache src tests tools packages
+	$(PYTHON) -m ruff check --no-cache src tests tools packages browser
 
 test:
 	$(PYTHON) -m pytest
@@ -114,6 +114,15 @@ mutations:
 # breaks on tag day.
 zipapp:
 	$(PYTHON) tools/build_zipapp.py --check
+
+# Outside `check` for the same reason and one more: it needs the network once,
+# for the runtime the page carries and the dependency it bundles, and a browser
+# to open the page in. In CI on every push, in a job of its own on the Python
+# the page carries -- the comparison is the page against the command, and two
+# different Pythons would be a third thing in it.
+browser:
+	$(PYTHON) tools/build_browser.py
+	$(PYTHON) tools/browser_gates.py
 
 # Outside `check` because it is a release question, not a change question: a
 # container may sit unswept for as long as it takes to run the `oracle` workflow,

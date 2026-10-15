@@ -47,6 +47,10 @@ OUTSIDE_CHECK = {
                       "installing — the destruction happens between a release and "
                       "whatever an installation already has. CI runs it on every "
                       "push",
+    "browser": "it fetches the runtime the page carries and the dependency it "
+               "bundles, and it opens the page in a browser -- neither of which "
+               "`make check` may do, offline being the property this tool sells. "
+               "CI runs it on every push, in a job of its own",
     "zipapp": "it fetches the dependency it bundles, and `make check` is offline "
               "— which is the property this tool sells, so the gate that proves "
               "it must not be the thing that breaks it. CI runs it on every "
@@ -197,6 +201,9 @@ def test_ci_runs_nothing_the_gate_does_not():
         # engine with `>=`, so installing one resolves a newer engine beside an
         # older command and the tool refuses the mismatch.
         'v=$(python3 -c "import json,urllib.request',
+        # Fetching the browser the page gate opens the page in. Like `pip
+        # install`, it installs something and judges nothing.
+        "python -m playwright install",
     )
     #: And the third kind: a gate CI runs that `make check` does not, with the
     #: reason. `OUTSIDE_CHECK` says why a target is not in `check`; this says
@@ -226,13 +233,23 @@ def test_ci_runs_nothing_the_gate_does_not():
             "it fetches the dependency it bundles, and `make check` is offline "
             "-- the property this tool sells. CI has the network, and a build "
             "nobody runs until tag day is a build that breaks on tag day.",
+        "python tools/build_browser.py":
+            "it fetches the runtime the page carries, pinned by digest, and the "
+            "dependency it bundles. The page is the thing the next step judges, "
+            "so it is built from this commit rather than taken from anywhere.",
+        "python tools/browser_gates.py":
+            "it opens the page in a browser, which `make check` has no way to "
+            "do, and counts what the page asks for. It is the only place the "
+            "check runs on a Python nobody here compiled, so it is the only "
+            "place a difference between that Python and the command's shows.",
     }
     # The `check` recipes, plus the targets named above — a CI step matching one
     # of those is recognised because somebody wrote down why it is there.
     recipes = [c.replace("$(PYTHON)", "python").strip()
                for c in recipe_commands(include={"zipapp", "paths-disjoint",
                                                  "wheels", "installed-runs",
-                                                 "upgrade-paths-from-wheels"})]
+                                                 "upgrade-paths-from-wheels",
+                                                 "browser"})]
     for command, reason in CI_ONLY.items():
         assert reason and command in recipes, (
             f"{command!r} is named as CI-only and the Makefile does not run it")

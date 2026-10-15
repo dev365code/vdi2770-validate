@@ -96,7 +96,10 @@ report's `schemaVersion` is `1`, and 1.0 commits to not changing it.
   archive the command reads, and `import vdi2770_validate` is the command's own
   package;
 - the GitHub Action: the README's *In a workflow* section runs the same check
-  in a workflow and hands the exit code to the next step.
+  in a workflow and hands the exit code to the next step;
+- the browser page: `python tools/build_browser.py` builds `dist/vdi2770.html`,
+  and opened in a browser -- served, or straight from a disk -- it gives the same
+  two exit codes and the command's report byte for byte.
 
 **Now.**
 
@@ -104,10 +107,16 @@ report's `schemaVersion` is `1`, and 1.0 commits to not changing it.
 - Python library — done
 - single file, nothing to install — done
 - GitHub Action — done
-- browser, nothing installed — not yet
+- browser, nothing installed — done; `python tools/browser_gates.py` opens the
+  page and checks every official sample and every container here through it
+  and through the command, comparing stdout, stderr and the exit code as bytes.
+  It counts the page's requests four ways from the moment it is ready, shows
+  each counter two requests it has to see, and builds two containers that ask
+  the reader to reach the server the page came from: after loading, the page
+  makes none, and while loading it asks for nothing but itself
 
-**1.0.** Five doors to one verdict. The fifth is a page that checks a container
-in the browser, installing nothing and sending the container nowhere.
+**1.0.** Met. Five doors to one verdict; the fifth is a page that checks a
+container in the browser, installing nothing and sending the container nowhere.
 
 ## Input safety
 

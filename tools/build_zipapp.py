@@ -22,6 +22,7 @@ Needs the network once, to fetch the one dependency being bundled.
 from __future__ import annotations
 
 import argparse
+import email
 import hashlib
 import os
 import re
@@ -117,13 +118,24 @@ def dependencies() -> list:
             if _distribution_name(s) not in FIRST_PARTY]
 
 
-def stage(into: Path) -> None:
+def stage(into: Path, python_version: str | None = None, notices: list | None = None) -> None:
+    """Copy the packages from the tree and install the dependencies beside them.
+
+    `python_version` is the Python the dependencies are resolved for. The
+    default, the oldest one this project supports, is right for a file that is
+    copied to machines nobody here has seen; the browser page carries its own
+    Python and asks for that one instead.
+
+    `notices`, when given, is filled with each bundled distribution's name,
+    version, licence and licence files. They live in its `.dist-info`, which is
+    removed below, so they are read first or not at all.
+    """
     for package in PACKAGES:
         shutil.copytree(package, into / package.name,
                         ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
     subprocess.run([sys.executable, "-m", "pip", "install", "--quiet",
                     "--target", str(into), "--only-binary", ":all:",
-                    "--python-version", python_floor(),
+                    "--python-version", python_version or python_floor(),
                     *dependencies()], check=True,
                    # A subprocess that caches leaves `.pyc` files wherever this
                    # interpreter decided to put them, which is not always
@@ -144,11 +156,32 @@ def stage(into: Path) -> None:
     # every module, `PYTHONDONTWRITEBYTECODE` does not reach pip's own compile
     # step, and each nested `.pyc` is stamped with the mtime of its source --
     # which no two builds share. A top-level glob left a hundred and forty in.
+    if notices is not None:
+        notices.extend(_notices(into))
     for junk in (list(into.glob("*.dist-info")) + list(into.glob("*.egg-info"))
                  + list(into.rglob("__pycache__"))
                  + [into / "bin", into / "Scripts"]):
         shutil.rmtree(junk, ignore_errors=True)
     (into / "__main__.py").write_text(ENTRY, encoding="utf-8")
+
+
+def _notices(into: Path) -> list:
+    """What each distribution `pip` wrote here says about its own licence."""
+    found = []
+    for info in sorted(into.glob("*.dist-info")):
+        meta = email.message_from_string((info / "METADATA").read_text(encoding="utf-8"))
+        texts = {}
+        for path in sorted(p for p in info.rglob("*") if p.is_file()):
+            rel = path.relative_to(info).as_posix()
+            if rel.startswith("licenses/") or re.match(r"(?i)(licen[cs]e|copying|notice)", path.name):
+                texts[rel] = path.read_text(encoding="utf-8", errors="replace")
+        said = meta.get("License-Expression") or meta.get("License") or ""
+        if not said or "\n" in said or len(said) > 60:
+            said = next((c.rsplit("::", 1)[-1].strip() for c in meta.get_all("Classifier") or []
+                         if c.startswith("License ::")), "see the text below")
+        found.append({"name": meta["Name"], "version": meta["Version"], "licence": said,
+                      "texts": texts})
+    return found
 
 
 #: The entry point — the one part of this file that is not about building.

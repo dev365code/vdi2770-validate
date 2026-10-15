@@ -80,7 +80,7 @@ jobs:
           python -m pip install -e packages/vdi2770
           python -m pip install -e ".[dev]"
       - name: Lint
-        run: python -m ruff check --no-cache src tests tools packages
+        run: python -m ruff check --no-cache src tests tools packages browser
       - name: Build fixtures
         run: python tools/make_fixtures.py
       # The whole suite runs on every row, Windows included. A few tests skip on
@@ -269,6 +269,35 @@ jobs:
           test "${{ steps.installed.outputs.version }}" = "$WANT" || { echo "::error::asked for $WANT and the action resolved ${{ steps.installed.outputs.version }}"; exit 1; }
           got=$(PYTHONPATH="$RUNNER_TEMP/vdi2770-validate" python -m vdi2770_validate --version)
           test "$got" = "$WANT" || { echo "::error::asked for $WANT and ran $got"; exit 1; }
+
+  # The page this repository builds, opened the way somebody opens it: served,
+  # and from a disk. It runs the check on a Python built for a browser -- the
+  # one place here whose interpreter nobody in this repository compiled -- so the
+  # command runs beside it on the same minor version, every file the other jobs
+  # check is checked by both, and what each wrote is compared byte for byte. And
+  # the page is counted: what it asks for while it loads, and what it sends once
+  # it has.
+  the-page-this-repo-offers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version: "3.13"
+      # Not editable, and not this project: the gate runs the command from the
+      # tree itself. What it needs installed is the one dependency, at the
+      # version the page bundles, and the browser the page is opened in.
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install "xmlschema==4.2.0" "playwright==1.63.0"
+          python -m playwright install --with-deps chromium
+      - name: Build fixtures
+        run: python tools/make_fixtures.py
+      - name: Build the page
+        run: python tools/build_browser.py
+      - name: The page sends nothing once it has loaded, and says what the command says
+        run: python tools/browser_gates.py
 
   # The README's shortest example is `- uses:` and `paths:` -- no `setup-python`,
   # no build. Every other use of the action here is preceded by both, so the line

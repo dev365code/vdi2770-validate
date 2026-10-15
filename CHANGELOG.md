@@ -4,10 +4,22 @@ Sections through 0.7.0 had their wording tidied after their tags; the text each 
 
 ## 0.12.0 — unreleased
 
-Who should take this release: anyone running the checker on Pyodide or another
-Emscripten build of Python, where every container, a clean one included, was
-reported as this tool failing on it.
+Who should take this release: anyone who has to check a delivery on a machine
+where nothing may be installed, which a page in the browser now does; and anyone
+running the checker on Pyodide or another Emscripten build of Python, where
+every container, a clean one included, was reported as this tool failing on it.
 
+- **The check runs in a browser, from one page.** `vdi2770.html` carries the
+  reader, the rules, `xmlschema` and Pyodide -- a build of CPython for the
+  browser -- and runs the command's own code inside the tab. Its report is what
+  `vdi2770-validate check --no-bundle` prints, byte for byte, with the same exit
+  code, and the JSON it saves is what `--json` prints. Once it has loaded it
+  makes no network request, opened from a disk it makes none at all, and it
+  stores nothing. `tools/build_browser.py` builds it, taking the runtime only at
+  the digest it names, and the release carries it beside the single file. No
+  rule, verdict, exit code or report field moves: every official sample and
+  every container here is checked through the page and through the command, and
+  the two are compared as bytes.
 - **A Python with `O_NONBLOCK` and no `fcntl` read every path as this tool's own
   failure.** The open that keeps a named pipe with no writer from stalling a
   sweep asked whether the platform had the flag, then imported the module.

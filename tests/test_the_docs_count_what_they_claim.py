@@ -535,8 +535,12 @@ def test_no_document_cites_a_file_that_is_not_here():
     # 52 to 54 when every finding in the metadata came to be held to its line:
     # the page behind the picture and the table beside it name that test.
     # The pending section omits the released sample-table citation.
-    assert seen == 53, (
-        f"{seen} citations found, not 53. If you added or removed one, say so "
+    # 53 to 57 when the browser page came: the table beside the picture cites
+    # its builder as the entrance's evidence, the newest changelog section names
+    # the builder, and THIRD_PARTY.md names it twice -- as what checks the
+    # runtime's digest, and as where its licences are pinned.
+    assert seen == 57, (
+        f"{seen} citations found, not 57. If you added or removed one, say so "
         f"here; if you did not, some of them just stopped being checked.")
 
 

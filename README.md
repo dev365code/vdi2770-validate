@@ -8,7 +8,7 @@
 
 &nbsp;**Apache-2.0**&nbsp;·&nbsp;**Python 3.9 · 3.12 · 3.13**&nbsp;·&nbsp;**pure Python, nothing compiled**&nbsp;·&nbsp;**the check opens no socket**
 
-[Ten seconds](#ten-seconds) · [What it catches](#what-it-catches) · [Where it sits](#where-it-sits) · [Four doors](#four-doors-one-judgement) · [What it will not tell you](#what-it-will-not-tell-you) · [Roadmap](#roadmap) · [Two layers](#one-install-two-layers) · [In your product](#using-this-validator-in-your-product)
+[Ten seconds](#ten-seconds) · [What it catches](#what-it-catches) · [Where it sits](#where-it-sits) · [Five doors](#five-doors-one-judgement) · [What it will not tell you](#what-it-will-not-tell-you) · [Roadmap](#roadmap) · [Two layers](#one-install-two-layers) · [In your product](#using-this-validator-in-your-product)
 
 </div>
 
@@ -106,7 +106,7 @@ lists all of them.
 ## Where it stands
 
 <a href="https://github.com/dev365code/vdi2770-validate/blob/main/docs/what-it-catches.md">
-<img src="https://raw.githubusercontent.com/dev365code/vdi2770-validate/main/docs/capabilities.svg?v=5c4c5699" alt="Coverage: 41 of 44 rules have a fixture pair; Explanation: what is wrong, evidence, remedy, source, line; Report contract: schemaVersion, golden, exit codes, schema; Entrances: command line, library, single file, Action; Input safety: read budgets, advisory, own mutations; Upstream: pinned by commit, checked weekly" width="100%">
+<img src="https://raw.githubusercontent.com/dev365code/vdi2770-validate/main/docs/capabilities.svg?v=1dec97b0" alt="Coverage: 41 of 44 rules have a fixture pair; Explanation: what is wrong, evidence, remedy, source, line; Report contract: schemaVersion, golden, exit codes, schema; Entrances: command line, library, single file, Action, browser; Input safety: read budgets, advisory, own mutations; Upstream: pinned by commit, checked weekly" width="100%">
 </a>
 
 *Six things this tool holds itself to, measured on the code this page describes, against the conditions it has set for 1.0. The picture is drawn from [`docs/capabilities.json`](https://github.com/dev365code/vdi2770-validate/blob/main/docs/capabilities.json), and every item it marks done names a file in this repository that says so; the cases behind each axis are in [`docs/what-it-catches.md`](https://github.com/dev365code/vdi2770-validate/blob/main/docs/what-it-catches.md).*
@@ -123,7 +123,7 @@ flowchart LR
     class C judge
 ```
 
-## Four doors, one judgement
+## Five doors, one judgement
 
 | Door | For | One line |
 |---|---|---|
@@ -131,6 +131,7 @@ flowchart LR
 | Python | your own tooling | `import vdi2770` / `import vdi2770_validate` |
 | Single file | closed networks, approvals | `python vdi2770.pyz check handover.zip` |
 | GitHub Action | a workflow that blocks a bad delivery | `uses: dev365code/vdi2770-validate@v0.11.1` |
+| Browser | a machine where nothing may be installed | open `vdi2770.html`, drop the container on it |
 
 No route to a package index? No pip, no virtual environment, no rights to make
 one? Carry **one file** in instead. It still needs a Python — that is the one
@@ -148,6 +149,28 @@ python tools/build_zipapp.py --check     # writes dist/vdi2770.pyz and runs it
 Pure Python, nothing compiled, and an ordinary readable zip: whoever has to
 approve software entering the network can open it and read every line, which
 matters more than convenience when the approval is the hard part.
+
+Nothing may be installed at all, not even a Python? Open **one page** instead.
+`vdi2770.html` carries the checker, its rules and a Python built for the
+browser, and it checks the container inside the tab: once the page has loaded
+it makes no network request, and opened from a disk it makes none at all. Its
+report is what `vdi2770-validate check --no-bundle` prints, byte for byte, with
+the same exit code, and the JSON it saves is what `--json` prints. The container
+is held in the tab's memory while it is checked, so a very large delivery is one
+for the command line.
+
+Take it from the
+[latest release](https://github.com/dev365code/vdi2770-validate/releases/latest/download/vdi2770.html),
+beside the single file, or build the one this working tree produces:
+
+```bash
+python tools/build_browser.py            # writes dist/vdi2770.html
+python tools/browser_gates.py            # opens it in a browser and holds it to the above
+```
+
+The second needs Playwright and a Python of the same minor version as the one
+the page carries, because it runs the command beside the page and compares the
+two.
 
 Exit codes and a versioned JSON report make it a CI gate in one line.
 
@@ -292,10 +315,10 @@ timeline
     Shipped : Reader and rules, same version, one tag, one install
             : 44 rules, each with a source and a remedy
             : Versioned JSON report, exit codes, single-file offline build
+            : Browser-local checking — no install, and the file never leaves the machine
     Building : An obligation index — what is asked for, and how much of it is covered
              : Deeper documentation-container checks
-    Planned : Browser-local checking — no install, and the file never leaves the machine
-            : Cross-checks with neighbouring handover standards
+    Planned : Cross-checks with neighbouring handover standards
 ```
 
 ## One install, two layers
