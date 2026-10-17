@@ -150,7 +150,7 @@ missing, as `F1`.
   `python tools/mutation_table.py --run`
 - declared encodings read without loss — done;
   `tests/test_a_document_is_read_in_the_encoding_it_declares.py` reads metadata
-  declared in UTF-8, UTF-16, the ISO-8859 family, windows-1252, Shift_JIS,
+  declared in UTF-8, UTF-16, five of the ISO-8859 family, windows-1252, Shift_JIS,
   Windows-31J, EUC-JP, ISO-2022-JP, EUC-KR, GB2312, GBK, GB18030, Big5,
   HZ-GB-2312 and UTF-7, and a document under every name the IANA charset
   registry gives a charset it decodes, the same on every Python. The class name
@@ -161,9 +161,13 @@ missing, as `F1`.
   `tests/fixtures/x1-bytes-that-are-not-shift-jis.zip` are one such pair, and
   Windows-31J, EUC-KR, GB2312 and Big5 have theirs
 
-**1.0.** Met. Metadata may declare an encoding in its XML declaration, and the
-condition was a test that reads metadata in each encoding the declaration allows
-and quotes it back unchanged: the one named above.
+**1.0.** Met, to the extent this reader reads. Metadata may declare an encoding
+in its XML declaration, and the condition was a test that reads metadata in each
+encoding the declaration allows and quotes it back unchanged: the one named
+above, for every charset the IANA registry names, a declaration found as ASCII
+can be in, and every supported Python decodes. UCS-4 and the EBCDIC code pages
+are outside that; a document in one is `X1`, which says it is in an encoding
+this reader does not read.
 
 ## Upstream
 

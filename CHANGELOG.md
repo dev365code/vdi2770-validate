@@ -36,10 +36,16 @@ should read the paragraph after the list: four of these changes move it.
   document it is, and the schema check reads the same text. **This moves
   verdicts:** such a document draws the findings its content earns where it drew
   `X1`. Bytes that are not the declared encoding are still `X1`, which now names
-  the encoding and the bytes, at their position. The budget of
-  elements a read may build is charged from the text such a document is decoded
-  to, because there a `<` need not be the byte that spells it in ASCII, and a
-  document that writes its markup another way costs what it holds.
+  the encoding and the first of the bytes, at their position -- half of a
+  surrogate pair, which UTF-7 can spell, among them. A document in UCS-4 or
+  EBCDIC is still `X1`, and now says that is what it is. The budget of elements
+  a read may build is charged from the text such a document is decoded to,
+  because there a `<` need not be the byte that spells it in ASCII, and a
+  document that writes its markup another way costs what it holds. A byte order
+  mark and a declaration that disagree are `X1` too: a UTF-8 file with a mark
+  that declared ISO-8859-1 or windows-1252 -- what an editor that saves with a
+  mark and keeps the old declaration makes -- was read as the declaration said,
+  its German quoted back misread, and passed.
 - **An encoding is known by the name the IANA charset registry gives it, on
   every Python.** A declared name was looked up in the codec table of whichever
   Python ran the check, and Pythons do not agree on those: in 0.11.1 already, a
@@ -80,10 +86,11 @@ document declared in one of the encodings above, which exited `1` for its `X1`
 alone, now exits with what its content earns: `0` when nothing else is wrong.
 One whose declaration names its encoding as a Python spells it and the IANA
 registry does not, such as `cp1252`, exited `0` when its content was clean and
-now exits `1`. And on Pyodide or another Emscripten build of Python, where every
-container exited `70`, a container exits as it does anywhere else. In the
-Action with `fail-on-finding: false`, a run this tool failed on now publishes
-`70` and leaves the step green, as every other code does.
+now exits `1`, as does one whose byte order mark and declaration disagree. And
+on Pyodide or another Emscripten build of Python, where every container exited
+`70`, a container exits as it does anywhere else. In the Action with
+`fail-on-finding: false`, a run this tool failed on now publishes `70` and
+leaves the step green, as every other code does.
 
 ## 0.11.1 — 2026-10-10
 

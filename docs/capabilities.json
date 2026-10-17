@@ -186,7 +186,7 @@
           "done": true,
           "evidence": {
             "file": "tests/test_a_document_is_read_in_the_encoding_it_declares.py",
-            "says": "metadata in each encoding a declaration can name is read"
+            "says": "metadata in each charset the IANA registry names and this reader decodes is read"
           }
         }
       ],

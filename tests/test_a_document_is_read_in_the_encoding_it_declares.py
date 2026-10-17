@@ -11,9 +11,11 @@ encodings are not supported`, and the refusal was `X1`: the metadata file is not
 well-formed XML. It was well-formed. The limit was this parser's, reported as the
 sender's.
 
-The condition this project set itself before 1.0 is held here as it is worded:
-metadata in each encoding a declaration can name is read, and what the report
-quotes from it comes back unchanged. And what the declaration says is still the
+The condition this project set itself before 1.0 is held here, to the extent this
+reader reads at all: metadata in each charset the IANA registry names and this
+reader decodes is read, and what the report quotes from it comes back unchanged.
+UCS-4 and the EBCDIC code pages are outside that, and a document in one is told
+so. And what the declaration says is still the
 whole question: bytes that are not the encoding it names are still `X1`.
 """
 from __future__ import annotations
@@ -342,3 +344,95 @@ def test_a_document_expat_reads_in_utf16_is_charged_for_its_markup(mark, codec, 
                       **{f"{i}.zip": zipped({META: body, "a.pdf": b"%PDF-1.4"}) for i in range(4)}})
     refused = [f for f in runner.check_bytes(archive, "budget.zip").findings if f.rule.id == "X6"]
     assert refused, "four UTF-16 documents of 600 elements each were parsed against a budget of 1,000"
+
+
+#: A document in UCS-4 or EBCDIC, told apart by its first bytes the way XML 1.0
+#: (Appendix F) tells them apart before any declaration is read.
+NOT_READ = [
+    ("UCS-4, big-endian, with a mark", "UCS-4", b"\x00\x00\xfe\xff", "utf-32-be"),
+    ("UCS-4, little-endian, with a mark", "UCS-4", b"\xff\xfe\x00\x00", "utf-32-le"),
+    ("UCS-4, big-endian", "UCS-4", b"", "utf-32-be"),
+    ("UCS-4, little-endian", "UCS-4", b"", "utf-32-le"),
+    ("EBCDIC", "EBCDIC", b"", "cp037"),
+]
+
+
+@pytest.mark.parametrize("label,what,mark,codec", NOT_READ, ids=[n[0] for n in NOT_READ])
+def test_a_document_in_an_encoding_this_reader_does_not_read_is_told_so(label, what, mark, codec):
+    """`X1` either way -- this reader reads neither -- but saying so: the file is
+    not malformed XML, it is XML in an encoding this reader does not read, and
+    the report was saying the first and not the second."""
+    declared = {"UCS-4": "UTF-32", "EBCDIC": "IBM037"}[what]
+    text = _metadata(declared, "Technische Spezifikation")
+    x1 = [f for f in _findings(_container(mark + text.encode(codec)), "unread.zip") if f[0] == "X1"]
+    assert x1, f"a document in {label} drew no X1"
+    assert what in x1[0][1] and "does not read" in x1[0][1], x1[0][1]
+
+
+#: A byte order mark, the declaration that follows it, and what the file is in.
+#: The mark settles the encoding before any declaration is read (Appendix F),
+#: and the declaration still has to name the encoding the file is in (4.3.3).
+MARKED = [
+    ("UTF-8 mark, declared ISO-8859-1", b"\xef\xbb\xbf", "ISO-8859-1", "utf-8"),
+    ("UTF-8 mark, declared windows-1252", b"\xef\xbb\xbf", "windows-1252", "utf-8"),
+    ("UTF-8 mark, declared Shift_JIS", b"\xef\xbb\xbf", "Shift_JIS", "utf-8"),
+    ("UTF-16LE mark, declared Shift_JIS", b"\xff\xfe", "Shift_JIS", "utf-16-le"),
+    ("UTF-16BE mark, declared ISO-8859-1", b"\xfe\xff", "ISO-8859-1", "utf-16-be"),
+]
+
+
+@pytest.mark.parametrize("label,mark,declared,codec", MARKED, ids=[m[0] for m in MARKED])
+def test_a_byte_order_mark_and_a_declaration_that_disagree_are_not_well_formed(label, mark, declared, codec):
+    """A UTF-8 file with a mark that declared ISO-8859-1 -- an editor that saves
+    as UTF-8 with a mark and leaves the old declaration in place makes one -- was
+    read as ISO-8859-1, its German quoted back as `GrÃ¶Ã\x9fe`, and passed."""
+    text = _metadata(declared, "Technische Größe")
+    findings = _findings(_container(mark + text.encode(codec)), "marked.zip")
+    x1 = [f for f in findings if f[0] == "X1"]
+    assert x1, f"{label}: {findings}"
+    assert declared in x1[0][1] and "byte order mark" in x1[0][1], x1[0][1]
+    assert not [f for f in findings if f[0] == "M3"], findings
+
+
+@pytest.mark.parametrize("mark,declared,codec", [(b"\xef\xbb\xbf", "UTF-8", "utf-8"),
+                                                 (b"\xff\xfe", "UTF-16", "utf-16-le"),
+                                                 (b"\xfe\xff", "UTF-16", "utf-16-be")],
+                         ids=["UTF-8", "UTF-16LE", "UTF-16BE"])
+def test_a_byte_order_mark_and_a_declaration_that_agree_are_read(mark, declared, codec):
+    text = _metadata(declared, "Technische Größe")
+    findings = _findings(_container(mark + text.encode(codec)), "marked.zip")
+    assert "X1" not in [f[0] for f in findings], findings
+    quoted = [f[1] for f in findings if f[0] == "M3"][0].split("'")[1]
+    assert quoted == "Technische Größe", quoted
+
+
+def test_half_of_a_character_is_not_read_as_one():
+    """UTF-7 can spell half of a surrogate pair, and Python's decoder lets it
+    through; no document holds one (production 2, `Char`). It is `X1` at the
+    place it is written, naming the encoding -- where it was refused later, by
+    the parser, at the first line, as an encoding this reader could not use."""
+    good = _written(_metadata("UTF-7", "Technische Spezifikation"), "utf-7")
+    tag = b'<ClassName Language="de">'
+    at = good.index(tag) + len(tag)
+    bad = good[:at] + b"+2AA-" + good[at:]
+    x1 = [f for f in _findings(_container(bad), "half.zip") if f[0] == "X1"]
+    assert x1 and "UTF-7" in x1[0][1], x1
+    read = good.decode("utf-7")
+    starts = read.index(tag.decode("ascii")) + len(tag)
+    line = read.count("\n", 0, starts) + 1
+    column = starts - (read.rfind("\n", 0, starts) + 1)
+    assert (x1[0][3], x1[0][4]) == (line, column), x1[0]
+
+
+def test_the_bytes_an_x1_names_are_a_few_not_a_run():
+    """Inside a run of UTF-7's base64 the decoder reports the whole run as the
+    bytes it could not read; a long one made a finding of hundreds of thousands
+    of characters, most of them bytes that were fine. The finding names the
+    first few and says there are more."""
+    name = "Technische Spezifikation " + "技" * 5_000
+    good = _written(_metadata("UTF-7", name), "utf-7")
+    run = good.index(b"+", good.index(b'<ClassName Language="de">'))
+    bad = good[:run + 4000] + b"\xff" + good[run + 4000:]
+    x1 = [f for f in _findings(_container(bad), "run.zip") if f[0] == "X1"]
+    assert x1 and len(x1[0][1]) < 200, len(x1[0][1]) if x1 else x1
+

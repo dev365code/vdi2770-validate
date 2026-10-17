@@ -252,6 +252,25 @@ _DECLARATION = re.compile(
 
 _LINE_BREAK = re.compile(r"\r\n|\r|\n")
 
+#: The first bytes of the encodings this reader does not read, the way XML 1.0
+#: (Appendix F) tells them apart before any declaration: UCS-4 in its four byte
+#: orders, with a mark and without one, and EBCDIC.
+_NOT_READ = ((b"\x00\x00\xfe\xff", "UCS-4"), (b"\xff\xfe\x00\x00", "UCS-4"),
+             (b"\x00\x00\x00<", "UCS-4"), (b"<\x00\x00\x00", "UCS-4"),
+             (b"\x00\x00<\x00", "UCS-4"), (b"\x00<\x00\x00", "UCS-4"),
+             (b"\x4c\x6f\xa7\x94", "EBCDIC"))
+
+#: A byte order mark, the encoding it settles (Appendix F), and the names a
+#: declaration after it may give that encoding -- the registry's, without
+#: regard to case (4.3.3).
+_MARKS = ((b"\xef\xbb\xbf", "UTF-8", "utf-8", {"utf-8", "csutf8"}),
+          (b"\xff\xfe", "UTF-16", "utf-16-le", {"utf-16", "csutf16", "utf-16le", "csutf16le"}),
+          (b"\xfe\xff", "UTF-16", "utf-16-be", {"utf-16", "csutf16", "utf-16be", "csutf16be"}))
+
+#: Half of a surrogate pair: a code point no document holds (production 2).
+_SURROGATE = re.compile("[\ud800-\udfff]")
+
+
 def _readable(data: bytes) -> Union[bytes, str]:
     """The document as the parser is handed it: its bytes, or its text.
 
@@ -279,6 +298,21 @@ def _readable(data: bytes) -> Union[bytes, str]:
     decodes is refused here, the same way on every Python: an encoding a
     processor does not read is a fatal error as well (4.3.3).
     """
+    for start, what in _NOT_READ:
+        if data.startswith(start):
+            raise XmlError(f"the document is in {what}, as its first bytes say, and this reader "
+                           f"does not read {what}", 1, 0)
+    for mark, settled, codec, names in _MARKS:
+        if data.startswith(mark):
+            head = data[len(mark):len(mark) + 512].decode(codec, "replace")
+            said = _DECLARATION.match(head.encode("ascii", "replace"))
+            if said:
+                name = (said.group(1) or said.group(2)).decode("ascii")
+                if name.lower() not in names:
+                    raise XmlError(f"the document starts with a {settled} byte order mark and "
+                                   f"declares {name}; its declaration has to name the encoding "
+                                   f"the mark says it is in", 1, 0)
+            return data
     found = _DECLARATION.match(data)
     if not found:
         return data
@@ -290,17 +324,29 @@ def _readable(data: bytes) -> Union[bytes, str]:
         raise XmlError(f"the document declares {name}, which is not an IANA-registered name "
                        f"for a charset this reader reads; use the registered name", 1, 0)
     try:
-        return data.decode(codec)
+        text = data.decode(codec)
     except UnicodeDecodeError as e:
         read = data[:e.start].decode(codec, "replace")     # only counted, for where
         breaks = list(_LINE_BREAK.finditer(read))
         line = len(breaks) + 1
         column = len(read) - (breaks[-1].end() if breaks else 0)
+        # The first few: inside a run of UTF-7's base64 the decoder names the
+        # whole run, most of it bytes that were fine.
+        bad = data[e.start:e.end]
+        shown = bad[:8].hex(" ") + (" ..." if len(bad) > 8 else "")
         raise XmlError(f"the document declares {name}, and the bytes here are not "
-                       f"{name}: {data[e.start:e.end].hex(' ')}", line, column) from None
+                       f"{name}: {shown}; declare the encoding the file is in", line, column) from None
     except (UnicodeError, ValueError) as e:
         raise XmlError(f"the document declares {name}, and it cannot be read as "
                        f"{name}: {e}", 1, 0) from None
+    half = _SURROGATE.search(text)
+    if half:
+        before = text[:half.start()]
+        ends = list(_LINE_BREAK.finditer(before))
+        raise XmlError(f"the document declares {name}, and the bytes here are not {name}: "
+                       f"they make half of a character, U+{ord(half.group()):04X}",
+                       len(ends) + 1, len(before) - (ends[-1].end() if ends else 0))
+    return text
 
 
 #: How the first bytes say a document is UTF-16 when it is (Appendix F): a byte
