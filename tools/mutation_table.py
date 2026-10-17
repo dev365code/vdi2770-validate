@@ -3542,7 +3542,7 @@ TABLE += [
      "a counter attached to nothing would report the zero requests the page claims"),
     ("gates/the-command-runs-on-the-pages-python",
      "tools/browser_gates.py",
-     '    if page.get("python", "").split(".")[:2] != here.get("python", "").split(".")[:2]:\n',
+     '    if page.get("python", "") != here.get("python", ""):\n',
      "    if False:\n",
      ["tests/test_the_page_says_what_the_command_says.py::test_the_gate_refuses_to_compare_across_interpreters"],
      "a difference between two Pythons would be reported as the page's"),
