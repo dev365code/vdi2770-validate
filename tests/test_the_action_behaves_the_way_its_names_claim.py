@@ -327,6 +327,11 @@ for name in names:
 """
 
 
+# Not on Windows: there the name below is a drive and a path, not a file name
+# with backslashes in it, and the stand-in hashing tool is a script Windows will
+# not run by its first line. The job on a Windows runner runs the real tool, on
+# a real path, with the file pinned by its hash.
+@pytest.mark.skipif(os.name == "nt", reason="the stand-in tool and the backslash name are POSIX's")
 def test_a_pinned_file_is_held_to_its_hash_whatever_its_path_holds(tmp_path):
     """Every path on a Windows runner holds a backslash, and the hashing tool
     there escapes such a name by putting a backslash in front of the hash. Read
