@@ -54,18 +54,70 @@ RUNTIME = {
 RUNTIME_FILES = ("pyodide.js", "pyodide.asm.js", "pyodide.asm.wasm", "python_stdlib.zip",
                  "pyodide-lock.json")
 
-#: The licences of what the runtime is built from, at the revisions it was built
-#: from. The release asset carries neither, so they are fetched, pinned the same
-#: way, and printed in the page.
+#: The notices of what the runtime is built from, at the revisions it was built
+#: from. The release asset carries none of them, so they are fetched, pinned the
+#: same way, and printed in the page. Not only Pyodide and CPython: the `.wasm`
+#: has compiled into it what CPython incorporates -- expat, libmpdec, zlib,
+#: HACL* and the rest its licence page lists -- and, from the build Pyodide made
+#: of it (its `Makefile.envs` and `cpython/Makefile` at that tag), Pyodide's
+#: hiwire, libffi at the commit it names, and Emscripten 4.0.9 with the musl it
+#: carries and its port of bzip2. `revision` is the tag or commit each is read
+#: at; `between` cuts a notice out of a source file that keeps it at its head.
 RUNTIME_LICENCES = (
-    {"name": "Pyodide", "version": "0.29.5", "licence": "MPL-2.0",
+    {"name": "Pyodide", "notice": "Pyodide", "version": "0.29.5", "revision": "0.29.5",
+     "licence": "MPL-2.0", "file": "LICENSE",
      "source": "https://github.com/pyodide/pyodide/tree/0.29.5",
      "url": "https://raw.githubusercontent.com/pyodide/pyodide/0.29.5/LICENSE",
      "sha256": "1f256ecad192880510e84ad60474eab7589218784b9a50bc7ceee34c2b91f1d5"},
-    {"name": "CPython, with its standard library", "version": "3.13.2", "licence": "PSF-2.0",
+    {"name": "hiwire, which Pyodide compiles into the runtime", "notice": "hiwire",
+     "version": "6a1e672", "revision": "6a1e67280a15d929ebeceee54a6358c9c8d5f697",
+     "licence": "MPL-2.0", "file": "LICENSE",
+     "source": "https://github.com/pyodide/hiwire/tree/6a1e67280a15d929ebeceee54a6358c9c8d5f697",
+     "url": "https://raw.githubusercontent.com/pyodide/hiwire/"
+            "6a1e67280a15d929ebeceee54a6358c9c8d5f697/LICENSE",
+     "sha256": "1f256ecad192880510e84ad60474eab7589218784b9a50bc7ceee34c2b91f1d5"},
+    {"name": "CPython, with its standard library", "notice": "CPython", "version": "3.13.2",
+     "revision": "v3.13.2", "licence": "PSF-2.0", "file": "LICENSE",
      "source": "https://github.com/python/cpython/tree/v3.13.2",
      "url": "https://raw.githubusercontent.com/python/cpython/v3.13.2/LICENSE",
      "sha256": "78b12c3a81360b357002334f0e70ea0e92eebf7a9b358805c03c48484945f3bb"},
+    {"name": "What CPython incorporates: expat, libffi, zlib, libmpdec, mimalloc and the "
+             "rest its licence page lists", "notice": "CPython incorporates",
+     "version": "3.13.2", "revision": "v3.13.2", "licence": "each one's own, as given there",
+     "file": "Doc/license.rst",
+     "source": "https://github.com/python/cpython/tree/v3.13.2",
+     "url": "https://raw.githubusercontent.com/python/cpython/v3.13.2/Doc/license.rst",
+     "sha256": "62f2c9c2c75d511170eb464ad5f83b78cc1f37eb2eb49c2846c9aa6c4557ee99"},
+    {"name": "HACL*, as CPython carries it", "notice": "HACL*", "version": "3.13.2",
+     "revision": "v3.13.2", "licence": "MIT", "file": "Modules/_hacl/Hacl_Hash_SHA2.c, its notice",
+     "source": "https://github.com/python/cpython/tree/v3.13.2/Modules/_hacl",
+     "url": "https://raw.githubusercontent.com/python/cpython/v3.13.2/Modules/_hacl/Hacl_Hash_SHA2.c",
+     "between": ("/* MIT License", "*/"),
+     "sha256": "30638efb75c8b185bb09c3df6977e3f3c5d21a1e696218cf7ade6bc4d5201b31"},
+    {"name": "libffi, which Pyodide compiles into the runtime", "notice": "libffi",
+     "version": "f08493d", "revision": "f08493d249d2067c8b3207ba46693dd858f95db3",
+     "licence": "MIT", "file": "LICENSE",
+     "source": "https://github.com/libffi/libffi/tree/f08493d249d2067c8b3207ba46693dd858f95db3",
+     "url": "https://raw.githubusercontent.com/libffi/libffi/"
+            "f08493d249d2067c8b3207ba46693dd858f95db3/LICENSE",
+     "sha256": "2c9c2acb9743e6b007b91350475308aee44691d96aa20eacef8e199988c8c388"},
+    {"name": "bzip2, as Emscripten's port builds it", "notice": "bzip2", "version": "1.0.6",
+     "revision": "1.0.6", "licence": "bzip2's own, BSD-style", "file": "LICENSE",
+     "source": "https://github.com/emscripten-ports/bzip2/tree/1.0.6",
+     "url": "https://raw.githubusercontent.com/emscripten-ports/bzip2/1.0.6/LICENSE",
+     "sha256": "4919cfb14a73cd64fcef67b107613970cf1659a09aa675dba31314f373bc7204"},
+    {"name": "Emscripten, the compiler and runtime the build used", "notice": "Emscripten",
+     "version": "4.0.9", "revision": "4.0.9", "licence": "MIT or University of Illinois/NCSA",
+     "file": "LICENSE",
+     "source": "https://github.com/emscripten-core/emscripten/tree/4.0.9",
+     "url": "https://raw.githubusercontent.com/emscripten-core/emscripten/4.0.9/LICENSE",
+     "sha256": "620a78084fc7ca97c0b5dea9abf891f3ffcadfdbf305276f099c9c4e12fc1d86"},
+    {"name": "musl, the C library Emscripten carries", "notice": "musl", "version": "4.0.9",
+     "revision": "4.0.9", "licence": "MIT", "file": "COPYRIGHT",
+     "source": "https://github.com/emscripten-core/emscripten/tree/4.0.9/system/lib/libc/musl",
+     "url": "https://raw.githubusercontent.com/emscripten-core/emscripten/4.0.9/"
+            "system/lib/libc/musl/COPYRIGHT",
+     "sha256": "f9bc4423732350eb0b3f7ed7e91d530298476f8fec0c6c427a1c04ade22655af"},
 )
 
 #: The places in `browser/page.html` this fills, each exactly once.
@@ -148,6 +200,16 @@ def app_archive(staged: Path, into: Path) -> bytes:
     return raw.getvalue()
 
 
+def notice_text(data: bytes, between=None) -> str:
+    """The notice a fetched file holds: all of it, or the part from the first
+    `between[0]` to the `between[1]` after it."""
+    text = data.decode("utf-8")
+    if between is None:
+        return text
+    start = text.index(between[0])
+    return text[start:text.index(between[1], start) + len(between[1])]
+
+
 def licences_html(bundled: list, runtime: list) -> str:
     """Each component, its version, its licence, where its source is, and the
     licence text itself."""
@@ -166,7 +228,7 @@ def licences_html(bundled: list, runtime: list) -> str:
          for name in OWN_NOTICES})
     for entry in runtime:
         one(f"{entry['name']} {entry['version']}", entry["licence"], entry["source"],
-            {"LICENSE": entry["text"]})
+            {entry["file"]: entry["text"]})
     one(f"{RUNTIME['name']} {RUNTIME['version']} release asset",
         f"sha256 {RUNTIME['sha256']}", RUNTIME["url"], {})
     for dist in bundled:
@@ -179,8 +241,9 @@ def build(output: Path, runtime_asset: Path | None = None) -> bytes:
     runtime = runtime_files(fetch(RUNTIME["url"], RUNTIME["sha256"],
                                   f"the {RUNTIME['name']} {RUNTIME['version']} release",
                                   runtime_asset))
-    licences = [dict(entry, text=fetch(entry["url"], entry["sha256"],
-                                       f"the {entry['name']} licence").decode("utf-8"))
+    licences = [dict(entry, text=notice_text(fetch(entry["url"], entry["sha256"],
+                                                   f"the {entry['notice']} notice"),
+                                             entry.get("between")))
                 for entry in RUNTIME_LICENCES]
     with tempfile.TemporaryDirectory() as tmp:
         staged = Path(tmp) / "app"

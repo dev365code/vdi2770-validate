@@ -18,6 +18,7 @@ import hashlib
 import importlib.util
 import io
 import os
+import re
 import subprocess
 import sys
 import tarfile
@@ -247,6 +248,52 @@ def _tarball(names):
             info.size = len(body)
             tar.addfile(info, io.BytesIO(body))
     return bz2.compress(raw.getvalue())
+
+
+#: What the runtime's `.wasm` has compiled into it besides CPython itself, in the
+#: build Pyodide 0.29.5 made of it: Emscripten 4.0.9 and the musl it carries, its
+#: port of bzip2, libffi, and Pyodide's hiwire; and, inside CPython, expat,
+#: libmpdec, zlib, HACL* and the rest of what CPython's licence page lists.
+INCORPORATED = ("hiwire", "CPython incorporates", "libffi", "HACL*", "bzip2", "Emscripten", "musl")
+
+
+def test_the_page_carries_the_notice_of_everything_compiled_into_its_runtime():
+    """A binary built from MIT and BSD code carries their notices, and the
+    runtime is such a binary. The CPython licence the page printed names none of
+    what is compiled into it -- it says that software is under the licences
+    listed with it, and that list is in CPython's documentation, not in that
+    file -- so expat, libffi, libmpdec, HACL*, bzip2 and musl were in the page
+    without a word of their notices."""
+    named = " ".join(entry["name"] for entry in BUILD.RUNTIME_LICENCES)
+    missing = [component for component in INCORPORATED if component not in named]
+    assert not missing, f"the page prints no notice for {missing}"
+
+
+def test_every_notice_the_page_prints_is_pinned_at_a_revision():
+    """Fetched at a tag or a commit, and held to a digest, as the runtime is: a
+    branch would print whatever the file says on the day of the build."""
+    for entry in BUILD.RUNTIME_LICENCES:
+        assert re.fullmatch(r"[0-9a-f]{64}", entry["sha256"]), entry["name"]
+        assert f"/{entry['revision']}/" in entry["url"], (entry["name"], entry["url"])
+        assert entry["revision"] in entry["source"], (entry["name"], entry["source"])
+
+
+def test_the_notice_files_name_each_notice_the_page_prints_at_its_revision():
+    """`THIRD_PARTY.md` -- both copies, the repository's and the wheel's -- names
+    each component the page prints a notice for, at the revision it was taken
+    from, so the two cannot come to describe different builds."""
+    for copy in (ROOT / "THIRD_PARTY.md", ROOT / "packages" / "vdi2770" / "THIRD_PARTY.md"):
+        text = copy.read_text(encoding="utf-8")
+        for entry in BUILD.RUNTIME_LICENCES:
+            assert entry["notice"] in text and f"`{entry['revision']}`" in text, (copy.name, entry["name"])
+
+
+def test_a_notice_kept_in_a_source_file_is_cut_to_the_notice():
+    """HACL* keeps its MIT notice at the head of each source file rather than in
+    a file of its own; the page prints that comment and not the C after it."""
+    source = b"/* MIT License\n *\n * Permission is hereby granted ... */\n\nint f(void) { return 0; }\n"
+    cut = BUILD.notice_text(source, ("/* MIT License", "*/"))
+    assert cut.startswith("/* MIT License") and cut.endswith("*/") and "int f" not in cut
 
 
 def test_the_runtime_files_are_taken_by_name():

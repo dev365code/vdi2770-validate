@@ -3447,6 +3447,25 @@ TABLE += [
 ]
 
 
+#: The notices the page prints, of what its runtime has compiled into it.
+TABLE += [
+    ("gates/the-page-prints-the-notice-of-what-its-runtime-incorporates",
+     "tools/build_browser.py",
+     '    {"name": "musl, the C library Emscripten carries", "notice": "musl", "version": "4.0.9",\n',
+     '    {"name": "the C library Emscripten carries", "notice": "libc", "version": "4.0.9",\n',
+     ["tests/test_the_page_says_what_the_command_says.py::"
+      "test_the_page_carries_the_notice_of_everything_compiled_into_its_runtime"],
+     "a component compiled into the runtime would be in the page without its notice"),
+    ("gates/a-notice-in-a-source-file-is-cut-to-the-notice",
+     "tools/build_browser.py",
+     "    return text[start:text.index(between[1], start) + len(between[1])]\n",
+     "    return text[start:]\n",
+     ["tests/test_the_page_says_what_the_command_says.py::"
+      "test_a_notice_kept_in_a_source_file_is_cut_to_the_notice"],
+     "the page would print a C source file where it means to print the notice at its head"),
+]
+
+
 #: The gate's own judgement, asked of a page that is not a browser: what it does
 #: with a request after load, and with a run the two door containers are not in.
 TABLE += [

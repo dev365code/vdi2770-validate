@@ -17,6 +17,13 @@ whether we changed it.
 | `elementpath` (what `xmlschema` depends on; bundled where it is) | [sissaschool/elementpath](https://github.com/sissaschool/elementpath) | MIT | No |
 | Pyodide 0.29.5, five files of the release asset `pyodide-core-0.29.5.tar.bz2` (SHA-256 `ab08aafc11a3c9a0fe73825eb2cec78bda9464348dd17414e7ec0132ef3451e8`) — in the browser page only | [pyodide/pyodide](https://github.com/pyodide/pyodide) @ `0.29.5` | **MPL-2.0** | **No — byte for byte; the digest is checked by `tools/build_browser.py`** |
 | CPython 3.13.2 and its standard library, as built into that runtime — in the browser page only | [python/cpython](https://github.com/python/cpython) @ `v3.13.2` | **PSF-2.0** | No |
+| What CPython incorporates — expat, libffi, zlib, libmpdec, mimalloc and the rest CPython's own licence page lists — as built into that runtime; in the browser page only | [python/cpython](https://github.com/python/cpython) `Doc/license.rst` @ `v3.13.2` | each one's own, as given there | No |
+| HACL*, as CPython carries it — in the browser page only | [python/cpython](https://github.com/python/cpython) `Modules/_hacl` @ `v3.13.2` | **MIT** | No |
+| hiwire, which Pyodide compiles into its runtime — in the browser page only | [pyodide/hiwire](https://github.com/pyodide/hiwire) @ `6a1e67280a15d929ebeceee54a6358c9c8d5f697` | **MPL-2.0** | No |
+| libffi, which Pyodide compiles into its runtime — in the browser page only | [libffi/libffi](https://github.com/libffi/libffi) @ `f08493d249d2067c8b3207ba46693dd858f95db3` | **MIT** | No |
+| bzip2, as Emscripten's port builds it into that runtime — in the browser page only | [emscripten-ports/bzip2](https://github.com/emscripten-ports/bzip2) @ `1.0.6` | bzip2's own, BSD-style | No |
+| Emscripten, the compiler and runtime that runtime was built with — in the browser page only | [emscripten-core/emscripten](https://github.com/emscripten-core/emscripten) @ `4.0.9` | **MIT** or University of Illinois/NCSA | No |
+| musl, the C library Emscripten carries — in the browser page only | [emscripten-core/emscripten](https://github.com/emscripten-core/emscripten) `system/lib/libc/musl` @ `4.0.9` | **MIT** | No |
 
 The corpus and the message list are **test material** and are in neither wheel.
 
@@ -24,10 +31,13 @@ The browser page, `vdi2770.html`, is a release asset and is in no wheel and no
 sdist. It carries the engine's wheel contents, `xmlschema`, `elementpath` and the
 Pyodide runtime, and under *What is inside this page, and its licences* it
 prints each one's licence in full: this project's `LICENSE`, `NOTICE` and this
-file; Pyodide's MPL-2.0 text and CPython's licence, each fetched at the tag the
-runtime was built from and pinned by digest in `tools/build_browser.py`; and the
-licence files `xmlschema` and `elementpath` ship in their own distributions.
-Pyodide's source, as MPL-2.0 asks, is at its tag on GitHub, which the page names.
+file; Pyodide's MPL-2.0 text and CPython's licence; the notices of what the
+runtime has compiled into it beside CPython -- CPython's own list of the
+software it incorporates, HACL*, hiwire, libffi, bzip2, Emscripten and the musl
+it carries -- each fetched at the revision the runtime was built from and pinned
+by digest in `tools/build_browser.py`; and the licence files `xmlschema` and
+`elementpath` ship in their own distributions. The source of Pyodide and of
+hiwire, as MPL-2.0 asks, is at those revisions on GitHub, which the page names.
 The schema and the class table are in the engine's wheel, under
 `vdi2770/validate/data/`; they were in the rules' wheel until 0.8.0 merged the
 two distributions. The MIT-derived English and
