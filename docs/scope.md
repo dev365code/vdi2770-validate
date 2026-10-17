@@ -44,6 +44,16 @@ failure — files that never claimed at all.
 
 ## Known limits of what *is* in scope
 
+- **The standard library's ZIP reading**: an archive is opened with Python's own
+  `zipfile`, and a patch release can change what that accepts. Since the
+  releases that fixed CVE-2025-8291 it checks that a ZIP64 end-of-central-
+  directory locator points at a ZIP64 end record (APPNOTE 4.3.15), and refuses
+  the archive where it does not; a release from before that opens it. The
+  stricter reading is the specification's. A container made to sit on that line
+  can therefore be judged differently on different Pythons -- measured, 3.13.15
+  against 3.9.6. The browser page carries CPython 3.13.2, and its comparison
+  with the command runs on that same release.
+
 - **Text spelling at the listing limit**: the page charges the visible spelling
   of runner syntax against the existing listing allowance. It can list fewer
   findings at that limit and says how many; the stored report, JSON, counts and

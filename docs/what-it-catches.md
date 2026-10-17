@@ -99,7 +99,8 @@ report's `schemaVersion` is `1`, and 1.0 commits to not changing it.
   in a workflow and hands the exit code to the next step;
 - the browser page: `python tools/build_browser.py` builds `dist/vdi2770.html`,
   and opened in a browser -- served, or straight from a disk -- it gives the same
-  two exit codes and the command's report byte for byte.
+  two exit codes and, byte for byte, the report the command prints on the Python
+  the page carries, at a UTF-8 console.
 
 **Now.**
 
@@ -109,11 +110,13 @@ report's `schemaVersion` is `1`, and 1.0 commits to not changing it.
 - GitHub Action — done
 - browser, nothing installed — done; `python tools/browser_gates.py` opens the
   page and checks every official sample and every container here through it
-  and through the command, comparing stdout, stderr and the exit code as bytes.
-  It counts the page's requests four ways from the moment it is ready, shows
-  each counter two requests it has to see, and builds two containers that ask
-  the reader to reach the server the page came from: after loading, the page
-  makes none, and while loading it asks for nothing but itself
+  and through the command, run on the Python the page carries to the patch
+  release, comparing stdout, stderr and the exit code as bytes. It counts the
+  page's requests four ways from the moment it is ready, makes the page and its
+  worker fetch once each and requires every counter to see what it can of
+  those, and builds two containers that ask the reader to reach the server the
+  gate runs: after loading, the page makes none, and while loading it asks for
+  nothing but itself
 
 **1.0.** Met. Five doors to one verdict; the fifth is a page that checks a
 container in the browser, installing nothing and sending the container nowhere.

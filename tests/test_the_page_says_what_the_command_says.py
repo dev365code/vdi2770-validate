@@ -335,20 +335,22 @@ def test_the_job_installs_the_browser_the_gate_was_written_against():
 
 
 def test_the_job_runs_the_python_the_page_carries():
-    """Two interpreters of different minor versions can word one standard-library
-    error differently, and a comparison across them could not say which door a
-    difference came through. So the command runs on the Python the page runs."""
+    """Two interpreters can word one standard-library error differently, and two
+    patch releases of one can accept different archives, and a comparison across
+    them could not say which door a difference came through. So the command runs
+    on the Python the page runs, to the patch release."""
     ci = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
     job = ci[ci.index("\n  the-page-this-repo-offers:"):]
-    minor = ".".join(BUILD.RUNTIME["python"].split(".")[:2])
-    assert f'python-version: "{minor}"' in job.split("\n  the-", 2)[1]
+    assert f'python-version: "{BUILD.RUNTIME["python"]}"' in job.split("\n  the-", 2)[1]
 
 
 def test_the_gate_refuses_to_compare_across_interpreters():
     """Asked to compare a page and a command on two different Pythons, it says
-    so rather than reporting the differences as the page's."""
+    so rather than reporting the differences as the page's -- two patch releases
+    of one minor version included, which it took for one Python while 3.13.15's
+    `zipfile` refused an archive that 3.13.2's opens."""
     page = {"python": "3.13.2", "vdi2770": "0.12.0", "xmlschema": "4.2.0", "elementpath": "5.1.4"}
-    assert GATES.unlike(page, dict(page, python="3.13.9")) == []
+    assert GATES.unlike(page, dict(page, python="3.13.9")) == ["python"]
     assert GATES.unlike(page, dict(page, python="3.12.4")) == ["python"]
     assert GATES.unlike(page, dict(page, elementpath="5.2.0")) == ["elementpath"]
 

@@ -154,8 +154,9 @@ Nothing may be installed at all, not even a Python? Open **one page** instead.
 `vdi2770.html` carries the checker, its rules and a Python built for the
 browser, and it checks the container inside the tab: once the page has loaded
 it makes no network request, and opened from a disk it makes none at all. Its
-report is what `vdi2770-validate check --no-bundle` prints, byte for byte, with
-the same exit code, and the JSON it saves is what `--json` prints. The container
+report is what `vdi2770-validate check --no-bundle` prints on the Python the page
+carries, CPython 3.13.2, at a UTF-8 console -- byte for byte, with the same exit
+code -- and the JSON it saves is what `--json` prints there. The container
 is held in the tab's memory while it is checked, so a very large delivery is one
 for the command line.
 
@@ -168,9 +169,9 @@ python tools/build_browser.py            # writes dist/vdi2770.html
 python tools/browser_gates.py            # opens it in a browser and holds it to the above
 ```
 
-The second needs Playwright and a Python of the same minor version as the one
-the page carries, because it runs the command beside the page and compares the
-two.
+The second needs Playwright and the Python the page carries, to the patch
+release, because it runs the command beside the page and compares the two, and a
+patch release can change what the standard library accepts.
 
 Exit codes and a versioned JSON report make it a CI gate in one line.
 

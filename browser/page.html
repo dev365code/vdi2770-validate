@@ -37,7 +37,7 @@ details pre { max-height: 22rem; overflow-y: auto; }
 <p><a id="json" href="#" hidden>Save the JSON report</a></p>
 <details>
 <summary>What this page is</summary>
-<p>The report it shows is what <code>vdi2770-validate check --no-bundle FILE</code> prints at a command line, and the JSON report is what the same command prints with <code>--json</code>, byte for byte, with the exit code it would return. The page runs that command's own code, in a Python that runs inside the browser and travels inside this file, together with the rules, the reader and the schema they check against. Nothing is fetched to start it.</p>
+<p>The report it shows is what <code>vdi2770-validate check --no-bundle FILE</code> prints at a UTF-8 command line on the Python this page carries, and the JSON report is what the same command prints with <code>--json</code>, byte for byte, with the exit code it would return. The page runs that command's own code, in a Python that runs inside the browser and travels inside this file, together with the rules, the reader and the schema they check against. Nothing is fetched to start it.</p>
 <p>The file can be saved and opened again from a disk, with no network at all.</p>
 </details>
 <details>

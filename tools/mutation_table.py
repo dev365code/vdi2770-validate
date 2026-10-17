@@ -3469,6 +3469,13 @@ TABLE += [
 #: The gate's own judgement, asked of a page that is not a browser: what it does
 #: with a request after load, and with a run the two door containers are not in.
 TABLE += [
+    ("gates/the-page-is-compared-on-its-own-patch-release",
+     "tools/browser_gates.py",
+     '    if page.get("python", "") != here.get("python", ""):\n',
+     '    if page.get("python", "").split(".")[:2] != here.get("python", "").split(".")[:2]:\n',
+     ["tests/test_the_page_says_what_the_command_says.py::"
+      "test_the_gate_refuses_to_compare_across_interpreters"],
+     "the page would be compared with a command whose standard library reads archives differently"),
     ("gates/a-request-after-load-is-reported",
      "tools/browser_gates.py",
      '        if urls:\n            problems.append(f"{label}: {len(urls)} request(s) after load, seen by the {name} "\n',

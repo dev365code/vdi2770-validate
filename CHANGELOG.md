@@ -16,14 +16,15 @@ should read the paragraph after the list: three of these changes move it.
   reader, the rules, `xmlschema` and `elementpath`, and Pyodide -- a build of
   CPython for the browser -- and runs the command's own code inside the tab. It
   prints the licence of each, and the notices of what the runtime has compiled
-  into it. Its report is what `vdi2770-validate check --no-bundle` prints, byte
-  for byte, with the same exit code, and the JSON it saves is what `--json`
-  prints. Once it has loaded it makes no network request, opened from a disk it
-  makes none at all, and it stores nothing. `tools/build_browser.py` builds it,
-  taking the runtime only at the digest it names, and the release carries it
-  beside the single file. No rule, verdict, exit code or report field moves:
-  every official sample and every container here is checked through the page and
-  through the command, and the two are compared as bytes.
+  into it. Its report is what `vdi2770-validate check --no-bundle` prints on the
+  Python the page carries, at a UTF-8 console -- byte for byte, with the same
+  exit code -- and the JSON it saves is what `--json` prints there. Once it has
+  loaded it makes no network request, opened from a disk it makes none at all,
+  and it stores nothing. `tools/build_browser.py` builds it, taking the runtime
+  only at the digest it names, and the release carries it beside the single
+  file. No rule, verdict, exit code or report field moves: every official sample
+  and every container here is checked through the page and through the command,
+  and the two are compared as bytes.
 - **A metadata file is read in the encoding it declares.** One declaring
   Shift_JIS, Windows-31J, EUC-JP, EUC-KR, GB2312, GBK, GB18030, Big5 or UTF-7 --
   encodings that take more than one byte for a character -- was reported as

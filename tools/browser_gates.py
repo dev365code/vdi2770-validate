@@ -139,9 +139,12 @@ def blind(expected: dict, seen: dict) -> list:
 
 def unlike(page: dict, here: dict) -> list:
     """What decides a verdict and differs between the page's runtime and the
-    command's: the Python, to the minor version, and each package, exactly."""
+    command's: the Python, to the patch release, and each package, exactly. A
+    patch release can change what the standard library accepts -- 3.13.15's
+    `zipfile` refuses a ZIP64 end record whose locator is wrong, which 3.13.2's
+    opens -- so two patches of one minor version are two readers."""
     out = []
-    if page.get("python", "").split(".")[:2] != here.get("python", "").split(".")[:2]:
+    if page.get("python", "") != here.get("python", ""):
         out.append("python")
     out += [name for name in ("vdi2770", "xmlschema", "elementpath")
             if page.get(name) != here.get(name)]
