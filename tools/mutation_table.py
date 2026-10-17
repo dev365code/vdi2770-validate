@@ -169,6 +169,15 @@ TABLE = [
      "an entrance that swallows the verdict is worse than no entrance: the "
      "workflow goes green over a container the same tool rejects in a terminal"),
 
+    ("gates/the-action-publishes-the-tools-own-failure",
+     "action.yml",
+     "          0|1|2|3|64|70) ;;\n",
+     "          0|1|2|3|64) ;;\n",
+     ["tests/test_the_action_behaves_the_way_its_names_claim.py::"
+      "test_asked_not_to_fail_it_succeeds_and_still_says_what_happened"],
+     "a run the tool itself failed on would fail the step and publish no exit-code, even "
+     "with fail-on-finding false"),
+
     ("gates/the-time-budget-actually-compares",
      "tools/time_budget.py",
      "        self.ok = self.factor < FAIL_AT",

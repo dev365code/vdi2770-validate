@@ -211,12 +211,13 @@ runs:
         rc=0
         "$@" || rc=$?
 
-        # Only the codes this tool defines are verdicts. 127 is "no python here",
-        # 126 is "not executable"; reported as a verdict they would say a
+        # Only the codes this tool defines are published. 127 is "no python
+        # here", 126 is "not executable"; reported as a verdict they would say a
         # container has a finding when nothing looked at one -- and in report
-        # mode the step would go green over a run that never happened.
+        # mode the step would go green over a run that never happened. 70 is
+        # one of the tool's own: it failed on a file, and says so.
         case "$rc" in
-          0|1|2|3|64) ;;
+          0|1|2|3|64|70) ;;
           *)
             echo "::error::the checker did not run (exit $rc); this is not a verdict on any container"
             exit "$rc"

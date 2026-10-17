@@ -10,7 +10,7 @@ receiving metadata declared in a Japanese, Korean or Chinese encoding, which was
 reported as not well-formed XML; and anyone running the checker on Pyodide or
 another Emscripten build of Python, where every container, a clean one included,
 was reported as this tool failing on it. Whoever gates a build on the exit code
-should read the paragraph after the list: three of these changes move it.
+should read the paragraph after the list: four of these changes move it.
 
 - **The check runs in a browser, from one page.** `vdi2770.html` carries the
   reader, the rules, `xmlschema` and `elementpath`, and Pyodide -- a build of
@@ -62,6 +62,12 @@ should read the paragraph after the list: three of these changes move it.
   the other, so a clean container came back `cannot read it — No module named
   'fcntl'`, exit `70`, with a diagnostic bundle. The open now asks for the module
   itself; where it is missing, a path has to be a regular file, as on Windows.
+- **The Action publishes `70`.** Its step published the checker's exit code for
+  `0`, `1`, `2`, `3` and `64`, and took any other code for a checker that never
+  ran -- `70` included, which the command returns when it fails on a file of its
+  own accord, and which the action's own description of `exit-code` lists. With
+  `fail-on-finding: false` such a run failed the step and published no
+  `exit-code`. It is published now, like every code the tool defines.
 
 **If your build gates on the exit code, this is the paragraph for you.** A
 document declared in one of the encodings above, which exited `1` for its `X1`
@@ -69,7 +75,9 @@ alone, now exits with what its content earns: `0` when nothing else is wrong.
 One whose declaration names its encoding as a Python spells it and the IANA
 registry does not, such as `cp1252`, exited `0` when its content was clean and
 now exits `1`. And on Pyodide or another Emscripten build of Python, where every
-container exited `70`, a container exits as it does anywhere else.
+container exited `70`, a container exits as it does anywhere else. In the
+Action with `fail-on-finding: false`, a run this tool failed on now publishes
+`70` and leaves the step green, as every other code does.
 
 ## 0.11.1 — 2026-10-10
 

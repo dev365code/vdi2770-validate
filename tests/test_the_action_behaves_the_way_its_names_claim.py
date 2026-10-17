@@ -49,6 +49,19 @@ def _declared_env():
     return dict.fromkeys(_check_step().get("env", {}), "")
 
 
+def _tool_exit_codes():
+    """The exit codes the tool defines, read off its own table in `cli.py`. A
+    list written here was `0, 1, 2, 3, 64` after the tool had learned `70`,
+    and the step treated `70` as a checker that never ran."""
+    import re as _re
+    cli = (ROOT / "packages" / "vdi2770" / "src" / "vdi2770" / "validate" / "cli.py").read_text(encoding="utf-8")
+    table = cli.split("EXIT_CODES = (", 1)[1].split(")\n", 1)[0]
+    return sorted({int(n) for n in _re.findall(r'"\s+(\d+)\s', table)})
+
+
+TOOL_CODES = _tool_exit_codes()
+
+
 def _run(tmp_path, exit_code, fail_on_finding="true", pyz=None, paths="a.zip"):
     """The `check` step, with a stub interpreter and this action's own env."""
     stub_dir = tmp_path / "bin"
@@ -86,7 +99,7 @@ def _run(tmp_path, exit_code, fail_on_finding="true", pyz=None, paths="a.zip"):
     return done.returncode, published.get("exit-code"), done.stdout + done.stderr
 
 
-@pytest.mark.parametrize("code", [0, 1, 2, 3, 64])
+@pytest.mark.parametrize("code", TOOL_CODES)
 def test_a_verdict_is_published_and_the_gate_fails_on_it(tmp_path, code):
     """Whatever the checker returns, the code is written down; the step's own
     status is that code, because the default is a gate."""
@@ -95,7 +108,7 @@ def test_a_verdict_is_published_and_the_gate_fails_on_it(tmp_path, code):
     assert status == code, f"the gate returned {status} for a checker that returned {code}"
 
 
-@pytest.mark.parametrize("code", [0, 1, 2, 3, 64])
+@pytest.mark.parametrize("code", TOOL_CODES)
 def test_asked_not_to_fail_it_succeeds_and_still_says_what_happened(tmp_path, code):
     status, published, _ = _run(tmp_path, code, fail_on_finding="false")
     assert published == str(code)
