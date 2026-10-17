@@ -277,6 +277,37 @@ jobs:
   # check is checked by both, and what each wrote is compared byte for byte. And
   # the page is counted: what it asks for while it loads, and what it sends once
   # it has.
+  # The same action on a Windows runner, where every path holds a backslash.
+  # The hashing tool there escapes such a name and prints a backslash in front
+  # of the hash, so a file pinned with `sha256:` never matched what it was
+  # pinned to -- and the job above, on Linux, could not see that.
+  the-action-on-a-windows-runner:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Build the single file this working tree produces, into the runner's temp
+        run: python tools/build_zipapp.py --check -o "$RUNNER_TEMP/vdi2770.pyz"
+      - name: Its hash, the way somebody pinning it would take it
+        id: pin
+        run: echo "sha256=$(python -c 'import hashlib, sys; print(hashlib.sha256(open(sys.argv[1], "rb").read()).hexdigest())' "$RUNNER_TEMP/vdi2770.pyz")" >> "$GITHUB_OUTPUT"
+      - name: A file pinned by its hash runs, from a path with backslashes in it
+        id: pinned
+        uses: ./
+        with:
+          pyz: ${{ runner.temp }}\vdi2770.pyz
+          sha256: ${{ steps.pin.outputs.sha256 }}
+          paths: corpus/examples/container/documentcontainer.zip
+      - name: It ran the file it was handed, and the container passed
+        run: |
+          test "${{ steps.pinned.outcome }}" = success || { echo "::error::a pinned file on a Windows runner did not run"; exit 1; }
+          test "${{ steps.pinned.outputs.exit-code }}" = 0 || { echo "::error::expected exit 0 for a conforming container, got '${{ steps.pinned.outputs.exit-code }}'"; exit 1; }
+
   the-page-this-repo-offers:
     runs-on: ubuntu-latest
     steps:

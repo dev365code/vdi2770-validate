@@ -156,10 +156,13 @@ runs:
             exit 64
           fi
           if [ -n "$WANT_SHA" ]; then
+            # The bytes on standard input, not the file by name: given a name
+            # that holds a backslash -- every path on a Windows runner does --
+            # these tools escape it and print a backslash in front of the hash.
             if command -v sha256sum >/dev/null 2>&1; then
-              got=$(sha256sum "$PYZ" | cut -d" " -f1)
+              got=$(sha256sum < "$PYZ" | cut -d" " -f1)
             else
-              got=$(shasum -a 256 "$PYZ" | cut -d" " -f1)
+              got=$(shasum -a 256 < "$PYZ" | cut -d" " -f1)
             fi
             want=$(printf '%s' "$WANT_SHA" | tr 'A-Z' 'a-z' | tr -d '[:space:]')
             got=$(printf '%s' "$got" | tr 'A-Z' 'a-z')

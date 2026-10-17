@@ -178,6 +178,15 @@ TABLE = [
      "a run the tool itself failed on would fail the step and publish no exit-code, even "
      "with fail-on-finding false"),
 
+    ("gates/a-pinned-file-is-hashed-by-its-bytes",
+     "action.yml",
+     '              got=$(sha256sum < "$PYZ" | cut -d" " -f1)\n',
+     '              got=$(sha256sum "$PYZ" | cut -d" " -f1)\n',
+     ["tests/test_the_action_behaves_the_way_its_names_claim.py::"
+      "test_a_pinned_file_is_held_to_its_hash_whatever_its_path_holds"],
+     "on a Windows runner, where every path holds a backslash, a pinned file would never "
+     "match its hash"),
+
     ("gates/the-time-budget-actually-compares",
      "tools/time_budget.py",
      "        self.ok = self.factor < FAIL_AT",

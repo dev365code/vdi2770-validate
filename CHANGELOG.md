@@ -68,6 +68,12 @@ should read the paragraph after the list: four of these changes move it.
   own accord, and which the action's own description of `exit-code` lists. With
   `fail-on-finding: false` such a run failed the step and published no
   `exit-code`. It is published now, like every code the tool defines.
+- **A single file pinned with `sha256:` runs on a Windows runner.** The Action
+  hashed `pyz` by its name, and the hashing tool there escapes a name that holds
+  a backslash -- every path on a Windows runner does -- by printing a backslash
+  in front of the hash. The hash then never matched the one asked for, and the
+  step stopped with `64`. The file's bytes are hashed from standard input now,
+  where there is no name to escape.
 
 **If your build gates on the exit code, this is the paragraph for you.** A
 document declared in one of the encodings above, which exited `1` for its `X1`

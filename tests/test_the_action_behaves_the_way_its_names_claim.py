@@ -307,3 +307,58 @@ def test_a_carried_file_can_be_held_to_a_hash(tmp_path):
     done = subprocess.run([*GITHUB_BASH, str(script)], capture_output=True, text=True, env=env)
     assert done.returncode == 64, f"a file that is not what was asked for came back as {done.returncode}"
     assert "hashes to" in done.stdout + done.stderr
+
+
+#: `sha256sum` as GNU coreutils writes it, which is the one a Windows runner's
+#: bash has: a file name holding a backslash or a newline is escaped, and the
+#: line then starts with a backslash -- in front of the hash. Read from
+#: standard input there is no name to escape.
+GNU_SHA256SUM = """#!{python}
+import hashlib, sys
+names = sys.argv[1:]
+if not names:
+    print(hashlib.sha256(sys.stdin.buffer.read()).hexdigest() + "  -")
+for name in names:
+    digest = hashlib.sha256(open(name, "rb").read()).hexdigest()
+    if "\\\\" in name or "\\n" in name:
+        print("\\\\" + digest + "  " + name.replace("\\\\", "\\\\\\\\").replace("\\n", "\\\\n"))
+    else:
+        print(digest + "  " + name)
+"""
+
+
+def test_a_pinned_file_is_held_to_its_hash_whatever_its_path_holds(tmp_path):
+    """Every path on a Windows runner holds a backslash, and the hashing tool
+    there escapes such a name by putting a backslash in front of the hash. Read
+    off that line, the hash was never 64 hex digits, so a file pinned with
+    `sha256:` never matched what was asked for and the step stopped with 64."""
+    import hashlib
+    import sys
+
+    room = tmp_path / "D:\\a\\_temp"
+    room.mkdir()
+    checker = room / "vdi2770.pyz"
+    checker.write_bytes(b"the file you were promised")
+    stub_dir = tmp_path / "bin"
+    stub_dir.mkdir()
+    for name in ("python3", "python"):
+        stub = stub_dir / name
+        stub.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+        stub.chmod(0o755)
+    hasher = stub_dir / "sha256sum"
+    hasher.write_text(GNU_SHA256SUM.format(python=sys.executable), encoding="utf-8")
+    hasher.chmod(0o755)
+    escaped = subprocess.run([str(hasher), str(checker)], capture_output=True, text=True).stdout
+    assert escaped.startswith("\\"), "the premise: the tool escapes a name that holds a backslash"
+    script = tmp_path / "step.sh"
+    script.write_text(_check_step_body(), encoding="utf-8")
+    output = tmp_path / "GITHUB_OUTPUT"
+    output.write_text("", encoding="utf-8")
+    env = dict(os.environ)
+    env.update(_declared_env())
+    env.update({"PATH": f"{stub_dir}:{os.environ['PATH']}", "PYZ": str(checker),
+                "WANT_SHA": hashlib.sha256(b"the file you were promised").hexdigest(),
+                "PATHS": "a.zip", "FAIL_ON_FINDING": "true", "GITHUB_OUTPUT": str(output)})
+    done = subprocess.run([*GITHUB_BASH, str(script)], capture_output=True, text=True, env=env)
+    assert done.returncode == 0, f"the file it was asked for came back as {done.returncode}: {done.stdout + done.stderr}"
+
