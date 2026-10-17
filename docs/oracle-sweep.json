@@ -3850,6 +3850,29 @@
           "P6"
         ]
       }
+    },
+    "m3-class-name-in-windows-31j.zip": {
+      "reference": {},
+      "ours": {
+        "info": [
+          "P4"
+        ],
+        "warning": [
+          "M3"
+        ]
+      }
+    },
+    "x1-bytes-that-are-not-windows-31j.zip": {
+      "reference": {},
+      "ours": {
+        "error": [
+          "X1"
+        ]
+      }
     }
+  },
+  "_unswept": {
+    "m3-class-name-in-windows-31j.zip": "New generated container; the pinned reference has not been run on it.",
+    "x1-bytes-that-are-not-windows-31j.zip": "New generated container; the pinned reference has not been run on it."
   }
 }

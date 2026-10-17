@@ -13,10 +13,13 @@ check that — the normative text is paywalled.
 
 ## How much of this was measured
 
-There are 134 containers in `corpus/` and
-`tests/fixtures/`. All 134 containers were put through the reference
-implementation at its pinned commit `e47c13c`, with locale `en_US`.
-[docs/oracle-sweep.json](oracle-sweep.json) records both implementations' verdicts.
+There are 136 containers in `corpus/` and
+`tests/fixtures/`. 134 of the 136 containers were put through the reference
+implementation at its pinned commit `e47c13c`, with locale `en_US`. The two
+fixtures whose metadata is declared in Windows-31J have only our verdict and
+wait in the recording's `_unswept` block for a real reference run; no
+reference evidence is invented for them.
+[docs/oracle-sweep.json](oracle-sweep.json) records both states.
 
 A container added after a sweep carries our column and an empty one for the
 reference until the next run, named in the sweep's `_unswept` block with the

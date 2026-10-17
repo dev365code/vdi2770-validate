@@ -9,7 +9,6 @@ make this process open a file or reach a host.
 """
 from __future__ import annotations
 
-import codecs
 import re
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Union
@@ -146,6 +145,101 @@ class Node:
 #: The encodings expat reads by itself, by the names it knows them by.
 _EXPAT_READS = {"utf-8", "utf-16", "utf-16be", "utf-16le", "iso-8859-1", "us-ascii"}
 
+#: The names the IANA charset registry gives each charset this reader decodes,
+#: by the codec that decodes it. XML 1.0 (4.3.3) asks a processor to read a
+#: registered name, compared without regard to case, as the charset registered
+#: under it, or to treat the name as unknown; a name the running Python happens
+#: to know is not thereby one of these, and Pythons do not agree on which they
+#: know -- 3.9 has no `Windows-31J`, 3.13 reads it as Windows-31J, and a reader
+#: that asked whichever one ran it read the same document two ways. So the
+#: names are written down here, once.
+#:
+#: Each charset is one whose declaration reads as ASCII, which is how a
+#: declaration is found, and each codec is one every Python this package
+#: supports carries. Not here: UTF-16 and UTF-32, which a declaration found as
+#: ASCII cannot be in; the EBCDIC code pages; and the charsets no supported
+#: Python has a codec for. One codec for each registration, whatever Python
+#: calls its aliases: `MS_Kanji` is registered as Shift_JIS, and `ISO-8859-11`
+#: as TIS-620. ISO-8859-6-E and -I and ISO-8859-8-E and -I are ISO-8859-6 and
+#: ISO-8859-8 with their direction made explicit (RFC 1556), the same bytes for
+#: the same characters, and `windows-874` is the code page Python calls cp874.
+_REGISTERED = {
+    "ascii": ("US-ASCII", "iso-ir-6", "ANSI_X3.4-1968", "ANSI_X3.4-1986", "ISO646-US", "us",
+        "IBM367", "cp367", "csASCII"),
+    "iso8859-1": ("iso-ir-100", "ISO_8859-1", "ISO-8859-1", "latin1", "l1", "IBM819", "CP819",
+        "csISOLatin1"),
+    "iso8859-2": ("iso-ir-101", "ISO_8859-2", "ISO-8859-2", "latin2", "l2", "csISOLatin2"),
+    "iso8859-3": ("iso-ir-109", "ISO_8859-3", "ISO-8859-3", "latin3", "l3", "csISOLatin3"),
+    "iso8859-4": ("iso-ir-110", "ISO_8859-4", "ISO-8859-4", "latin4", "l4", "csISOLatin4"),
+    "iso8859-5": ("iso-ir-144", "ISO_8859-5", "ISO-8859-5", "cyrillic", "csISOLatinCyrillic"),
+    "iso8859-6": ("iso-ir-127", "ISO_8859-6", "ISO-8859-6", "ECMA-114", "ASMO-708", "arabic",
+        "csISOLatinArabic", "ISO_8859-6-E", "csISO88596E", "ISO-8859-6-E", "ISO_8859-6-I",
+        "csISO88596I", "ISO-8859-6-I"),
+    "iso8859-7": ("iso-ir-126", "ISO_8859-7", "ISO-8859-7", "ELOT_928", "ECMA-118", "greek",
+        "greek8", "csISOLatinGreek"),
+    "iso8859-8": ("iso-ir-138", "ISO_8859-8", "ISO-8859-8", "hebrew", "csISOLatinHebrew",
+        "ISO_8859-8-E", "csISO88598E", "ISO-8859-8-E", "ISO_8859-8-I", "csISO88598I",
+        "ISO-8859-8-I"),
+    "iso8859-9": ("iso-ir-148", "ISO_8859-9", "ISO-8859-9", "latin5", "l5", "csISOLatin5"),
+    "iso8859-10": ("ISO-8859-10", "iso-ir-157", "l6", "csISOLatin6", "latin6"),
+    "shift_jis": ("Shift_JIS", "MS_Kanji", "csShiftJIS"),
+    "euc_jp": ("Extended_UNIX_Code_Packed_Format_for_Japanese", "csEUCPkdFmtJapanese",
+        "EUC-JP"),
+    "euc_kr": ("KS_C_5601-1987", "iso-ir-149", "KS_C_5601-1989", "KSC_5601", "korean",
+        "csKSC56011987", "EUC-KR", "csEUCKR"),
+    "iso2022_kr": ("ISO-2022-KR", "csISO2022KR"),
+    "iso2022_jp": ("ISO-2022-JP", "csISO2022JP"),
+    "iso2022_jp_2": ("ISO-2022-JP-2", "csISO2022JP2"),
+    "gb2312": ("GB_2312-80", "iso-ir-58", "chinese", "csISO58GB231280", "GB2312", "csGB2312"),
+    "utf-7": ("UNICODE-1-1-UTF-7", "csUnicode11UTF7", "UTF-7", "csUTF7"),
+    "utf-8": ("UTF-8", "csUTF8"),
+    "iso8859-13": ("ISO-8859-13", "csISO885913"),
+    "iso8859-14": ("ISO-8859-14", "iso-ir-199", "ISO_8859-14", "latin8", "iso-celtic", "l8",
+        "csISO885914"),
+    "iso8859-15": ("ISO-8859-15", "ISO_8859-15", "Latin-9", "csISO885915"),
+    "iso8859-16": ("ISO-8859-16", "iso-ir-226", "ISO_8859-16", "latin10", "l10", "csISO885916"),
+    "gbk": ("GBK", "CP936", "MS936", "windows-936", "csGBK"),
+    "gb18030": ("GB18030", "csGB18030"),
+    "kz1048": ("KZ-1048", "STRK1048-2002", "RK1048", "csKZ1048"),
+    "hp-roman8": ("hp-roman8", "roman8", "r8", "csHPRoman8"),
+    "cp850": ("IBM850", "cp850", "csPC850Multilingual"),
+    "cp852": ("IBM852", "cp852", "csPCp852"),
+    "cp437": ("IBM437", "cp437", "csPC8CodePage437"),
+    "cp862": ("IBM862", "cp862", "csPC862LatinHebrew"),
+    "cp932": ("Windows-31J", "csWindows31J"),
+    "big5": ("Big5", "csBig5"),
+    "mac-roman": ("macintosh", "mac", "csMacintosh"),
+    "cp855": ("IBM855", "cp855", "csIBM855"),
+    "cp857": ("IBM857", "cp857", "csIBM857"),
+    "cp860": ("IBM860", "cp860", "csIBM860"),
+    "cp861": ("IBM861", "cp861", "cp-is", "csIBM861"),
+    "cp863": ("IBM863", "cp863", "csIBM863"),
+    "cp864": ("IBM864", "cp864", "csIBM864"),
+    "cp865": ("IBM865", "cp865", "csIBM865"),
+    "cp869": ("IBM869", "cp869", "cp-gr", "csIBM869"),
+    "koi8-r": ("KOI8-R", "csKOI8R"),
+    "hz": ("HZ-GB-2312",),
+    "cp866": ("IBM866", "cp866", "csIBM866"),
+    "cp775": ("IBM775", "cp775", "csPC775Baltic"),
+    "koi8-u": ("KOI8-U", "csKOI8U"),
+    "cp858": ("IBM00858", "CCSID00858", "CP00858", "csIBM00858"),
+    "big5hkscs": ("Big5-HKSCS", "csBig5HKSCS"),
+    "ptcp154": ("PTCP154", "csPTCP154", "PT154", "CP154", "Cyrillic-Asian"),
+    "cp874": ("windows-874", "cswindows874"),
+    "cp1250": ("windows-1250", "cswindows1250"),
+    "cp1251": ("windows-1251", "cswindows1251"),
+    "cp1252": ("windows-1252", "cswindows1252"),
+    "cp1253": ("windows-1253", "cswindows1253"),
+    "cp1254": ("windows-1254", "cswindows1254"),
+    "cp1255": ("windows-1255", "cswindows1255"),
+    "cp1256": ("windows-1256", "cswindows1256"),
+    "cp1257": ("windows-1257", "cswindows1257"),
+    "cp1258": ("windows-1258", "cswindows1258"),
+    "tis-620": ("TIS-620", "csTIS620", "ISO-8859-11"),
+}
+
+_CODEC_OF = {name.lower(): codec for codec, names in _REGISTERED.items() for name in names}
+
 #: The start of an XML declaration that names an encoding -- productions 23, 24,
 #: 25, 26, 80 and 81 of XML 1.0 -- read off the bytes of a document whose first
 #: characters are ASCII, as they are in every encoding a declaration can be
@@ -157,15 +251,6 @@ _DECLARATION = re.compile(
     rb"(?:\"([A-Za-z][A-Za-z0-9._-]*)\"|'([A-Za-z][A-Za-z0-9._-]*)')")
 
 _LINE_BREAK = re.compile(r"\r\n|\r|\n")
-
-#: Codecs Python carries that are not encodings a document is written in: its
-#: own escape and domain-name transforms, and the two whose meaning is whatever
-#: the machine's Windows code page is. A declaration naming one is a name this
-#: reader does not use, which XML 1.0 (4.3.3) allows, and it is left to expat
-#: exactly as before.
-_NOT_FOR_DOCUMENTS = {"unicode-escape", "raw-unicode-escape", "idna", "punycode",
-                      "undefined", "mbcs", "oem"}
-
 
 def _readable(data: bytes) -> Union[bytes, str]:
     """The document as the parser is handed it: its bytes, or its text.
@@ -185,13 +270,14 @@ def _readable(data: bytes) -> Union[bytes, str]:
     ISO-2022-JP, whose escape sequences change what the bytes after them mean, it
     read a byte at a time, and wrongly.
 
-    So the declared encoding is decoded here, by the codec Python has for that
-    name, and strictly: bytes that are not legal in the declared encoding are
-    the fatal error XML 1.0 (4.3.3) says they are, and nothing is replaced. The
-    parser is then handed text, which it reads as the characters it holds
-    whatever the declaration says -- so the declaration is applied once, here.
-    A name nobody has a codec for -- or one whose codec is not of text, like
-    `rot13` -- is handed on as bytes, and expat refuses it as it always has.
+    So the declared encoding is decoded here, strictly, by the codec this reader
+    keeps for that name in `_REGISTERED`: bytes that are not legal in the
+    declared encoding are the fatal error XML 1.0 (4.3.3) says they are, and
+    nothing is replaced. The parser is then handed text, which it reads as the
+    characters it holds whatever the declaration says -- so the declaration is
+    applied once, here. A name the registry does not give a charset this reader
+    decodes is refused here, the same way on every Python: an encoding a
+    processor does not read is a fatal error as well (4.3.3).
     """
     found = _DECLARATION.match(data)
     if not found:
@@ -199,16 +285,12 @@ def _readable(data: bytes) -> Union[bytes, str]:
     name = (found.group(1) or found.group(2)).decode("ascii")
     if name.lower() in _EXPAT_READS:
         return data
-    try:
-        codec = codecs.lookup(name).name
-    except LookupError:
-        return data
-    if codec in _NOT_FOR_DOCUMENTS:
-        return data
+    codec = _CODEC_OF.get(name.lower())
+    if codec is None:
+        raise XmlError(f"the document declares {name}, which is not an IANA-registered name "
+                       f"for a charset this reader reads; use the registered name", 1, 0)
     try:
         return data.decode(codec)
-    except LookupError:
-        return data
     except UnicodeDecodeError as e:
         read = data[:e.start].decode(codec, "replace")     # only counted, for where
         breaks = list(_LINE_BREAK.finditer(read))
@@ -221,6 +303,22 @@ def _readable(data: bytes) -> Union[bytes, str]:
                        f"{name}: {e}", 1, 0) from None
 
 
+#: How the first bytes say a document is UTF-16 when it is (Appendix F): a byte
+#: order mark, or a `<?` written in two bytes a character. A declaration found as
+#: ASCII never gets as far as expat with a name it cannot use; one in UTF-16 can,
+#: and its refusal should still say which name it was.
+_UTF16_STARTS = ((b"\xff\xfe", "utf-16-le"), (b"\xfe\xff", "utf-16-be"),
+                 (b"<\x00?\x00", "utf-16-le"), (b"\x00<\x00?", "utf-16-be"))
+
+
+def _head(data: bytes) -> str:
+    """The start of `data` as text, to name what its declaration says."""
+    for start, codec in _UTF16_STARTS:
+        if data.startswith(start):
+            return data[:512].decode(codec, "replace")
+    return data[:256].decode("ascii", "replace")
+
+
 def _markup_charge(data: bytes) -> int:
     """The most elements `data` can make the parser build, counted from what the
     parser is handed -- before it is handed it.
@@ -228,9 +326,9 @@ def _markup_charge(data: bytes) -> int:
     Every element has an opening `<`, so counting those bounds the cost of a
     parse whether it succeeds, refuses, or dies on a malformed token. Counted in
     the bytes where expat reads them itself; in the text where the document was
-    decoded first, because there a `<` need not be the byte 0x3C -- mac-arabic
-    has a byte of its own for it, and UTF-7 can write one in base64 -- and a
-    count of bytes charged nothing for exactly the markup they do not show. A
+    decoded first, because there a `<` need not be the byte 0x3C -- UTF-7 can
+    write one in base64 -- and a count of bytes charged nothing for exactly the
+    markup they do not show. A
     document whose bytes are not its declared encoding builds nothing.
     """
     try:
@@ -353,8 +451,8 @@ def parse(data: bytes) -> Node:
         # Name what the document declared. Python says "multi-byte encodings are
         # not supported" without saying which one, and a reader of the report has
         # only our sentence to go on.
-        declared = re.search(rb'encoding\s*=\s*["\']([^"\']{1,64})["\']', data[:256])
-        which = declared.group(1).decode("ascii", "replace") if declared else "the one declared"
+        declared = re.search(r'encoding\s*=\s*["\']([^"\']{1,64})["\']', _head(data))
+        which = declared.group(1) if declared else "the one declared"
         raise XmlError(f"the document declares an encoding this parser cannot use "
                        f"({which}): {e}", p.CurrentLineNumber, p.CurrentColumnNumber) from e
 

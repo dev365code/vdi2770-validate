@@ -148,13 +148,15 @@ missing, as `F1`.
 - declared encodings read without loss — done;
   `tests/test_a_document_is_read_in_the_encoding_it_declares.py` reads metadata
   declared in UTF-8, UTF-16, the ISO-8859 family, windows-1252, Shift_JIS,
-  EUC-JP, ISO-2022-JP, EUC-KR, GB2312, GBK, GB18030, Big5, HZ-GB-2312 and UTF-7.
-  The class name `M3` quotes comes back as the characters the file holds, and
-  the report is the one the same document draws in UTF-8. Bytes that are not the
-  encoding a file declares are still `X1`, at the byte:
+  Windows-31J, EUC-JP, ISO-2022-JP, EUC-KR, GB2312, GBK, GB18030, Big5,
+  HZ-GB-2312 and UTF-7, and a document under every name the IANA charset
+  registry gives a charset it decodes, the same on every Python. The class name
+  `M3` quotes comes back as the characters the file holds, and the report is the
+  one the same document draws in UTF-8. Bytes that are not the encoding a file
+  declares are still `X1`, at the byte:
   `tests/fixtures/m3-class-name-in-shift-jis.zip` and
   `tests/fixtures/x1-bytes-that-are-not-shift-jis.zip` are one such pair, and
-  EUC-KR, GB2312 and Big5 have theirs
+  Windows-31J, EUC-KR, GB2312 and Big5 have theirs
 
 **1.0.** Met. Metadata may declare an encoding in its XML declaration, and the
 condition was a test that reads metadata in each encoding the declaration allows

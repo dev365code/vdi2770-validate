@@ -9,7 +9,8 @@ where nothing may be installed, which a page in the browser now does; anyone
 receiving metadata declared in a Japanese, Korean or Chinese encoding, which was
 reported as not well-formed XML; and anyone running the checker on Pyodide or
 another Emscripten build of Python, where every container, a clean one included,
-was reported as this tool failing on it.
+was reported as this tool failing on it. Whoever gates a build on the exit code
+should read the paragraph after the list: three of these changes move it.
 
 - **The check runs in a browser, from one page.** `vdi2770.html` carries the
   reader, the rules, `xmlschema` and Pyodide -- a build of CPython for the
@@ -23,22 +24,35 @@ was reported as this tool failing on it.
   every container here is checked through the page and through the command, and
   the two are compared as bytes.
 - **A metadata file is read in the encoding it declares.** One declaring
-  Shift_JIS, EUC-JP, EUC-KR, GB2312, GBK, GB18030, Big5 or UTF-7 -- encodings
-  that take more than one byte for a character -- was reported as `X1`, not
-  well-formed XML, with `multi-byte encodings are not supported`: a limit of
-  this parser, put on the sender. One declaring ISO-2022-JP or HZ-GB-2312, whose
-  escape sequences change what the bytes after them mean, was read a byte at a
-  time and drew `X1` wherever it held anything but ASCII. Each is now decoded in
-  the encoding it declares, strictly, and checked as the document it is, and the
-  schema check reads the same text. **This moves verdicts:** such a document
-  draws the findings its content earns where it drew `X1`. Bytes that are not
-  the declared encoding are still `X1`, which now names the encoding and the
-  bytes, at their position. A declaration naming one of Python's own transforms
-  -- `unicode_escape`, `idna` -- is not read through it, and is treated as it
-  was before. The budget of elements a read may build is charged from the text
-  such a document is decoded to, because there a `<` need not be the byte that
-  spells it in ASCII, and a document that writes its markup another way costs
-  what it holds.
+  Shift_JIS, Windows-31J, EUC-JP, EUC-KR, GB2312, GBK, GB18030, Big5 or UTF-7 --
+  encodings that take more than one byte for a character -- was reported as
+  `X1`, not well-formed XML, with `multi-byte encodings are not supported`: a
+  limit of this parser, put on the sender. One declaring ISO-2022-JP or
+  HZ-GB-2312, whose escape sequences change what the bytes after them mean, was
+  read a byte at a time and drew `X1` wherever it held anything but ASCII. Each
+  is now decoded in the encoding it declares, strictly, and checked as the
+  document it is, and the schema check reads the same text. **This moves
+  verdicts:** such a document draws the findings its content earns where it drew
+  `X1`. Bytes that are not the declared encoding are still `X1`, which now names
+  the encoding and the bytes, at their position. The budget of
+  elements a read may build is charged from the text such a document is decoded
+  to, because there a `<` need not be the byte that spells it in ASCII, and a
+  document that writes its markup another way costs what it holds.
+- **An encoding is known by the name the IANA charset registry gives it, on
+  every Python.** A declared name was looked up in the codec table of whichever
+  Python ran the check, and Pythons do not agree on those: in 0.11.1 already, a
+  document declaring `IBM00858` was read on 3.13 and was `X1` on 3.9. The names
+  are now the
+  registry's -- each charset's registered name and its aliases, compared
+  without regard to case, as XML 1.0 asks -- for the charsets this tool decodes,
+  and the list is the same on every Python and in the browser page. **This
+  moves verdicts too:** a name the registry does not give such a charset is
+  `X1`, which says so, where some were read. `cp1252`, `latin_1` and
+  `mac_roman` are names Python has and the registry does not: a document
+  declaring one was read on every Python, and is `X1` now, which asks for the
+  registered name. Declared as `windows-1252`, `ISO-8859-1` or `macintosh`, the
+  same document is read as before. A private `x-` name, an EBCDIC code page and
+  one of Python's own transforms, such as `unicode_escape`, are `X1` as well.
 - **A Python with `O_NONBLOCK` and no `fcntl` read every path as this tool's own
   failure.** The open that keeps a named pipe with no writer from stalling a
   sweep asked whether the platform had the flag, then imported the module.
@@ -46,6 +60,14 @@ was reported as this tool failing on it.
   the other, so a clean container came back `cannot read it — No module named
   'fcntl'`, exit `70`, with a diagnostic bundle. The open now asks for the module
   itself; where it is missing, a path has to be a regular file, as on Windows.
+
+**If your build gates on the exit code, this is the paragraph for you.** A
+document declared in one of the encodings above, which exited `1` for its `X1`
+alone, now exits with what its content earns: `0` when nothing else is wrong.
+One whose declaration names its encoding as a Python spells it and the IANA
+registry does not, such as `cp1252`, exited `0` when its content was clean and
+now exits `1`. And on Pyodide or another Emscripten build of Python, where every
+container exited `70`, a container exits as it does anywhere else.
 
 ## 0.11.1 — 2026-10-10
 

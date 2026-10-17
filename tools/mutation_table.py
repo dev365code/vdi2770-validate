@@ -3447,6 +3447,26 @@ TABLE += [
 ]
 
 
+#: The gate's own judgement, asked of a page that is not a browser: what it does
+#: with a request after load, and with a run the two door containers are not in.
+TABLE += [
+    ("gates/a-request-after-load-is-reported",
+     "tools/browser_gates.py",
+     '        if urls:\n            problems.append(f"{label}: {len(urls)} request(s) after load, seen by the {name} "\n',
+     '        if False:\n            problems.append(f"{label}: {len(urls)} request(s) after load, seen by the {name} "\n',
+     ["tests/test_the_page_says_what_the_command_says.py::"
+      "test_a_request_after_load_is_a_problem_named_by_the_counter_that_saw_it"],
+     "the page could send anything once it had loaded and the gate would pass it"),
+    ("gates/the-doors-have-to-be-in-the-run",
+     "tools/browser_gates.py",
+     "    if opened != sorted(DOORS):\n",
+     "    if False:\n",
+     ["tests/test_the_page_says_what_the_command_says.py::"
+      "test_the_two_doors_have_to_be_among_the_files_checked"],
+     "a run without the containers that ask the reader to reach out would count a zero nothing tried to break"),
+]
+
+
 #: The browser page. What can be judged without a browser is judged here: the
 #: Python the page runs, the comparison it is held to, and the build that makes
 #: it. The page's own script and its worker are judged by
@@ -3540,18 +3560,40 @@ TABLE += [
      "    if True:\n",
      ["tests/test_a_document_is_read_in_the_encoding_it_declares.py::test_each_encoding_a_declaration_names_is_read_and_quoted_back_unchanged"],
      "Shift_JIS, EUC-KR, GB2312 and Big5 would be refused again as not well-formed"),
-    ("reader/pythons-own-transforms-are-not-document-encodings",
+    ("reader/a-name-is-read-as-the-registry-registers-it",
      "packages/vdi2770/src/vdi2770/xmlread.py",
-     "    if codec in _NOT_FOR_DOCUMENTS:\n",
-     "    if False:\n",
-     ["tests/test_a_document_is_read_in_the_encoding_it_declares.py::test_a_name_for_one_of_pythons_own_transforms_is_not_read_through_it"],
-     "a declaration naming unicode_escape would turn backslashes in the text into markup"),
-    ("reader/a-codec-that-is-not-of-text-is-refused-as-before",
+     "    codec = _CODEC_OF.get(name.lower())\n",
+     "    codec = _CODEC_OF.get(name.lower()) or name\n",
+     ["tests/test_a_document_is_read_in_the_encoding_it_declares.py::test_a_name_the_registry_does_not_give_is_not_read_on_any_python"],
+     "a name the running Python knows and the registry does not would be read, and read differently from one Python to the next"),
+    ("reader/a-name-outside-the-registry-is-refused-here",
      "packages/vdi2770/src/vdi2770/xmlread.py",
-     "    except LookupError:\n        return data\n    except UnicodeDecodeError as e:\n",
-     "    except ImportError:\n        return data\n    except UnicodeDecodeError as e:\n",
+     '        raise XmlError(f"the document declares {name}, which is not an IANA-registered name "\n'
+     '                       f"for a charset this reader reads; use the registered name", 1, 0)\n',
+     "        return data\n",
+     ["tests/test_a_document_is_read_in_the_encoding_it_declares.py::test_a_name_the_registry_does_not_give_is_not_read_on_any_python",
+      "tests/test_a_document_is_read_in_the_encoding_it_declares.py::test_a_name_for_one_of_pythons_own_transforms_is_not_read_through_it"],
+     "such a name would go to expat, which borrows whatever table the running Python has for it"),
+    ("reader/windows-31j-is-read-as-registered",
+     "packages/vdi2770/src/vdi2770/xmlread.py",
+     '    "cp932": ("Windows-31J", "csWindows31J"),\n',
+     "",
+     ["tests/test_a_document_is_read_in_the_encoding_it_declares.py::test_each_encoding_a_declaration_names_is_read_and_quoted_back_unchanged",
+      "tests/test_a_document_is_read_in_the_encoding_it_declares.py::test_a_registered_name_is_read_as_the_charset_registered_under_it"],
+     "a registered name some Python lacks would be refused on every one"),
+    ("reader/a-utf-16-declaration-is-named-when-it-is-refused",
+     "packages/vdi2770/src/vdi2770/xmlread.py",
+     "    for start, codec in _UTF16_STARTS:\n",
+     "    for start, codec in ():\n",
      ["packages/vdi2770/tests/test_the_public_api.py::test_an_encoding_this_parser_will_not_use_is_the_documents_problem"],
-     "a declaration naming rot13 would escape the reader as a LookupError"),
+     "a UTF-16 document refused for the encoding it declares would be refused without the name"),
+    ("reader/a-utf-16-document-is-charged-for-its-markup",
+     "packages/vdi2770/src/vdi2770/xmlread.py",
+     "    try:\n        source = _readable(data)\n    except XmlError:\n        return 0\n",
+     '    if data.startswith((b"\\xff\\xfe", b"\\xfe\\xff")):\n        return 0\n'
+     "    try:\n        source = _readable(data)\n    except XmlError:\n        return 0\n",
+     ["tests/test_a_document_is_read_in_the_encoding_it_declares.py::test_a_document_expat_reads_in_utf16_is_charged_for_its_markup"],
+     "UTF-16 documents would be parsed in full past the budget"),
     ("reader/the-bad-bytes-are-reported-on-their-line",
      "packages/vdi2770/src/vdi2770/xmlread.py",
      "        line = len(breaks) + 1\n",

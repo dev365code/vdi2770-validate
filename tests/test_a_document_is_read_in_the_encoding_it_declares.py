@@ -44,6 +44,9 @@ ENCODINGS = [
     ("ISO-8859-9", "iso8859-9", "Teknik şartname"),
     ("windows-1252", "cp1252", "Technische Größe €"),
     ("Shift_JIS", "shift_jis", "技術仕様書"),
+    # NEC's row 13 is in Windows-31J and not in Shift_JIS, so the circled one
+    # can only come back if the file was read as what it declares.
+    ("Windows-31J", "cp932", "技術仕様書①"),
     ("EUC-JP", "euc_jp", "技術仕様書"),
     ("ISO-2022-JP", "iso2022_jp", "技術仕様書"),
     ("EUC-KR", "euc_kr", "기술 사양서"),
@@ -59,7 +62,7 @@ ENCODINGS = [
 #: a table of one character per byte: the ones that take more than one byte for
 #: a character, which were refused, and the ones whose escape sequences change
 #: what the next bytes mean, which were read a byte at a time.
-MULTI_BYTE = ["Shift_JIS", "EUC-JP", "ISO-2022-JP", "EUC-KR", "GB2312", "GBK", "GB18030", "Big5",
+MULTI_BYTE = ["Shift_JIS", "Windows-31J", "EUC-JP", "ISO-2022-JP", "EUC-KR", "GB2312", "GBK", "GB18030", "Big5",
               "HZ-GB-2312", "UTF-7"]
 
 
@@ -118,8 +121,10 @@ def test_the_verdict_is_the_one_the_same_document_gets_in_utf8(declared, codec, 
     assert _findings(raw, "declared.zip") == _findings(same, "declared.zip")
 
 
-#: A byte that is not legal where it stands, for each multi-byte encoding.
-BROKEN = b"\xff"
+#: A byte that is not legal where it stands, for each multi-byte encoding. Not
+#: 0xFF in Windows-31J, which gives that byte a character of the vendor's own;
+#: there, a lead byte with nothing after it that it can lead.
+BROKEN = {"Windows-31J": b"\x81\x20"}
 
 
 @pytest.mark.parametrize("declared", MULTI_BYTE)
@@ -135,7 +140,7 @@ def test_bytes_that_are_not_the_declared_encoding_are_still_not_well_formed(decl
     # run of base64, so it is not searched for.
     tag = b'<ClassName Language="de">'
     at = good.index(tag) + len(tag)
-    bad = good[:at] + BROKEN + good[at:]
+    bad = good[:at] + BROKEN.get(declared, b"\xff") + good[at:]
     with pytest.raises(UnicodeDecodeError):
         bad.decode(codec)
     findings = _findings(_container(bad), "broken.zip")
@@ -162,22 +167,86 @@ def test_a_byte_order_mark_still_decides_against_a_declaration_that_disagrees():
 
 def test_a_name_for_one_of_pythons_own_transforms_is_not_read_through_it():
     """`unicode_escape` is a codec Python carries and no document is written in:
-    read through it, a backslash sequence in the text would become markup. The
-    name is one this reader does not use, as XML 1.0 lets a processor treat a
-    name, and the document is read as it was before -- the backslashes are
-    text."""
-    import warnings
-
+    read through it, a backslash sequence in the text would become markup. No
+    charset is registered under that name, so the document is not read at all,
+    which is what XML 1.0 (4.3.3) makes of an encoding a processor does not
+    read -- on every Python, where pyexpat used to lend expat a table built
+    through the transform."""
     from vdi2770 import xmlread
 
-    # pyexpat builds its table by decoding every byte through the codec, and
-    # this one warns about the `\\]` it meets on the way. That is how it read
-    # such a document before as well, and it is not what this is about.
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", DeprecationWarning)
-        tree = xmlread.parse(b'<?xml version="1.0" encoding="unicode_escape"?>'
-                             b'<a>\\u003cb/\\u003e</a>')
-    assert tree.text == "\\u003cb/\\u003e"
+    with pytest.raises(xmlread.XmlError) as refused:
+        xmlread.parse(b'<?xml version="1.0" encoding="unicode_escape"?>'
+                      b'<a>\\u003cb/\\u003e</a>')
+    assert "unicode_escape" in refused.value.message
+
+
+def _registered():
+    from vdi2770 import xmlread
+
+    return sorted(((name, codec) for codec, names in xmlread._REGISTERED.items() for name in names),
+                  key=lambda pair: pair[0].lower())
+
+
+@pytest.mark.parametrize("name,codec", _registered(), ids=[n for n, _ in _registered()])
+def test_every_name_the_registry_gives_is_read_on_this_python(name, codec):
+    """A name is read as the IANA charset registry registers it, and the same way
+    on every Python: the names are this reader's, not the running Python's, and
+    each is read here on whichever Python runs this -- each of the ones this
+    package supports, in CI. A Python that lacked a codec the list names would
+    fail here rather than read one document two ways."""
+    from vdi2770 import xmlread
+
+    tree = xmlread.parse(f'<?xml version="1.0" encoding="{name}"?>\n<a>read</a>'.encode(codec))
+    assert tree.text == "read"
+
+
+def test_the_registry_names_one_charset_once_and_only_names_a_declaration_can_hold():
+    """Compared without regard to case, as XML 1.0 asks, no name may lead to two
+    codecs. And each is one a declaration can be written with -- production 81,
+    `EncName`, starts with a letter and has no colon -- so a registered name
+    like `ISO_8859-1:1987` or `850`, which no well-formed declaration holds, is
+    not one this list can be asked for."""
+    from vdi2770 import xmlread
+
+    seen = {}
+    for codec, names in xmlread._REGISTERED.items():
+        for name in names:
+            assert re.fullmatch(r"[A-Za-z][A-Za-z0-9._-]*", name), name
+            assert seen.setdefault(name.lower(), codec) == codec, name
+
+
+#: What the registry says and a Python's own table does not: `MS_Kanji` is an
+#: alias of Shift_JIS, which some Pythons read as Windows-31J; ISO-8859-11 is
+#: an alias of TIS-620; and windows-874, which no Python here knows by that
+#: name, is the code page Python calls cp874.
+REGISTRY_READS = [("Windows-31J", "cp932"), ("csWindows31J", "cp932"), ("MS_Kanji", "shift_jis"),
+                  ("ISO-8859-11", "tis-620"), ("windows-874", "cp874"), ("ISO-8859-8-I", "iso8859-8")]
+
+
+@pytest.mark.parametrize("name,codec", REGISTRY_READS, ids=[n for n, _ in REGISTRY_READS])
+def test_a_registered_name_is_read_as_the_charset_registered_under_it(name, codec):
+    from vdi2770 import xmlread
+
+    assert {n.lower(): c for n, c in _registered()}[name.lower()] == codec
+    assert xmlread._readable(f'<?xml version="1.0" encoding="{name}"?><a/>'.encode("ascii")) == (
+        f'<?xml version="1.0" encoding="{name}"?><a/>')
+
+
+#: Names a Python may know and the registry does not give a charset this reader
+#: decodes: Python's own spellings, a private `x-` name, a transform, an EBCDIC
+#: page, and UTF-32, which a declaration found as ASCII cannot be in.
+UNREGISTERED = ["SJIS", "MS932", "cp932", "x-sjis", "cp1252", "latin_1", "unicode_escape",
+                "mac-arabic", "IBM037", "UTF-32"]
+
+
+@pytest.mark.parametrize("name", UNREGISTERED)
+def test_a_name_the_registry_does_not_give_is_not_read_on_any_python(name):
+    """`X1`, naming the encoding, on every Python -- where a document declaring
+    `SJIS` was read on all of them and one declaring `Windows-31J` on some."""
+    raw = _container(_metadata(name, "Technische Spezifikation").encode("ascii", "xmlcharrefreplace"))
+    x1 = [f for f in _findings(raw, "unregistered.zip") if f[0] == "X1"]
+    assert x1, f"a document declaring {name} was read"
+    assert name in x1[0][1] and "IANA" in x1[0][1], x1[0][1]
 
 
 def test_the_library_reads_it_too():
@@ -202,9 +271,11 @@ def _walk(node):
         yield from _walk(child)
 
 
-#: A `<` that is not the byte 0x3C. mac-arabic has a byte of its own for it, and
-#: UTF-7 can write any character, markup included, in base64.
-HIDDEN_MARKUP = [("mac-arabic", b"\xbc"), ("UTF-7", b"+ADw-")]
+#: A `<` that is not the byte 0x3C: UTF-7 can write any character, markup
+#: included, in base64. (mac-arabic has a byte of its own for it, 0xBC, and is
+#: not a name the registry gives, so a document declaring it is not read at all
+#: -- see `UNREGISTERED`.)
+HIDDEN_MARKUP = [("UTF-7", b"+ADw-")]
 
 
 @pytest.mark.parametrize("declared,lt", HIDDEN_MARKUP, ids=[h[0] for h in HIDDEN_MARKUP])
@@ -237,3 +308,37 @@ def test_a_document_is_charged_for_the_markup_it_holds_not_the_bytes_that_spell_
                       **{f"{i}.zip": zipped({META: body, "a.pdf": b"%PDF-1.4"}) for i in range(4)}})
     refused = [f for f in runner.check_bytes(archive, "budget.zip").findings if f.rule.id == "X6"]
     assert refused, "four documents of 600 elements each were parsed against a budget of 1,000"
+
+
+@pytest.mark.parametrize("mark,codec", [(b"\xff\xfe", "utf-16-le"), (b"\xfe\xff", "utf-16-be")],
+                         ids=["UTF-16LE", "UTF-16BE"])
+def test_a_document_expat_reads_in_utf16_is_charged_for_its_markup(mark, codec, monkeypatch):
+    """expat reads UTF-16 itself, so such a document goes to it as bytes and is
+    charged from them -- where every `<` is a 0x3C beside a zero. Nothing
+    charged the UTF-16 path in particular, so leaving it out of the charge was a
+    change no test saw: four documents, each with a valid declaration and body,
+    would be parsed in full against a budget the first one spends."""
+    from vdi2770_validate import runner
+
+    monkeypatch.setattr(runner, "MAX_TOTAL_ELEMENTS", 1_000)
+    text = ('<?xml version="1.0" encoding="UTF-16"?>'
+            '<Document xmlns="http://www.vdi.de/schemas/vdi2770">'
+            + "<a>" * 600 + "</a>" * 600 + "</Document>")
+    body = mark + text.encode(codec)
+    from vdi2770 import xmlread
+
+    assert len(list(_walk(xmlread.parse(body)))) == 601, "the premise: expat reads it, all of it"
+    plain = (b'<?xml version="1.0"?><Document xmlns="http://www.vdi.de/schemas/vdi2770">'
+             b'<DocumentId DomainId="d">X</DocumentId></Document>')
+
+    def zipped(members):
+        out = io.BytesIO()
+        with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as z:
+            for name, data in members.items():
+                z.writestr(name, data)
+        return out.getvalue()
+
+    archive = zipped({"VDI2770_Main.xml": plain, "VDI2770_Main.pdf": b"%PDF-1.4",
+                      **{f"{i}.zip": zipped({META: body, "a.pdf": b"%PDF-1.4"}) for i in range(4)}})
+    refused = [f for f in runner.check_bytes(archive, "budget.zip").findings if f.rule.id == "X6"]
+    assert refused, "four UTF-16 documents of 600 elements each were parsed against a budget of 1,000"

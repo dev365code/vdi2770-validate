@@ -466,12 +466,16 @@ def test_every_node_carries_the_namespace_it_was_written_in():
 
 
 #: `utf-7` was the example of an encoding expat will not decode. It is read now
-#: -- a document is read in the encoding it declares when Python has a codec for
-#: it -- so the examples are names that are still refused: none at all, a codec
-#: that is not of text, one that is no document's encoding, and a body its
-#: declared encoding does not describe.
+#: -- a document is read in the encoding it declares when the name is one the
+#: IANA charset registry gives it -- so the examples are names that are still
+#: refused: none at all, a codec that is not of text, one that is no document's
+#: encoding, and a body its declared encoding does not describe. A declaration
+#: found as ASCII is refused before expat sees it, so each is also written in
+#: UTF-16, where expat reads the declaration itself and the registry's
+#: refusal is its own.
+@pytest.mark.parametrize("form", ["ascii", "utf-16"])
 @pytest.mark.parametrize("declared", ["XXXX", "rot13", "idna", "utf-32", "cp99999"])
-def test_an_encoding_this_parser_will_not_use_is_the_documents_problem(declared):
+def test_an_encoding_this_parser_will_not_use_is_the_documents_problem(declared, form):
     """expat raises `LookupError` for an encoding nobody has and `ValueError`
     for one it will not decode, and neither is an `ExpatError`. Both escaped
     `parse`, so a caller that catches `XmlError` — which is the whole contract
@@ -482,7 +486,8 @@ def test_an_encoding_this_parser_will_not_use_is_the_documents_problem(declared)
     The document declares an encoding that does not exist. That is the
     document's problem, and it has a line number.
     """
-    body = f'<?xml version="1.0" encoding="{declared}"?><a/>'.encode()
+    text = f'<?xml version="1.0" encoding="{declared}"?><a/>'
+    body = text.encode() if form == "ascii" else b"\xff\xfe" + text.encode("utf-16-le")
     with pytest.raises(vdi2770.XmlError) as e:
         vdi2770.parse_xml(body)
     assert not isinstance(e.value, vdi2770.UnsafeXml), "this is malformed, not hostile"

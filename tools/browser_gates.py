@@ -217,6 +217,11 @@ class _Handler(http.server.BaseHTTPRequestHandler):
         pass
 
 
+#: The two containers `doors` makes, by name, so the run can be asked whether
+#: they were in it.
+DOORS = ("door-external-entity.zip", "door-remote-schema.zip")
+
+
 def doors(into: Path, base: str) -> list:
     """Two containers that ask the reader to reach the server this run started.
 
@@ -237,7 +242,7 @@ def doors(into: Path, base: str) -> list:
         'xsi:schemaLocation="http://www.vdi.de/schemas/vdi2770 vdi2770.xsd"',
         f'xsi:schemaLocation="http://www.vdi.de/schemas/vdi2770 {base}door/schema.xsd"', 1)
     made = []
-    for name, text in (("door-external-entity.zip", entity), ("door-remote-schema.zip", schema)):
+    for name, text in zip(DOORS, (entity, schema)):
         if text == original:
             raise SystemExit(f"{name}: the clean sample no longer has the text this "
                              f"door is made by changing, so the door would be shut")
@@ -340,6 +345,11 @@ CONTROLS = {"browser": 2, "server": 2, "page timing": 1, "worker timing": 1}
 
 def judge(watched, label, todo, expected, base, problems) -> tuple:
     """Every file through one open page; then the counts, then the controls."""
+    opened = sorted(path.name for path in todo if path.name in DOORS)
+    if opened != sorted(DOORS):
+        problems.append(f"{label}: the files checked do not include both containers that ask "
+                        f"the reader to reach the server ({', '.join(DOORS)}), so the count "
+                        f"below says nothing about a reader that was asked to")
     own = watched.asked_while_loading()
     if own != [watched.url]:
         problems.append(f"{label}: while loading, the page asked for {own}; it should ask "

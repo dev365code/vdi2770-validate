@@ -142,12 +142,17 @@ def main() -> int:
     # for, which is `X1` -- bytes that are not legal in the declared encoding
     # are a fatal error (XML 1.0, 4.3.3). What the sample says that an encoding
     # has no bytes for, its German, is written as character references, which
-    # read back as the same characters.
-    declared_in = (("Shift_JIS", "shift_jis", "shift-jis", "技術仕様書"),
-                   ("EUC-KR", "euc_kr", "euc-kr", "기술 사양서"),
-                   ("GB2312", "gb2312", "gb2312", "技术规格书"),
-                   ("Big5", "big5", "big5", "技術規格書"))
-    for declared, codec, slug, class_name in declared_in:
+    # read back as the same characters. Windows-31J's name carries a character
+    # from NEC's row 13, which Shift_JIS does not have, so only a reading as what
+    # the file declares quotes it back; and that encoding gives 0xFF a character
+    # of its own, so the byte it has no character for is a lead byte with
+    # nothing after it that it can lead.
+    declared_in = (("Shift_JIS", "shift_jis", "shift-jis", "技術仕様書", b"\xff"),
+                   ("EUC-KR", "euc_kr", "euc-kr", "기술 사양서", b"\xff"),
+                   ("GB2312", "gb2312", "gb2312", "技术规格书", b"\xff"),
+                   ("Big5", "big5", "big5", "技術規格書", b"\xff"),
+                   ("Windows-31J", "cp932", "windows-31j", "技術仕様書①", b"\x81\x20"))
+    for declared, codec, slug, class_name, illegal in declared_in:
         text = base[META].decode("utf-8")
         for old, new in (('encoding="UTF-8"', f'encoding="{declared}"'),
                          ('<ClassName Language="de">Technische Spezifikation</ClassName>',
@@ -162,7 +167,7 @@ def main() -> int:
             f"replaced by one in that encoding's script")
         at = written.index(class_name.encode(codec))
         f = dict(base)
-        f[META] = written[:at] + b"\xff" + written[at:]
+        f[META] = written[:at] + illegal + written[at:]
         add(f"x1-bytes-that-are-not-{slug}.zip", f, "X1", [META],
             f"the same metadata with one byte that is not {declared}")
 

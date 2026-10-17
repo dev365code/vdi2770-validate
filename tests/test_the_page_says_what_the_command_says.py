@@ -167,6 +167,51 @@ def test_a_counter_that_missed_the_control_is_blind_not_quiet():
     assert GATES.blind(expected, {"browser": 2}) == ["server", "page timing", "worker timing"]
 
 
+class _Watched:
+    """A page that loaded asking for nothing but itself, sent `after` once it was
+    ready, and was seen by every counter when it was made to fetch."""
+    url = "http://127.0.0.1:1/vdi2770.html"
+    loaded = {"browser": 1, "server": 1, "page timing": 0, "worker timing": 0}
+    downloads = ()
+    page = None
+
+    def __init__(self, after=()):
+        self.after = dict(after)
+
+    def asked_while_loading(self):
+        return [self.url]
+
+    def since(self, mark):
+        return {name: list(self.after.get(name, ())) for name in GATES.CONTROLS}
+
+    def controls(self, base):
+        return dict(GATES.CONTROLS), {}
+
+
+def _judged(watched, todo=()):
+    problems = []
+    GATES.judge(watched, "served", list(todo), {}, "http://127.0.0.1:1/", problems)
+    return problems
+
+
+def test_a_request_after_load_is_a_problem_named_by_the_counter_that_saw_it(monkeypatch):
+    """The claim itself: anything a counter saw between the page being ready and
+    the last container being checked is reported, whichever counter saw it."""
+    monkeypatch.setattr(GATES.time, "sleep", lambda seconds: None)
+    for counter in GATES.CONTROLS:
+        said = _judged(_Watched({counter: ["http://127.0.0.1:9/sent"]}))
+        assert [p for p in said if "1 request(s) after load" in p and counter in p], said
+
+
+def test_the_two_doors_have_to_be_among_the_files_checked(monkeypatch):
+    """Nothing sent is worth something only if the reader was asked to send:
+    the two containers that ask it to reach the server have to be in the run,
+    and if they are not, the gate says so rather than counting a zero that
+    nothing tried to break."""
+    monkeypatch.setattr(GATES.time, "sleep", lambda seconds: None)
+    assert [p for p in _judged(_Watched()) if "reach the server" in p]
+
+
 def test_every_container_and_every_official_sample_is_compared():
     """The comparison is over everything this repository checks containers
     with: every container the oracle sweep walks, and every file copied from
