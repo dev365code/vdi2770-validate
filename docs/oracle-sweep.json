@@ -1660,6 +1660,126 @@
         ]
       }
     },
+    "m3-class-name-in-big5.zip": {
+      "reference": {
+        "ERROR": [
+          "DC_003"
+        ],
+        "INFO": [
+          "REP_003",
+          "REP_005",
+          "REP_008",
+          "REP_009",
+          "REP_010",
+          "REP_011",
+          "REP_015",
+          "REP_020",
+          "REP_028",
+          "REP_036",
+          "REP_041",
+          "REP_043",
+          "ZU_005"
+        ]
+      },
+      "ours": {
+        "info": [
+          "P4"
+        ],
+        "warning": [
+          "M3"
+        ]
+      }
+    },
+    "m3-class-name-in-euc-kr.zip": {
+      "reference": {
+        "ERROR": [
+          "DC_003"
+        ],
+        "INFO": [
+          "REP_003",
+          "REP_005",
+          "REP_008",
+          "REP_009",
+          "REP_010",
+          "REP_011",
+          "REP_015",
+          "REP_020",
+          "REP_028",
+          "REP_036",
+          "REP_041",
+          "REP_043",
+          "ZU_005"
+        ]
+      },
+      "ours": {
+        "info": [
+          "P4"
+        ],
+        "warning": [
+          "M3"
+        ]
+      }
+    },
+    "m3-class-name-in-gb2312.zip": {
+      "reference": {
+        "ERROR": [
+          "DC_003"
+        ],
+        "INFO": [
+          "REP_003",
+          "REP_005",
+          "REP_008",
+          "REP_009",
+          "REP_010",
+          "REP_011",
+          "REP_015",
+          "REP_020",
+          "REP_028",
+          "REP_036",
+          "REP_041",
+          "REP_043",
+          "ZU_005"
+        ]
+      },
+      "ours": {
+        "info": [
+          "P4"
+        ],
+        "warning": [
+          "M3"
+        ]
+      }
+    },
+    "m3-class-name-in-shift-jis.zip": {
+      "reference": {
+        "ERROR": [
+          "DC_003"
+        ],
+        "INFO": [
+          "REP_003",
+          "REP_005",
+          "REP_008",
+          "REP_009",
+          "REP_010",
+          "REP_011",
+          "REP_015",
+          "REP_020",
+          "REP_028",
+          "REP_036",
+          "REP_041",
+          "REP_043",
+          "ZU_005"
+        ]
+      },
+      "ours": {
+        "info": [
+          "P4"
+        ],
+        "warning": [
+          "M3"
+        ]
+      }
+    },
     "m3-german-name-of-another-class.zip": {
       "reference": {
         "INFO": [
@@ -2913,6 +3033,114 @@
         ]
       }
     },
+    "x1-bytes-that-are-not-big5.zip": {
+      "reference": {
+        "ERROR": [
+          "DC_003"
+        ],
+        "INFO": [
+          "REP_003",
+          "REP_005",
+          "REP_008",
+          "REP_009",
+          "REP_010",
+          "REP_011",
+          "REP_015",
+          "REP_020",
+          "REP_028",
+          "REP_036",
+          "REP_041",
+          "REP_043",
+          "ZU_005"
+        ]
+      },
+      "ours": {
+        "error": [
+          "X1"
+        ]
+      }
+    },
+    "x1-bytes-that-are-not-euc-kr.zip": {
+      "reference": {
+        "ERROR": [
+          "DC_003"
+        ],
+        "INFO": [
+          "REP_003",
+          "REP_005",
+          "REP_008",
+          "REP_009",
+          "REP_010",
+          "REP_011",
+          "REP_015",
+          "REP_020",
+          "REP_028",
+          "REP_036",
+          "REP_041",
+          "REP_043",
+          "ZU_005"
+        ]
+      },
+      "ours": {
+        "error": [
+          "X1"
+        ]
+      }
+    },
+    "x1-bytes-that-are-not-gb2312.zip": {
+      "reference": {
+        "ERROR": [
+          "DC_003"
+        ],
+        "INFO": [
+          "REP_003",
+          "REP_005",
+          "REP_008",
+          "REP_009",
+          "REP_010",
+          "REP_011",
+          "REP_015",
+          "REP_020",
+          "REP_028",
+          "REP_036",
+          "REP_041",
+          "REP_043",
+          "ZU_005"
+        ]
+      },
+      "ours": {
+        "error": [
+          "X1"
+        ]
+      }
+    },
+    "x1-bytes-that-are-not-shift-jis.zip": {
+      "reference": {
+        "ERROR": [
+          "DC_003"
+        ],
+        "INFO": [
+          "REP_003",
+          "REP_005",
+          "REP_008",
+          "REP_009",
+          "REP_010",
+          "REP_011",
+          "REP_015",
+          "REP_020",
+          "REP_028",
+          "REP_036",
+          "REP_041",
+          "REP_043",
+          "ZU_005"
+        ]
+      },
+      "ours": {
+        "error": [
+          "X1"
+        ]
+      }
+    },
     "x1-malformed-xml.zip": {
       "reference": {
         "ERROR": [
@@ -3622,92 +3850,6 @@
           "P6"
         ]
       }
-    },
-    "m3-class-name-in-big5.zip": {
-      "reference": {},
-      "ours": {
-        "info": [
-          "P4"
-        ],
-        "warning": [
-          "M3"
-        ]
-      }
-    },
-    "m3-class-name-in-euc-kr.zip": {
-      "reference": {},
-      "ours": {
-        "info": [
-          "P4"
-        ],
-        "warning": [
-          "M3"
-        ]
-      }
-    },
-    "m3-class-name-in-gb2312.zip": {
-      "reference": {},
-      "ours": {
-        "info": [
-          "P4"
-        ],
-        "warning": [
-          "M3"
-        ]
-      }
-    },
-    "m3-class-name-in-shift-jis.zip": {
-      "reference": {},
-      "ours": {
-        "info": [
-          "P4"
-        ],
-        "warning": [
-          "M3"
-        ]
-      }
-    },
-    "x1-bytes-that-are-not-big5.zip": {
-      "reference": {},
-      "ours": {
-        "error": [
-          "X1"
-        ]
-      }
-    },
-    "x1-bytes-that-are-not-euc-kr.zip": {
-      "reference": {},
-      "ours": {
-        "error": [
-          "X1"
-        ]
-      }
-    },
-    "x1-bytes-that-are-not-gb2312.zip": {
-      "reference": {},
-      "ours": {
-        "error": [
-          "X1"
-        ]
-      }
-    },
-    "x1-bytes-that-are-not-shift-jis.zip": {
-      "reference": {},
-      "ours": {
-        "error": [
-          "X1"
-        ]
-      }
     }
-  },
-  "_unswept": {
-    "m3-class-name-in-big5.zip": "New generated container; the pinned reference has not been run on it.",
-    "m3-class-name-in-euc-kr.zip": "New generated container; the pinned reference has not been run on it.",
-    "m3-class-name-in-gb2312.zip": "New generated container; the pinned reference has not been run on it.",
-    "m3-class-name-in-shift-jis.zip": "New generated container; the pinned reference has not been run on it.",
-    "x1-bytes-that-are-not-big5.zip": "New generated container; the pinned reference has not been run on it.",
-    "x1-bytes-that-are-not-euc-kr.zip": "New generated container; the pinned reference has not been run on it.",
-    "x1-bytes-that-are-not-gb2312.zip": "New generated container; the pinned reference has not been run on it.",
-    "x1-bytes-that-are-not-shift-jis.zip": "New generated container; the pinned reference has not been run on it."
   }
 }
