@@ -7,7 +7,7 @@ one release drift; this takes the account that ships in the repository and adds
 the part a release page needs and a changelog does not -- how to check the file
 you just downloaded.
 
-    python tools/release_notes.py --version 0.9.1 --pyz-sha <hex>
+    python tools/release_notes.py --version 0.9.1 --pyz-sha <hex> --page-sha <hex>
 
 It refuses rather than improvises. A CHANGELOG whose top section is for another
 version, or which has no opening paragraph, gets no release notes: a release
@@ -68,7 +68,7 @@ def opening_paragraph(section: str) -> str:
         f"{section.strip()[:60]!r}")
 
 
-def body(version: str, pyz_sha: str, changelog: str) -> str:
+def body(version: str, pyz_sha: str, changelog: str, page_sha: str) -> str:
     """The notes for `version`, refusing if the CHANGELOG is about another one."""
     said, body_text = top_section(changelog)
     if said != version:
@@ -77,8 +77,9 @@ def body(version: str, pyz_sha: str, changelog: str) -> str:
             f"One of the two is wrong and it is not for this script to decide which.")
     lead = opening_paragraph(body_text)
     lead = "**" + LEAD + ":**" + lead[len(LEAD) + 1:]
-    if not re.fullmatch(r"[0-9a-f]{64}", pyz_sha):
-        raise CannotDescribe(f"that is not a sha256 of anything: {pyz_sha!r}")
+    for digest in (pyz_sha, page_sha):
+        if not re.fullmatch(r"[0-9a-f]{64}", digest):
+            raise CannotDescribe(f"that is not a sha256 of anything: {digest!r}")
     return f"""{lead}
 
 Full notes: `CHANGELOG.md`, section {version}.
@@ -94,6 +95,16 @@ python vdi2770.pyz check YOUR-CONTAINER.zip
 
 ```
 sha256  {pyz_sha}
+```
+
+## One page, nothing installed
+
+`vdi2770.html` is attached as well: the same check inside a browser tab, for a
+machine where nothing may be installed, not even a Python. Open it and drop the
+container on it; once it has loaded it makes no network request.
+
+```
+sha256  {page_sha}
 ```
 
 The wheels and sdists are the same bytes PyPI serves, and `SHA256SUMS-reader`
@@ -113,6 +124,7 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--version", required=True, help="the release being described")
     ap.add_argument("--pyz-sha", required=True, help="sha256 of the single file")
+    ap.add_argument("--page-sha", required=True, help="sha256 of the browser page")
     ap.add_argument("--changelog", default=str(ROOT / "CHANGELOG.md"))
     ap.add_argument("-o", "--output", help="where to write; stdout by default")
     args = ap.parse_args(argv)
@@ -120,7 +132,8 @@ def main(argv=None) -> int:
     version = args.version[1:] if args.version.startswith("v") else args.version
     try:
         text = body(version, args.pyz_sha.strip().lower(),
-                    pathlib.Path(args.changelog).read_text(encoding="utf-8"))
+                    pathlib.Path(args.changelog).read_text(encoding="utf-8"),
+                    args.page_sha.strip().lower())
     except CannotDescribe as e:
         print(f"refusing to describe this release: {e}", file=sys.stderr)
         return 1

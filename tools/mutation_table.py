@@ -3418,6 +3418,35 @@ TABLE += [
 ]
 
 
+#: The release page's body is generated, so what it hands a reader is what this
+#: function prints. The browser page is attached beside the single file and
+#: has a hash of its own to be checked against.
+TABLE += [
+    ("gates/the-release-body-prints-the-pages-own-hash",
+     "tools/release_notes.py",
+     "sha256  {page_sha}\n",
+     "sha256  {pyz_sha}\n",
+     ["tests/test_the_release_notes_come_from_the_changelog.py::"
+      "test_the_body_hands_a_reader_the_browser_page_and_its_hash"],
+     "the body prints the single file's hash where the page's belongs, so the "
+     "page a reader downloads can be checked against nothing"),
+    ("gates/the-page-hash-the-body-prints-is-a-hash",
+     "tools/release_notes.py",
+     "    for digest in (pyz_sha, page_sha):\n",
+     "    for digest in (pyz_sha,):\n",
+     ["tests/test_the_release_notes_come_from_the_changelog.py::"
+      "test_a_page_hash_that_is_not_one_is_refused"],
+     "a placeholder is printed where the page's hash should be"),
+    ("gates/no-release-body-without-the-pages-hash",
+     "tools/release_notes.py",
+     '    ap.add_argument("--page-sha", required=True, help="sha256 of the browser page")\n',
+     '    ap.add_argument("--page-sha", default="0" * 64, help="sha256 of the browser page")\n',
+     ["tests/test_the_release_notes_come_from_the_changelog.py::"
+      "test_the_command_does_not_describe_a_release_without_the_page_hash"],
+     "a release is described with a hash nobody gave"),
+]
+
+
 #: The browser page. What can be judged without a browser is judged here: the
 #: Python the page runs, the comparison it is held to, and the build that makes
 #: it. The page's own script and its worker are judged by
