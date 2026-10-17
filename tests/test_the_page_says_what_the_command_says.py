@@ -172,7 +172,8 @@ class _Watched:
     """A page that loaded asking for nothing but itself, sent `after` once it was
     ready, and was seen by every counter when it was made to fetch."""
     url = "http://127.0.0.1:1/vdi2770.html"
-    loaded = {"browser": 1, "server": 1, "page timing": 0, "worker timing": 0}
+    loaded = {"browser": 1, "server": 1, "page timing": 0, "worker timing": 0, "sockets": 0,
+              "worker sockets": 0}
     downloads = ()
     page = None
 
@@ -181,6 +182,9 @@ class _Watched:
 
     def asked_while_loading(self):
         return [self.url]
+
+    def mark(self):
+        return dict(self.loaded)
 
     def since(self, mark):
         return {name: list(self.after.get(name, ())) for name in GATES.CONTROLS}
@@ -202,6 +206,37 @@ def test_a_request_after_load_is_a_problem_named_by_the_counter_that_saw_it(monk
     for counter in GATES.CONTROLS:
         said = _judged(_Watched({counter: ["http://127.0.0.1:9/sent"]}))
         assert [p for p in said if "1 request(s) after load" in p and counter in p], said
+
+
+def test_a_request_after_the_report_is_saved_is_a_problem(monkeypatch):
+    """The first count ends with the last container. Saving the JSON is a click
+    after that, and a timer can fire later still, so the count is taken again;
+    the JSON's own blob URL is the page's, and not a request."""
+    monkeypatch.setattr(GATES.time, "sleep", lambda seconds: None)
+    watched = _Watched({"browser": ["blob:http://127.0.0.1:1/0f", "http://127.0.0.1:9/saved"]})
+    watched.quiet = dict(watched.loaded)
+    problems = []
+    GATES.nothing_after(watched, "served", problems)
+    assert problems == ["served: 1 request(s) after the report was shown and saved, seen by the "
+                        "browser counter: ['http://127.0.0.1:9/saved']"], problems
+
+
+def test_anything_a_page_or_its_worker_keeps_is_a_problem():
+    """Asked from the inside, because a page opened from a disk keeps local
+    storage where the browser's account of its context does not look."""
+    problems = []
+    GATES.stored("opened from a disk", "page",
+                 {"indexedDB": 0, "usage": 0, "localStorage": 1, "sessionStorage": 0}, problems)
+    GATES.stored("opened from a disk", "worker", {"indexedDB": 0, "usage": 0}, problems)
+    assert problems == ["opened from a disk: the page left something stored: {'localStorage': 1}"]
+
+
+def test_a_websocket_is_counted_and_shown_to_its_counter():
+    """None of the other counters sees a WebSocket, the page's or the worker's --
+    and a Python socket leaves the worker as one -- so each side has a counter of
+    its own, and, like the others, a control it has to see."""
+    assert GATES.CONTROLS["sockets"] == 2 and GATES.CONTROLS["worker sockets"] == 1
+    assert GATES.CONTROLS["server"] == 4, "the server sees the request that opens each socket"
 
 
 def test_the_two_doors_have_to_be_among_the_files_checked(monkeypatch):

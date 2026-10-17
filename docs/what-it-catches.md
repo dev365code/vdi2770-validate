@@ -112,11 +112,16 @@ report's `schemaVersion` is `1`, and 1.0 commits to not changing it.
   page and checks every official sample and every container here through it
   and through the command, run on the Python the page carries to the patch
   release, comparing stdout, stderr and the exit code as bytes. It counts the
-  page's requests four ways from the moment it is ready, makes the page and its
-  worker fetch once each and requires every counter to see what it can of
-  those, and builds two containers that ask the reader to reach the server the
-  gate runs: after loading, the page makes none, and while loading it asks for
-  nothing but itself
+  page's requests six ways -- the WebSockets the page and its worker open among
+  them, which is how a Python socket leaves the worker -- from the moment it is
+  ready until after its report has been shown and saved, makes the page and its
+  worker each fetch once and open a socket once and requires every counter to
+  see what it can of those, asks the page and its worker what they keep, and
+  builds two containers that ask the reader to reach the server the gate runs:
+  after loading, the page makes none, while loading it asks for nothing but
+  itself, and it keeps nothing. A WebRTC connection, a beacon sent as the tab
+  closes and a timer that fires seconds after the last check are outside what
+  it counts
 
 **1.0.** Met. Five doors to one verdict; the fifth is a page that checks a
 container in the browser, installing nothing and sending the container nowhere.

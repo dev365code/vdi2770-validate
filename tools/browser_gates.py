@@ -9,20 +9,25 @@ sending the container nowhere, and that its report is the one the command line
 gives. A browser can be made to answer each of those by counting, so this
 counts.
 
-* **Nothing is sent.** Every request is counted four ways: by the browser's own
+* **Nothing is sent.** Every request is counted five ways: by the browser's own
   network events, which see the page and the worker it starts; by the server
-  that hands the page out; and by the Resource Timing of the page and of the
-  worker, each read from the inside. The count runs from the moment the page
-  says it is ready to the moment the last container has been checked, and it has
-  to be zero. A counter attached to the wrong thing reads zero as well, so the
-  page and the worker are then each made to fetch once and every counter has to
-  see it. And two containers are built for the run that ask the reader to reach
+  that hands the page out; by the Resource Timing of the page and of the
+  worker, each read from the inside; and by the WebSockets the page and the
+  worker open -- the worker's are how a Python socket leaves it -- which none of
+  the others sees. The count runs from the moment the page says it is
+  ready to the moment the last container has been checked, and it has to be
+  zero; it is taken again after the report has been shown and its JSON saved,
+  and a little after that. A counter attached to the wrong thing reads zero as
+  well, so the page and the worker are then each made to fetch once and to open
+  a socket once, and every counter has to see what it can of those. And two containers are built for the run that ask the reader to reach
   out to that same server -- an external entity and a remote schema -- so the
   door is opened rather than assumed shut.
 * **Nothing is fetched to start it.** While it loads, the page asks for nothing
   but itself: the runtime, the reader and the rules travel inside the file.
 * **Nothing is installed.** No cookie, no storage, no cache, no service worker,
-  no download it did not ask for.
+  no download it did not ask for -- asked of the page and its worker themselves,
+  because a page opened from a disk keeps local storage where the browser's own
+  account of what a context holds does not look.
 * **The report is the command's.** Every official sample and every container
   here is checked by the page and by the command, with the same arguments, and
   stdout, stderr and the exit code are compared as bytes. Then the same file is
@@ -269,6 +274,18 @@ READ_RUNS = """(k) => {
 
 TIMING = "performance.getEntriesByType('resource').map(e => e.name)"
 
+#: Put in the worker once it is ready: every WebSocket it is asked to open is
+#: written down before it is opened. Python's sockets come out of the worker as
+#: WebSockets, and the browser reports a WebSocket for the page and not for a
+#: worker it started, so the worker's are counted from the inside, like its
+#: Resource Timing.
+WORKER_SOCKETS = """(() => {
+  const Opened = self.WebSocket, seen = self.__vdi2770_sockets = [];
+  self.WebSocket = function (url, ...rest) { seen.push(String(url)); return new Opened(url, ...rest); };
+  self.WebSocket.prototype = Opened.prototype;
+  return true;
+})()"""
+
 
 def page_runs(page, path: Path) -> list:
     """Hand the page one file through its own file input, as a person does, and
@@ -290,8 +307,13 @@ class Watched:
 
     def __init__(self, context, url, server):
         self.url, self.server, self.requests, self.downloads, self.console = url, server, [], [], []
+        self.sockets = []
         context.on("request", lambda r: self.requests.append(r.url))
         self.page = context.new_page()
+        # A WebSocket is not a request to any of the other counters -- not to the
+        # browser's request events, not to either Resource Timing. These events
+        # report the worker's sockets too.
+        self.page.on("websocket", lambda ws: self.sockets.append(ws.url))
         self.page.on("download", lambda d: self.downloads.append(d))
         self.page.on("console", lambda m: self.console.append(m.text))
         self.page.on("pageerror", lambda e: self.console.append(f"page error: {e}"))
@@ -310,40 +332,55 @@ class Watched:
         if len(self.page.workers) != 1:
             raise SystemExit(f"the page started {len(self.page.workers)} workers; this counts one")
         self.worker = self.page.workers[0]
+        self.worker.evaluate(WORKER_SOCKETS)
         self.loaded = self.mark()
 
     def mark(self):
         return {"browser": len(self.requests), "server": self.server.count(),
                 "page timing": len(self.page.evaluate(TIMING)),
-                "worker timing": len(self.worker.evaluate(TIMING))}
+                "worker timing": len(self.worker.evaluate(TIMING)),
+                "sockets": len(self.sockets),
+                "worker sockets": len(self.worker.evaluate("self.__vdi2770_sockets"))}
 
     def since(self, mark):
         return {"browser": self.requests[mark["browser"]:],
                 "server": [path for path, _ in self.server.since(mark["server"])],
                 "page timing": self.page.evaluate(TIMING)[mark["page timing"]:],
-                "worker timing": self.worker.evaluate(TIMING)[mark["worker timing"]:]}
+                "worker timing": self.worker.evaluate(TIMING)[mark["worker timing"]:],
+                "sockets": self.sockets[mark["sockets"]:],
+                "worker sockets": self.worker.evaluate("self.__vdi2770_sockets")[mark["worker sockets"]:]}
 
     def asked_while_loading(self):
-        """What the page fetched before it was ready, other than its own blobs."""
+        """What the page fetched before it was ready, other than its own blobs,
+        and any socket it opened."""
         return [u for u in self.requests[:self.loaded["browser"]]
-                if not u.startswith(("blob:", "data:"))]
+                if not u.startswith(("blob:", "data:"))] + self.sockets[:self.loaded["sockets"]]
 
     def controls(self, base):
-        """Make the page and the worker fetch once each, and see who noticed."""
+        """Make the page and the worker fetch once each, and the page open a socket
+        once, and see who noticed."""
         mark = self.mark()
+        socket = "ws" + base[len("http"):] + "control/socket"
         self.page.evaluate(f"fetch('{base}control/page').then(r => r.status, e => String(e))")
         self.worker.evaluate(f"fetch('{base}control/worker').then(r => r.status, e => String(e))")
+        self.page.evaluate(f"(() => {{ try {{ new WebSocket('{socket}'); }} catch (e) {{}} }})()")
+        self.worker.evaluate(f"(() => {{ try {{ new WebSocket('{socket}-worker'); }} catch (e) {{}} }})()")
         time.sleep(1)
-        wanted = {f"{base}control/page", f"{base}control/worker", "/control/page", "/control/worker"}
+        wanted = {f"{base}control/page", f"{base}control/worker", "/control/page", "/control/worker",
+                  socket, "/control/socket", f"{socket}-worker", "/control/socket-worker"}
         seen = self.since(mark)
         counted = {name: sum(1 for url in urls if url in wanted) for name, urls in seen.items()}
         stray = {name: [u for u in urls if u not in wanted] for name, urls in seen.items()}
         return counted, {name: urls for name, urls in stray.items() if urls}
 
 
-#: Each counter, and how many of the two control requests it should see: the
-#: page's own timing cannot see the worker's, nor the worker's the page's.
-CONTROLS = {"browser": 2, "server": 2, "page timing": 1, "worker timing": 1}
+#: Each counter, and how many of the four control requests it should see: the
+#: page's own timing cannot see the worker's, nor the worker's the page's; each
+#: socket is seen by the server, as the request that opens it, and by the
+#: browser's websocket events -- which report a worker's sockets with the page's,
+#: measured -- and the worker's by the count kept inside it; by nothing else.
+CONTROLS = {"browser": 2, "server": 4, "page timing": 1, "worker timing": 1, "sockets": 2,
+            "worker sockets": 1}
 
 
 def judge(watched, label, todo, expected, base, problems) -> tuple:
@@ -365,6 +402,7 @@ def judge(watched, label, todo, expected, base, problems) -> tuple:
             problems.append(f"{label}: {len(urls)} request(s) after load, seen by the {name} "
                             f"counter: {urls[:5]}")
     counted, stray = watched.controls(base)
+    watched.quiet = watched.mark()
     for name in blind(CONTROLS, counted):
         problems.append(f"{label}: the {name} counter did not see the control requests, so "
                         f"the zero it read proves nothing")
@@ -382,13 +420,53 @@ def judge(watched, label, todo, expected, base, problems) -> tuple:
     return runs, compared, sum(len(urls) for urls in sent.values())
 
 
+#: What a page or a worker could have stored, asked of it from the inside. A
+#: question it cannot answer is written down as the error it raised.
+STORED = """async () => {
+  const ask = async (f) => { try { return await f(); } catch (e) { return String(e); } };
+  const out = {
+    indexedDB: await ask(async () => (await indexedDB.databases()).length),
+    usage: await ask(async () => (await navigator.storage.estimate()).usage),
+  };
+  if (self.localStorage !== undefined) {
+    out.localStorage = await ask(() => localStorage.length);
+    out.sessionStorage = await ask(() => sessionStorage.length);
+  }
+  return out;
+}"""
+
+
+def stored(label, where, held, problems):
+    """Anything other than a zero is something the page keeps."""
+    kept = {name: value for name, value in held.items() if value != 0}
+    if kept:
+        problems.append(f"{label}: the {where} left something stored: {kept}")
+
+
+def nothing_after(watched, label, problems, wait=2.0):
+    """The count again, once the report has been shown and its JSON saved, and a
+    little after: a click and a timer are both ways to send something after the
+    first count has been taken. Blob URLs are the page's own -- the JSON a person
+    saves is one."""
+    time.sleep(wait)
+    for name, urls in watched.since(watched.quiet).items():
+        urls = [u for u in urls if not u.startswith(("blob:", "data:"))]
+        if urls:
+            problems.append(f"{label}: {len(urls)} request(s) after the report was shown and "
+                            f"saved, seen by the {name} counter: {urls[:5]}")
+
+
 def installs_nothing(context, watched, label, problems):
     """No cookie and no storage, and -- where a page could have them at all --
     no service worker and no cache. A document opened from a disk cannot
-    register either: the browser refuses the question for it."""
+    register either: the browser refuses the question for it. Storage is asked
+    of the page and its worker too, because the browser's account of a context
+    leaves out a page opened from a disk."""
     state = context.storage_state()
     if state.get("cookies") or state.get("origins"):
         problems.append(f"{label}: the page left something stored: {state}")
+    stored(label, "page", watched.page.evaluate(STORED), problems)
+    stored(label, "worker", watched.worker.evaluate(STORED), problems)
     if not watched.url.startswith("http"):
         return
     registered = watched.page.evaluate(
@@ -465,6 +543,7 @@ def main() -> int:
                                                      server.base, problems)
                         installs_nothing(context, watched, label, problems)
                         shows_what_was_compared(watched, runs[todo[-1]], label, problems)
+                        nothing_after(watched, label, problems)
                         print(f"{label}: ready in {watched.ready_after:.1f} s; {len(todo)} files, "
                               f"{compared} runs compared with the command; requests after "
                               f"load: {sent}")

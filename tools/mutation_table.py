@@ -3494,6 +3494,27 @@ TABLE += [
      ["tests/test_the_page_says_what_the_command_says.py::"
       "test_the_gate_refuses_to_compare_across_interpreters"],
      "the page would be compared with a command whose standard library reads archives differently"),
+    ("gates/the-count-is-taken-again-after-the-report-is-saved",
+     "tools/browser_gates.py",
+     "        urls = [u for u in urls if not u.startswith((\"blob:\", \"data:\"))]\n        if urls:\n",
+     "        urls = []\n        if urls:\n",
+     ["tests/test_the_page_says_what_the_command_says.py::"
+      "test_a_request_after_the_report_is_saved_is_a_problem"],
+     "a click or a timer after the first count could send anything and the gate would pass it"),
+    ("gates/what-a-page-keeps-is-asked-of-it",
+     "tools/browser_gates.py",
+     "    kept = {name: value for name, value in held.items() if value != 0}\n",
+     "    kept = {}\n",
+     ["tests/test_the_page_says_what_the_command_says.py::"
+      "test_anything_a_page_or_its_worker_keeps_is_a_problem"],
+     "a page opened from a disk could keep local storage and the gate would not see it"),
+    ("gates/a-socket-has-a-control-of-its-own",
+     "tools/browser_gates.py",
+     'CONTROLS = {"browser": 2, "server": 4, "page timing": 1, "worker timing": 1, "sockets": 2,\n',
+     'CONTROLS = {"browser": 2, "server": 2, "page timing": 1, "worker timing": 1, "sockets": 0,\n',
+     ["tests/test_the_page_says_what_the_command_says.py::"
+      "test_a_websocket_is_counted_and_shown_to_its_counter"],
+     "a socket counter attached to nothing would read zero and be believed"),
     ("gates/a-request-after-load-is-reported",
      "tools/browser_gates.py",
      '        if urls:\n            problems.append(f"{label}: {len(urls)} request(s) after load, seen by the {name} "\n',
