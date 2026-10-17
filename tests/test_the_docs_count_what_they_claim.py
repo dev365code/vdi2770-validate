@@ -548,8 +548,10 @@ def test_no_document_cites_a_file_that_is_not_here():
     # 57 to 59 when metadata came to be read in the encoding it declares: the
     # page behind the picture names the test that holds it to that, and the
     # table beside the picture cites the same test as the item's evidence.
-    assert seen == 59, (
-        f"{seen} citations found, not 59. If you added or removed one, say so "
+    # 59 to 60 when the page behind the picture came to say how far that holds:
+    # it names the file whose table of encoding names it holds to.
+    assert seen == 60, (
+        f"{seen} citations found, not 60. If you added or removed one, say so "
         f"here; if you did not, some of them just stopped being checked.")
 
 

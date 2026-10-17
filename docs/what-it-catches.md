@@ -166,13 +166,14 @@ missing, as `F1`.
   `tests/fixtures/x1-bytes-that-are-not-shift-jis.zip` are one such pair, and
   Windows-31J, EUC-KR, GB2312 and Big5 have theirs
 
-**1.0.** Met, to the extent this reader reads. Metadata may declare an encoding
-in its XML declaration, and the condition was a test that reads metadata in each
-encoding the declaration allows and quotes it back unchanged: the one named
-above, for every charset the IANA registry names, a declaration found as ASCII
-can be in, and every supported Python decodes. UCS-4 and the EBCDIC code pages
-are outside that; a document in one is `X1`, which says it is in an encoding
-this reader does not read.
+**1.0.** Met for every name in the table `_REGISTERED` in
+`packages/vdi2770/src/vdi2770/xmlread.py`: the IANA charset registry's names for
+the charsets this reader decodes. Metadata may declare an encoding in its XML
+declaration, and the condition was a test that reads metadata in each encoding
+the declaration allows and quotes it back unchanged: the one named above reads
+it under every name in that table. A name outside the table is `X1`, and a
+document in UCS-4 or EBCDIC is `X1` saying it is in an encoding this reader does
+not read.
 
 ## Upstream
 

@@ -11,11 +11,12 @@ encodings are not supported`, and the refusal was `X1`: the metadata file is not
 well-formed XML. It was well-formed. The limit was this parser's, reported as the
 sender's.
 
-The condition this project set itself before 1.0 is held here, to the extent this
-reader reads at all: metadata in each charset the IANA registry names and this
-reader decodes is read, and what the report quotes from it comes back unchanged.
-UCS-4 and the EBCDIC code pages are outside that, and a document in one is told
-so. And what the declaration says is still the
+The condition this project set itself before 1.0 is held here as far as the
+table of names goes -- `_REGISTERED`, in `vdi2770/xmlread.py`, the IANA charset
+registry's names for the charsets this reader decodes: metadata declared under
+any name the table in vdi2770/xmlread.py holds is read, and what the report
+quotes from it comes back unchanged. A name outside the table is X1, and so is a
+document in UCS-4 or EBCDIC, which says what it is in. And what the declaration says is still the
 whole question: bytes that are not the encoding it names are still `X1`.
 """
 from __future__ import annotations

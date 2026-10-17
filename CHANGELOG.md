@@ -81,6 +81,24 @@ should read the paragraph after the list: four of these changes move it.
   step stopped with `64`. The file's bytes are hashed from standard input now,
   where there is no name to escape.
 
+**What a declaration reads as, against 0.11.1.** Every move the two entries on
+encodings make, measured on both Python 3.9 and 3.13 with the same metadata
+declared each way -- once holding only ASCII, once holding other text:
+
+| Declared as | 0.11.1 | 0.12.0 |
+|---|---|---|
+| A registered name or alias of an encoding that takes more than one byte for a character: `Shift_JIS`, `MS_Kanji`, `csShiftJIS`, `Windows-31J`, `EUC-JP`, `EUC-KR`, `csEUCKR`, `KS_C_5601-1987`, `GB2312`, `GBK`, `CP936`, `GB18030`, `Big5`, `Big5-HKSCS`, `ISO-2022-KR`, `UTF-7` and the rest of their aliases | `X1` | read |
+| `ISO-2022-JP` or `HZ-GB-2312`, holding anything but ASCII | `X1` | read |
+| A registered name no Python here knows by that name: `Latin-9`, `windows-874`, `ISO-8859-8-I`, `csUTF8` | `X1` | read |
+| `IBM00858` | `X1` on 3.9, read on 3.13 | read |
+| A Python spelling of an encoding of one byte a character, not registered: `cp1252`, `latin_1`, `iso8859_15`, `mac_roman`, `cp1250` | read | `X1` |
+| A Python spelling of UTF-8, not registered -- `utf8`, `UTF8`, `u8`, `utf_8`, `cp65001`, `utf-8-sig` -- holding only ASCII | read | `X1` |
+| The same, holding anything but ASCII | `X1` | `X1` |
+| Python's `unicode_escape` | read | `X1` |
+| A UTF-8 byte order mark, then a declaration of ISO-8859-1 or windows-1252 | read, misquoted | `X1` |
+| A Python spelling of an encoding of more than one byte a character, not registered: `sjis`, `ms932`, `cp932`, `euckr`, `cp949`, `x-sjis` | `X1` | `X1` |
+| A registered name Python knows too: `windows-1252`, `ISO-8859-15`, `KOI8-R`, `latin1`, `macintosh` | read | read |
+
 **If your build gates on the exit code, this is the paragraph for you.** A
 document declared in one of the encodings above, which exited `1` for its `X1`
 alone, now exits with what its content earns: `0` when nothing else is wrong.

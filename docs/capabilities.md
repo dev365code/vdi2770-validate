@@ -31,7 +31,7 @@
 - read budgets, per member and per archive — done (`SECURITY.md`: "Per-member size, total size, member count and compression-ratio caps")
 - a security fix ships with an advisory — done (`SECURITY.md`: "a security fix that ships in a release gets a GitHub security advisory")
 - tests verified against their own mutations — done (`tools/mutation_table.py`: "Every claim this project makes about a gate, as a mutation somebody can run")
-- declared encodings read without loss — done (`tests/test_a_document_is_read_in_the_encoding_it_declares.py`: "metadata in each charset the IANA registry names and this reader decodes is read")
+- declared encodings read without loss — done (`tests/test_a_document_is_read_in_the_encoding_it_declares.py`: "metadata declared under any name the table in vdi2770/xmlread.py holds is read")
 
 **Upstream** — 2 of 2:
 - upstream corpus pinned by commit — done (`corpus/MANIFEST.json`: ""repo": "DigitalDataChainConsortium/vdi2770", "commit":")
