@@ -14,12 +14,9 @@ check that — the normative text is paywalled.
 ## How much of this was measured
 
 There are 136 containers in `corpus/` and
-`tests/fixtures/`. 134 of the 136 containers were put through the reference
-implementation at its pinned commit `e47c13c`, with locale `en_US`. The two
-fixtures whose metadata is declared in Windows-31J have only our verdict and
-wait in the recording's `_unswept` block for a real reference run; no
-reference evidence is invented for them.
-[docs/oracle-sweep.json](oracle-sweep.json) records both states.
+`tests/fixtures/`. All 136 containers were put through the reference
+implementation at its pinned commit `e47c13c`, with locale `en_US`.
+[docs/oracle-sweep.json](oracle-sweep.json) records both implementations' verdicts.
 
 A container added after a sweep carries our column and an empty one for the
 reference until the next run, named in the sweep's `_unswept` block with the
@@ -37,9 +34,9 @@ are about is not something this repository can print — §4 says why — but th
 sentence was wrong, and wrong in the direction this whole page exists to guard
 against: an assertion about the other implementation that nobody had asked it.
 
-The reference columns for the 126 previously recorded containers were reproduced
+The reference columns for the 134 previously recorded containers were reproduced
 **byte-identically** with the same pinned commit and locale; our columns for all
-134 containers are unchanged.
+136 containers are unchanged.
 `tools/oracle/README.md` says what you need to repeat it, including the two
 things that will bite you.
 
@@ -54,7 +51,7 @@ What the sweep settled:
   agreement are not — the same limitation §4 discloses, and it applies here too.) The `refKeys`/`refCodes` split earns its keep:
   thirteen of the reference's displayed codes are emitted from more than one key
   with different meanings, so a comparison keyed on the code alone is unsound.
-- **67 containers where it reports an error and we do not**, and **seven where we
+- **68 containers where it reports an error and we do not**, and **seven where we
   do and it does not**. The differences include the policies in §1 and §2,
   the PDF/A identification and text-reading checks in §5, our own budget rules,
   and the archives the reference throws on rather than reports (§3).
@@ -144,12 +141,14 @@ correct German name — of a different class) is `M3` here, and
 `technische spezifikation` is `M3` here; both were run. That the reference
 accepts them is **read from its source**, not measured — see the note below.
 
-The four `m3-class-name-in-*` fixtures put a class name written in Japanese,
+The five `m3-class-name-in-*` fixtures put a class name written in Japanese,
 Korean or Chinese, none of the twelve, in metadata declared in Shift_JIS,
-EUC-KR, GB2312 or Big5. The pinned reference read all four and reported
-`DC_003` as an error; `M3` reports the same name here, as a warning. The two
-agree on what is wrong and not on how much it weighs, and those four are among
-the containers counted above where only the reference reports an error.
+Windows-31J, EUC-KR, GB2312 or Big5 -- each the IANA charset registry's name
+for the encoding it is. The pinned reference read all five, its verdict on the
+Windows-31J one the same as on the Shift_JIS one, and reported `DC_003` as an
+error; `M3` reports the same name here, as a warning. The two agree on what is
+wrong and not on how much it weighs, and those five are among the containers
+counted above where only the reference reports an error.
 
 We think matching the pair is the more useful check — a name that belongs to
 another class is exactly the mistake worth catching — but it is a divergence,
@@ -226,8 +225,8 @@ Three more, this time observed in the sweep rather than read:
   into no answer. Our `Z12` reports it, and `Z13` names the folder it left
   unopened.
 - **A byte that is not in the encoding a document declares is read past.** Each
-  of the four `x1-bytes-that-are-not-*` fixtures is an `m3-class-name-in-*`
-  twin with one byte its declared encoding has no character for. On each the
+  of the five `x1-bytes-that-are-not-*` fixtures is an `m3-class-name-in-*`
+  twin with bytes its declared encoding has no character for. On each the
   reference reports what it reports on the twin: `DC_003`, and nothing about
   the byte. XML 1.0 makes such a byte a fatal error (§4.3.3), and `X1` reports
   it here, naming the encoding and the byte at its line and column. What that
