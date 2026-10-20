@@ -25,9 +25,9 @@ should read the paragraph after the list: four of these changes move it.
   left; a WebRTC connection is outside what such a policy governs, and the page
   opens none. `tools/build_browser.py` builds it, taking the runtime
   only at the digest it names, and the release carries it beside the single
-  file. No rule, verdict, exit code or report field moves: every official sample
-  and every container here is checked through the page and through the command,
-  and the two are compared as bytes.
+  file. The page itself moves nothing: every official sample and every container
+  here is checked through the page and through the command, and the two are
+  compared as bytes, so the verdicts this release moves, below, move in both.
 - **A metadata file is read in the encoding it declares.** One declaring
   Shift_JIS, Windows-31J, EUC-JP, EUC-KR, GB2312, GBK, GB18030, Big5 or UTF-7 --
   encodings that take more than one byte for a character -- was reported as
@@ -48,7 +48,10 @@ should read the paragraph after the list: four of these changes move it.
   mark and a declaration that disagree are `X1` too: a UTF-8 file with a mark
   that declared ISO-8859-1 or windows-1252 -- what an editor that saves with a
   mark and keeps the old declaration makes -- was read as the declaration said,
-  its German quoted back misread, and passed.
+  its German quoted back misread, and passed. The declaration is read whole, to
+  the `?>` that closes it, however much white space it holds, so a name the white
+  space pushes far from the mark is held to the mark as well; one that is never
+  closed is `X1`, saying so.
 - **An encoding is known by the name the IANA charset registry gives it, on
   every Python.** A declared name was looked up in the codec table of whichever
   Python ran the check, and Pythons do not agree on those: in 0.11.1 already, a

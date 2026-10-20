@@ -177,9 +177,11 @@ missing, as `F1`.
 the charsets this reader decodes. Metadata may declare an encoding in its XML
 declaration, and the condition was a test that reads metadata in each encoding
 the declaration allows and quotes it back unchanged: the one named above reads
-it under every name in that table. A name outside the table is `X1`, and a
-document in UCS-4 or EBCDIC is `X1` saying it is in an encoding this reader does
-not read.
+it under every name in that table. A name outside the table is `X1` -- but for
+`UTF-16`, `UTF-16BE` and `UTF-16LE`, which the parser reads itself, and for the
+names a document that starts with a byte order mark may give the encoding the
+mark settles. A document in UCS-4 or EBCDIC is `X1` saying it is in an encoding
+this reader does not read.
 
 ## Upstream
 

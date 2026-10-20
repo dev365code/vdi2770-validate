@@ -3907,6 +3907,44 @@
           "P6"
         ]
       }
+    },
+    "x1-a-declaration-never-closed.zip": {
+      "reference": {},
+      "ours": {
+        "error": [
+          "X1"
+        ]
+      }
+    },
+    "x1-a-mark-and-a-long-iso-8859-1-declaration.zip": {
+      "reference": {},
+      "ours": {
+        "error": [
+          "X1"
+        ]
+      }
+    },
+    "x1-a-mark-and-a-long-windows-1252-declaration.zip": {
+      "reference": {},
+      "ours": {
+        "error": [
+          "X1"
+        ]
+      }
+    },
+    "x1-a-utf-16-mark-and-a-long-utf-8-declaration.zip": {
+      "reference": {},
+      "ours": {
+        "error": [
+          "X1"
+        ]
+      }
     }
+  },
+  "_unswept": {
+    "x1-a-declaration-never-closed.zip": "New generated container; the pinned reference has not been run on it.",
+    "x1-a-mark-and-a-long-iso-8859-1-declaration.zip": "New generated container; the pinned reference has not been run on it.",
+    "x1-a-mark-and-a-long-windows-1252-declaration.zip": "New generated container; the pinned reference has not been run on it.",
+    "x1-a-utf-16-mark-and-a-long-utf-8-declaration.zip": "New generated container; the pinned reference has not been run on it."
   }
 }

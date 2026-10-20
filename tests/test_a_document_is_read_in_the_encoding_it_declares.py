@@ -15,9 +15,11 @@ The condition this project set itself before 1.0 is held here as far as the
 table of names goes -- `_REGISTERED`, in `vdi2770/xmlread.py`, the IANA charset
 registry's names for the charsets this reader decodes: metadata declared under
 any name the table in vdi2770/xmlread.py holds is read, and what the report
-quotes from it comes back unchanged. A name outside the table is X1, and so is a
-document in UCS-4 or EBCDIC, which says what it is in. And what the declaration says is still the
-whole question: bytes that are not the encoding it names are still `X1`.
+quotes from it comes back unchanged. A name outside the table is X1 -- but for
+UTF-16 and its two byte orders, which the parser reads itself, and for the names
+a byte order mark's encoding goes by after the mark -- and so is a document in
+UCS-4 or EBCDIC, which says what it is in. And what the declaration says is still
+the whole question: bytes that are not the encoding it names are still `X1`.
 """
 from __future__ import annotations
 
@@ -405,6 +407,69 @@ def test_a_byte_order_mark_and_a_declaration_that_agree_are_read(mark, declared,
     assert "X1" not in [f[0] for f in findings], findings
     quoted = [f[1] for f in findings if f[0] == "M3"][0].split("'")[1]
     assert quoted == "Technische Größe", quoted
+
+
+def _long(text: str, spaces: int = 700) -> str:
+    """The same declaration with `spaces` of white space after its version,
+    which XML 1.0 allows without limit (productions 23 and 24) -- so that the
+    name it gives lies further from the start than any fixed look ahead."""
+    assert text.startswith('<?xml version="1.0" '), "the premise"
+    return text.replace('<?xml version="1.0" ', '<?xml version="1.0"' + " " * spaces, 1)
+
+
+#: The marks held to a long declaration: each pair the short one is held to,
+#: and a UTF-16 mark in front of a declaration naming UTF-8.
+LONG_MARKED = MARKED + [("UTF-16LE mark, declared UTF-8", b"\xff\xfe", "UTF-8", "utf-16-le")]
+
+
+@pytest.mark.parametrize("label,mark,declared,codec", LONG_MARKED, ids=[m[0] for m in LONG_MARKED])
+def test_a_mark_and_a_long_declaration_that_disagree_are_not_well_formed(label, mark, declared, codec):
+    """Where the declaration names its encoding is wherever its white space
+    puts it, so the mark is held to the whole declaration, read once and read
+    the same way the document is decoded by. With 700 spaces after its version,
+    a UTF-8 file with a mark that declared windows-1252 was looked at for 512
+    bytes, held to nothing, and read as windows-1252 -- its German quoted back
+    as `GrÃ¶ÃŸe` -- and passed, where one space made it X1."""
+    text = _long(_metadata(declared, "Technische Größe"))
+    findings = _findings(_container(mark + text.encode(codec)), "marked.zip")
+    x1 = [f for f in findings if f[0] == "X1"]
+    assert x1 and declared in x1[0][1] and "byte order mark" in x1[0][1], f"{label}: {findings}"
+    assert not [f for f in findings if f[0] == "M3"], findings
+
+
+@pytest.mark.parametrize("mark,declared,codec", [(b"\xef\xbb\xbf", "UTF-8", "utf-8"),
+                                                 (b"\xff\xfe", "UTF-16", "utf-16-le")],
+                         ids=["UTF-8", "UTF-16LE"])
+def test_a_mark_and_a_long_declaration_that_agree_are_read(mark, declared, codec):
+    text = _long(_metadata(declared, "Technische Größe"))
+    findings = _findings(_container(mark + text.encode(codec)), "marked.zip")
+    assert "X1" not in [f[0] for f in findings], findings
+    quoted = [f[1] for f in findings if f[0] == "M3"][0].split("'")[1]
+    assert quoted == "Technische Größe", quoted
+
+
+def test_a_long_declaration_without_a_mark_is_read_in_the_encoding_it_names():
+    """The declaration a document is decoded by is read the same way, from
+    `<?xml` to its `?>`: 700 spaces do not move the encoding it names."""
+    raw = _container(_written(_long(_metadata("windows-1252", "Technische Größe")), "cp1252"))
+    findings = _findings(raw, "declared.zip")
+    assert "X1" not in [f[0] for f in findings], findings
+    quoted = [f[1] for f in findings if f[0] == "M3"][0].split("'")[1]
+    assert quoted == "Technische Größe", quoted
+
+
+@pytest.mark.parametrize("mark,codec", [(b"", "utf-8"), (b"\xef\xbb\xbf", "utf-8"), (b"\xff\xfe", "utf-16-le")],
+                         ids=["no mark", "UTF-8 mark", "UTF-16LE mark"])
+def test_a_declaration_that_is_never_closed_is_not_well_formed(mark, codec):
+    """A declaration ends with `?>` (production 23). One that never does is
+    X1, saying so, on every Python -- the name it began to give is not a name
+    the document can be read in, and nothing after it is read as one."""
+    text = _metadata("UTF-8", "Technische Spezifikation")
+    assert text.count("?>") == 1, "the premise: the declaration is the sample's only processing instruction"
+    data = mark + text.replace("?>", "", 1).encode(codec)
+    x1 = [f for f in _findings(_container(data), "unclosed.zip") if f[0] == "X1"]
+    assert [f[1] for f in x1] == [f"the document's XML declaration is not closed: no ?> follows "
+                                  f"<?xml in its {len(data):,} bytes"], x1
 
 
 def test_half_of_a_character_is_not_read_as_one():

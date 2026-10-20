@@ -171,6 +171,30 @@ def main() -> int:
         add(f"x1-bytes-that-are-not-{slug}.zip", f, "X1", [META],
             f"the same metadata with one byte that is not {declared}")
 
+    # X1 for a byte order mark held to a declaration that names another
+    # encoding, wherever in the declaration's white space the name falls --
+    # XML 1.0 puts no bound on it (productions 23 to 25) -- and for a
+    # declaration that is never closed.
+    text = base[META].decode("utf-8")
+    for slug, mark, declared, codec in (
+            ("a-mark-and-a-long-windows-1252-declaration", b"\xef\xbb\xbf", "windows-1252", "utf-8"),
+            ("a-mark-and-a-long-iso-8859-1-declaration", b"\xef\xbb\xbf", "ISO-8859-1", "utf-8"),
+            ("a-utf-16-mark-and-a-long-utf-8-declaration", b"\xff\xfe", "UTF-8", "utf-16-le")):
+        long = text
+        for old, new in (('<?xml version="1.0" ', '<?xml version="1.0"' + " " * 700),
+                         ('encoding="UTF-8"', f'encoding="{declared}"')):
+            assert long.count(old) == 1, f"anchor not found once: {old!r}"
+            long = long.replace(old, new)
+        f = dict(base)
+        f[META] = mark + long.encode(codec)
+        add(f"x1-{slug}.zip", f, "X1", [META],
+            f"saved in {codec.upper()} with its byte order mark, the declaration naming "
+            f"{declared} after 700 spaces")
+    assert text.count("?>") == 1, "the declaration is the metadata's only processing instruction"
+    f = dict(base)
+    f[META] = text.replace("?>", "", 1).encode("utf-8")
+    add("x1-a-declaration-never-closed.zip", f, "X1", [META], "the declaration's closing ?> removed")
+
     # F3 — declared media type disagrees with the file name
     f = dict(base)
     f[META] = edit(base[META], '<DigitalFile FileFormat="application/pdf">B.pdf</DigitalFile>',

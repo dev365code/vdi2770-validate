@@ -252,6 +252,38 @@ _DECLARATION = re.compile(
 
 _LINE_BREAK = re.compile(r"\r\n|\r|\n")
 
+#: Where an XML declaration begins: `<?xml` and white space (production 23).
+_DECLARATION_OPENS = re.compile(rb"<\?xml[ \t\r\n]")
+
+
+def _declaration(data: bytes, mark: bytes = b"", codec: str = "utf-8") -> Optional[str]:
+    """The encoding named by the XML declaration `data` opens with, after its
+    byte order mark `mark` in `codec` -- or None, when it opens with none or the
+    one it opens with names none.
+
+    The whole declaration is read, from `<?xml` to the `?>` that closes it, and
+    however much white space it holds: productions 23 to 25 put no bound on it,
+    so a fixed look ahead is a guess about where the name is. The bound is the
+    document's own length, which the reader has already held to its budget. A
+    declaration that is never closed is not well-formed, and is refused here
+    rather than read on into the document. Read once, it is the same name the
+    mark is held to and the document is decoded by."""
+    text = data[len(mark):]
+    if codec != "utf-8":
+        # Each character as UTF-8: the declaration's own characters are ASCII,
+        # and nothing the decoder could not read turns into a `?`.
+        text = text.decode(codec, "replace").encode("utf-8")
+    if not _DECLARATION_OPENS.match(text):
+        return None
+    end = text.find(b"?>")
+    if end < 0:
+        raise XmlError(f"the document's XML declaration is not closed: no ?> follows <?xml "
+                       f"in its {len(data):,} bytes", 1, 0)
+    found = _DECLARATION.match(text, 0, end + 2)
+    return (found.group(1) or found.group(2)).decode("ascii") if found else None
+
+
+
 #: The first bytes of the encodings this reader does not read, the way XML 1.0
 #: (Appendix F) tells them apart before any declaration: UCS-4 in its four byte
 #: orders, with a mark and without one, and EBCDIC.
@@ -304,19 +336,15 @@ def _readable(data: bytes) -> Union[bytes, str]:
                            f"does not read {what}", 1, 0)
     for mark, settled, codec, names in _MARKS:
         if data.startswith(mark):
-            head = data[len(mark):len(mark) + 512].decode(codec, "replace")
-            said = _DECLARATION.match(head.encode("ascii", "replace"))
-            if said:
-                name = (said.group(1) or said.group(2)).decode("ascii")
-                if name.lower() not in names:
-                    raise XmlError(f"the document starts with a {settled} byte order mark and "
-                                   f"declares {name}; its declaration has to name the encoding "
-                                   f"the mark says it is in", 1, 0)
+            name = _declaration(data, mark, codec)
+            if name is not None and name.lower() not in names:
+                raise XmlError(f"the document starts with a {settled} byte order mark and "
+                               f"declares {name}; its declaration has to name the encoding "
+                               f"the mark says it is in", 1, 0)
             return data
-    found = _DECLARATION.match(data)
-    if not found:
+    name = _declaration(data)
+    if name is None:
         return data
-    name = (found.group(1) or found.group(2)).decode("ascii")
     if name.lower() in _EXPAT_READS:
         return data
     codec = _CODEC_OF.get(name.lower())
