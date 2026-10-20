@@ -14,12 +14,9 @@ check that — the normative text is paywalled.
 ## How much of this was measured
 
 There are 140 containers in `corpus/` and
-`tests/fixtures/`. 136 of the 140 containers were put through the reference
-implementation at its pinned commit `e47c13c`, with locale `en_US`. The four
-fixtures whose metadata holds a long XML declaration after a byte order mark, or
-one that is never closed, have only our verdict and wait in the recording's
-`_unswept` block for a real reference run; no reference evidence is invented for
-them. [docs/oracle-sweep.json](oracle-sweep.json) records both states.
+`tests/fixtures/`. All 140 containers were put through the reference
+implementation at its pinned commit `e47c13c`, with locale `en_US`.
+[docs/oracle-sweep.json](oracle-sweep.json) records both implementations' verdicts.
 
 A container added after a sweep carries our column and an empty one for the
 reference until the next run, named in the sweep's `_unswept` block with the
@@ -37,9 +34,9 @@ are about is not something this repository can print — §4 says why — but th
 sentence was wrong, and wrong in the direction this whole page exists to guard
 against: an assertion about the other implementation that nobody had asked it.
 
-The reference columns for the 134 previously recorded containers were reproduced
+The reference columns for the 136 previously recorded containers were reproduced
 **byte-identically** with the same pinned commit and locale; our columns for all
-136 containers are unchanged.
+140 containers are unchanged.
 `tools/oracle/README.md` says what you need to repeat it, including the two
 things that will bite you.
 
@@ -54,7 +51,7 @@ What the sweep settled:
   agreement are not — the same limitation §4 discloses, and it applies here too.) The `refKeys`/`refCodes` split earns its keep:
   thirteen of the reference's displayed codes are emitted from more than one key
   with different meanings, so a comparison keyed on the code alone is unsound.
-- **68 containers where it reports an error and we do not**, and **seven where we
+- **68 containers where it reports an error and we do not**, and **nine where we
   do and it does not**. The differences include the policies in §1 and §2,
   the PDF/A identification and text-reading checks in §5, our own budget rules,
   and the archives the reference throws on rather than reports (§3).
@@ -214,7 +211,7 @@ Java toolchain — so the summaries below are not checkable from a clone:
 - `MainDocument` overrides only the two-argument `validate`, so main-document rules
   are skipped entirely when it is validated through the three-argument entry point.
 
-Three more, this time observed in the sweep rather than read:
+Four more, this time observed in the sweep rather than read:
 
 - **A path-traversal member ends the run with an unhandled `ProcessorException`,
   so the container gets no report at all.** This is *not* a vulnerability: the
@@ -235,6 +232,17 @@ Three more, this time observed in the sweep rather than read:
   it here, naming the encoding and the byte at its line and column. What that
   project's parser does with the byte is not visible in the codes a run
   records, and is not claimed here.
+- **A byte order mark and a declaration that name two encodings are read
+  past.** The two `x1-a-mark-and-a-long-*-declaration` fixtures hold the
+  conforming metadata saved as UTF-8 with a byte order mark, its declaration
+  naming ISO-8859-1 or windows-1252 after 700 spaces. The reference reports no
+  error on either. The mark settles the encoding before any declaration is read
+  (XML 1.0, Appendix F), and an entity presented in an encoding other than the
+  one its declaration names is a fatal error (§4.3.3), which `X1` reports here.
+  Which of the two encodings that project read them in is not visible in the
+  codes a run records, and is not claimed here. On the two fixtures whose
+  declaration is never closed or follows a UTF-16 mark it does not agree with,
+  it reports an error as this tool does.
 
 One structural difference, not a defect on either side: the reference extracts
 every container to a temporary folder on disk before validating

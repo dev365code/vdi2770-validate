@@ -3063,6 +3063,102 @@
         ]
       }
     },
+    "x1-a-declaration-never-closed.zip": {
+      "reference": {
+        "ERROR": [
+          "REP_023",
+          "REP_039"
+        ],
+        "INFO": [
+          "REP_003",
+          "REP_005",
+          "REP_036",
+          "ZU_005"
+        ],
+        "WARN": [
+          "REP_016",
+          "REP_027",
+          "REP_028"
+        ]
+      },
+      "ours": {
+        "error": [
+          "X1"
+        ]
+      }
+    },
+    "x1-a-mark-and-a-long-iso-8859-1-declaration.zip": {
+      "reference": {
+        "INFO": [
+          "REP_003",
+          "REP_005",
+          "REP_008",
+          "REP_009",
+          "REP_010",
+          "REP_011",
+          "REP_015",
+          "REP_020",
+          "REP_028",
+          "REP_036",
+          "REP_041",
+          "REP_043",
+          "ZU_005"
+        ]
+      },
+      "ours": {
+        "error": [
+          "X1"
+        ]
+      }
+    },
+    "x1-a-mark-and-a-long-windows-1252-declaration.zip": {
+      "reference": {
+        "INFO": [
+          "REP_003",
+          "REP_005",
+          "REP_008",
+          "REP_009",
+          "REP_010",
+          "REP_011",
+          "REP_015",
+          "REP_020",
+          "REP_028",
+          "REP_036",
+          "REP_041",
+          "REP_043",
+          "ZU_005"
+        ]
+      },
+      "ours": {
+        "error": [
+          "X1"
+        ]
+      }
+    },
+    "x1-a-utf-16-mark-and-a-long-utf-8-declaration.zip": {
+      "reference": {
+        "ERROR": [
+          "REP_023",
+          "REP_039"
+        ],
+        "INFO": [
+          "REP_003",
+          "REP_005",
+          "REP_036",
+          "ZU_005"
+        ],
+        "WARN": [
+          "REP_016",
+          "REP_027",
+          "REP_028"
+        ]
+      },
+      "ours": {
+        "error": [
+          "X1"
+        ]
+      }
+    },
     "x1-bytes-that-are-not-big5.zip": {
       "reference": {
         "ERROR": [
@@ -3907,44 +4003,6 @@
           "P6"
         ]
       }
-    },
-    "x1-a-declaration-never-closed.zip": {
-      "reference": {},
-      "ours": {
-        "error": [
-          "X1"
-        ]
-      }
-    },
-    "x1-a-mark-and-a-long-iso-8859-1-declaration.zip": {
-      "reference": {},
-      "ours": {
-        "error": [
-          "X1"
-        ]
-      }
-    },
-    "x1-a-mark-and-a-long-windows-1252-declaration.zip": {
-      "reference": {},
-      "ours": {
-        "error": [
-          "X1"
-        ]
-      }
-    },
-    "x1-a-utf-16-mark-and-a-long-utf-8-declaration.zip": {
-      "reference": {},
-      "ours": {
-        "error": [
-          "X1"
-        ]
-      }
     }
-  },
-  "_unswept": {
-    "x1-a-declaration-never-closed.zip": "New generated container; the pinned reference has not been run on it.",
-    "x1-a-mark-and-a-long-iso-8859-1-declaration.zip": "New generated container; the pinned reference has not been run on it.",
-    "x1-a-mark-and-a-long-windows-1252-declaration.zip": "New generated container; the pinned reference has not been run on it.",
-    "x1-a-utf-16-mark-and-a-long-utf-8-declaration.zip": "New generated container; the pinned reference has not been run on it."
   }
 }
