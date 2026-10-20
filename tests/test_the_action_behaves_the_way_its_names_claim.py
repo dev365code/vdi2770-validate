@@ -312,9 +312,10 @@ def test_a_carried_file_can_be_held_to_a_hash(tmp_path):
 #: `sha256sum` as GNU coreutils writes it, which is the one a Windows runner's
 #: bash has: a file name holding a backslash or a newline is escaped, and the
 #: line then starts with a backslash -- in front of the hash. Read from
-#: standard input there is no name to escape.
-GNU_SHA256SUM = """#!{python}
-import hashlib, sys
+#: standard input there is no name to escape. The tool's Python, which a
+#: one-line shell script runs: a first line naming the interpreter is cut at
+#: the first space, and the path to a Python can hold one.
+GNU_SHA256SUM = """import hashlib, sys
 names = sys.argv[1:]
 if not names:
     print(hashlib.sha256(sys.stdin.buffer.read()).hexdigest() + "  -")
@@ -338,6 +339,7 @@ def test_a_pinned_file_is_held_to_its_hash_whatever_its_path_holds(tmp_path):
     off that line, the hash was never 64 hex digits, so a file pinned with
     `sha256:` never matched what was asked for and the step stopped with 64."""
     import hashlib
+    import shlex
     import sys
 
     room = tmp_path / "D:\\a\\_temp"
@@ -350,8 +352,11 @@ def test_a_pinned_file_is_held_to_its_hash_whatever_its_path_holds(tmp_path):
         stub = stub_dir / name
         stub.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
         stub.chmod(0o755)
+    tool = tmp_path / "sha256sum.py"
+    tool.write_text(GNU_SHA256SUM, encoding="utf-8")
     hasher = stub_dir / "sha256sum"
-    hasher.write_text(GNU_SHA256SUM.format(python=sys.executable), encoding="utf-8")
+    hasher.write_text(f'#!/bin/sh\nexec {shlex.quote(sys.executable)} {shlex.quote(str(tool))} "$@"\n',
+                      encoding="utf-8")
     hasher.chmod(0o755)
     escaped = subprocess.run([str(hasher), str(checker)], capture_output=True, text=True).stdout
     assert escaped.startswith("\\"), "the premise: the tool escapes a name that holds a backslash"
