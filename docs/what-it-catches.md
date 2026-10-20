@@ -111,17 +111,23 @@ report's `schemaVersion` is `1`, and 1.0 commits to not changing it.
 - browser, nothing installed — done; `python tools/browser_gates.py` opens the
   page and checks every official sample and every container here through it
   and through the command, run on the Python the page carries to the patch
-  release, comparing stdout, stderr and the exit code as bytes. It counts the
-  page's requests six ways -- the WebSockets the page and its worker open among
-  them, which is how a Python socket leaves the worker -- from the moment it is
-  ready until after its report has been shown and saved, makes the page and its
-  worker each fetch once and open a socket once and requires every counter to
-  see what it can of those, asks the page and its worker what they keep, and
+  release, comparing stdout, stderr and the exit code as bytes. The page
+  carries a Content-Security-Policy, the one the gate knows, that lets it
+  connect to nothing but its own blobs. The gate counts the page's requests six
+  ways -- the WebSockets the page and its worker open among them, which is how
+  a Python socket leaves the worker -- and counts what the policy refuses, in
+  the page and in its worker, from the moment the page is ready until after its
+  report has been shown and saved. It makes the page and its worker each fetch
+  once and open a socket once, and requires every counter to see what it can of
+  those with the policy set aside, and each side to see its own refused with
+  the policy in force. It asks the page and its worker what they keep, and
   builds two containers that ask the reader to reach the server the gate runs:
-  after loading, the page makes none, while loading it asks for nothing but
-  itself, and it keeps nothing. A WebRTC connection, a beacon sent as the tab
+  after loading, the page makes no request, refused or not, while loading it
+  asks for nothing but itself, and it keeps nothing. A beacon sent as the tab
   closes and a timer that fires seconds after the last check are outside what
-  it counts
+  the gate counts and inside what the policy refuses, which governs a beacon as
+  it does a fetch. A WebRTC connection is outside both, and nothing in the page
+  starts one.
 
 **1.0.** Met. Five doors to one verdict; the fifth is a page that checks a
 container in the browser, installing nothing and sending the container nowhere.

@@ -173,7 +173,7 @@ class _Watched:
     ready, and was seen by every counter when it was made to fetch."""
     url = "http://127.0.0.1:1/vdi2770.html"
     loaded = {"browser": 1, "server": 1, "page timing": 0, "worker timing": 0, "sockets": 0,
-              "worker sockets": 0}
+              "worker sockets": 0, "page refused": 0, "worker refused": 0}
     downloads = ()
     page = None
 
@@ -191,6 +191,13 @@ class _Watched:
 
     def controls(self, base):
         return dict(GATES.CONTROLS), {}
+
+    def refusals(self, base):
+        return dict(self.refused), dict(self.left), dict(self.tried)
+
+    refused = dict(GATES.REFUSED)
+    left = {}
+    tried = {}
 
 
 def _judged(watched, todo=()):
@@ -237,6 +244,75 @@ def test_a_websocket_is_counted_and_shown_to_its_counter():
     its own, and, like the others, a control it has to see."""
     assert GATES.CONTROLS["sockets"] == 2 and GATES.CONTROLS["worker sockets"] == 1
     assert GATES.CONTROLS["server"] == 4, "the server sees the request that opens each socket"
+
+
+def test_a_request_the_policy_should_have_refused_is_a_problem(monkeypatch):
+    """Under the page's own policy the control requests are refused; one that a
+    counter saw leave anyway means the policy does not hold."""
+    monkeypatch.setattr(GATES.time, "sleep", lambda seconds: None)
+    watched = _Watched()
+    watched.left = {"server": ["/control/page"]}
+    assert [p for p in _judged(watched) if "policy let requests out" in p and "server" in p]
+
+
+def test_a_request_the_page_made_on_its_own_is_a_problem_though_its_policy_refused_it(monkeypatch):
+    """A refusal that is not one of the controls is a request the page made by
+    itself. Its policy kept the request in, and the gate names it all the same:
+    a page that tries to send is not a page that sends nothing."""
+    monkeypatch.setattr(GATES.time, "sleep", lambda seconds: None)
+    watched = _Watched()
+    watched.tried = {"page refused": ["http://127.0.0.1:9/sent"]}
+    assert [p for p in _judged(watched)
+            if "tried to reach ['http://127.0.0.1:9/sent']" in p and "page refused" in p]
+
+
+def test_a_refusal_counter_that_missed_the_controls_is_blind_not_quiet(monkeypatch):
+    """Under the policy, what each side's refusals have to show is its own two
+    control requests. A side whose refusals did not show them proves nothing
+    about the policy, whatever else it read."""
+    monkeypatch.setattr(GATES.time, "sleep", lambda seconds: None)
+    watched = _Watched()
+    watched.refused = {"page refused": 2, "worker refused": 0}
+    said = _judged(watched)
+    assert [p for p in said if "worker refused counter did not see the control requests refused" in p]
+    assert not [p for p in said if "page refused counter" in p], said
+
+
+def test_under_the_policy_a_refusal_is_counted_and_an_attempt_is_not_a_departure():
+    """`Watched.refusals` itself, on a page that is not a browser: the four
+    control requests come back as refusals on each side, the worker's count of
+    sockets it was asked to open is an attempt, and anything else a counter saw
+    is a request that left."""
+    class Page:
+        def mark(self):
+            return {}
+
+        def attempt(self, base):
+            return {"a", "b", "c", "d"}
+
+        def since(self, mark):
+            return {"page refused": ["a", "b", "e"], "worker refused": ["c", "d"],
+                    "worker sockets": ["ws://x/control/socket-worker"], "browser": [], "server": ["/leak"]}
+
+    refused, left, tried = GATES.Watched.refusals(Page(), "http://127.0.0.1:1/")
+    assert refused == {"page refused": 2, "worker refused": 2}
+    assert left == {"server": ["/leak"]}
+    assert tried == {"page refused": ["e"]}, "a request the page made on its own, refused, is still one it made"
+
+
+def test_the_page_carries_its_policy():
+    """A request the page made would be refused before it left, by a policy in
+    the page's own head -- the one the gate knows, once."""
+    page = (ROOT / "browser" / "page.html").read_text(encoding="utf-8")
+    assert page.count(GATES.POLICY_TAG) == 1
+    assert "connect-src blob: data:" in GATES.POLICY and "default-src 'none'" in GATES.POLICY
+
+
+def test_nothing_in_the_page_opens_a_peer_connection():
+    """WebRTC is a way out that a policy cannot refuse, so nothing here may start
+    one -- which is checked by reading the code, the only place it can be."""
+    for name in ("page.html", "worker.js", "vdi2770_page.py"):
+        assert "RTCPeerConnection" not in (ROOT / "browser" / name).read_text(encoding="utf-8"), name
 
 
 def test_the_two_doors_have_to_be_among_the_files_checked(monkeypatch):

@@ -44,6 +44,12 @@ failure — files that never claimed at all.
 
 ## Known limits of what *is* in scope
 
+- **The browser page's policy**: the page carries a Content-Security-Policy that
+  lets it connect to nothing but its own blobs, so a request it made would be
+  refused before it left, and `tools/browser_gates.py` counts what is refused as
+  well as what is sent. A WebRTC connection is outside what such a policy can
+  refuse; the page opens none, which a test holds to by reading its code.
+
 - **The standard library's ZIP reading**: an archive is opened with Python's own
   `zipfile`, and a patch release can change what that accepts. Since the
   releases that fixed CVE-2025-8291 it checks that a ZIP64 end-of-central-

@@ -550,8 +550,10 @@ def test_no_document_cites_a_file_that_is_not_here():
     # table beside the picture cites the same test as the item's evidence.
     # 59 to 60 when the page behind the picture came to say how far that holds:
     # it names the file whose table of encoding names it holds to.
-    assert seen == 60, (
-        f"{seen} citations found, not 60. If you added or removed one, say so "
+    # 60 to 61 when the page came to carry a policy of its own: the scope page
+    # names the gate that counts what that policy refuses.
+    assert seen == 61, (
+        f"{seen} citations found, not 61. If you added or removed one, say so "
         f"here; if you did not, some of them just stopped being checked.")
 
 

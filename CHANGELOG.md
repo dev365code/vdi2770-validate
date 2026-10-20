@@ -20,7 +20,10 @@ should read the paragraph after the list: four of these changes move it.
   Python the page carries, at a UTF-8 console -- byte for byte, with the same
   exit code -- and the JSON it saves is what `--json` prints there. Once it has
   loaded it makes no network request, opened from a disk it makes none at all,
-  and it stores nothing. `tools/build_browser.py` builds it, taking the runtime
+  and it stores nothing. A Content-Security-Policy in its head lets it connect
+  to nothing but its own blobs, so a request it made would be refused before it
+  left; a WebRTC connection is outside what such a policy governs, and the page
+  opens none. `tools/build_browser.py` builds it, taking the runtime
   only at the digest it names, and the release carries it beside the single
   file. No rule, verdict, exit code or report field moves: every official sample
   and every container here is checked through the page and through the command,

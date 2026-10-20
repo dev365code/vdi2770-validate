@@ -9,19 +9,29 @@ sending the container nowhere, and that its report is the one the command line
 gives. A browser can be made to answer each of those by counting, so this
 counts.
 
-* **Nothing is sent.** Every request is counted five ways: by the browser's own
-  network events, which see the page and the worker it starts; by the server
-  that hands the page out; by the Resource Timing of the page and of the
-  worker, each read from the inside; and by the WebSockets the page and the
-  worker open -- the worker's are how a Python socket leaves it -- which none of
-  the others sees. The count runs from the moment the page says it is
-  ready to the moment the last container has been checked, and it has to be
-  zero; it is taken again after the report has been shown and its JSON saved,
-  and a little after that. A counter attached to the wrong thing reads zero as
-  well, so the page and the worker are then each made to fetch once and to open
-  a socket once, and every counter has to see what it can of those. And two containers are built for the run that ask the reader to reach
-  out to that same server -- an external entity and a remote schema -- so the
-  door is opened rather than assumed shut.
+* **Nothing is sent.** The page carries a Content-Security-Policy that lets it
+  connect to nothing but its own blobs, so a request it made would be refused
+  before it left; the policy has to be there once, as it is written here.
+  Every request is counted six ways: by the browser's own network events,
+  which see the page and the worker it starts; by the server that hands the
+  page out; by the Resource Timing of the page and of the worker, each read
+  from the inside; and by the WebSockets the page and the worker open -- the
+  worker's are how a Python socket leaves it -- which none of the others sees.
+  What the policy refuses is counted too, in the page and in the worker. The
+  count runs from the moment the page says it is ready to the moment the last
+  container has been checked, and it has to be zero; it is taken again after
+  the report has been shown and its JSON saved, and a little after that. A
+  counter attached to the wrong thing reads zero as well, so the page and the
+  worker are each made to fetch once and to open a socket once: first with the
+  policy set aside, where every counter has to see what it can of those, and
+  then under it, where each side has to see its own refused and no other
+  counter may see them leave. A refusal that is not one of those is a request
+  the page made on its own, and a problem though it never left. And two
+  containers are built for the run that ask the reader to reach out to that
+  same server -- an external entity and a remote schema -- so the door is
+  opened rather than assumed shut. A WebRTC connection is outside what the
+  policy refuses and what these counters see; nothing in the page starts one,
+  and a test holds to that by reading its code.
 * **Nothing is fetched to start it.** While it loads, the page asks for nothing
   but itself: the runtime, the reader and the rules travel inside the file.
 * **Nothing is installed.** No cookie, no storage, no cache, no service worker,
@@ -274,6 +284,21 @@ READ_RUNS = """(k) => {
 
 TIMING = "performance.getEntriesByType('resource').map(e => e.name)"
 
+#: The page's own policy, written into its head: nothing but its inline script,
+#: its blob worker and WebAssembly may run, and it may connect to nothing but its
+#: own blobs. A request the page made anyway would be refused by the browser
+#: before it left, so the gate counts what is refused as well as what is sent.
+POLICY = ("default-src 'none'; script-src 'unsafe-inline' 'wasm-unsafe-eval' blob:; "
+          "worker-src blob:; connect-src blob: data:; img-src data:; style-src 'unsafe-inline'; "
+          "base-uri 'none'; form-action 'none'")
+POLICY_TAG = f'<meta http-equiv="Content-Security-Policy" content="{POLICY}">'
+
+#: Put in before anything runs: each request the policy refuses, in the page or,
+#: once it is ready, in the worker.
+REFUSALS = ("self.__vdi2770_refused = self.__vdi2770_refused || [];"
+            "self.addEventListener('securitypolicyviolation',"
+            " e => self.__vdi2770_refused.push(String(e.blockedURI || e.violatedDirective)), true);")
+
 #: Put in the worker once it is ready: every WebSocket it is asked to open is
 #: written down before it is opened. Python's sockets come out of the worker as
 #: WebSockets, and the browser reports a WebSocket for the page and not for a
@@ -287,14 +312,25 @@ WORKER_SOCKETS = """(() => {
 })()"""
 
 
+def until(target, expression, timeout):
+    """Ask `expression` of the page until it is true. Playwright's own
+    `wait_for_function` builds its question with `new Function`, which the
+    page's policy refuses -- the policy doing its job -- so this asks with
+    `evaluate`, which the policy does not govern."""
+    deadline = time.monotonic() + timeout
+    while not target.evaluate(expression):
+        if time.monotonic() > deadline:
+            raise TimeoutError(f"{timeout} s waiting for {expression}")
+        time.sleep(0.05)
+
+
 def page_runs(page, path: Path) -> list:
     """Hand the page one file through its own file input, as a person does, and
     read back the runs it made of it."""
     k = page.evaluate("window.vdi2770.runs.length")
     page.set_input_files("#file", str(path))
-    page.wait_for_function(
-        f"window.vdi2770.failed || (window.vdi2770.runs.length >= {k + 2} && !window.vdi2770.busy)",
-        timeout=600_000)
+    until(page, f"!!(window.vdi2770.failed || (window.vdi2770.runs.length >= {k + 2} "
+                f"&& !window.vdi2770.busy))", 600)
     failed = page.evaluate("window.vdi2770.failed")
     if failed:
         raise SystemExit(f"the page failed on {path.name}: {failed}")
@@ -308,6 +344,7 @@ class Watched:
     def __init__(self, context, url, server):
         self.url, self.server, self.requests, self.downloads, self.console = url, server, [], [], []
         self.sockets = []
+        context.add_init_script(REFUSALS)
         context.on("request", lambda r: self.requests.append(r.url))
         self.page = context.new_page()
         # A WebSocket is not a request to any of the other counters -- not to the
@@ -320,8 +357,7 @@ class Watched:
         started = time.monotonic()
         self.page.goto(url)
         try:
-            self.page.wait_for_function(
-                "window.vdi2770 && (window.vdi2770.ready || window.vdi2770.failed)", timeout=180_000)
+            until(self.page, "!!(window.vdi2770 && (window.vdi2770.ready || window.vdi2770.failed))", 180)
         except Exception as e:
             raise SystemExit(f"the page did not get ready: {e}\n" + "\n".join(self.console[-20:])) from None
         failed = self.page.evaluate("window.vdi2770.failed")
@@ -333,6 +369,7 @@ class Watched:
             raise SystemExit(f"the page started {len(self.page.workers)} workers; this counts one")
         self.worker = self.page.workers[0]
         self.worker.evaluate(WORKER_SOCKETS)
+        self.worker.evaluate(REFUSALS)
         self.loaded = self.mark()
 
     def mark(self):
@@ -340,7 +377,9 @@ class Watched:
                 "page timing": len(self.page.evaluate(TIMING)),
                 "worker timing": len(self.worker.evaluate(TIMING)),
                 "sockets": len(self.sockets),
-                "worker sockets": len(self.worker.evaluate("self.__vdi2770_sockets"))}
+                "worker sockets": len(self.worker.evaluate("self.__vdi2770_sockets")),
+                "page refused": len(self.page.evaluate("self.__vdi2770_refused")),
+                "worker refused": len(self.worker.evaluate("self.__vdi2770_refused"))}
 
     def since(self, mark):
         return {"browser": self.requests[mark["browser"]:],
@@ -348,26 +387,45 @@ class Watched:
                 "page timing": self.page.evaluate(TIMING)[mark["page timing"]:],
                 "worker timing": self.worker.evaluate(TIMING)[mark["worker timing"]:],
                 "sockets": self.sockets[mark["sockets"]:],
-                "worker sockets": self.worker.evaluate("self.__vdi2770_sockets")[mark["worker sockets"]:]}
+                "worker sockets": self.worker.evaluate("self.__vdi2770_sockets")[mark["worker sockets"]:],
+                "page refused": self.page.evaluate("self.__vdi2770_refused")[mark["page refused"]:],
+                "worker refused": self.worker.evaluate("self.__vdi2770_refused")[mark["worker refused"]:]}
 
     def asked_while_loading(self):
         """What the page fetched before it was ready, other than its own blobs,
         and any socket it opened."""
-        return [u for u in self.requests[:self.loaded["browser"]]
-                if not u.startswith(("blob:", "data:"))] + self.sockets[:self.loaded["sockets"]]
+        return ([u for u in self.requests[:self.loaded["browser"]] if not u.startswith(("blob:", "data:"))]
+                + self.sockets[:self.loaded["sockets"]]
+                + self.page.evaluate("self.__vdi2770_refused")[:self.loaded["page refused"]])
 
-    def controls(self, base):
-        """Make the page and the worker fetch once each, and the page open a socket
-        once, and see who noticed."""
-        mark = self.mark()
+    def attempt(self, base):
+        """The page and the worker each try to fetch once and to open a socket
+        once -- the same four requests as the controls."""
         socket = "ws" + base[len("http"):] + "control/socket"
         self.page.evaluate(f"fetch('{base}control/page').then(r => r.status, e => String(e))")
         self.worker.evaluate(f"fetch('{base}control/worker').then(r => r.status, e => String(e))")
         self.page.evaluate(f"(() => {{ try {{ new WebSocket('{socket}'); }} catch (e) {{}} }})()")
         self.worker.evaluate(f"(() => {{ try {{ new WebSocket('{socket}-worker'); }} catch (e) {{}} }})()")
         time.sleep(1)
-        wanted = {f"{base}control/page", f"{base}control/worker", "/control/page", "/control/worker",
-                  socket, "/control/socket", f"{socket}-worker", "/control/socket-worker"}
+        return {f"{base}control/page", f"{base}control/worker", "/control/page", "/control/worker",
+                socket, "/control/socket", f"{socket}-worker", "/control/socket-worker"}
+
+    def refusals(self, base):
+        """Under the page's own policy: the four control requests are refused, the
+        refusals are seen, and nothing else saw them leave."""
+        mark = self.mark()
+        wanted = self.attempt(base)
+        seen = self.since(mark)
+        refused = {name: sum(1 for url in seen[name] if url in wanted) for name in REFUSED}
+        tried = {name: [url for url in seen[name] if url not in wanted] for name in REFUSED}
+        left = {name: urls for name, urls in seen.items() if name not in set(REFUSED) | ATTEMPTS and urls}
+        return refused, left, {name: urls for name, urls in tried.items() if urls}
+
+    def controls(self, base):
+        """Make the page and the worker fetch once each, and the page open a socket
+        once, and see who noticed."""
+        mark = self.mark()
+        wanted = self.attempt(base)
         seen = self.since(mark)
         counted = {name: sum(1 for url in urls if url in wanted) for name, urls in seen.items()}
         stray = {name: [u for u in urls if u not in wanted] for name, urls in seen.items()}
@@ -381,6 +439,15 @@ class Watched:
 #: measured -- and the worker's by the count kept inside it; by nothing else.
 CONTROLS = {"browser": 2, "server": 4, "page timing": 1, "worker timing": 1, "sockets": 2,
             "worker sockets": 1}
+
+#: Under the page's policy, each side's two control requests are refused, and
+#: the refusals are what is seen of them.
+REFUSED = {"page refused": 2, "worker refused": 2}
+
+#: Counters that see a request being asked for rather than leaving: the count
+#: kept inside the worker is taken when a socket is opened, before the policy
+#: refuses it, so under the policy it sees the control socket it was asked for.
+ATTEMPTS = {"worker sockets"}
 
 
 def judge(watched, label, todo, expected, base, problems) -> tuple:
@@ -401,13 +468,17 @@ def judge(watched, label, todo, expected, base, problems) -> tuple:
         if urls:
             problems.append(f"{label}: {len(urls)} request(s) after load, seen by the {name} "
                             f"counter: {urls[:5]}")
-    counted, stray = watched.controls(base)
+    refused, left, tried = watched.refusals(base)
     watched.quiet = watched.mark()
-    for name in blind(CONTROLS, counted):
-        problems.append(f"{label}: the {name} counter did not see the control requests, so "
-                        f"the zero it read proves nothing")
-    for name, urls in stray.items():
-        problems.append(f"{label}: requests beside the controls, seen by the {name} counter: {urls[:5]}")
+    for name, urls in tried.items():
+        problems.append(f"{label}: the page tried to reach {urls[:5]}, which its policy refused "
+                        f"({name} counter)")
+    for name in blind(REFUSED, refused):
+        problems.append(f"{label}: the {name} counter did not see the control requests refused, "
+                        f"so the page's policy is not shown to hold")
+    for name, urls in left.items():
+        problems.append(f"{label}: the page's policy let requests out, seen by the {name} "
+                        f"counter: {urls[:5]}")
     if watched.downloads:
         problems.append(f"{label}: the page started {len(watched.downloads)} download(s) by itself")
     compared = 0
@@ -504,6 +575,10 @@ def main() -> int:
         print(f"there is no page at {page_file} to judge; build it with "
               f"`python tools/build_browser.py`", file=sys.stderr)
         return 2
+    if page_file.read_text(encoding="utf-8").count(POLICY_TAG) != 1:
+        print(f"the page at {page_file} does not carry its policy once, as this gate knows "
+              f"it:\n    {POLICY_TAG}", file=sys.stderr)
+        return 1
 
     argv_for = _the_pages_python().argv_for
     here = versions_here()
@@ -529,6 +604,24 @@ def main() -> int:
                 try:
                     for label, url in (("served", server.base + page_file.name),
                                        ("opened from a disk", page_file.as_uri())):
+                        # The counters, shown requests they have to see: in a context
+                        # where the page's policy is set aside, because under it
+                        # nothing would leave to be seen.
+                        loose = browser.new_context(bypass_csp=True)
+                        control = Watched(loose, url, server)
+                        own = control.asked_while_loading()
+                        if own != [control.url]:
+                            problems.append(f"{label}: while loading, with its policy set aside, the "
+                                            f"page asked for {own}; it should ask for itself and "
+                                            f"nothing else")
+                        counted, stray = control.controls(server.base)
+                        for name in blind(CONTROLS, counted):
+                            problems.append(f"{label}: the {name} counter did not see the control "
+                                            f"requests, so the zero it read proves nothing")
+                        for name, urls in stray.items():
+                            problems.append(f"{label}: requests beside the controls, seen by the "
+                                            f"{name} counter: {urls[:5]}")
+                        loose.close()
                         context = browser.new_context(accept_downloads=True)
                         watched = Watched(context, url, server)
                         mismatch = unlike(watched.runtime, here)
