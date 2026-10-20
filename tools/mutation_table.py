@@ -2234,8 +2234,8 @@ PUBLISHING_PATH_ROWS = [
      'version of this row survived'),
     ('release/the-release-builds-the-file-the-page-points-at',
      '.github/workflows/release.yml',
-     '      - name: Build the single file',
-     '      - name: Build the single file (skipped)\n        if: false',
+     '      - name: Build the single file and the browser page',
+     '      - name: Build the single file and the browser page (skipped)\n        if: false',
      ['tests/test_the_publishing_path_has_three_properties.py::'
       'test_the_release_builds_the_single_file_it_hands_out'],
      'the front page points at `releases/latest/download/vdi2770.pyz`, which '
