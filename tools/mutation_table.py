@@ -2615,7 +2615,7 @@ LISTING_BUDGET_ROWS = [
 
     ("pages/a-pin-a-reader-runs-is-past-every-advisory",
      "README.md",
-     'pip install "vdi2770-validate==0.11.1"',
+     'pip install "vdi2770-validate==0.12.0"',
      'pip install "vdi2770-validate==0.7.0"',
      ["tests/test_an_advisory_and_its_release_name_each_other.py::"
       "test_every_pin_a_page_hands_a_reader_is_past_every_advisory"],
@@ -2644,7 +2644,7 @@ LISTING_BUDGET_ROWS = [
 
     ("pages/a-pin-in-a-sentence-is-past-every-advisory",
      "README.md",
-     "`vdi2770-validate==0.11.1` installs one matching pair.",
+     "`vdi2770-validate==0.12.0` installs one matching pair.",
      "`vdi2770-validate==0.9.6` installs one matching pair.",
      ["tests/test_an_advisory_and_its_release_name_each_other.py::"
       "test_every_pin_a_page_hands_a_reader_is_past_every_advisory"],

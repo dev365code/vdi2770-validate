@@ -2,7 +2,7 @@
 
 Sections through 0.7.0 had their wording tidied after their tags; the text each version carried when it was published is in that tag's own `CHANGELOG.md`. From 0.8.0 on, a released section is frozen at its tag and takes only appended `*(Correction ...)*` lines.
 
-## 0.12.0 — unreleased
+## 0.12.0 — 2026-10-21
 
 Who should take this release: anyone who has to check a delivery on a machine
 where nothing may be installed, which a page in the browser now does; anyone

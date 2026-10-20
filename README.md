@@ -529,7 +529,7 @@ it is not a promise that nothing your pipeline reads can change.
 verdict your pipeline has not seen, and the point of a validator is that the
 answer it gives today is the answer it gave when you signed off on it. From
 0.9.1 this package names the engine it was built with exactly, so
-`vdi2770-validate==0.11.1` installs one matching pair.
+`vdi2770-validate==0.12.0` installs one matching pair.
 
 Four releases cannot be pinned that way: 0.8.0, 0.8.1, 0.8.2 and 0.9.0 name
 their engine with a floor, and a floor stops holding the moment a newer engine
@@ -538,7 +538,7 @@ one of those four by both names is not a way to stay put, because every release
 from 0.8.0 to 0.9.1 is inside the range of GHSA-f9xw-89gp-x52p:
 
 ```
-pip install "vdi2770-validate==0.11.1"
+pip install "vdi2770-validate==0.12.0"
 ```
 
 Move there from any release, not only those four. Every release up to 0.9.6
