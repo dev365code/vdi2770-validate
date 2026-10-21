@@ -8,8 +8,8 @@ and not before, so an archive whose names it gives was read one way on one
 Python and another way on the next -- and one whose field is damaged was
 refused by the newer releases alone. The repair for CVE-2024-0450, which
 refuses an entry whose data runs on over the next one's, is in some releases
-and not in others, and two releases that have it refuse a different one of two
-entries sharing a local header.
+and not in others; of two entries sharing a local header, the releases that
+have it refuse one before 3.12.10 and 3.13.3, and only warn from those on.
 
 The reader now names every entry itself, the way APPNOTE says, and refuses an
 entry that names two files, or whose bytes are another entry's too, before the
@@ -80,8 +80,11 @@ NAMED = {
     # its word, whatever IBM 437 makes of the header.
     "a-name-in-ibm-437-with-a-unicode-path-naming-another-file": "X.pdf",
     "a-header-with-a-control-byte-and-a-unicode-path": "B\u263a.pdf",
-    # Compared as the library tidies a name: cut at its first NUL.
+    # Compared as the library tidies a name: cut at its first NUL -- and a
+    # field that leaves no name is none.
     "a-unicode-path-carrying-a-nul": "X.pdf",
+    "a-unicode-path-cut-to-nothing": "B\u207f.pdf",
+    "a-flagged-utf-8-name-with-its-unicode-path": "B\u00fc.pdf",
     # A field that is not one is passed over, and says nothing.
     "a-unicode-path-that-is-not-utf-8": "B.pdf",
     "an-empty-unicode-path": "B.pdf",
@@ -116,6 +119,12 @@ REFUSED = {
         "B.docx": ("ambiguous-name", _AMBIGUOUS)}),
     # An entry that names two files (4.6.9): neither name is taken for the other.
     "a-unicode-path-naming-another-file": (OTHERS, {"X.pdf": ("member-unreadable", _two_names("'B.pdf'"))}),
+    # A header bit 11 says is UTF-8 is its own UTF-8 version.
+    "a-flagged-utf-8-name-with-a-unicode-path-naming-another-file": (OTHERS, {
+        "B\u00fc.pdf": ("member-unreadable",
+                        "its header calls it 'B\u00fc.pdf' and its Info-ZIP Unicode Path field "
+                        "(APPNOTE 4.6.9) calls it 'X.pdf'; that field is the UTF-8 version of the "
+                        "header's name, so the entry names two files")}),
     "a-unicode-path-differing-in-case": (OTHERS, {"X.pdf": ("member-unreadable", _two_names("'x.pdf'"))}),
     # A byte order mark is not tidied away, and UTF-8 here carries none (4.6.9).
     "a-unicode-path-with-a-byte-order-mark": (OTHERS, {
@@ -243,9 +252,28 @@ def test_an_entry_naming_two_files_is_told_to_name_one():
     files[LAST] = files[LAST].replace(b"B.pdf", b"X.pdf")
     data = ENTRIES.cases(files, SUBJECT)["a-unicode-path-naming-another-file"]
     found = {f.rule.id: f for f in check_bytes(data, "two-names.zip").findings}
-    assert found["F1"].message == ("A file named in the metadata is in the container under more "
-                                   "than one name")
+    assert found["F1"].message == ("A file named in the metadata is in the container under an "
+                                   "entry that names itself more than once")
     assert found["F1"].fix == ONE_NAME and found["Z12"].fix == ONE_NAME
+
+
+@pytest.mark.parametrize("name", sorted(REFUSED))
+def test_a_later_read_with_no_list_refuses_what_the_first_one_refused(name):
+    """`member_bytes` and `member_reader` are public, and a caller need not
+    pass the names the first read accepted. Asked for an entry the first read
+    refused for naming two files, or for data another entry holds too, the
+    library's releases answered differently: bytes on one, nothing on the
+    next."""
+    c = _read(name)
+    for member, defect in sorted(c.rejected.items()):
+        if defect.kind == "member-unreadable" and not defect.detail.startswith("BadZipFile"):
+            assert zipread.member_bytes(CASES[name], member) is None, member
+
+
+def test_an_archive_without_a_unicode_path_field_is_handed_over_as_it_is():
+    """The copy costs a second archive's worth of memory for as long as the
+    archive is open, so it is made only where there is a field to take out."""
+    assert zipread._unread(CASES["plain"], []) is CASES["plain"]
 
 
 def test_the_library_is_handed_no_unicode_path_field(monkeypatch):

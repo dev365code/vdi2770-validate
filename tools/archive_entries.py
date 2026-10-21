@@ -159,8 +159,13 @@ def cases(files: dict, subject: str) -> dict:
             build(renamed(entry(ibm437, data, extra=up(other, of=ibm437)))),
         "a-header-with-a-control-byte-and-a-unicode-path":
             build(renamed(entry(control, data, extra=up(f"{stem}\u263a{dot}{ext}".encode(), of=control)))),
-        # A field the library would tidy into the header's own name.
+        # A field the library would tidy into the header's own name, or into
+        # no name at all.
         "a-unicode-path-carrying-a-nul": build(renamed(entry(other, data, extra=up(other + b"\0junk", of=other)))),
+        "a-unicode-path-cut-to-nothing": build(renamed(entry(latin, data, extra=up(b"\0junk", of=latin)))),
+        # A header bit 11 says is UTF-8, and a field that agrees with it.
+        "a-flagged-utf-8-name-with-its-unicode-path": build(renamed(entry(utf8, data, flags=UTF8,
+                                                                          extra=up(utf8, of=utf8)))),
         "a-unicode-path-naming-a-path-out": build(renamed(entry(latin, data, extra=up(
             b"../" + plain, of=latin)))),
         "a-unicode-path-repeating-another-members-name": build(renamed(entry(latin, data, extra=up(
@@ -173,6 +178,8 @@ def cases(files: dict, subject: str) -> dict:
             "<2H3B", UNICODE_PATH, 3, 1, 0, 0)))),
         # Entries that say two things about their own name.
         "a-unicode-path-naming-another-file": build(renamed(entry(other, data, extra=up(plain, of=other)))),
+        "a-flagged-utf-8-name-with-a-unicode-path-naming-another-file":
+            build(renamed(entry(utf8, data, flags=UTF8, extra=up(other, of=utf8)))),
         "a-unicode-path-with-a-byte-order-mark": build(renamed(entry(other, data, extra=up(
             b"\xef\xbb\xbf" + other, of=other)))),
         "a-unicode-path-differing-in-case": build(renamed(entry(other, data, extra=up(other.lower(), of=other)))),

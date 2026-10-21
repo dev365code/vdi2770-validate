@@ -68,12 +68,12 @@ failure — files that never claimed at all.
   every entry itself -- by general purpose bit 11 or as IBM Code Page 437 (4.4.4,
   APPENDIX D), or by such a field where the field is one -- and refuses an entry
   that names two files, or whose data another entry holds too, before the
-  library is asked. The library is handed a copy of the archive without those
-  fields, so none of its releases reads one, and a container carrying one is
-  held twice while it is open. What the library still does is list the entries
-  of that copy, and inflate each member and check its CRC-32. The browser page
-  carries CPython 3.13.2, a release from before the repair for CVE-2025-8291,
-  and its comparison with the command runs on that same release.
+  library is asked for its bytes. The library is handed a copy of the archive
+  without those fields, so none of its releases reads one, and a container
+  carrying one is held twice while it is open. What the library still does is
+  list the entries of that copy, and inflate each member and check its CRC-32.
+  The browser page carries CPython 3.13.2, a release from before the repair for
+  CVE-2025-8291, and its comparison with the command runs on that same release.
 
 - **Text spelling at the listing limit**: the page charges the visible spelling
   of runner syntax against the existing listing allowance. It can list fewer

@@ -619,14 +619,16 @@ def _name(info: zipfile.ZipInfo, header: _Header) -> Optional[str]:
 
     The library has read the header's name by bit 11, or as IBM Code Page 437
     without it (4.4.4, APPENDIX D), and that stands unless a Unicode Path field
-    gives the UTF-8 version of it (4.6.9). A header holding bytes other than
-    printable ASCII is in a character set nothing here can know, which is what
-    the field is for, and the field is taken at its word. But printable ASCII
-    reads the same in every character set the name could be in, so a field
-    giving such a header another name is not its UTF-8 version: the entry names
-    two files. So does an extra field carrying two of them. Compared as the
-    library tidies a name -- cut at its first NUL, its separators made `/` --
-    so that only a difference the name keeps is one.
+    gives the UTF-8 version of it (4.6.9). A header without bit 11 holding bytes
+    other than printable ASCII is in a character set nothing here can know,
+    which is what the field is for, and the field is taken at its word. But a
+    header bit 11 says is UTF-8 already is the UTF-8 version, and printable
+    ASCII reads the same in every character set the name could be in -- so a
+    field giving either of those another name is not its UTF-8 version: the
+    entry names two files. So does an extra field carrying two of them.
+    Compared as the library tidies a name -- cut at its first NUL, its
+    separators made `/` -- so that only a difference the name keeps is one, and
+    a field the tidying leaves no name in is no name at all.
     """
     if not info.filename:
         return None
@@ -637,7 +639,9 @@ def _name(info: zipfile.ZipInfo, header: _Header) -> Optional[str]:
     if not header.unicode:
         return None
     given = zipfile.ZipInfo(header.unicode[0]).filename
-    if given != info.filename and all(0x20 <= b <= 0x7E for b in header.raw):
+    if not given:
+        return None
+    if given != info.filename and (header.utf8 or all(0x20 <= b <= 0x7E for b in header.raw)):
         return (f"its header calls it {info.filename!r} and its Info-ZIP Unicode Path field "
                 f"(APPNOTE 4.6.9) calls it {given!r}; that field is the UTF-8 version of the "
                 "header's name, so the entry names two files")
@@ -1334,6 +1338,12 @@ def member_reader(data: bytes, allowed: Optional[Set[str]] = None):
         if not isinstance(opened, tuple):
             return lambda name: None
         archive = _Named(opened[0], opened[0].infolist())
+        # And refused where the first read refuses: an entry naming two files,
+        # or whose data another entry holds too. A caller that passes no list
+        # of accepted names asked the library for those, and its releases did
+        # not answer alike.
+        found_at = found.follows - found.size
+        refused = set(opened[1]) | set(_overlapping(data, opened[0].infolist(), found_at))
         # Counted once. `getinfo` and `open` resolve a duplicated name to the
         # *last* entry, while everything upstream -- the accepted `Member`, the
         # budget charge, the allow-list -- came from the first. A 505 KiB archive
@@ -1353,6 +1363,8 @@ def member_reader(data: bytes, allowed: Optional[Set[str]] = None):
             if counted.get(name) != 1:
                 return None
             info = archive.getinfo(name)
+            if id(info) in refused:
+                return None
             if info.compress_type not in SUPPORTED_METHODS:
                 return None            # not one this reader inflates; see the sweep
             if info.file_size > MAX_MEMBER_BYTES:
