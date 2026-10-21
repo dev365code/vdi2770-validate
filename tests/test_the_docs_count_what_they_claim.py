@@ -294,7 +294,10 @@ def test_the_divergence_numbers_are_derived_from_the_sweep_and_the_catalogue():
     # The sweep records a thrown exception as its own severity block, which is
     # the whole point of `docs/divergences.md` §3: a crash is not a finding.
     threw = sum(1 for e in sweep.values() if e["reference"].get("EXCEPTION"))
-    assert re.search(rf"\b{words.get(threw, threw)}\b of our fixtures", prose), (
+    # Spelled the way the count beside it is. The table above names the numbers
+    # the page used when it was written, and a fourth fixture the reference
+    # throws on turned "four" into a number the gate could only look for as "4".
+    assert re.search(rf"\b{spelled(threw)}\b of our fixtures", prose), (
         f"the reference threw on {threw} fixtures")
 
 

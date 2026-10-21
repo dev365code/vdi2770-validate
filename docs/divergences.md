@@ -14,12 +14,9 @@ check that — the normative text is paywalled.
 ## How much of this was measured
 
 There are 159 containers in `corpus/` and
-`tests/fixtures/`. 155 of the 159 containers were put through the reference
-implementation at its pinned commit `e47c13c`, with locale `en_US`. The four
-fixtures whose entries Python's own ZIP reading has named or placed two ways
-have only our verdict and wait in the recording's `_unswept` block for a real
-reference run; no reference evidence is invented for them.
-[docs/oracle-sweep.json](oracle-sweep.json) records both states.
+`tests/fixtures/`. All 159 containers were put through the reference
+implementation at its pinned commit `e47c13c`, with locale `en_US`.
+[docs/oracle-sweep.json](oracle-sweep.json) records both implementations' verdicts.
 
 A container added after a sweep carries our column and an empty one for the
 reference until the next run, named in the sweep's `_unswept` block with the
@@ -37,9 +34,9 @@ are about is not something this repository can print — §4 says why — but th
 sentence was wrong, and wrong in the direction this whole page exists to guard
 against: an assertion about the other implementation that nobody had asked it.
 
-The reference columns for the 140 previously recorded containers were reproduced
+The reference columns for the 155 previously recorded containers were reproduced
 **byte-identically** with the same pinned commit and locale; our columns for all
-155 containers are unchanged.
+159 containers are unchanged.
 `tools/oracle/README.md` says what you need to repeat it, including the two
 things that will bite you.
 
@@ -54,12 +51,12 @@ What the sweep settled:
   agreement are not — the same limitation §4 discloses, and it applies here too.) The `refKeys`/`refCodes` split earns its keep:
   thirteen of the reference's displayed codes are emitted from more than one key
   with different meanings, so a comparison keyed on the code alone is unsound.
-- **68 containers where it reports an error and we do not**, and **sixteen where we
+- **68 containers where it reports an error and we do not**, and **nineteen where we
   do and it does not**. The differences include the policies in §1 and §2,
   the PDF/A identification and text-reading checks in §5, our own budget rules,
-  the archives the reference throws on rather than reports, and archives whose
-  end records say two things (both §3).
-- **It throws rather than reports on three of our fixtures.** More on that in §3.
+  the archives the reference throws on rather than reports, archives whose end
+  records say two things, and entries the two read differently (all §3).
+- **It throws rather than reports on four of our fixtures.** More on that in §3.
 
 The remaining "read from its source" claims in this document are marked where
 they appear.
@@ -215,7 +212,7 @@ Java toolchain — so the summaries below are not checkable from a clone:
 - `MainDocument` overrides only the two-argument `validate`, so main-document rules
   are skipped entirely when it is validated through the three-argument entry point.
 
-Five more, this time observed in the sweep rather than read:
+Six more, this time observed in the sweep rather than read:
 
 - **A path-traversal member ends the run with an unhandled `ProcessorException`,
   so the container gets no report at all.** This is *not* a vulnerability: the
@@ -262,6 +259,18 @@ Five more, this time observed in the sweep rather than read:
   further back than the longest comment reaches. Which bytes that project took
   for the central directory in those seven is not visible in the codes a run
   records, and is not claimed here.
+- **An entry Python's own ZIP reading names or places two ways is read as it
+  stands.** Four fixtures rename or move the conforming container's PDF entry
+  field by field. This tool takes an entry's name from its Info-ZIP Unicode Path
+  field (APPNOTE 4.6.9), and refuses as `Z12` an entry that names two files or
+  whose data another entry holds too, on every Python. On the entry whose
+  header gives, in IBM Code Page 437, the name the metadata declares, and whose
+  field names another file, the reference reports no error where this tool
+  reports `F1`. On the entry whose data runs on over the next entry's it reports
+  no error; on the entry whose header and field name two files it reports an
+  error, as this tool does; on two entries sharing one local header it throws
+  rather than reports. Which name or which bytes it took for those entries is
+  not visible in the codes a run records, and is not claimed here.
 
 One structural difference, not a defect on either side: the reference extracts
 every container to a temporary folder on disk before validating

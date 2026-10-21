@@ -862,6 +862,33 @@
         ]
       }
     },
+    "f1-a-name-in-ibm-437-with-a-unicode-path-naming-another-file.zip": {
+      "reference": {
+        "INFO": [
+          "REP_003",
+          "REP_005",
+          "REP_008",
+          "REP_009",
+          "REP_010",
+          "REP_011",
+          "REP_015",
+          "REP_020",
+          "REP_028",
+          "REP_036",
+          "REP_041",
+          "REP_043",
+          "ZU_005"
+        ]
+      },
+      "ours": {
+        "error": [
+          "F1"
+        ],
+        "warning": [
+          "F2"
+        ]
+      }
+    },
     "f1-named-file-missing.zip": {
       "reference": {
         "ERROR": [
@@ -3909,6 +3936,72 @@
         ]
       }
     },
+    "z12-a-unicode-path-naming-another-file.zip": {
+      "reference": {
+        "ERROR": [
+          "REP_007"
+        ],
+        "INFO": [
+          "REP_003",
+          "REP_005",
+          "REP_008",
+          "REP_009",
+          "REP_010",
+          "REP_011",
+          "REP_020",
+          "REP_028",
+          "REP_036",
+          "ZU_005"
+        ],
+        "WARN": [
+          "REP_006"
+        ]
+      },
+      "ours": {
+        "error": [
+          "F1",
+          "Z12"
+        ]
+      }
+    },
+    "z12-data-running-into-the-next-entry.zip": {
+      "reference": {
+        "INFO": [
+          "REP_003",
+          "REP_005",
+          "REP_008",
+          "REP_009",
+          "REP_010",
+          "REP_011",
+          "REP_015",
+          "REP_020",
+          "REP_028",
+          "REP_036",
+          "REP_041",
+          "REP_043",
+          "ZU_005"
+        ]
+      },
+      "ours": {
+        "error": [
+          "F1",
+          "Z12"
+        ]
+      }
+    },
+    "z12-two-entries-one-local-header.zip": {
+      "reference": {
+        "EXCEPTION": [
+          "«uncoded»"
+        ]
+      },
+      "ours": {
+        "error": [
+          "F1",
+          "Z12"
+        ]
+      }
+    },
     "z12-unreadable-member.zip": {
       "reference": {
         "EXCEPTION": [
@@ -4267,50 +4360,6 @@
           "P6"
         ]
       }
-    },
-    "f1-a-name-in-ibm-437-with-a-unicode-path-naming-another-file.zip": {
-      "reference": {},
-      "ours": {
-        "error": [
-          "F1"
-        ],
-        "warning": [
-          "F2"
-        ]
-      }
-    },
-    "z12-a-unicode-path-naming-another-file.zip": {
-      "reference": {},
-      "ours": {
-        "error": [
-          "F1",
-          "Z12"
-        ]
-      }
-    },
-    "z12-data-running-into-the-next-entry.zip": {
-      "reference": {},
-      "ours": {
-        "error": [
-          "F1",
-          "Z12"
-        ]
-      }
-    },
-    "z12-two-entries-one-local-header.zip": {
-      "reference": {},
-      "ours": {
-        "error": [
-          "F1",
-          "Z12"
-        ]
-      }
     }
-  },
-  "_unswept": {
-    "f1-a-name-in-ibm-437-with-a-unicode-path-naming-another-file.zip": "New generated container; the pinned reference has not been run on it.",
-    "z12-a-unicode-path-naming-another-file.zip": "New generated container; the pinned reference has not been run on it.",
-    "z12-data-running-into-the-next-entry.zip": "New generated container; the pinned reference has not been run on it.",
-    "z12-two-entries-one-local-header.zip": "New generated container; the pinned reference has not been run on it."
   }
 }
