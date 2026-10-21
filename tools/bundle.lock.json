@@ -1,0 +1,22 @@
+[
+  {
+    "name": "elementpath",
+    "version": "5.1.4",
+    "file": "elementpath-5.1.4-py3-none-any.whl",
+    "url": "https://files.pythonhosted.org/packages/42/b0/b709cc33ccb0288f41f2d92dfd754d2ccf925cb9277a66effbc132cd004c/elementpath-5.1.4-py3-none-any.whl",
+    "sha256": "5ec8d7bb44b16c98414a6a95e20cb150f3cbfc3cac65edc14773288c7a937376",
+    "size": 261881,
+    "requires_python": null,
+    "tags": null
+  },
+  {
+    "name": "xmlschema",
+    "version": "4.2.0",
+    "file": "xmlschema-4.2.0-py3-none-any.whl",
+    "url": "https://files.pythonhosted.org/packages/dc/1a/81ac398d35be848f3655893b6260f227b29ca6acf5c2674dc5ed9af63027/xmlschema-4.2.0-py3-none-any.whl",
+    "sha256": "82d24a50eea5e7f2d603312813848cd66fddf8fa2b6730839c6aa3d66312e3b6",
+    "size": 467246,
+    "requires_python": null,
+    "tags": null
+  }
+]

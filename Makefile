@@ -17,6 +17,7 @@ check: lint fixtures test corpus coverage-check rules-doc golden-report time-bud
 # The comment lives above the recipe: a `#` line inside one is a command as far
 # as anything reading recipes is concerned, and the parity gate read it as one.
 lint:
+	$(PYTHON) tools/bundle_lock.py --check
 	$(PYTHON) -m ruff check --no-cache src tests tools packages browser
 
 test:

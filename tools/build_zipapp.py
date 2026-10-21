@@ -31,6 +31,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import urllib.request
 import zipfile
 from pathlib import Path
 
@@ -54,6 +55,22 @@ FIXED_TIMESTAMP = (1980, 1, 1, 0, 0, 0)
 #: the promise the variable makes where refusing would break the build instead.
 ZIP_EARLIEST = (1980, 1, 1, 0, 0, 0)
 ZIP_LATEST = (2107, 12, 31, 23, 59, 58)
+
+
+def verified(data: bytes, sha256: str, what: str) -> bytes:
+    got = hashlib.sha256(data).hexdigest()
+    if got != sha256:
+        raise SystemExit(f"{what} has sha256 {got}, and this build takes only {sha256}. "
+                         f"Nothing was built. If the pin is what should move, move it "
+                         f"here and say why in the commit.")
+    return data
+
+
+def fetch(url: str, sha256: str, what: str, local: Path | None = None) -> bytes:
+    if local is not None:
+        return verified(local.read_bytes(), sha256, what)
+    with urllib.request.urlopen(url, timeout=300) as answer:
+        return verified(answer.read(), sha256, what)
 
 
 def _timestamp():

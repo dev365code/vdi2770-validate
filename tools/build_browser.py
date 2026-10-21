@@ -32,7 +32,6 @@ import re
 import sys
 import tarfile
 import tempfile
-import urllib.request
 import zipfile
 from pathlib import Path
 
@@ -40,6 +39,7 @@ ROOT = Path(__file__).resolve().parents[1]
 BROWSER = ROOT / "browser"
 sys.path.insert(0, str(ROOT / "tools"))
 import build_zipapp  # noqa: E402 -- one staging for both single-file forms
+from build_zipapp import fetch, verified as verified  # noqa: E402 -- one digest refusal for every fetched byte
 
 #: The runtime. A Pyodide release is a build of CPython for the browser, and the
 #: page carries five files of it. The digest is the release asset's as
@@ -126,21 +126,6 @@ MARKS = ("@@TITLE@@", "@@VERSION@@", "@@LICENCES@@", "@@ASSETS@@", "@@WORKER@@")
 #: This project's own notices, as the engine's wheel carries them.
 OWN_NOTICES = ("LICENSE", "NOTICE", "THIRD_PARTY.md")
 
-
-def verified(data: bytes, sha256: str, what: str) -> bytes:
-    got = hashlib.sha256(data).hexdigest()
-    if got != sha256:
-        raise SystemExit(f"{what} has sha256 {got}, and this build takes only {sha256}. "
-                         f"Nothing was built. If the pin is what should move, move it "
-                         f"here and say why in the commit.")
-    return data
-
-
-def fetch(url: str, sha256: str, what: str, local: Path | None = None) -> bytes:
-    if local is not None:
-        return verified(local.read_bytes(), sha256, what)
-    with urllib.request.urlopen(url, timeout=300) as answer:
-        return verified(answer.read(), sha256, what)
 
 
 def runtime_files(tarball: bytes) -> dict:

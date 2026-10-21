@@ -79,6 +79,7 @@ jobs:
           # one in this commit -- and the run would be about that instead.
           python -m pip install -e packages/vdi2770
           python -m pip install -e ".[dev]"
+          python tools/bundle_lock.py --check
       - name: Lint
         run: python -m ruff check --no-cache src tests tools packages browser
       - name: Build fixtures
