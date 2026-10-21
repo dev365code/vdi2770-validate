@@ -67,9 +67,10 @@ failure — files that never claimed at all.
   one and missing, as `F1`, on the other, and such a field that is not UTF-8
   makes the archive unreadable on the first and not on the second. A member
   whose data runs on into the next member's is read on 3.9.6 and refused on
-  3.9.25 and later. None of the containers in this repository has either shape.
-  The browser page carries CPython 3.13.2, a release from before that repair,
-  and its comparison with the command runs on that same release.
+  3.9.25 and later. None of the containers in this repository has any of these
+  shapes. The browser page carries CPython 3.13.2, a release from before the
+  repair for CVE-2025-8291, and its comparison with the command runs on that
+  same release.
 
 - **Text spelling at the listing limit**: the page charges the visible spelling
   of runner syntax against the existing listing allowance. It can list fewer
