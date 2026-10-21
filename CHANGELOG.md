@@ -6,8 +6,10 @@ Sections through 0.7.0 had their wording tidied after their tags; the text each 
 
 - **The single file and the page carry locked third-party wheels.** Names,
   versions, filenames, URLs and SHA-256 digests select everything bundled, so
-  repeated builds of the same commit carry the same bytes. Local wheel copies
-  pass the same checks. This changes no judgment, finding ID or exit code.
+  repeated builds of the same commit carry the same bytes for the
+  single file on any supported Python and the
+  page built on the Python it carries (3.13). Local wheel copies pass the same
+  checks. This changes no judgment, finding ID or exit code.
 - **A release page must match the page CI opened.** The release builds it on
   the same Python as the page job, then compares it byte for byte with that
   commit's successful CI artifact before offering it for download. A release

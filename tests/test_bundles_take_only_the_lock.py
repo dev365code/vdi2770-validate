@@ -183,3 +183,9 @@ def test_an_update_refuses_metadata_that_excludes_the_projects_python_floor(tmp_
     with pytest.raises(SystemExit, match=r"Requires-Python >=3\.10.*project.*3\.9"):
         tool.set_version("elementpath==5.1.4")
     assert output.read_text(encoding="utf-8") == "unchanged\n"
+
+
+def test_the_repeated_build_claim_names_each_artifacts_python_scope():
+    said = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8").split("## 0.12.0", 1)[0]
+    assert "single file on any supported Python" in said
+    assert "page built on the Python it carries (3.13)" in said
