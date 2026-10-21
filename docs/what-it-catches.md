@@ -159,6 +159,16 @@ one archive in one file.
 `tests/test_an_archive_ends_where_its_end_records_say.py` holds the reader to
 each such end.
 
+And the entries an archive lists are named by this tool, the way APPNOTE names
+them (4.4.4, 4.6.9, APPENDIX D), before Python's library is asked: a member an
+Info-ZIP Unicode Path field names is that member on every Python, though the
+library reads the field from 3.12 on only, and a field that is not one is
+passed over on every Python, where the releases from 3.12 refused the whole
+archive or warned. An entry that names two files, or whose data another entry
+holds too, is `Z12` on every Python, in the same words.
+`tests/test_an_entry_is_named_and_placed_as_its_headers_say.py` holds the
+reader to each such entry.
+
 **Now.**
 
 - read budgets, per member and per archive — done; the table in

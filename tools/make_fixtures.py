@@ -18,6 +18,7 @@ import zipfile
 from pathlib import Path
 
 import archive_ends
+import archive_entries
 from page_fixtures import cases
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -432,6 +433,30 @@ def main() -> int:
         made[f"z1-{case}.zip"] = {"rule": "Z1", "basedOn": "documentcontainer.zip",
                                   "changed": ["<end records>"],
                                   "note": "the conforming container's end, rewritten: " + note}
+
+    # Z12 for each entry the standard library's releases read two ways that the
+    # reader refuses (APPNOTE 4.3.6, 4.6.9): the conforming container's PDF,
+    # renamed or moved by tools/archive_entries.py, so these are where its
+    # refusal and its words have to be the same on every Python.
+    entries = archive_entries.cases(base, "B.pdf")
+    for case, note in archive_entries.FIXTURES.items():
+        (OUT / f"z12-{case}.zip").write_bytes(entries[case])
+        made[f"z12-{case}.zip"] = {"rule": "Z12", "basedOn": "documentcontainer.zip",
+                                   "changed": ["B.pdf"],
+                                   "note": "the conforming container's PDF entry, rewritten: " + note}
+
+    # F1 where a Unicode Path field (APPNOTE 4.6.9) is taken at its word: the
+    # PDF's header holds its name in IBM Code Page 437, a field whose CRC-32 is
+    # that header's names it X.pdf, and the metadata declares the name the
+    # header spells. The releases before 3.12 read the header's name.
+    f = dict(base)
+    f[META] = edit(f[META], "B.pdf", "B\u00fc.pdf")
+    case = "a-name-in-ibm-437-with-a-unicode-path-naming-another-file"
+    (OUT / f"f1-{case}.zip").write_bytes(archive_entries.cases(f, "B.pdf")[case])
+    made[f"f1-{case}.zip"] = {
+        "rule": "F1", "basedOn": "documentcontainer.zip", "changed": [META, "B.pdf"],
+        "note": "the PDF's header names it B\u00fc.pdf in IBM Code Page 437 and its Info-ZIP Unicode "
+                "Path field X.pdf; the metadata declares B\u00fc.pdf"}
 
     # Z2 — nothing in the archive at all
     add("z2-empty-archive.zip", {}, "Z2", sorted(base), "every member removed",

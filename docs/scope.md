@@ -50,7 +50,8 @@ failure — files that never claimed at all.
   well as what is sent. A WebRTC connection is outside what such a policy can
   refuse; the page opens none, which a test holds to by reading its code.
 
-- **The end of an archive is read here; the rest by the standard library**: an
+- **The end of an archive and its entries are read here; their bytes by the
+  standard library**: an
   archive is opened with Python's own `zipfile`, and its patch releases have read
   the records at the end of an archive two ways. The releases that fixed
   CVE-2025-8291 follow a ZIP64 end-of-central-directory locator to the record it
@@ -59,18 +60,20 @@ failure — files that never claimed at all.
   So this reader reads those records itself first, the way APPNOTE lays them
   out: an end the two would read differently is `Z1` on every Python, in this
   reader's words, and what reaches the library is an end every release of it
-  reads alike. Past the end -- the entries the central directory lists, and
-  what they hold -- the library still reads, and its releases do not all accept
-  the same entries. A member whose name an Info-ZIP Unicode Path field (APPNOTE
-  4.6.9) also gives is named by that field on Python 3.12.5 to 3.14.7 and by its
-  header on 3.9.6 to 3.11.16, so a file the metadata names can be there on the
-  one and missing, as `F1`, on the other, and such a field that is not UTF-8
-  makes the archive unreadable on the first and not on the second. A member
-  whose data runs on into the next member's is read on 3.9.6 and refused on
-  3.9.25 and later. None of the containers in this repository has any of these
-  shapes. The browser page carries CPython 3.13.2, a release from before the
-  repair for CVE-2025-8291, and its comparison with the command runs on that
-  same release.
+  reads alike. The entries the central directory lists are named and placed
+  here too. The library reads an Info-ZIP Unicode Path field (APPNOTE 4.6.9)
+  from 3.12.0 on and not before, and from then on refuses a whole archive whose
+  field is not UTF-8; it refuses an entry whose data runs on into the next only
+  in the releases that carry the repair for CVE-2024-0450. So this reader names
+  every entry itself -- by general purpose bit 11 or as IBM Code Page 437 (4.4.4,
+  APPENDIX D), or by such a field where the field is one -- and refuses an entry
+  that names two files, or whose data another entry holds too, before the
+  library is asked. The library is handed a copy of the archive without those
+  fields, so none of its releases reads one, and a container carrying one is
+  held twice while it is open. What the library still does is list the entries
+  of that copy, and inflate each member and check its CRC-32. The browser page
+  carries CPython 3.13.2, a release from before the repair for CVE-2025-8291,
+  and its comparison with the command runs on that same release.
 
 - **Text spelling at the listing limit**: the page charges the visible spelling
   of runner syntax against the existing listing allowance. It can list fewer

@@ -20,7 +20,7 @@ SRC = HERE / "src" / "vdi2770"
 # expat does not read itself the reader looks that encoding up and decodes it.
 # `struct` was another: the records at the end of an archive are read here,
 # field by field, before the library is asked about the archive.
-ALLOWED = {"codecs", "collections", "dataclasses", "enum", "io", "re", "struct",
+ALLOWED = {"codecs", "collections", "contextlib", "dataclasses", "enum", "io", "re", "struct",
            "typing", "unicodedata", "xml", "zipfile", "zlib"}
 
 

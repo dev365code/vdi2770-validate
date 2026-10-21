@@ -552,8 +552,10 @@ def test_no_document_cites_a_file_that_is_not_here():
     # it names the file whose table of encoding names it holds to.
     # 60 to 61 when the page came to carry a policy of its own: the scope page
     # names the gate that counts what that policy refuses.
-    assert seen == 61, (
-        f"{seen} citations found, not 61. If you added or removed one, say so "
+    # 61 to 62 when the reader came to name and place an archive's entries
+    # itself: docs/what-it-catches.md names the test that holds it to each one.
+    assert seen == 62, (
+        f"{seen} citations found, not 62. If you added or removed one, say so "
         f"here; if you did not, some of them just stopped being checked.")
 
 

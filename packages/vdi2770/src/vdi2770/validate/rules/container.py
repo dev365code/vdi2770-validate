@@ -173,6 +173,17 @@ DEFECT_TO_RULE = {
 # a single member that expands past the ratio floor, and the project's own tests
 # say so. A Finding may carry its own remedy, so each kind carries the one that
 # names what to do about *it*.
+#: What to do about an entry the reader refused for naming more than one
+#: file. Its bytes are readable, so "re-create the archive and send it again"
+#: re-zips the same files into the same field -- the loop `_remedy_for` already
+#: ends for a locked member.
+ONE_NAME = ("Give the entry one name. An Info-ZIP Unicode Path field (APPNOTE 4.6.9) "
+            "holds the UTF-8 version of the name its header already carries, and this "
+            "entry's says something else -- zipping the same files again writes the "
+            "same field. Store the name once, in UTF-8 with general purpose bit 11 set "
+            "(APPNOTE 4.4.4), or leave the field out.")
+
+
 def _remedy_for(defect):
     """The remedy for a refusal, by what the refusal actually says.
 
@@ -188,6 +199,9 @@ def _remedy_for(defect):
         return ("Remove the password from this member before handing the "
                 "container over. A recipient who cannot open a file has not been "
                 "given it, and nothing here can check what it cannot read.")
+    if (defect.kind == "member-unreadable"
+            and "Info-ZIP Unicode Path" in (defect.detail or "")):
+        return ONE_NAME
     return REMEDY_FOR_DEFECT.get(defect.kind)
 
 
