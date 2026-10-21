@@ -189,3 +189,31 @@ def test_the_repeated_build_claim_names_each_artifacts_python_scope():
     said = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8").split("## 0.12.0", 1)[0]
     assert "single file on any supported Python" in said
     assert "page built on the Python it carries (3.13)" in said
+
+
+@pytest.mark.parametrize("directory", ["another-5.1.4", "elementpath-99.0"])
+def test_an_update_refuses_a_dist_info_directory_for_another_name_or_version(directory, tmp_path, monkeypatch):
+    import zipfile
+
+    tool = lock_tool()
+    entries = wheels_at(tmp_path)
+    monkeypatch.setattr(tool, "read_lock", lambda: entries)
+    output = tmp_path / "bundle.lock.json"
+    output.write_text("unchanged\n", encoding="utf-8")
+    monkeypatch.setattr(tool, "LOCK", output)
+    new = entries[0]
+    response = {"urls": [{"packagetype": "bdist_wheel", "filename": new["file"],
+                          "url": new["url"], "digests": {"sha256": new["sha256"]}, "size": new["size"]}]}
+    monkeypatch.setattr(tool.urllib.request, "urlopen", lambda *a, **k: io.BytesIO(json.dumps(response).encode()))
+    body = io.BytesIO()
+    with zipfile.ZipFile(body, "w") as wheel:
+        wheel.writestr(f"{directory}.dist-info/METADATA", "Name: elementpath\nVersion: 5.1.4\n")
+    new["size"] = len(body.getvalue())
+    response["urls"][0]["size"] = new["size"]
+    import build_zipapp
+    payloads = {e["url"]: (tmp_path / e["file"]).read_bytes() for e in entries}
+    payloads[new["url"]] = body.getvalue()
+    monkeypatch.setattr(build_zipapp, "fetch", lambda url, *args: payloads[url])
+    with pytest.raises(SystemExit, match="dist-info.*name or version"):
+        tool.set_version("elementpath==5.1.4")
+    assert output.read_text(encoding="utf-8") == "unchanged\n"

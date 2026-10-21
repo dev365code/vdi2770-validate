@@ -146,6 +146,8 @@ def wheel_metadata(data: bytes, entry: dict, entries: list):
             paths = [n for n in wheel.namelist() if n.endswith(".dist-info/METADATA")]
             if len(paths) != 1:
                 raise SystemExit(f"{entry['file']} must carry exactly one METADATA")
+            if paths[0].rsplit("/", 1)[0] != entry["file"].removesuffix("-py3-none-any.whl") + ".dist-info":
+                raise SystemExit(f"{entry['file']} dist-info directory name or version differs from the lock")
             meta = email.message_from_bytes(wheel.read(paths[0]))
     except zipfile.BadZipFile as exc:
         raise SystemExit(f"{entry['file']} is not a wheel: {exc}") from None
