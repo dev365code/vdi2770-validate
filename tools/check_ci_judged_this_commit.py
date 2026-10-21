@@ -2,8 +2,8 @@
 """Something must have judged this commit before a tag turns it into a publish.
 
 The release workflow runs `make check` on the tagged tree. That is one
-interpreter on one Linux runner, and it is not the gate: the four-row matrix —
-three Pythons and Windows — runs on push, and nothing connects the two. A tag
+interpreter on one Linux runner, and it is not the gate: the matrix — three
+Pythons, Windows and the command as pip gives it — runs on push. A tag
 can be pushed at a moment when the branch run never finished, was cancelled, or
 failed, and the release would neither know nor care.
 

@@ -47,6 +47,7 @@ jobs:
   # executable there and a shebang file here, and `pip` writes both from the
   # same `entry_points.txt`.
   check:
+    name: check (${{ matrix.os }}, ${{ matrix.python-version }}, ${{ matrix.dependencies || 'locked' }})
     runs-on: ${{ matrix.os }}
     strategy:
       # `fail-fast` off: one platform failing while the other is still running
@@ -56,9 +57,14 @@ jobs:
       matrix:
         os: [ubuntu-latest]
         python-version: ["3.9", "3.12", "3.13"]
+        dependencies: ["locked"]
         include:
           - os: windows-latest
             python-version: "3.12"
+          - os: ubuntu-latest
+            python-version: "3.13"
+            dependencies: "as pip gives it"
+            test-selection: tests/test_cli.py tests/test_offline.py tests/test_the_json_says_what_produced_it.py
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
@@ -74,14 +80,22 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install "packaging==26.3"
+      - name: Install the wheels the page carries
+        if: matrix.dependencies != 'as pip gives it'
+        run: |
           python tools/bundle_lock.py --requirements bundle-requirements.txt
           python -m pip install --require-hashes --no-deps -r bundle-requirements.txt
+      - name: Install both distributions from this tree
+        run: |
           # The reader first, and from the working tree. The rules pin it
           # exactly, so a pip that reaches an index here would either fail (the
           # version is not published yet) or install a reader that is not the
           # one in this commit -- and the run would be about that instead.
           python -m pip install -e packages/vdi2770
           python -m pip install -e ".[dev]"
+      - name: Check the installed lock
+        if: matrix.dependencies != 'as pip gives it'
+        run: |
           python tools/bundle_lock.py --check
       - name: Lint
         run: python -m ruff check --no-cache src tests tools packages browser
@@ -95,7 +109,9 @@ jobs:
       # rewrites it to `/` there; the refusal itself is checked on every
       # platform). Each skip says why, at its own `skipif`.
       - name: Test
-        run: python -m pytest
+        # The added row witnesses the command with index dependencies. The
+        # other rows keep the whole suite, including the installed-lock gate.
+        run: python -m pytest ${{ matrix.test-selection }}
       # The question no reading of a tree can answer: does the file pip wrote
       # start, on the machine it wrote it on. This release moves where the tool
       # is installed from and which distribution owns the executable, and this

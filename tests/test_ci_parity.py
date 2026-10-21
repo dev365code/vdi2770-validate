@@ -16,7 +16,8 @@ CI = (ROOT / ".github" / "workflows" / "ci.yml")
 def test_ci_installs_the_wheels_the_page_bundles_before_resolving_anything_else():
     jobs = yaml.safe_load(CI.read_text(encoding="utf-8"))["jobs"]
     for name in ("check", "the-page-this-repo-offers"):
-        commands = [line.strip() for s in jobs[name]["steps"] if not s.get("if")
+        commands = [line.strip() for s in jobs[name]["steps"]
+                    if not s.get("if") or (name == "check" and s.get("if") == "matrix.dependencies != 'as pip gives it'")
                     for line in s.get("run", "").splitlines() if not line.strip().startswith("#")]
         generated = commands.index("python tools/bundle_lock.py --requirements bundle-requirements.txt")
         installed = commands.index("python -m pip install --require-hashes --no-deps -r bundle-requirements.txt")
@@ -40,6 +41,24 @@ def test_ci_keeps_the_page_it_opened_only_after_a_second_build_agrees():
     assert steps[upload]["with"]["path"] == "dist/vdi2770.html"
     assert steps[upload]["with"]["if-no-files-found"] == "error"
     assert not steps[upload].get("if")
+
+
+def test_ci_checks_the_command_as_pip_gives_it_without_applying_the_page_lock():
+    job = yaml.safe_load(CI.read_text(encoding="utf-8"))["jobs"]["check"]
+    matrix = job["strategy"]["matrix"]
+    rows = [row for row in matrix["include"] if row.get("dependencies") == "as pip gives it"]
+    assert len(rows) == 1
+    assert rows[0] == {"os": "ubuntu-latest", "python-version": "3.13",
+                       "dependencies": "as pip gives it",
+                       "test-selection": "tests/test_cli.py tests/test_offline.py tests/test_the_json_says_what_produced_it.py"}
+    assert matrix["dependencies"] == ["locked"]
+    assert "matrix.dependencies" in job["name"]
+    steps = job["steps"]
+    locked = [s for s in steps if "bundle_lock.py" in s.get("run", "")]
+    assert len(locked) == 2
+    assert all(s.get("if") == "matrix.dependencies != 'as pip gives it'" for s in locked)
+    assert next(s["run"] for s in steps if s.get("name") == "Test") == "python -m pytest ${{ matrix.test-selection }}"
+    assert not any("browser_gates.py" in s.get("run", "") for s in steps)
 
 
 #: Targets `make check` deliberately does not depend on, with the reason. A
