@@ -342,15 +342,51 @@ _PLACEHOLDER = 0xFFFFFFFF
 @dataclass(frozen=True)
 class _Directory:
     """Where an archive's end records put its central directory: where they say
-    it begins, how long it is, and where the record after it begins."""
+    it begins, how long it is, where the record after it begins, how many
+    entries it holds, and which of the records said so."""
     offset: int
     size: int
     follows: int
+    entries: int
+    which: str
 
 
 def _prefixed(skipped: int) -> str:
     return (f"the archive its end record describes begins {skipped:,} bytes into the "
             "file, and what comes before it is not part of it")
+
+
+_SPLIT = "of a split archive; this reader reads an archive that is one file"
+
+#: The fields of the end record a zip64 end record holds as well (4.4.21 to
+#: 4.4.24), and what each holds when it leaves its value to the zip64 record.
+_SHARED = (("number of entries on this disk", 0xFFFF), ("number of entries", 0xFFFF),
+           ("size of the central directory", _PLACEHOLDER),
+           ("offset of the central directory", _PLACEHOLDER))
+
+
+def _one_disk(which: str, disk: int, cd_disk: int, this: int, total: int):
+    """An archive that is one file is disk 0 of one, and every entry is on it
+    (4.4.19 to 4.4.21) -- or the reason this one is not."""
+    if disk:
+        return f"the {which} places this archive on disk {disk:,} {_SPLIT}"
+    if cd_disk:
+        return f"the {which} places the central directory on disk {cd_disk:,} {_SPLIT}"
+    if this != total:
+        return f"the {which} counts {this:,} entries on this disk and {total:,} in all"
+    return None
+
+
+def _closing(data: bytes, start: int):
+    """Where, from `start` on, an end record's signature begins and its comment
+    runs to the end of the file: where an end record could be the last thing
+    in it."""
+    n = len(data)
+    q = data.find(_END, start, n - 18)
+    while q >= 0:
+        if q + 22 + struct.unpack_from("<H", data, q + 20)[0] == n:
+            yield q
+        q = data.find(_END, q + 1, n - 18)
 
 
 def _directory(data: bytes):
@@ -365,18 +401,40 @@ def _directory(data: bytes):
     differently is refused here, before the library is asked, and in this
     reader's words -- so the verdict and the sentence are the same on every
     Python. What reaches the library is an end every release of it reads alike.
+
+    And an end every release reads, and reads alike, is refused when it says two
+    things: one end record, and nothing after it and its comment (4.3.1,
+    4.3.16); one disk (4.4.19 to 4.4.21); one value for each field, whichever
+    record holds it (4.4.21 to 4.4.24). A reader that takes the other half of
+    such an end at its word reads another archive.
     """
     n = len(data)
     # The end record the library takes: the last 22 bytes when they are one
     # with no comment, or else the last of its signature in the last 64 KiB of
-    # comment and the record. Without one there is no archive, which the
-    # library says in these words on every release.
+    # comment and the record -- the longest comment and the record, to the
+    # byte, as the releases from 3.12.10 on have it; those before looked one
+    # byte further back, where no record the file ends with can begin. Without
+    # one there is no archive, which the library says in these words on every
+    # release.
     if n >= 22 and data[n - 22:n - 18] == _END and data[n - 2:] == b"\0\0":
         p = n - 22
     else:
         p = data.rfind(_END, max(0, n - 22 - 0xFFFF))
         if p < 0 or n - p < 22:
             return "File is not a zip file"
+    closing = list(_closing(data, max(0, n - 22 - 0xFFFF)))
+    if closing != [p]:
+        if closing:
+            return (f"the signature of an end record occurs again at byte {p:,}, after the "
+                    f"end record at byte {closing[0]:,}")
+        comment, = struct.unpack_from("<H", data, p + 20)
+        if p + 22 + comment < n:
+            return (f"the archive's end record ends {n - p - 22 - comment:,} bytes before the "
+                    "end of the file, and what comes after it is not part of it")
+        if p + 22 + comment > n:
+            return (f"the archive's end record gives its comment {comment:,} bytes, and the "
+                    f"file ends {n - p - 22:,} bytes after the record")
+    counts = struct.unpack_from("<4H", data, p + 4)
     size, offset = struct.unpack_from("<2L", data, p + 12)
     loc = p - 20
     if loc < 0 or data[loc:loc + 4] != _LOCATOR:
@@ -387,7 +445,7 @@ def _directory(data: bytes):
             if value == _PLACEHOLDER:
                 return (f"the end record gives the {name} as {value:,}, the value that says it is "
                         "in a zip64 end record, and the archive has none")
-        return _placed("end record", offset, size, p)
+        return _one_disk("end record", *counts) or _placed("end record", offset, size, p, counts[3])
     disk, at, disks = struct.unpack_from("<LQL", data, loc + 4)
     if disk != 0 or disks > 1:
         return "zipfiles that span multiple disks are not supported"
@@ -416,7 +474,20 @@ def _directory(data: bytes):
                 return f"the central directory ends {gap:,} bytes before the zip64 end record begins"
             if gap < 0:
                 return f"the zip64 end record places its central directory {-gap:,} bytes past where it is"
-        return _placed("zip64 end record", offset, size, at)
+        disk, cd_disk, this, total = struct.unpack_from("<2L2Q", data, at + 16)
+        refused = _one_disk("zip64 end record", disk, cd_disk, this, total)
+        if refused:
+            return refused
+        # What the end record does not leave to the zip64 record with a
+        # placeholder, it gives as the value (4.4.19 to 4.4.24): the same one.
+        for name, value in (("this archive", counts[0]), ("the central directory", counts[1])):
+            if value not in (0, 0xFFFF):
+                return f"the end record places {name} on disk {value:,} {_SPLIT}"
+        said = (*counts[2:], *struct.unpack_from("<2L", data, p + 12))
+        for (name, mark), small, large in zip(_SHARED, said, (this, total, size, offset)):
+            if small not in (mark, large):
+                return f"the end record gives the {name} as {small:,} and the zip64 end record as {large:,}"
+        return _placed("zip64 end record", offset, size, at, total)
     if rec >= 0 and data[rec:rec + 4] == _END64:
         # The record is where one of version 1 would be, and the locator points
         # somewhere else: at the record of an archive that has bytes in front
@@ -430,12 +501,12 @@ def _directory(data: bytes):
     return f"the zip64 locator points at byte {at:,}, and no zip64 end record begins there"
 
 
-def _placed(which: str, offset: int, size: int, follows: int):
+def _placed(which: str, offset: int, size: int, follows: int, entries: int):
     """The central directory comes before the record after it (4.3.6)."""
     if size > follows:
         return (f"the {which} gives the central directory {size:,} bytes, more than the "
                 f"{follows:,} that come before it")
-    return _Directory(offset, size, follows)
+    return _Directory(offset, size, follows, entries, which)
 
 
 def read(data: bytes, path: str, depth: int = 0, _budget: Optional[_Budget] = None) -> Container:
@@ -465,6 +536,16 @@ def _read(data: bytes, path: str, depth: int, _budget: Optional[_Budget],
         # sweep with them. "Not a readable ZIP archive" is exactly what this is.
         c.kind = Kind.UNREADABLE
         c.defects.append(Defect("not-a-zip", c.where, str(e)))
+        return c
+    # As many entries as the end records count (4.4.22). The library lists the
+    # central directory to its size and never asks the count; a reader that
+    # lists it to its count lists other entries. Before a nameless one is set
+    # aside below, because it is an entry all the same.
+    if len(zf.infolist()) != found.entries:
+        c.kind = Kind.UNREADABLE
+        c.defects.append(Defect("not-a-zip", c.where, (
+            f"the {found.which} counts {found.entries:,} entries and the central directory "
+            f"holds {len(zf.infolist()):,}")))
         return c
 
     # From the start of the file. The library finds an archive by its end

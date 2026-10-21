@@ -90,7 +90,14 @@ jobs:
       # the runner may lack, and a member name carrying a backslash (`zipfile`
       # rewrites it to `/` there; the refusal itself is checked on every
       # platform). Each skip says why, at its own `skipif`.
+      #
+      # The 3.13 row says which way its `zipfile` reads the end of an archive:
+      # as releases do after the repair for CVE-2025-8291, which the cases of
+      # that end are then held to there, as the page's job holds them to a
+      # release from before it.
       - name: Test
+        env:
+          VDI2770_ZIPFILE_GENERATION: ${{ matrix.python-version == '3.13' && 'G2' || '' }}
         run: python -m pytest
       # The question no reading of a tree can answer: does the file pip wrote
       # start, on the machine it wrote it on. This release moves where the tool

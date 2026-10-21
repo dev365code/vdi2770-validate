@@ -13,25 +13,42 @@ code should read the paragraph after the list.
 - **Where an archive ends is read by this tool, the same way on every Python.**
   The records at the end of a ZIP archive -- the end of central directory record
   and, for a ZIP64 archive, the locator in front of it and the record it points
-  at -- were read by Python's `zipfile`, and its patch releases read them two
-  ways. Before the repair for CVE-2025-8291 it took the 56 bytes in front of the
-  locator to be the ZIP64 record, whatever the locator said; after it, it
+  at -- were read by Python's `zipfile`, and its patch releases do not all read
+  them alike. Before the repair for CVE-2025-8291 it took the 56 bytes in front
+  of the locator to be the ZIP64 record, whatever the locator said; after it, it
   follows the locator and holds the record to its own size. An archive whose
   locator points past or short of its record, or whose record gives the wrong
   size, was read before the repair -- on Python 3.9.6, 3.12.10 and 3.13.2, and
   in the browser page -- and refused after it; one whose record carries
-  extensible data, the other way round. **This moves verdicts:** each is `Z1`
-  now on every Python, and the ends every release already refused are refused
-  in one sentence of this tool's rather than in whichever one the running
-  Python's library had. Fourteen fixtures hold the cases, and wait for the
-  reference implementation's run.
+  extensible data, the other way round. And the releases before 3.12.10 look
+  for the end record one byte further from the end of the file than the
+  longest comment reaches: an archive whose end record is there was read on
+  Python 3.9.6, 3.9.25 and 3.12.5, and refused on 3.12.10 and after.
+  **This moves verdicts:** each is `Z1` now on every Python, and the ends every
+  release already refused are refused in one sentence of this tool's rather
+  than in whichever one the running Python's library had. Fifteen fixtures hold
+  the cases, and wait for the reference implementation's run.
+- **An archive whose end contradicts itself is not read.** Every Python reads
+  these, and each says two things about one archive: bytes after the end record
+  and its comment, or a comment longer than what is left of the file (APPNOTE
+  4.3.16); the signature of a second end record after the first (4.3.1); disk
+  numbers other than those of an archive in one file, or fewer entries on this
+  disk than in all (4.4.19 to 4.4.21); an end record giving a value its ZIP64
+  end record contradicts (4.4.21 to 4.4.24); and a count of entries other than
+  the number the central directory holds (4.4.22). A reader that takes the other
+  half of one of these at its word reads another archive.
+  **This moves verdicts:** each is `Z1` now, on every Python. None of the
+  containers in this repository is one.
 
 **If your build gates on the exit code, this is the paragraph for you.** A
 container whose ZIP64 locator or record disagrees with where the record is,
 which exited with what its content earns on a Python from before the repair and
 in the browser page, now exits `1` there, as it already did elsewhere; one whose
 ZIP64 record carries extensible data, which current Pythons read, exits `1` on
-every Python.
+every Python. So does one whose end record lies a byte further back than the
+longest comment reaches, which exited with what its content earns on Python
+3.9.6, 3.9.25 and 3.12.5, and one whose end contradicts itself in one of the
+ways above, which exited with what its content earns everywhere.
 
 ## 0.12.0 — 2026-10-21
 

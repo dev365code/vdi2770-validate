@@ -4115,6 +4115,14 @@
           "Z1"
         ]
       }
+    },
+    "z1-end-record-with-the-longest-comment-and-a-byte-after-it.zip": {
+      "reference": {},
+      "ours": {
+        "error": [
+          "Z1"
+        ]
+      }
     }
   },
   "_unswept": {
@@ -4131,6 +4139,7 @@
     "z1-zip64-record-placing-the-directory-past-where-it-is.zip": "New generated container; the pinned reference has not been run on it.",
     "z1-zip64-record-with-extensible-data-values-in-the-end-record.zip": "New generated container; the pinned reference has not been run on it.",
     "z1-zip64-record-with-extensible-data.zip": "New generated container; the pinned reference has not been run on it.",
-    "z1-zip64-with-bytes-in-front-located-from-the-file.zip": "New generated container; the pinned reference has not been run on it."
+    "z1-zip64-with-bytes-in-front-located-from-the-file.zip": "New generated container; the pinned reference has not been run on it.",
+    "z1-end-record-with-the-longest-comment-and-a-byte-after-it.zip": "New generated container; the pinned reference has not been run on it."
   }
 }

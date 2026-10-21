@@ -63,27 +63,29 @@ def end(data: bytes, *, entries=None, this=None, size=None, offset=None, disk=0,
 
 
 def zip64(data: bytes, *, placeholders=True, gap=0, size=44, extensible=b"", signature=END64,
-          points=0, disk=0, cd_disk=0, entries=None, locator_disk=0, disks=1, end_fields=None,
-          moved=0) -> bytes:
+          points=0, disk=0, cd_disk=0, entries=None, this=None, locator_disk=0, disks=1,
+          end_fields=None, moved=0) -> bytes:
     """The archive under a zip64 end record and its locator, then an end record
     holding placeholders -- or, with `placeholders=False`, the values themselves.
     `points` moves where the locator says the zip64 record is; `gap` puts bytes
     between the central directory and the record; `size` is what the record
     says its own size is, which a record of version 1 with nothing extensible
     gives as 44 (4.3.14.1); `moved` is how far past the central directory the
-    record says the directory begins."""
+    record says the directory begins; `this` is the record's count of entries
+    on this disk, and `end_fields` replaces fields of the end record after it."""
     body, d = directory(data)
     entries = d["entries"] if entries is None else entries
     out = body + b"\0" * gap
     at = len(out)
     out += struct.pack(END64_FIELDS, signature, size, 45, 45, disk, cd_disk,
-                       entries, entries, d["size"], d["offset"] + moved) + extensible
+                       entries if this is None else this, entries, d["size"],
+                       d["offset"] + moved) + extensible
     out += struct.pack(LOCATOR_FIELDS, LOCATOR, locator_disk, at + points, disks)
     fields = ({"this": P16, "entries": P16, "size": P32, "offset": P32} if placeholders else
               {"this": d["entries"], "entries": d["entries"], "size": d["size"], "offset": d["offset"]})
-    fields.update(end_fields or {})
-    return out + struct.pack(END_FIELDS, END, 0, 0, fields["this"], fields["entries"],
-                             fields["size"], fields["offset"], 0)
+    fields = {"disk": 0, "cd_disk": 0, **fields, **(end_fields or {})}
+    return out + struct.pack(END_FIELDS, END, fields["disk"], fields["cd_disk"], fields["this"],
+                             fields["entries"], fields["size"], fields["offset"], 0)
 
 
 #: The cases written as fixtures: each end the library's releases read
@@ -111,12 +113,16 @@ FIXTURES = {
         "seven bytes in front of the archive, the locator counting from the start of the file",
     "zip64-record-placing-the-directory-past-where-it-is":
         "the zip64 end record places the central directory four bytes past where it is",
+    "end-record-with-the-longest-comment-and-a-byte-after-it":
+        "the end record carries the longest comment there is, and one byte follows it",
 }
 
 
 def cases(data: bytes) -> dict:
     """Every end the reader is held to, by name, from one plain archive."""
     real = {"placeholders": False}
+    _, d = directory(data)
+    more = d["entries"] + 1
     return {
         # Ends every release of the library reads alike.
         "plain": end(data),
@@ -127,10 +133,12 @@ def cases(data: bytes) -> dict:
         "zip64-locator-of-two-disks": zip64(data, disks=2),
         "zip64-locator-of-two-disks-pointing-past-its-record": zip64(data, disks=2, points=8),
         "no-end-record": data[:-22],
-        # The record's two counts spell the record's own signature, so the last
-        # time it occurs in the file is inside the record: the library takes the
-        # last 22 bytes as the record when they are one, and so must the reader.
-        "end-record-whose-counts-spell-its-signature": end(data, this=0x4B50, entries=0x0605),
+        # A comment as long as one can be reaches back to where the search for
+        # the record begins; the stored archive's own end record is in that
+        # stretch, and is not the end of this one.
+        "end-record-with-the-longest-comment": end(data, comment=b"\0" * 0xFFFF),
+        "plain-holding-a-stored-archive": end(plain({"inner.zip": data})),
+        "zip64-end-record-disks-as-placeholders": zip64(data, end_fields={"disk": P16, "cd_disk": P16}),
         "plain-with-bytes-in-front": b"\0" * 7 + end(data),
         "zip64-with-bytes-in-front": b"\0" * 7 + zip64(data),
         # Ends the library reads one way before CVE-2025-8291 was repaired and
@@ -151,4 +159,27 @@ def cases(data: bytes) -> dict:
         "zip64-record-after-a-gap": zip64(data, gap=4),
         "zip64-with-bytes-in-front-located-from-the-file": b"\0" * 7 + zip64(data, points=7),
         "zip64-record-placing-the-directory-past-where-it-is": zip64(data, moved=4),
+        # Searched for one byte further back than the longest comment reaches
+        # by the releases before 3.12.10, and not by those after.
+        "end-record-with-the-longest-comment-and-a-byte-after-it":
+            end(data, comment=b"\0" * 0xFFFF, after=b"\0"),
+        # Ends every release reads, and reads alike, that contradict themselves.
+        "end-record-with-bytes-after-it": end(data, after=b"\0" * 7),
+        "end-record-comment-past-the-end": end(data, comment=b"abc", comment_length=9),
+        "end-record-in-the-comment": end(data, comment=END + b"\0" * 18),
+        # The record's two counts spell the record's own signature, so the last
+        # time it occurs in the file is inside the record: the library takes the
+        # last 22 bytes as the record when they are one, and so must the reader.
+        "end-record-whose-counts-spell-its-signature": end(data, this=0x4B50, entries=0x0605),
+        "end-record-on-disk-1": end(data, disk=1),
+        "end-record-directory-on-disk-1": end(data, cd_disk=1),
+        "end-record-entries-on-this-disk-differ": end(data, this=0),
+        "end-record-entries-wrong": end(data, entries=more),
+        "zip64-record-on-disk-1": zip64(data, disk=1),
+        "zip64-record-directory-on-disk-1": zip64(data, cd_disk=1),
+        "zip64-record-entries-on-this-disk-differ": zip64(data, this=0),
+        "zip64-end-record-on-disk-1": zip64(data, end_fields={"disk": 1}),
+        "zip64-end-record-offset-disagrees": zip64(data, end_fields={"offset": 1}, **real),
+        "zip64-end-record-entries-disagree": zip64(data, end_fields={"this": more, "entries": more}, **real),
+        "zip64-entries-wrong": zip64(data, entries=more),
     }

@@ -152,7 +152,10 @@ And the records at the end of an archive are read by this tool, the way
 APPNOTE lays them out (4.3.14 to 4.3.16), before Python's library is asked: an
 end the library's releases read two ways -- a ZIP64 locator pointing short of
 its record, read before the repair for CVE-2025-8291 and refused after it -- is
-`Z1` on every Python, the browser page's included, in the same words.
+`Z1` on every Python, the browser page's included, in the same words. So is an
+end that contradicts itself, though every Python reads it: bytes after the end
+record, a second end record, or counts and disk numbers that are not those of
+one archive in one file.
 `tests/test_an_archive_ends_where_its_end_records_say.py` holds the reader to
 each such end.
 

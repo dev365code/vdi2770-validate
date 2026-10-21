@@ -13,12 +13,13 @@ check that — the normative text is paywalled.
 
 ## How much of this was measured
 
-There are 154 containers in `corpus/` and
-`tests/fixtures/`. 140 of the 154 containers were put through the reference
-implementation at its pinned commit `e47c13c`, with locale `en_US`. The fourteen
-fixtures whose archives end in records Python's own ZIP reading has read two
-ways have only our verdict and wait in the recording's `_unswept` block for a
-real reference run; no reference evidence is invented for them.
+There are 155 containers in `corpus/` and
+`tests/fixtures/`. 140 of the 155 containers were put through the reference
+implementation at its pinned commit `e47c13c`, with locale `en_US`. The fifteen
+fixtures whose archives end in records Python's own ZIP reading has not read
+alike on every release have only our verdict, and wait in the recording's
+`_unswept` block for a real reference run; no reference evidence is invented
+for them.
 [docs/oracle-sweep.json](oracle-sweep.json) records both states.
 
 A container added after a sweep carries our column and an empty one for the

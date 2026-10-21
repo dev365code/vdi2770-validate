@@ -12,10 +12,15 @@ refused on another -- and the browser page carries a release from before.
 
 The reader now reads the end itself first, the way APPNOTE lays it out, and
 asks the library about an archive only when every release would read that end
-alike. Each case below is a plain archive whose end has been rewritten field
-by field (`tools/archive_ends.py`), and the reason one is refused is asserted
-to the byte -- which is what makes the assertion mean the same thing on a
-Python whose library would refuse it too, in other words.
+alike. And an end that contradicts itself is refused even where every release
+reads it: one end record, and nothing after it (4.3.1, 4.3.16); one disk
+(4.4.19 to 4.4.21); and fields that say one thing, whichever record holds them
+(4.4.22 to 4.4.24) -- because a reader that takes the other half of a
+contradiction at its word reads a different archive. Each case below is a
+plain archive whose end has been rewritten field by field
+(`tools/archive_ends.py`), and the reason one is refused is asserted to the
+byte -- which is what makes the assertion mean the same thing on a Python whose
+library would refuse it too, in other words.
 """
 import inspect
 import os
@@ -43,10 +48,13 @@ PLAIN = ENDS.plain(_members(CLEAN_DOCUMENT))
 CASES = ENDS.cases(PLAIN)
 #: Where the zip64 end record is put: right after the central directory.
 AT = len(PLAIN) - 22
+#: What the plain archive's end record says: three entries, and where they are listed.
+_, SAID = ENDS.directory(PLAIN)
 
 #: The ends every release reads alike, and that are read.
 READ = ["plain", "zip64", "zip64-with-its-values-in-the-end-record", "zip64-on-no-disks",
-        "end-record-whose-counts-spell-its-signature"]
+        "end-record-with-the-longest-comment", "plain-holding-a-stored-archive",
+        "zip64-end-record-disks-as-placeholders"]
 
 #: How far into the file the archive begins, in the cases that put bytes in front of it.
 _PREFIX = ("the archive its end record describes begins 7 bytes into the file, and what "
@@ -91,6 +99,47 @@ REFUSED = {
     "zip64-with-bytes-in-front-located-from-the-file": _PREFIX,
     "zip64-record-placing-the-directory-past-where-it-is":
         "the zip64 end record places its central directory 4 bytes past where it is",
+    # Read by the releases before 3.12.10, which look for the record one byte
+    # further back than the longest comment reaches, and refused after.
+    "end-record-with-the-longest-comment-and-a-byte-after-it": "File is not a zip file",
+}
+
+#: Read by every release, and alike, and each a contradiction: refused here.
+_ONE_FILE = "of a split archive; this reader reads an archive that is one file"
+CONTRADICTORY = {
+    # One end record, and the file ends with it and its comment (4.3.1, 4.3.16).
+    "end-record-with-bytes-after-it":
+        "the archive's end record ends 7 bytes before the end of the file, and what comes "
+        "after it is not part of it",
+    "end-record-comment-past-the-end":
+        "the archive's end record gives its comment 9 bytes, and the file ends 3 bytes after "
+        "the record",
+    "end-record-in-the-comment":
+        f"the signature of an end record occurs again at byte {AT + 22:,}, after the end "
+        f"record at byte {AT:,}",
+    # One disk, holding every entry (4.4.19 to 4.4.21; 4.3.14 for the zip64 record).
+    "end-record-on-disk-1": f"the end record places this archive on disk 1 {_ONE_FILE}",
+    "end-record-directory-on-disk-1": f"the end record places the central directory on disk 1 {_ONE_FILE}",
+    "end-record-entries-on-this-disk-differ": "the end record counts 0 entries on this disk and 3 in all",
+    "end-record-whose-counts-spell-its-signature":
+        "the end record counts 19,280 entries on this disk and 1,541 in all",
+    "zip64-record-on-disk-1": f"the zip64 end record places this archive on disk 1 {_ONE_FILE}",
+    "zip64-record-directory-on-disk-1":
+        f"the zip64 end record places the central directory on disk 1 {_ONE_FILE}",
+    "zip64-record-entries-on-this-disk-differ":
+        "the zip64 end record counts 0 entries on this disk and 3 in all",
+    "zip64-end-record-on-disk-1": f"the end record places this archive on disk 1 {_ONE_FILE}",
+    # A field the end record does not leave to the zip64 record is the value
+    # (4.4.21 to 4.4.24), so it is the zip64 record's value.
+    "zip64-end-record-offset-disagrees":
+        f"the end record gives the offset of the central directory as 1 and the zip64 end "
+        f"record as {SAID['offset']:,}",
+    "zip64-end-record-entries-disagree":
+        "the end record gives the number of entries on this disk as 4 and the zip64 end "
+        "record as 3",
+    # As many entries as the central directory holds (4.4.22).
+    "end-record-entries-wrong": "the end record counts 4 entries and the central directory holds 3",
+    "zip64-entries-wrong": "the zip64 end record counts 4 entries and the central directory holds 3",
 }
 
 
@@ -100,7 +149,8 @@ def _refusals(name):
 
 
 def test_every_case_is_either_read_or_refused_for_a_reason():
-    assert sorted(READ + list(REFUSED)) == sorted(CASES)
+    assert sorted(READ + list(REFUSED) + list(CONTRADICTORY)) == sorted(CASES)
+    assert SAID["entries"] == 3
 
 
 @pytest.mark.parametrize("name", READ)
@@ -118,6 +168,14 @@ def test_an_end_the_releases_disagree_on_is_refused_for_the_same_reason_on_each(
     whichever Python printed it."""
     c, refused = _refusals(name)
     assert c.kind is Kind.UNREADABLE and refused == [REFUSED[name]], refused
+
+
+@pytest.mark.parametrize("name", sorted(CONTRADICTORY))
+def test_an_end_that_contradicts_itself_is_refused_though_every_release_reads_it(name):
+    """No release of the library refuses these, and each says two things about
+    one archive: the reader takes neither."""
+    c, refused = _refusals(name)
+    assert c.kind is Kind.UNREADABLE and refused == [CONTRADICTORY[name]], refused
 
 
 def test_the_reader_asks_the_library_nothing_private_about_where_an_archive_ends():
@@ -138,10 +196,10 @@ def _generation() -> str:
 
 def test_a_job_that_holds_these_on_one_kind_of_release_runs_on_that_kind():
     """The cases above prove nothing about the two kinds of release unless they
-    run on both. The check jobs run them on whatever release each Python is at,
-    which after the repair stays repaired; the page's job runs them on its own
-    pinned release from before it, and says so here -- so a job moved to another
-    release is a red job, not a quiet loss of the one that still reads the old way."""
+    run on both. The page's job runs them on its own pinned release from before
+    the repair and the 3.13 check row on one from after it, and each says so
+    here -- so a job moved to another release is a red job, not a quiet loss of
+    one of the two ways of reading."""
     want = os.environ.get("VDI2770_ZIPFILE_GENERATION")
     if not want:
         pytest.skip("this run names no kind of release")
