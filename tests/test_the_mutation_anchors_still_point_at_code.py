@@ -36,6 +36,14 @@ def test_every_anchor_appears_exactly_once_in_the_file_it_names():
         "nothing until it is re-pinned:\n  " + "\n  ".join(wrong))
 
 
+def test_each_mutation_row_makes_a_different_edit():
+    seen = {}
+    for name, path, anchor, replacement, _proves, _why in TABLE:
+        edit = (path, anchor, replacement)
+        assert edit not in seen, f"{name} repeats the edit made by {seen.get(edit)}"
+        seen[edit] = name
+
+
 def test_every_row_names_a_test_that_exists():
     """The other half of a row: the anchor points at code to break, and the
     `proves` list points at what has to go red. An anchor that stops matching is

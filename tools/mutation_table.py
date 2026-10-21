@@ -3630,8 +3630,9 @@ TABLE += [
      "tools/build_zipapp.py",
      "    if got != sha256:\n",
      "    if False:\n",
-     ["tests/test_the_page_says_what_the_command_says.py::test_the_runtime_is_the_one_this_repository_names"],
-     "any runtime at that URL would be built into the page"),
+     ["tests/test_the_page_says_what_the_command_says.py::test_the_runtime_is_the_one_this_repository_names",
+      "tests/test_a_bundle_refuses_unlocked_bytes.py::test_a_wheel_with_the_right_name_and_wrong_digest_is_refused"],
+     "a runtime or wheel with different bytes could be built into the bundle"),
     ("build/nothing-in-a-script-element-can-end-it",
      "tools/build_browser.py",
      '    if re.search(r"</script|<!--", text, re.IGNORECASE):\n',
@@ -3779,12 +3780,6 @@ TABLE += [
 
 
 TABLE += [
-    ("bundle/a-wheel-must-match-its-digest",
-     "tools/build_zipapp.py",
-     "    if got != sha256:\n",
-     "    if False:\n",
-     ["tests/test_a_bundle_refuses_unlocked_bytes.py::test_a_wheel_with_the_right_name_and_wrong_digest_is_refused"],
-     "a file with the locked name could carry different code"),
     ("bundle/a-wheel-cannot-extend-the-lock",
      "tools/bundle_lock.py",
      "    check_requirements(meta, entries)\n    return meta\n",
