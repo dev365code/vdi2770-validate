@@ -80,6 +80,15 @@ def fetch(url: str, sha256: str, what: str, local: Path | None = None) -> bytes:
         return verified(answer.read(), sha256, what)
 
 
+def python_floor() -> str:
+    """The lowest Python the project promises, rather than the builder's."""
+    manifest = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    found = re.search(r'^requires-python\s*=\s*">=([0-9.]+)"', manifest, re.M)
+    if not found:
+        raise SystemExit("pyproject.toml declares no requires-python floor")
+    return found.group(1)
+
+
 def _timestamp():
     epoch = os.environ.get("SOURCE_DATE_EPOCH")
     if not epoch:

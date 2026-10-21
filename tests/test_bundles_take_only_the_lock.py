@@ -49,7 +49,7 @@ def test_both_notice_files_name_every_bundled_version():
     ("size", 0), ("size", True), ("url", "https://example.org/packages/a.whl"),
     ("url", "http://files.pythonhosted.org/packages/a.whl"),
     ("name", "Elementpath"), ("name", "element_path"),
-    ("tags", ["py3-none-any"]), ("requires_python", ">=3.9"),
+    ("tags", ["py3-none-any"]), ("requires_python", "not a specifier"),
     ("file", "elementpath-5.1.4-cp313-none-any.whl"),
 ])
 def test_a_malformed_lock_is_refused(field, value, tmp_path):
@@ -164,3 +164,22 @@ def test_an_installed_version_mismatch_says_how_to_install_the_lock(monkeypatch)
     monkeypatch.setattr(tool.metadata, "metadata", lambda name: {"Version": "99.0"})
     with pytest.raises(SystemExit, match=r"differs from locked 5\.0\.4; run `make bundle-install`"):
         tool.check_installed(tool.read_lock())
+
+
+def test_an_update_refuses_metadata_that_excludes_the_projects_python_floor(tmp_path, monkeypatch):
+    tool = lock_tool()
+    entries = [dict(e, requires_python=None) for e in wheels_at(tmp_path, requires_python=">=3.10")]
+    monkeypatch.setattr(tool, "read_lock", lambda: entries)
+    output = tmp_path / "bundle.lock.json"
+    output.write_text("unchanged\n", encoding="utf-8")
+    monkeypatch.setattr(tool, "LOCK", output)
+    new = entries[0]
+    response = {"urls": [{"packagetype": "bdist_wheel", "filename": new["file"],
+                          "url": new["url"], "digests": {"sha256": new["sha256"]}, "size": new["size"]}]}
+    monkeypatch.setattr(tool.urllib.request, "urlopen", lambda *a, **k: io.BytesIO(json.dumps(response).encode()))
+    import build_zipapp
+    payloads = {e["url"]: (tmp_path / e["file"]).read_bytes() for e in entries}
+    monkeypatch.setattr(build_zipapp, "fetch", lambda url, *args: payloads[url])
+    with pytest.raises(SystemExit, match=r"Requires-Python >=3\.10.*project.*3\.9"):
+        tool.set_version("elementpath==5.1.4")
+    assert output.read_text(encoding="utf-8") == "unchanged\n"

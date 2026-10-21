@@ -2,7 +2,7 @@
 """Keep the third-party wheels carried by the single file and the page explicit.
 
     python tools/bundle_lock.py --check
-    python tools/bundle_lock.py --set elementpath==5.1.4
+    python tools/bundle_lock.py --set NAME==VERSION
     python tools/bundle_lock.py --requirements /tmp/bundle-requirements.txt
 
 An update commit also records a CHANGELOG entry, the versions in both
@@ -28,6 +28,7 @@ from pathlib import Path
 
 try:
     from packaging.requirements import InvalidRequirement, Requirement
+    from packaging.specifiers import InvalidSpecifier, SpecifierSet
     from packaging.utils import InvalidWheelFilename, parse_wheel_filename
     from packaging.version import InvalidVersion, Version
 except ImportError:
@@ -64,8 +65,16 @@ def validate(entries: list) -> list:
             raise SystemExit(f"{name} needs a https://files.pythonhosted.org/packages/ URL")
         if not entry["url"].endswith("/" + entry["file"]):
             raise SystemExit(f"{name}'s URL does not name its wheel file")
-        if entry["requires_python"] is not None or entry["tags"] is not None:
-            raise SystemExit(f"{name}: requires_python and tags are reserved and must be null")
+        if entry["tags"] is not None:
+            raise SystemExit(f"{name}: tags are reserved and must be null")
+        requires_python = entry["requires_python"]
+        if requires_python is not None:
+            if not isinstance(requires_python, str) or not requires_python:
+                raise SystemExit(f"{name}: requires_python must be a nonempty string or null")
+            try:
+                SpecifierSet(requires_python)
+            except InvalidSpecifier as exc:
+                raise SystemExit(f"{name}: invalid Requires-Python {requires_python}: {exc}") from None
         try:
             wheel_name, wheel_version, _build, tags = parse_wheel_filename(entry["file"])
             version = Version(entry["version"])
@@ -152,7 +161,7 @@ def requirements(entries: list, output: Path) -> None:
 
 
 def set_version(spec: str) -> None:
-    from build_zipapp import fetch
+    from build_zipapp import fetch, python_floor
     try:
         name, version = spec.split("==")
         name = distribution_name(name)
@@ -175,7 +184,12 @@ def set_version(spec: str) -> None:
         data = fetch(entry["url"], entry["sha256"], entry["file"])
         if len(data) != entry["size"]:
             raise SystemExit(f"{entry['file']} has size {len(data)}, and the lock takes only {entry['size']}")
-        wheel_metadata(data, entry, candidate)
+        meta = wheel_metadata(data, entry, candidate)
+        requires_python = meta.get("Requires-Python")
+        floor = python_floor()
+        if requires_python and not SpecifierSet(requires_python).contains(floor, prereleases=True):
+            raise SystemExit(f"{entry['file']}: Requires-Python {requires_python} excludes project Python floor {floor}")
+        entry["requires_python"] = requires_python
     LOCK.write_text(json.dumps(candidate, indent=2) + "\n", encoding="utf-8")
 
 
