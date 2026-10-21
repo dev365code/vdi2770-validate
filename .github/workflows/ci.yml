@@ -64,7 +64,7 @@ jobs:
           - os: ubuntu-latest
             python-version: "3.13"
             dependencies: "as pip gives it"
-            test-selection: tests/test_cli.py tests/test_offline.py tests/test_the_json_says_what_produced_it.py
+            test-selection: --deselect tests/test_bundles_take_only_the_lock.py::test_the_locked_wheels_require_only_versions_inside_the_lock
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
@@ -116,8 +116,9 @@ jobs:
       - name: Test
         env:
           VDI2770_ZIPFILE_GENERATION: ${{ matrix.python-version == '3.13' && 'G2' || '' }}
-        # The added row witnesses the command with index dependencies. The
-        # other rows keep the whole suite, including the installed-lock gate.
+        # The row with index dependencies runs the whole suite but the one test
+        # whose premise is that the installed wheels are the locked ones; the
+        # other rows run that one too, after the installed-lock gate.
         run: python -m pytest ${{ matrix.test-selection }}
       # The question no reading of a tree can answer: does the file pip wrote
       # start, on the machine it wrote it on. This release moves where the tool

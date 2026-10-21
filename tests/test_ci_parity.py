@@ -48,9 +48,14 @@ def test_ci_checks_the_command_as_pip_gives_it_without_applying_the_page_lock():
     matrix = job["strategy"]["matrix"]
     rows = [row for row in matrix["include"] if row.get("dependencies") == "as pip gives it"]
     assert len(rows) == 1
+    # The whole suite, but the one test whose premise is that the installed
+    # wheels are the locked ones. Three files of it witnessed the command and
+    # nothing else, so a dependency the index resolves differently could break
+    # every other check and this row would still be green.
     assert rows[0] == {"os": "ubuntu-latest", "python-version": "3.13",
                        "dependencies": "as pip gives it",
-                       "test-selection": "tests/test_cli.py tests/test_offline.py tests/test_the_json_says_what_produced_it.py"}
+                       "test-selection": "--deselect tests/test_bundles_take_only_the_lock.py::"
+                                         "test_the_locked_wheels_require_only_versions_inside_the_lock"}
     assert matrix["dependencies"] == ["locked"]
     assert "matrix.dependencies" in job["name"]
     steps = job["steps"]
