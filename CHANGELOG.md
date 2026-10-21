@@ -9,7 +9,9 @@ Sections through 0.7.0 had their wording tidied after their tags; the text each 
   repeated builds of the same commit carry the same bytes for the
   single file on any supported Python and the
   page built on the Python it carries (3.13). Local wheel copies pass the same
-  checks. This changes no judgment, finding ID or exit code.
+  checks. The page now carries elementpath 5.0.4, the version the single file
+  has always carried; judged against 5.1.4 on every corpus and fixture input,
+  nothing moved. This changes no judgment, finding ID or exit code.
 - **A release page must match the page CI opened.** The release builds it on
   the same Python as the page job, then compares it byte for byte with that
   commit's successful CI artifact before offering it for download. A release
