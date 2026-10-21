@@ -504,8 +504,10 @@ def test_a_workflow_that_publishes_runs_the_whole_gate():
         # The page kept by CI is evidence for the release's byte comparison.
         # It publishes no distribution or divergence counts. Its exact path,
         # browser gate and repeat-build comparison are asserted above.
-        return any("dist" in ln.split("path:", 1)[1] and not ln.strip().endswith(".html")
-                   for ln in text.splitlines() if ln.strip().startswith("path:"))
+        return any("dist" in str(step.get("with", {}).get("path", ""))
+                   and step.get("with", {}).get("name") != "the-page"
+                   for job in _yaml(w).get("jobs", {}).values()
+                   for step in job.get("steps", []))
 
     publishing = [w for w in workflows() if publishes(w)]
     assert publishing, "no workflow publishes anything; this test is looking in the wrong place"
@@ -521,6 +523,21 @@ def test_a_workflow_that_publishes_runs_the_whole_gate():
         assert any(c.strip() == "make oracle-fully-swept" for c in ran), (
             f"{w.name} publishes divergence counts and does not check the sweep "
             f"is complete. It runs: {ran}")
+
+
+def test_an_html_artifact_with_another_name_still_needs_the_whole_gate(tmp_path, monkeypatch):
+    import sys
+
+    import pytest
+
+    page = tmp_path / "page.yml"
+    page.write_text("jobs:\n  page:\n    steps:\n      - uses: actions/upload-artifact@pinned\n"
+                    "        with:\n          name: another-page\n          path: dist/page.html\n",
+                    encoding="utf-8")
+    release = ROOT / ".github/workflows/release.yml"
+    monkeypatch.setattr(sys.modules[__name__], "workflows", lambda: [release, page])
+    with pytest.raises(AssertionError, match="page.yml publishes and does not run"):
+        test_a_workflow_that_publishes_runs_the_whole_gate()
 
 
 def test_a_step_that_runs_make_check_runs_it_where_the_makefile_is():
