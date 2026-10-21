@@ -147,5 +147,13 @@ def test_normalized_metadata_names_are_compared_as_distribution_names(tmp_path):
     with zipfile.ZipFile(tmp_path / entries[1]["file"]) as z:
         from email import message_from_bytes
         meta = message_from_bytes(z.read("xmlschema-4.2.0.dist-info/METADATA"))
-    meta.replace_header("Name", "XMLSchema")
-    tool.check_requirements(meta, entries)
+    for name, accepted in [("XMLSchema", True), ("somethingelse", False)]:
+        meta.replace_header("Name", name)
+        raw = io.BytesIO()
+        with zipfile.ZipFile(raw, "w") as z:
+            z.writestr("xmlschema-4.2.0.dist-info/METADATA", meta.as_bytes())
+        if accepted:
+            assert tool.wheel_metadata(raw.getvalue(), entries[1], entries)["Name"] == name
+        else:
+            with pytest.raises(SystemExit, match="METADATA name or version"):
+                tool.wheel_metadata(raw.getvalue(), entries[1], entries)
