@@ -54,7 +54,7 @@ _, SAID = ENDS.directory(PLAIN)
 #: The ends every release reads alike, and that are read.
 READ = ["plain", "zip64", "zip64-with-its-values-in-the-end-record", "zip64-on-no-disks",
         "end-record-with-the-longest-comment", "plain-holding-a-stored-archive",
-        "zip64-end-record-disks-as-placeholders"]
+        "plain-with-a-closing-record-in-a-member", "zip64-end-record-disks-as-placeholders"]
 
 #: How far into the file the archive begins, in the cases that put bytes in front of it.
 _PREFIX = ("the archive its end record describes begins 7 bytes into the file, and what "
@@ -189,8 +189,13 @@ def test_the_reader_asks_the_library_nothing_private_about_where_an_archive_ends
 def _generation() -> str:
     """Which way this Python's `zipfile` reads a zip64 end: "G1", as releases did
     before the repair for CVE-2025-8291, or "G2", as they do after it -- told by
-    the repair's own words."""
-    repaired = "Corrupt zip64 end of central directory record" in inspect.getsource(zipfile._EndRecData64)
+    the repair's own words. The one private name a test here reads: the words
+    are in that function, and a Python without it is one whose way of reading
+    cannot be told -- which is said, rather than raised as an AttributeError."""
+    reads = getattr(zipfile, "_EndRecData64", None)
+    if reads is None:
+        pytest.fail("this Python's zipfile has no _EndRecData64, so which way it reads a zip64 end cannot be told")
+    repaired = "Corrupt zip64 end of central directory record" in inspect.getsource(reads)
     return "G2" if repaired else "G1"
 
 

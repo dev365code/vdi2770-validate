@@ -422,7 +422,15 @@ def _directory(data: bytes):
         p = data.rfind(_END, max(0, n - 22 - 0xFFFF))
         if p < 0 or n - p < 22:
             return "File is not a zip file"
-    closing = list(_closing(data, max(0, n - 22 - 0xFFFF)))
+    found = _described(data, p)
+    if isinstance(found, str):
+        return found
+    # One end record, and the file ends with it and its comment (4.3.1, 4.3.16).
+    # A record comes after the central directory it describes (4.3.6), so what
+    # lies in front of where that directory ends is the archive's own content --
+    # a member's bytes may hold anything -- and only from there on is a second
+    # signature a second record.
+    closing = list(_closing(data, max(found.offset + found.size, n - 22 - 0xFFFF)))
     if closing != [p]:
         if closing:
             return (f"the signature of an end record occurs again at byte {p:,}, after the "
@@ -434,6 +442,12 @@ def _directory(data: bytes):
         if p + 22 + comment > n:
             return (f"the archive's end record gives its comment {comment:,} bytes, and the "
                     f"file ends {n - p - 22:,} bytes after the record")
+    return found
+
+
+def _described(data: bytes, p: int):
+    """Where the end record at `p`, and the zip64 records in front of it, put
+    the central directory -- or the reason they do not."""
     counts = struct.unpack_from("<4H", data, p + 4)
     size, offset = struct.unpack_from("<2L", data, p + 12)
     loc = p - 20

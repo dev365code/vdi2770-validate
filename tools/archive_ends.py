@@ -88,6 +88,22 @@ def zip64(data: bytes, *, placeholders=True, gap=0, size=44, extensible=b"", sig
                              fields["entries"], fields["size"], fields["offset"], 0)
 
 
+def with_a_record_in_a_member(data: bytes) -> bytes:
+    """The archive with one member more, stored last, whose bytes hold what
+    looks like an end record whose comment runs to the end of the file: data,
+    in front of the central directory, and no record of this archive."""
+    with zipfile.ZipFile(io.BytesIO(data)) as z:
+        files = {name: z.read(name) for name in z.namelist()}
+
+    def build(length):
+        shaped = struct.pack(END_FIELDS, END, 0, 0, 0, 0, 0, 0, length)
+        return plain({**files, "zz-last.bin": b"x" * 100 + shaped + b"y" * 40})
+
+    first = build(0)
+    at = first.rfind(END, 0, len(first) - 22)
+    return build(len(first) - at - 22)
+
+
 #: The cases written as fixtures: each end the library's releases read
 #: differently -- in verdict, or only in the words -- and so the ones the
 #: reader has to settle itself. The rest are held to by the tests alone.
@@ -138,6 +154,7 @@ def cases(data: bytes) -> dict:
         # stretch, and is not the end of this one.
         "end-record-with-the-longest-comment": end(data, comment=b"\0" * 0xFFFF),
         "plain-holding-a-stored-archive": end(plain({"inner.zip": data})),
+        "plain-with-a-closing-record-in-a-member": with_a_record_in_a_member(data),
         "zip64-end-record-disks-as-placeholders": zip64(data, end_fields={"disk": P16, "cd_disk": P16}),
         "plain-with-bytes-in-front": b"\0" * 7 + end(data),
         "zip64-with-bytes-in-front": b"\0" * 7 + zip64(data),

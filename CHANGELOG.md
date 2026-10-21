@@ -28,7 +28,8 @@ code should read the paragraph after the list.
   release already refused are refused in one sentence of this tool's rather
   than in whichever one the running Python's library had. Fifteen fixtures hold
   the cases; the reference implementation reports an error on eight of them and
-  none on seven, which the page on divergences describes.
+  none on seven, which the page on divergences describes. No container that was
+  already in this repository moves.
 - **An archive whose end contradicts itself is not read.** Every Python reads
   these, and each says two things about one archive: bytes after the end record
   and its comment, or a comment longer than what is left of the file (APPNOTE
@@ -49,7 +50,8 @@ ZIP64 record carries extensible data, which current Pythons read, exits `1` on
 every Python. So does one whose end record lies a byte further back than the
 longest comment reaches, which exited with what its content earns on Python
 3.9.6, 3.9.25 and 3.12.5, and one whose end contradicts itself in one of the
-ways above, which exited with what its content earns everywhere.
+ways above, which exited with what its content earns everywhere -- but for a
+second end record, which was already refused as bytes in front of an archive.
 
 ## 0.12.0 — 2026-10-21
 
