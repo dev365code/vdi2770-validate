@@ -2,13 +2,16 @@
 
 Sections through 0.7.0 had their wording tidied after their tags; the text each version carried when it was published is in that tag's own `CHANGELOG.md`. From 0.8.0 on, a released section is frozen at its tag and takes only appended `*(Correction ...)*` lines.
 
-## 0.13.0 — unreleased
+## 0.13.0 — 2026-10-22
 
 Who should take this release: anyone who checks deliveries on more than one
 Python, or in the browser page and on a command line -- an archive whose end
 Python's own ZIP reading took one way on some of its releases and another way on
-others is judged the same on all of them now. Whoever gates a build on the exit
-code should read the paragraph after the list.
+others is judged the same on all of them now -- and anyone who checks the
+single file or the page against its digest, since two builds of one commit now
+carry the same bytes and the page a release offers is the one CI opened.
+Whoever gates a build on the exit code should read the paragraph after the
+list.
 
 - **Where an archive ends is read by this tool, the same way on every Python.**
   The records at the end of a ZIP archive -- the end of central directory record

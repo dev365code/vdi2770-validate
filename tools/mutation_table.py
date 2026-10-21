@@ -728,7 +728,7 @@ TABLE = [
 
     ("gates/the-pin-names-the-reader-that-was-built",
      "packages/vdi2770/pyproject.toml",
-     'version = "0.12.0"',
+     'version = "0.13.0"',
      'version = "0.7.1"',
      ["tools/check_wheel.py"],
      "the two manifests agree with each other and the artifacts do not: the "
@@ -1482,7 +1482,7 @@ FRONT_DOOR = [
 
     ("gates/the-page-quotes-the-requirement-the-project-declares",
      "README.md",
-     "`vdi2770[validate]==0.12.0`",
+     "`vdi2770[validate]==0.13.0`",
      "`vdi2770[validate]>=0.7.0`",
      ["tests/test_the_front_page_points_at_what_it_shows.py::"
       "test_the_requirement_the_page_quotes_is_the_one_the_project_declares"],
@@ -1491,7 +1491,7 @@ FRONT_DOOR = [
 
     ("gates/the-page-pypi-shows-quotes-the-requirement-the-project-declares",
      "README-vdi2770-validate.md",
-     "`vdi2770[validate]==0.12.0`",
+     "`vdi2770[validate]==0.13.0`",
      "`vdi2770[validate]==0.9.1`",
      ["tests/test_the_front_page_points_at_what_it_shows.py::"
       "test_the_requirement_the_page_quotes_is_the_one_the_project_declares"],
@@ -2615,7 +2615,7 @@ LISTING_BUDGET_ROWS = [
 
     ("pages/a-pin-a-reader-runs-is-past-every-advisory",
      "README.md",
-     'pip install "vdi2770-validate==0.12.0"',
+     'pip install "vdi2770-validate==0.13.0"',
      'pip install "vdi2770-validate==0.7.0"',
      ["tests/test_an_advisory_and_its_release_name_each_other.py::"
       "test_every_pin_a_page_hands_a_reader_is_past_every_advisory"],
@@ -2644,7 +2644,7 @@ LISTING_BUDGET_ROWS = [
 
     ("pages/a-pin-in-a-sentence-is-past-every-advisory",
      "README.md",
-     "`vdi2770-validate==0.12.0` installs one matching pair.",
+     "`vdi2770-validate==0.13.0` installs one matching pair.",
      "`vdi2770-validate==0.9.6` installs one matching pair.",
      ["tests/test_an_advisory_and_its_release_name_each_other.py::"
       "test_every_pin_a_page_hands_a_reader_is_past_every_advisory"],
