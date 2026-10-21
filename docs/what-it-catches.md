@@ -148,6 +148,14 @@ header says it expands 1028 times: it is refused before it is decompressed, as
 `Z5`, and the file the metadata names is reported as declined rather than as
 missing, as `F1`.
 
+And the records at the end of an archive are read by this tool, the way
+APPNOTE lays them out (4.3.14 to 4.3.16), before Python's library is asked: an
+end the library's releases read two ways -- a ZIP64 locator pointing short of
+its record, read before the repair for CVE-2025-8291 and refused after it -- is
+`Z1` on every Python, the browser page's included, in the same words.
+`tests/test_an_archive_ends_where_its_end_records_say.py` holds the reader to
+each such end.
+
 **Now.**
 
 - read budgets, per member and per archive — done; the table in

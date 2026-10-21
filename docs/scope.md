@@ -50,15 +50,19 @@ failure — files that never claimed at all.
   well as what is sent. A WebRTC connection is outside what such a policy can
   refuse; the page opens none, which a test holds to by reading its code.
 
-- **The standard library's ZIP reading**: an archive is opened with Python's own
-  `zipfile`, and a patch release can change what that accepts. Since the
-  releases that fixed CVE-2025-8291 it checks that a ZIP64 end-of-central-
-  directory locator points at a ZIP64 end record (APPNOTE 4.3.15), and refuses
-  the archive where it does not; a release from before that opens it. The
-  stricter reading is the specification's. A container made to sit on that line
-  can therefore be judged differently on different Pythons -- measured, 3.13.15
-  against 3.9.6. The browser page carries CPython 3.13.2, and its comparison
-  with the command runs on that same release.
+- **The end of an archive is read here; the rest by the standard library**: an
+  archive is opened with Python's own `zipfile`, and its patch releases have read
+  the records at the end of an archive two ways. The releases that fixed
+  CVE-2025-8291 follow a ZIP64 end-of-central-directory locator to the record it
+  names and hold that record to its own size (APPNOTE 4.3.14, 4.3.15); the
+  releases before took the 56 bytes in front of the locator, whatever it said.
+  So this reader reads those records itself first, the way APPNOTE lays them
+  out: an end the two would read differently is `Z1` on every Python, in this
+  reader's words, and what reaches the library is an end every release of it
+  reads alike. Past the end -- the entries the central directory lists, and
+  what they hold -- the library still reads. The browser page carries CPython
+  3.13.2, a release from before that repair, and its comparison with the command
+  runs on that same release.
 
 - **Text spelling at the listing limit**: the page charges the visible spelling
   of runner syntax against the existing listing allowance. It can list fewer

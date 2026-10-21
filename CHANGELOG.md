@@ -2,6 +2,37 @@
 
 Sections through 0.7.0 had their wording tidied after their tags; the text each version carried when it was published is in that tag's own `CHANGELOG.md`. From 0.8.0 on, a released section is frozen at its tag and takes only appended `*(Correction ...)*` lines.
 
+## 0.13.0 — unreleased
+
+Who should take this release: anyone who checks deliveries on more than one
+Python, or in the browser page and on a command line -- an archive whose end
+Python's own ZIP reading took one way on some of its releases and another way on
+others is judged the same on all of them now. Whoever gates a build on the exit
+code should read the paragraph after the list.
+
+- **Where an archive ends is read by this tool, the same way on every Python.**
+  The records at the end of a ZIP archive -- the end of central directory record
+  and, for a ZIP64 archive, the locator in front of it and the record it points
+  at -- were read by Python's `zipfile`, and its patch releases read them two
+  ways. Before the repair for CVE-2025-8291 it took the 56 bytes in front of the
+  locator to be the ZIP64 record, whatever the locator said; after it, it
+  follows the locator and holds the record to its own size. An archive whose
+  locator points past or short of its record, or whose record gives the wrong
+  size, was read before the repair -- on Python 3.9.6, 3.12.10 and 3.13.2, and
+  in the browser page -- and refused after it; one whose record carries
+  extensible data, the other way round. **This moves verdicts:** each is `Z1`
+  now on every Python, and the ends every release already refused are refused
+  in one sentence of this tool's rather than in whichever one the running
+  Python's library had. Fourteen fixtures hold the cases, and wait for the
+  reference implementation's run.
+
+**If your build gates on the exit code, this is the paragraph for you.** A
+container whose ZIP64 locator or record disagrees with where the record is,
+which exited with what its content earns on a Python from before the repair and
+in the browser page, now exits `1` there, as it already did elsewhere; one whose
+ZIP64 record carries extensible data, which current Pythons read, exits `1` on
+every Python.
+
 ## 0.12.0 — 2026-10-21
 
 Who should take this release: anyone who has to check a delivery on a machine

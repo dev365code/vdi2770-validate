@@ -17,6 +17,7 @@ import sys
 import zipfile
 from pathlib import Path
 
+import archive_ends
 from page_fixtures import cases
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -419,6 +420,18 @@ def main() -> int:
     made["z1-cut-short.zip"] = {
         "rule": "Z1", "basedOn": "documentcontainer.zip", "changed": ["<whole file>"],
         "note": "the first half of the conforming container, as a transfer that stopped halfway leaves it"}
+
+    # Z1 for each end of an archive the standard library's releases read two
+    # ways (APPNOTE 6.3.10, 4.3.14-4.3.16): the conforming container's own end,
+    # rewritten by tools/archive_ends.py. The reader settles each of them
+    # itself, before the library is asked, so these are where its verdict and
+    # its words have to be the same on every Python.
+    ends = archive_ends.cases(write_bytes(base))
+    for case, note in archive_ends.FIXTURES.items():
+        (OUT / f"z1-{case}.zip").write_bytes(ends[case])
+        made[f"z1-{case}.zip"] = {"rule": "Z1", "basedOn": "documentcontainer.zip",
+                                  "changed": ["<end records>"],
+                                  "note": "the conforming container's end, rewritten: " + note}
 
     # Z2 — nothing in the archive at all
     add("z2-empty-archive.zip", {}, "Z2", sorted(base), "every member removed",

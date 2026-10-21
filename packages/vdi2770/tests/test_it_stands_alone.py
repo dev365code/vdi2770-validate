@@ -18,8 +18,10 @@ SRC = HERE / "src" / "vdi2770"
 # it makes *adding* an import a decision someone has to make on purpose.
 # `codecs` was one: a document is read in the encoding it declares, and for one
 # expat does not read itself the reader looks that encoding up and decodes it.
-ALLOWED = {"codecs", "collections", "dataclasses", "enum", "io", "re", "typing",
-           "unicodedata", "xml", "zipfile", "zlib"}
+# `struct` was another: the records at the end of an archive are read here,
+# field by field, before the library is asked about the archive.
+ALLOWED = {"codecs", "collections", "dataclasses", "enum", "io", "re", "struct",
+           "typing", "unicodedata", "xml", "zipfile", "zlib"}
 
 
 def top_level_imports(path):

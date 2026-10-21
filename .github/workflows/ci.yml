@@ -321,8 +321,16 @@ jobs:
       - name: Install
         run: |
           python -m pip install --upgrade pip
-          python -m pip install "xmlschema==4.2.0" "playwright==1.63.0"
+          python -m pip install "xmlschema==4.2.0" "playwright==1.63.0" "pytest==8.3.4"
           python -m playwright install --with-deps chromium
+      # The ends of an archive Python's own ZIP reading takes two ways, held on a
+      # release from before the repair for CVE-2025-8291: the page's own, pinned,
+      # so it stays one. The check jobs hold them on releases from after it.
+      - name: The end of an archive is read alike on a Python from before the repair
+        env:
+          VDI2770_ZIPFILE_GENERATION: G1
+          PYTHONPATH: src:packages/vdi2770/src
+        run: python -m pytest tests/test_an_archive_ends_where_its_end_records_say.py
       - name: Build fixtures
         run: python tools/make_fixtures.py
       - name: Build the page

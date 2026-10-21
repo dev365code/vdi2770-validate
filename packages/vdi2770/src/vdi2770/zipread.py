@@ -8,6 +8,7 @@ rules turn into a Finding with a remedy.
 from __future__ import annotations
 
 import io
+import struct
 import unicodedata
 import zipfile
 from dataclasses import dataclass, field
@@ -327,6 +328,116 @@ class _Budget:
         return True
 
 
+#: The records an archive ends with, by their signatures (APPNOTE 6.3.10): the
+#: end of central directory record (4.3.16); the zip64 end of central directory
+#: locator, the 20 bytes in front of it (4.3.15); and the zip64 end of central
+#: directory record the locator points at (4.3.14).
+_END, _LOCATOR, _END64, _CENTRAL = b"PK\x05\x06", b"PK\x06\x07", b"PK\x06\x06", b"PK\x01\x02"
+
+#: What a field too small for its value holds when the value is in the zip64
+#: end record instead (4.4.1.4, 4.4.23, 4.4.24).
+_PLACEHOLDER = 0xFFFFFFFF
+
+
+@dataclass(frozen=True)
+class _Directory:
+    """Where an archive's end records put its central directory: where they say
+    it begins, how long it is, and where the record after it begins."""
+    offset: int
+    size: int
+    follows: int
+
+
+def _prefixed(skipped: int) -> str:
+    return (f"the archive its end record describes begins {skipped:,} bytes into the "
+            "file, and what comes before it is not part of it")
+
+
+def _directory(data: bytes):
+    """The end of the archive, read from its bytes the way APPNOTE 6.3.10 lays it
+    out -- or the reason it is not a readable ZIP archive.
+
+    The standard library reads these records two ways. Its releases from before
+    the repair for CVE-2025-8291 take the 56 bytes in front of a zip64 locator
+    to be the zip64 end record, whatever the locator says, and go on without one
+    when they are not; the releases after it follow the locator and hold the
+    record to its own size. An archive whose end those two would read
+    differently is refused here, before the library is asked, and in this
+    reader's words -- so the verdict and the sentence are the same on every
+    Python. What reaches the library is an end every release of it reads alike.
+    """
+    n = len(data)
+    # The end record the library takes: the last 22 bytes when they are one
+    # with no comment, or else the last of its signature in the last 64 KiB of
+    # comment and the record. Without one there is no archive, which the
+    # library says in these words on every release.
+    if n >= 22 and data[n - 22:n - 18] == _END and data[n - 2:] == b"\0\0":
+        p = n - 22
+    else:
+        p = data.rfind(_END, max(0, n - 22 - 0xFFFF))
+        if p < 0 or n - p < 22:
+            return "File is not a zip file"
+    size, offset = struct.unpack_from("<2L", data, p + 12)
+    loc = p - 20
+    if loc < 0 or data[loc:loc + 4] != _LOCATOR:
+        # No zip64 end record, so a field holding the placeholder points at
+        # nothing.
+        for name, value in (("size of the central directory", size),
+                            ("offset of the central directory", offset)):
+            if value == _PLACEHOLDER:
+                return (f"the end record gives the {name} as {value:,}, the value that says it is "
+                        "in a zip64 end record, and the archive has none")
+        return _placed("end record", offset, size, p)
+    disk, at, disks = struct.unpack_from("<LQL", data, loc + 4)
+    if disk != 0 or disks > 1:
+        return "zipfiles that span multiple disks are not supported"
+    # A zip64 end record of version 1 with nothing extensible is 56 bytes, and
+    # it is the record right in front of its locator (4.3.6, 4.3.14.1).
+    rec = loc - 56
+    if at == rec or (at < rec and data[at:at + 4] == _END64):
+        if data[at:at + 4] != _END64:
+            return f"the zip64 locator points at byte {at:,}, and no zip64 end record begins there"
+        length, = struct.unpack_from("<Q", data, at + 4)
+        if at + 12 + length != loc:
+            return (f"the zip64 end record gives its size as {length + 12:,} bytes, and the "
+                    f"locator follows it after {loc - at:,}")
+        if at < rec:
+            # An extensible data sector (4.3.14.3), or the fields of a later
+            # version of the record (4.3.14.2): what the library's releases
+            # disagree on reading, and nothing this reader reads.
+            return (f"the zip64 end record carries {rec - at:,} bytes past its fixed fields, "
+                    "which this reader does not read")
+        size, offset = struct.unpack_from("<2Q", data, at + 40)
+        if size <= at:
+            gap = at - size - offset
+            if gap > 0 and data[offset + gap:offset + gap + 4] == _CENTRAL:
+                return _prefixed(gap)
+            if gap > 0:
+                return f"the central directory ends {gap:,} bytes before the zip64 end record begins"
+            if gap < 0:
+                return f"the zip64 end record places its central directory {-gap:,} bytes past where it is"
+        return _placed("zip64 end record", offset, size, at)
+    if rec >= 0 and data[rec:rec + 4] == _END64:
+        # The record is where one of version 1 would be, and the locator points
+        # somewhere else: at the record of an archive that has bytes in front
+        # of it and counts its offsets from where it begins -- or nowhere true.
+        size, offset = struct.unpack_from("<2Q", data, rec + 40)
+        shift = rec - at
+        if shift > 0 and offset + size + shift == rec and data[offset + shift:offset + shift + 4] == _CENTRAL:
+            return _prefixed(shift)
+        return (f"the zip64 locator places the zip64 end record {abs(shift):,} bytes "
+                f"{'before' if shift > 0 else 'past'} where it is")
+    return f"the zip64 locator points at byte {at:,}, and no zip64 end record begins there"
+
+
+def _placed(which: str, offset: int, size: int, follows: int):
+    """The central directory comes before the record after it (4.3.6)."""
+    if size > follows:
+        return (f"the {which} gives the central directory {size:,} bytes, more than the "
+                f"{follows:,} that come before it")
+    return _Directory(offset, size, follows)
+
+
 def read(data: bytes, path: str, depth: int = 0, _budget: Optional[_Budget] = None) -> Container:
     return _read(data, path, depth, _budget, None)
 
@@ -338,6 +449,11 @@ def _read(data: bytes, path: str, depth: int, _budget: Optional[_Budget],
     on `read`, which is the reader's public door and has no use for it."""
     budget = _budget if _budget is not None else _Budget()
     c = Container(path=path, depth=depth)
+    found = _directory(data)
+    if not isinstance(found, _Directory):
+        c.kind = Kind.UNREADABLE
+        c.defects.append(Defect("not-a-zip", c.where, found))
+        return c
     try:
         zf = zipfile.ZipFile(io.BytesIO(data))
     except Exception as e:                       # noqa: BLE001
@@ -358,12 +474,12 @@ def _read(data: bytes, path: str, depth: int, _budget: Optional[_Budget],
     # it, cut short in transit, can end in that document container -- and was
     # read, and passed, as that one: a verdict on a file nobody delivered.
     #
-    # How far in the library went to reach it: where it found the central
-    # directory, less where the end record says the directory is -- zero for an
-    # archive that is the file. Taken from where the library found it rather
-    # than worked out again, because how the end record's own position is
-    # reported for zip64 differs between patch releases of the library.
-    skipped = zf.start_dir - zipfile._EndRecData(io.BytesIO(data))[zipfile._ECD_OFFSET]
+    # How far in the library went to reach it: where the central directory
+    # ends -- the record after it -- less where the end records say it ends,
+    # which is zero for an archive that is the file. Worked out from the end
+    # records this reader read itself, because the library's own account of a
+    # zip64 end differs between its patch releases.
+    skipped = found.follows - found.size - found.offset
     # And the file begins with the archive. A split archive small enough to be
     # one file begins with a marker (APPNOTE 8.5.3 and 8.5.4; `zip -s` writes
     # one) whose four bytes its offsets count as its own; an archive with
@@ -374,8 +490,7 @@ def _read(data: bytes, path: str, depth: int, _budget: Optional[_Budget],
     if skipped or starts != lead or not begins:
         c.kind = Kind.UNREADABLE
         c.defects.append(Defect("not-a-zip", c.where, (
-            f"the archive its end record describes begins {skipped:,} bytes into the "
-            "file, and what comes before it is not part of it" if skipped > 0 else
+            _prefixed(skipped) if skipped > 0 else
             f"the archive's end record places its central directory {-skipped:,} "
             "bytes past where it is" if skipped < 0 else
             f"the archive's first entry begins {starts:,} bytes into the file, and "
