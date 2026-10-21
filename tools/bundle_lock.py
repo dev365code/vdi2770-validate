@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import email
+import http.client
 import io
 import json
 import re
@@ -195,8 +196,15 @@ def set_version(spec: str) -> None:
     except ValueError:
         raise SystemExit("--set takes NAME==VERSION") from None
     entries = read_lock()
-    with urllib.request.urlopen(f"https://pypi.org/pypi/{name}/{version}/json", timeout=300) as answer:
-        files = json.load(answer)["urls"]
+    url = f"https://pypi.org/pypi/{name}/{version}/json"
+    try:
+        with urllib.request.urlopen(url, timeout=300) as answer:
+            files = json.load(answer)["urls"]
+    except (OSError, http.client.HTTPException) as exc:
+        reason = " ".join(str(exc).split())
+        raise SystemExit(f"cannot fetch PyPI metadata for {spec} from {url}: {reason}; "
+                         "build from the existing lock with local copies via --wheels DIR, "
+                         "--runtime FILE and --notices DIR") from None
     wheels = [f for f in files if f["packagetype"] == "bdist_wheel"]
     if len(wheels) != 1 or not wheels[0]["filename"].endswith("-py3-none-any.whl"):
         raise SystemExit(f"{spec}: this build takes one py3-none-any wheel")

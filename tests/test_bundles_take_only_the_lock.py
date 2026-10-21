@@ -241,3 +241,33 @@ def test_extra_markers_are_evaluated_without_hiding_other_environments(marker, r
 
 def test_distribution_names_collapse_dots_and_repeated_separators():
     assert lock_tool().distribution_name("Some...___--Package[docs]>=1") == "some-package"
+
+
+@pytest.mark.parametrize("failure", ["connection", "404", "timeout", "truncated"])
+def test_a_failed_index_request_refuses_without_changing_the_lock(failure, tmp_path, monkeypatch):
+    import http.client
+    import urllib.error
+
+    tool = lock_tool()
+    output = tmp_path / "bundle.lock.json"
+    output.write_text("unchanged\n", encoding="utf-8")
+    monkeypatch.setattr(tool, "LOCK", output)
+    url = "https://pypi.org/pypi/nosuch/1.0/json"
+    errors = {"connection": urllib.error.URLError(ConnectionRefusedError("connection refused")),
+              "404": urllib.error.HTTPError(url, 404, "Not Found", None, None),
+              "timeout": TimeoutError("timed out"),
+              "truncated": http.client.IncompleteRead(b"cut short", 99)}
+
+    def unavailable(*args, **kwargs):
+        raise errors[failure]
+
+    monkeypatch.setattr(tool.urllib.request, "urlopen", unavailable)
+    with pytest.raises(SystemExit) as refused:
+        tool.set_version("nosuch==1.0")
+    said = str(refused.value)
+    assert "nosuch==1.0" in said and url in said
+    assert str(errors[failure]) in said
+    assert "--wheels" in said and "existing lock" in said
+    assert len(said.splitlines()) == 1
+    assert refused.value.__suppress_context__
+    assert output.read_text(encoding="utf-8") == "unchanged\n"

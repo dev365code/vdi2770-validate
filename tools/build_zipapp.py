@@ -24,6 +24,7 @@ from __future__ import annotations
 import argparse
 import email
 import hashlib
+import http.client
 import io
 import os
 import re
@@ -69,15 +70,22 @@ def verified(data: bytes, sha256: str, what: str) -> bytes:
     return data
 
 
-def fetch(url: str, sha256: str, what: str, local: Path | None = None) -> bytes:
+def fetch(url: str, sha256: str, what: str, local: Path | None = None,
+          local_option: str = "--wheels DIR") -> bytes:
     if local is not None:
         try:
             data = local.read_bytes()
         except OSError as exc:
             raise SystemExit(f"cannot read {local}: {exc}") from None
         return verified(data, sha256, what)
-    with urllib.request.urlopen(url, timeout=300) as answer:
-        return verified(answer.read(), sha256, what)
+    try:
+        with urllib.request.urlopen(url, timeout=300) as answer:
+            data = answer.read()
+    except (OSError, http.client.HTTPException) as exc:
+        reason = " ".join(str(exc).split())
+        raise SystemExit(f"cannot fetch {what} from {url}: {reason}; "
+                         f"use a local copy with {local_option}") from None
+    return verified(data, sha256, what)
 
 
 def python_floor() -> str:

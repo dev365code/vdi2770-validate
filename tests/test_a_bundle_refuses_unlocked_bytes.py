@@ -143,3 +143,42 @@ def test_patch_versions_of_the_pages_python_are_accepted(tmp_path, monkeypatch):
     monkeypatch.setattr(PAGE, "fetch", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("accepted")))
     with pytest.raises(RuntimeError, match="accepted"):
         PAGE.build(tmp_path / "page.html")
+
+
+@pytest.mark.parametrize("failure", ["connection", "404", "timeout", "truncated"])
+@pytest.mark.parametrize("during_read", [False, True])
+def test_a_failed_download_refuses_in_one_line_with_a_local_remedy(failure, during_read, monkeypatch):
+    import http.client
+    import urllib.error
+
+    url = "https://example.invalid/locked.whl"
+    errors = {"connection": urllib.error.URLError(ConnectionRefusedError("connection refused")),
+              "404": urllib.error.HTTPError(url, 404, "Not Found", None, None),
+              "timeout": TimeoutError("timed out"),
+              "truncated": http.client.IncompleteRead(b"cut short", 99)}
+    error = errors[failure]
+
+    class Answer:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def read(self):
+            raise error
+
+    def unavailable(*args, **kwargs):
+        if during_read:
+            return Answer()
+        raise error
+
+    monkeypatch.setattr(BUILD.urllib.request, "urlopen", unavailable)
+    with pytest.raises(SystemExit) as refused:
+        BUILD.fetch(url, "0" * 64, "the locked wheel")
+    said = str(refused.value)
+    assert "the locked wheel" in said and url in said
+    assert str(error) in said
+    assert "--wheels" in said
+    assert len(said.splitlines()) == 1
+    assert refused.value.__suppress_context__
