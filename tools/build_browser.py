@@ -39,7 +39,8 @@ ROOT = Path(__file__).resolve().parents[1]
 BROWSER = ROOT / "browser"
 sys.path.insert(0, str(ROOT / "tools"))
 import build_zipapp  # noqa: E402 -- one staging for both single-file forms
-from build_zipapp import fetch, verified as verified  # noqa: E402 -- one digest refusal for every fetched byte
+from build_zipapp import fetch  # noqa: E402 -- one digest refusal for every fetched byte
+from build_zipapp import verified as verified
 
 #: The runtime. A Pyodide release is a build of CPython for the browser, and the
 #: page carries five files of it. The digest is the release asset's as
