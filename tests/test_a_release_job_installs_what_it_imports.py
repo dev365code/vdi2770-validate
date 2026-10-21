@@ -108,3 +108,14 @@ def test_every_release_job_installs_what_the_scripts_it_runs_import():
         "a release job runs code whose third-party dependency it does not "
         "install -- green locally and on push, where `.[dev]` carries it, but "
         f"red on the tag, the one place the job runs as written: {problems}")
+
+
+def test_ci_action_builders_install_the_lock_parser(monkeypatch):
+    if not hasattr(sys, "stdlib_module_names"):
+        import pytest
+        pytest.skip("needs sys.stdlib_module_names (Python 3.10+)")
+    monkeypatch.setattr(sys.modules[__name__], "RELEASE", ROOT / ".github/workflows/ci.yml")
+    for name, run_text in _jobs():
+        if name in {"the-action-this-repo-offers", "the-action-on-a-windows-runner"}:
+            missing = _third_party(ROOT / "tools/bundle_lock.py") - _installed(run_text)
+            assert not missing, f"{name}: the builder's lock parser needs {sorted(missing)}"
