@@ -73,6 +73,9 @@ jobs:
       - name: Install
         run: |
           python -m pip install --upgrade pip
+          python -m pip install "packaging==26.3"
+          python tools/bundle_lock.py --requirements bundle-requirements.txt
+          python -m pip install --require-hashes --no-deps -r bundle-requirements.txt
           # The reader first, and from the working tree. The rules pin it
           # exactly, so a pip that reaches an index here would either fail (the
           # version is not published yet) or install a reader that is not the
@@ -317,12 +320,15 @@ jobs:
         with:
           python-version: "3.13.2"
       # Not editable, and not this project: the gate runs the command from the
-      # tree itself. What it needs installed is the one dependency, at the
-      # version the page bundles, and the browser the page is opened in.
+      # tree itself. The locked wheels give it the same dependency bytes the
+      # page carries; the browser is installed beside them to open that page.
       - name: Install
         run: |
           python -m pip install --upgrade pip
-          python -m pip install "xmlschema==4.2.0" "playwright==1.63.0"
+          python -m pip install "packaging==26.3"
+          python tools/bundle_lock.py --requirements bundle-requirements.txt
+          python -m pip install --require-hashes --no-deps -r bundle-requirements.txt
+          python -m pip install "playwright==1.63.0"
           python -m playwright install --with-deps chromium
       - name: Build fixtures
         run: python tools/make_fixtures.py
@@ -330,6 +336,19 @@ jobs:
         run: python tools/build_browser.py
       - name: The page sends nothing once it has loaded, and says what the command says
         run: python tools/browser_gates.py
+
+      # Keep the page the gate opened. A release compares its own build with
+      # this file, and a second build here catches bytes that drift between
+      # two builds before either one can stand for this commit.
+      - name: A second build must agree with the page that was opened
+        run: |
+          python tools/build_browser.py -o dist/again.html
+          cmp dist/vdi2770.html dist/again.html
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        with:
+          name: the-page
+          path: dist/vdi2770.html
+          if-no-files-found: error
 
   # The README's shortest example is `- uses:` and `paths:` -- no `setup-python`,
   # no build. Every other use of the action here is preceded by both, so the line

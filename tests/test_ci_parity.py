@@ -5,10 +5,41 @@ already, in the sibling project, so the version pins are asserted too.
 """
 import re
 
+import yaml
+
 from conftest import ROOT, spelled
 
 MAKEFILE = (ROOT / "Makefile").read_text(encoding="utf-8")
 CI = (ROOT / ".github" / "workflows" / "ci.yml")
+
+
+def test_ci_installs_the_wheels_the_page_bundles_before_resolving_anything_else():
+    jobs = yaml.safe_load(CI.read_text(encoding="utf-8"))["jobs"]
+    for name in ("check", "the-page-this-repo-offers"):
+        commands = [line.strip() for s in jobs[name]["steps"] if not s.get("if")
+                    for line in s.get("run", "").splitlines() if not line.strip().startswith("#")]
+        generated = commands.index("python tools/bundle_lock.py --requirements bundle-requirements.txt")
+        installed = commands.index("python -m pip install --require-hashes --no-deps -r bundle-requirements.txt")
+        assert generated < installed
+        editable = [i for i, c in enumerate(commands) if "pip install -e" in c]
+        assert all(installed < i for i in editable)
+        assert not any('pip install "xmlschema==' in c for c in commands)
+
+
+def test_ci_keeps_the_page_it_opened_only_after_a_second_build_agrees():
+    job = yaml.safe_load(CI.read_text(encoding="utf-8"))["jobs"]["the-page-this-repo-offers"]
+    steps = job["steps"]
+    gate = next(i for i, s in enumerate(steps) if s.get("run") == "python tools/browser_gates.py")
+    again = next(i for i, s in enumerate(steps)
+                 if "python tools/build_browser.py -o dist/again.html" in s.get("run", ""))
+    assert "cmp dist/vdi2770.html dist/again.html" in steps[again]["run"]
+    assert not steps[again].get("if")
+    upload = next(i for i, s in enumerate(steps) if s.get("with", {}).get("name") == "the-page")
+    assert gate < again < upload
+    assert "upload-artifact@" in steps[upload]["uses"]
+    assert steps[upload]["with"]["path"] == "dist/vdi2770.html"
+    assert steps[upload]["with"]["if-no-files-found"] == "error"
+    assert not steps[upload].get("if")
 
 
 #: Targets `make check` deliberately does not depend on, with the reason. A
@@ -204,6 +235,12 @@ def test_ci_runs_nothing_the_gate_does_not():
         # Fetching the browser the page gate opens the page in. Like `pip
         # install`, it installs something and judges nothing.
         "python -m playwright install",
+        # The pip input is generated from the lock before either editable
+        # install can ask an index for a transitive dependency.
+        "python tools/bundle_lock.py --requirements",
+        # The page is opened in CI, so its repeat-build comparison belongs
+        # beside that gate. The assertion above binds both paths and order.
+        "cmp dist/vdi2770.html dist/again.html",
     )
     #: And the third kind: a gate CI runs that `make check` does not, with the
     #: reason. `OUTSIDE_CHECK` says why a target is not in `check`; this says
@@ -462,7 +499,10 @@ def test_a_workflow_that_publishes_runs_the_whole_gate():
         text = w.read_text(encoding="utf-8")
         if "pypi-publish" in text:
             return True
-        return any("dist" in ln.split("path:", 1)[1]
+        # The page kept by CI is evidence for the release's byte comparison.
+        # It publishes no distribution or divergence counts. Its exact path,
+        # browser gate and repeat-build comparison are asserted above.
+        return any("dist" in ln.split("path:", 1)[1] and not ln.strip().endswith(".html")
                    for ln in text.splitlines() if ln.strip().startswith("path:"))
 
     publishing = [w for w in workflows() if publishes(w)]
