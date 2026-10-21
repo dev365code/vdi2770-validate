@@ -26,7 +26,8 @@ Three refusals rather than one, because they are three different repairs:
 
 A re-run counts: one `success` among several attempts is how a commit
 legitimately goes from red to green, and refusing on the presence of any
-failure would make re-running useless.
+failure would make re-running useless. If several runs succeeded on the same
+commit, the page comparison uses the newest run (the greatest database ID).
 """
 from __future__ import annotations
 
@@ -49,7 +50,7 @@ def runs_for(commit: str, workflow: str = WORKFLOW):
     one, and this gate would be reading yesterday's green.
     """
     done = subprocess.run(
-        ["gh", "run", "list", "--workflow", workflow, "--commit", commit,
+        ["gh", "run", "list", "--workflow", workflow, "--commit", commit, "--limit", "100",
          "--json", "databaseId,status,conclusion,headSha,workflowName"],
         capture_output=True, text=True, env=NO_BYTECODE)
     if done.returncode != 0:
@@ -58,6 +59,13 @@ def runs_for(commit: str, workflow: str = WORKFLOW):
         return json.loads(done.stdout or "[]"), ""
     except json.JSONDecodeError as e:
         return None, f"{e}: {done.stdout[:200]}"
+
+
+def successful_run(commit: str, runs):
+    """The newest completed success on this exact commit, or no witness."""
+    return max((r for r in runs if r.get("headSha") == commit
+                and r.get("status") == "completed" and r.get("conclusion") == "success"),
+               key=lambda r: r.get("databaseId", 0), default=None)
 
 
 def verdict(commit: str, runs) -> str:
@@ -92,6 +100,8 @@ def main() -> int:
     ap.add_argument("--commit", default=os.environ.get("GITHUB_SHA"),
                     help="the commit to ask about; defaults to $GITHUB_SHA")
     ap.add_argument("--workflow", default=WORKFLOW)
+    ap.add_argument("--run-id", action="store_true",
+                    help="print only the newest successful run ID for the page comparison")
     args = ap.parse_args()
     if not args.commit:
         print("no commit to ask about: pass --commit or set GITHUB_SHA",
@@ -107,7 +117,10 @@ def main() -> int:
     if said:
         print(said, file=sys.stderr)
         return 1
-    print(f"{args.workflow} judged {args.commit[:7]} and it passed")
+    if args.run_id:
+        print(successful_run(args.commit, runs)["databaseId"])
+    else:
+        print(f"{args.workflow} judged {args.commit[:7]} and it passed")
     return 0
 
 

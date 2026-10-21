@@ -123,9 +123,8 @@ def test_the_release_compares_its_page_with_successful_ci_on_this_commit_before_
     assert not step.get("if") and not step.get("continue-on-error")
     assert step["env"]["GH_TOKEN"] == "${{ github.token }}"
     command = step["run"]
-    for needed in ("actions/workflows/ci.yml/runs", 'head_sha=$GITHUB_SHA',
-                   '.head_sha ==', '.status ==', '.conclusion ==',
-                   'completed', 'success', 'test -n "$run_id"', 'exit 1',
+    for needed in ('python "$GITHUB_WORKSPACE/tools/check_ci_judged_this_commit.py" --run-id',
+                   'test -n "$run_id"', 'exit 1',
                    'gh run download "$run_id" --name the-page --dir ci-page'):
         assert needed in command, needed
 
@@ -142,14 +141,18 @@ def test_the_release_page_comparison_runs_and_refuses_missing_evidence(case, pas
     bin_dir.mkdir()
     gh = bin_dir / "gh"
     gh.write_text('''#!/bin/sh
-echo "$1" >> calls
+echo "$1 $2" >> calls
 case "$1" in
-  api)
-    test "$CASE" != outage || exit 1
-    test "$CASE" != no-run || exit 0
-    echo 123
-    ;;
   run)
+    if test "$2" = list; then
+      test "$CASE" != outage || exit 1
+      if test "$CASE" = no-run; then
+        echo '[]'
+      else
+        echo '[{"databaseId":123,"headSha":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","status":"completed","conclusion":"success"}]'
+      fi
+      exit 0
+    fi
     test "$2 $3 $4 $5 $6 $7 $8" = 'download 123 --name the-page --dir ci-page ' || exit 2
     test "$CASE" != missing || exit 1
     mkdir -p ci-page
@@ -166,10 +169,14 @@ esac
     done = subprocess.run(["bash", "--noprofile", "--norc", "-e", "-o", "pipefail", "-c", command],
                           cwd=tmp_path, capture_output=True, text=True,
                           env={**os.environ, "PATH": str(bin_dir) + os.pathsep + os.environ["PATH"],
-                               "CASE": case, "GITHUB_SHA": "a" * 40, "GITHUB_REPOSITORY": "owner/project"})
+                               "CASE": case, "GITHUB_SHA": "a" * 40, "GITHUB_REPOSITORY": "owner/project",
+                               "GITHUB_WORKSPACE": str(ROOT)})
     assert (done.returncode == 0) is passes, done.stdout + done.stderr
     assert (tmp_path / "calls").read_text(encoding="utf-8").splitlines() == (
-        ["api"] if case in ("no-run", "outage") else ["api", "run"])
+        ["run list"] if case in ("no-run", "outage") else ["run list", "run download"])
+    if case == "missing":
+        assert "expired or was deleted" in done.stderr
+        assert "ci.yml" in done.stderr and "workflow_dispatch" in done.stderr
 
 
 def test_every_action_is_pinned_to_a_commit():

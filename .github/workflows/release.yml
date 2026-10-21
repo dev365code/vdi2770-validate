@@ -373,10 +373,12 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          run_id=$(gh api --method GET "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs?head_sha=$GITHUB_SHA&status=success&per_page=100" \
-            --jq ".workflow_runs | map(select(.head_sha == \"$GITHUB_SHA\" and .status == \"completed\" and .conclusion == \"success\")) | first | .id // empty")
+          run_id=$(python "$GITHUB_WORKSPACE/tools/check_ci_judged_this_commit.py" --run-id)
           test -n "$run_id" || { echo "no successful ci.yml run judged this commit"; exit 1; }
-          gh run download "$run_id" --name the-page --dir ci-page
+          if ! gh run download "$run_id" --name the-page --dir ci-page; then
+            echo "If the page artifact expired or was deleted, run ci.yml again on this commit: rerun the run or use workflow_dispatch on a branch at this commit." >&2
+            exit 1
+          fi
           cmp pyz/vdi2770.html ci-page/vdi2770.html
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
