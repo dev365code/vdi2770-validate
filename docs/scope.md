@@ -60,9 +60,16 @@ failure — files that never claimed at all.
   out: an end the two would read differently is `Z1` on every Python, in this
   reader's words, and what reaches the library is an end every release of it
   reads alike. Past the end -- the entries the central directory lists, and
-  what they hold -- the library still reads. The browser page carries CPython
-  3.13.2, a release from before that repair, and its comparison with the command
-  runs on that same release.
+  what they hold -- the library still reads, and its releases do not all accept
+  the same entries. A member whose name an Info-ZIP Unicode Path field (APPNOTE
+  4.6.9) also gives is named by that field on Python 3.12.5 to 3.14.7 and by its
+  header on 3.9.6 to 3.11.16, so a file the metadata names can be there on the
+  one and missing, as `F1`, on the other, and such a field that is not UTF-8
+  makes the archive unreadable on the first and not on the second. A member
+  whose data runs on into the next member's is read on 3.9.6 and refused on
+  3.9.25 and later. None of the containers in this repository has either shape.
+  The browser page carries CPython 3.13.2, a release from before that repair,
+  and its comparison with the command runs on that same release.
 
 - **Text spelling at the listing limit**: the page charges the visible spelling
   of runner syntax against the existing listing allowance. It can list fewer
