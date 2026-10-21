@@ -3810,6 +3810,12 @@ TABLE += [
      '        if False:\n',
      ["tests/test_bundles_take_only_the_lock.py::test_a_malformed_lock_is_refused"],
      "an update could redirect a locked wheel to another host or unencrypted transport"),
+    ("bundle/a-wheel-carries-one-dist-info",
+     "tools/bundle_lock.py",
+     "            if len(paths) != 1:\n",
+     "            if False:\n",
+     ["tests/test_a_bundle_refuses_unlocked_bytes.py::test_a_wheel_carries_exactly_one_dist_info_directory"],
+     "a wheel could carry another distribution's metadata or licence directory"),
 ]
 
 

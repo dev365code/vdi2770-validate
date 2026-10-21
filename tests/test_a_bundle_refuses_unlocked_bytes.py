@@ -217,3 +217,35 @@ def test_local_runtime_notices_are_verified_without_a_network_fallback(damaged, 
         page = PAGE.build(tmp_path / "page.html", runtime_asset=asset, wheels=folder, notices=notices)
         assert all(f"the {entry['notice']} licence".encode() in page for entry in entries)
         assert page == (tmp_path / "page.html").read_bytes()
+
+
+@pytest.mark.parametrize("operation", ["stage", "set"])
+@pytest.mark.parametrize("extra_file", ["METADATA", "LICENSE"])
+def test_a_wheel_carries_exactly_one_dist_info_directory(operation, extra_file, local_wheels, tmp_path, monkeypatch):
+    import hashlib
+    import io
+    import json
+
+    folder, entries = local_wheels
+    entry = entries[0]
+    path = folder / entry["file"]
+    with zipfile.ZipFile(path, "a") as wheel:
+        wheel.writestr(f"zzz-1.0.dist-info/{extra_file}", "Name: zzz\nVersion: 1.0\n")
+    body = path.read_bytes()
+    entry.update(sha256=hashlib.sha256(body).hexdigest(), size=len(body))
+    output = tmp_path / "bundle.lock.json"
+    output.write_text("unchanged\n", encoding="utf-8")
+    monkeypatch.setattr(LOCK, "LOCK", output)
+    response = {"urls": [{"packagetype": "bdist_wheel", "filename": entry["file"],
+                          "url": entry["url"], "digests": {"sha256": entry["sha256"]}, "size": entry["size"]}]}
+    monkeypatch.setattr(LOCK.urllib.request, "urlopen", lambda *a, **k: io.BytesIO(json.dumps(response).encode()))
+    if operation == "set":
+        payloads = {e["url"]: (folder / e["file"]).read_bytes() for e in entries}
+        monkeypatch.setattr(BUILD, "fetch", lambda url, *args: payloads[url])
+    with pytest.raises(SystemExit, match="2 dist-info directories.*exactly one"):
+        if operation == "stage":
+            BUILD.stage(tmp_path / "app", wheels=folder)
+        else:
+            LOCK.set_version("elementpath==5.1.4")
+    assert not (tmp_path / "app/__main__.py").exists()
+    assert output.read_text(encoding="utf-8") == "unchanged\n"

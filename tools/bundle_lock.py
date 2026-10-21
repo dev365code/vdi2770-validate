@@ -168,12 +168,22 @@ def check_installed(entries: list) -> None:
 def wheel_metadata(data: bytes, entry: dict, entries: list):
     try:
         with zipfile.ZipFile(io.BytesIO(data)) as wheel:
-            paths = [n for n in wheel.namelist() if n.endswith(".dist-info/METADATA")]
+            directories = set()
+            for name in wheel.namelist():
+                parts = name.split("/")
+                for i, part in enumerate(parts):
+                    if part.endswith(".dist-info"):
+                        directories.add("/".join(parts[:i + 1]))
+            paths = sorted(directories)
             if len(paths) != 1:
-                raise SystemExit(f"{entry['file']} must carry exactly one METADATA")
-            if paths[0].rsplit("/", 1)[0] != entry["file"].removesuffix("-py3-none-any.whl") + ".dist-info":
+                raise SystemExit(f"{entry['file']} has {len(paths)} dist-info directories; this build takes exactly one")
+            if paths[0] != "-".join(entry["file"].split("-")[:2]) + ".dist-info":
                 raise SystemExit(f"{entry['file']} dist-info directory name or version differs from the lock")
-            meta = email.message_from_bytes(wheel.read(paths[0]))
+            metadata_path = paths[0] + "/METADATA"
+            count = wheel.namelist().count(metadata_path)
+            if count != 1:
+                raise SystemExit(f"{entry['file']} has {count} METADATA files; this build takes exactly one")
+            meta = email.message_from_bytes(wheel.read(metadata_path))
     except zipfile.BadZipFile as exc:
         raise SystemExit(f"{entry['file']} is not a wheel: {exc}") from None
     if (distribution_name(meta.get("Name", "")), meta.get("Version")) != (entry["name"], entry["version"]):
