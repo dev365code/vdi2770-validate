@@ -4,10 +4,10 @@ import io
 import zipfile
 
 
-def wheels_at(folder, requirement="elementpath>=5,<6", version="4.2.0"):
+def wheels_at(folder, requirement="elementpath>=5,<6", version="4.2.0", element_version="5.1.4"):
     folder.mkdir(parents=True, exist_ok=True)
     entries = []
-    for name, ver, needs in [("elementpath", "5.1.4", ""), ("xmlschema", version, requirement)]:
+    for name, ver, needs in [("elementpath", element_version, ""), ("xmlschema", version, requirement)]:
         raw = io.BytesIO()
         with zipfile.ZipFile(raw, "w") as z:
             info = f"{name}-{ver}.dist-info"

@@ -3778,6 +3778,46 @@ TABLE += [
 ]
 
 
+TABLE += [
+    ("bundle/a-wheel-must-match-its-digest",
+     "tools/build_zipapp.py",
+     "    if got != sha256:\n",
+     "    if False:\n",
+     ["tests/test_a_bundle_refuses_unlocked_bytes.py::test_a_wheel_with_the_right_name_and_wrong_digest_is_refused"],
+     "a file with the locked name could carry different code"),
+    ("bundle/a-wheel-cannot-extend-the-lock",
+     "tools/bundle_lock.py",
+     "    check_requirements(meta, entries)\n    return meta\n",
+     "    return meta\n",
+     ["tests/test_a_bundle_refuses_unlocked_bytes.py::test_a_wheel_cannot_require_a_distribution_outside_the_lock"],
+     "a bundled wheel could require code nobody selected"),
+    ("bundle/the-lock-and-extra-are-independent-witnesses",
+     "tools/bundle_lock.py",
+     '    schema = next((e["version"] for e in entries if e["name"] == "xmlschema"), None)\n',
+     '    schema = specs[0].split("==")[1]\n',
+     ["tests/test_bundles_take_only_the_lock.py::test_the_lock_and_the_public_extra_name_the_same_schema"],
+     "reading the public extra twice would never notice a different locked version"),
+    ("bundle/a-release-must-compare-the-page-ci-opened",
+     ".github/workflows/release.yml",
+     "          cmp pyz/vdi2770.html ci-page/vdi2770.html\n",
+     "",
+     ["tests/test_the_publishing_path_has_three_properties.py::test_the_release_compares_its_page_with_successful_ci_on_this_commit_before_uploading"],
+     "a release could offer a page nobody opened"),
+    ("bundle/reproducibility-means-bytes-rather-than-size",
+     "tests/test_a_bundle_refuses_unlocked_bytes.py",
+     "    assert first == second\n",
+     "    assert len(first) == len(second)\n",
+     ["tests/test_a_bundle_refuses_unlocked_bytes.py::test_reproducibility_compares_bytes_even_when_sizes_agree"],
+     "equal-length changed bytes would be called reproducible"),
+    ("bundle/the-wheel-host-is-part-of-the-lock",
+     "tools/bundle_lock.py",
+     '        if not entry["url"].startswith("https://files.pythonhosted.org/packages/"):\n',
+     '        if False:\n',
+     ["tests/test_bundles_take_only_the_lock.py::test_a_malformed_lock_is_refused"],
+     "an update could redirect a locked wheel to another host or unencrypted transport"),
+]
+
+
 def give_history(tree: Path) -> None:
     """Give a copied candidate a private index and refs over shared, read-only objects."""
     history = tree.parent / "history"

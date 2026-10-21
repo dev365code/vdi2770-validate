@@ -374,7 +374,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           run_id=$(gh api --method GET "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs?head_sha=$GITHUB_SHA&status=success&per_page=100" \
-            --jq ".workflow_runs[] | select(.head_sha == \"$GITHUB_SHA\" and .status == \"completed\" and .conclusion == \"success\") | .id" | head -n 1)
+            --jq ".workflow_runs | map(select(.head_sha == \"$GITHUB_SHA\" and .status == \"completed\" and .conclusion == \"success\")) | first | .id // empty")
           test -n "$run_id" || { echo "no successful ci.yml run judged this commit"; exit 1; }
           gh run download "$run_id" --name the-page --dir ci-page
           cmp pyz/vdi2770.html ci-page/vdi2770.html

@@ -2,6 +2,18 @@
 
 Sections through 0.7.0 had their wording tidied after their tags; the text each version carried when it was published is in that tag's own `CHANGELOG.md`. From 0.8.0 on, a released section is frozen at its tag and takes only appended `*(Correction ...)*` lines.
 
+## 0.13.0 — unreleased
+
+- **The single file and the page carry locked third-party wheels.** Names,
+  versions, filenames, URLs and SHA-256 digests select everything bundled, so
+  repeated builds of the same commit carry the same bytes. Local wheel copies
+  pass the same checks. This changes no judgment, finding ID or exit code.
+- **A release page must match the page CI opened.** The release builds it on
+  the same Python as the page job, then compares it byte for byte with that
+  commit's successful CI artifact before offering it for download. A release
+  built the page on another Python than the one that judged it; that difference
+  now stops the release. This changes no judgment or exit code.
+
 ## 0.12.0 — 2026-10-21
 
 Who should take this release: anyone who has to check a delivery on a machine

@@ -20,8 +20,12 @@ repair that has to be found again.
 
 Read from the file, offline, as pure functions of its text.
 """
+import os
 import re
+import subprocess
+import sys
 
+import pytest
 import yaml
 
 from conftest import ROOT
@@ -124,6 +128,48 @@ def test_the_release_compares_its_page_with_successful_ci_on_this_commit_before_
                    'completed', 'success', 'test -n "$run_id"', 'exit 1',
                    'gh run download "$run_id" --name the-page --dir ci-page'):
         assert needed in command, needed
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="the release comparison runs in bash on its Linux runner")
+@pytest.mark.parametrize("case,passes", [("same", True), ("different", False),
+                                        ("no-run", False), ("missing", False), ("outage", False)])
+def test_the_release_page_comparison_runs_and_refuses_missing_evidence(case, passes, tmp_path):
+    steps = workflow(RELEASE)["jobs"]["upgrade-gate"]["steps"]
+    command = next(s["run"] for s in steps if "cmp pyz/vdi2770.html ci-page/vdi2770.html" in s.get("run", ""))
+    (tmp_path / "pyz").mkdir()
+    (tmp_path / "pyz/vdi2770.html").write_text("page bytes\n", encoding="utf-8")
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    gh = bin_dir / "gh"
+    gh.write_text('''#!/bin/sh
+echo "$1" >> calls
+case "$1" in
+  api)
+    test "$CASE" != outage || exit 1
+    test "$CASE" != no-run || exit 0
+    echo 123
+    ;;
+  run)
+    test "$2 $3 $4 $5 $6 $7 $8" = 'download 123 --name the-page --dir ci-page ' || exit 2
+    test "$CASE" != missing || exit 1
+    mkdir -p ci-page
+    if test "$CASE" = different; then
+      echo 'fake bytes' > ci-page/vdi2770.html
+    else
+      echo 'page bytes' > ci-page/vdi2770.html
+    fi
+    ;;
+  *) exit 2 ;;
+esac
+''', encoding="utf-8")
+    gh.chmod(0o755)
+    done = subprocess.run(["bash", "--noprofile", "--norc", "-e", "-o", "pipefail", "-c", command],
+                          cwd=tmp_path, capture_output=True, text=True,
+                          env={**os.environ, "PATH": str(bin_dir) + os.pathsep + os.environ["PATH"],
+                               "CASE": case, "GITHUB_SHA": "a" * 40, "GITHUB_REPOSITORY": "owner/project"})
+    assert (done.returncode == 0) is passes, done.stdout + done.stderr
+    assert (tmp_path / "calls").read_text().splitlines() == (
+        ["api"] if case in ("no-run", "outage") else ["api", "run"])
 
 
 def test_every_action_is_pinned_to_a_commit():

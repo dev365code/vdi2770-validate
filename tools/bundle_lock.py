@@ -26,9 +26,16 @@ import zipfile
 from importlib import metadata
 from pathlib import Path
 
-from packaging.requirements import InvalidRequirement, Requirement
-from packaging.utils import InvalidWheelFilename, parse_wheel_filename
-from packaging.version import InvalidVersion, Version
+try:
+    from packaging.requirements import InvalidRequirement, Requirement
+    from packaging.utils import InvalidWheelFilename, parse_wheel_filename
+    from packaging.version import InvalidVersion, Version
+except ModuleNotFoundError:
+    # Build-only jobs have pip, without this project's development extras.
+    # Its copy supplies the same parsers; no resolver or installer runs here.
+    from pip._vendor.packaging.requirements import InvalidRequirement, Requirement
+    from pip._vendor.packaging.utils import InvalidWheelFilename, parse_wheel_filename
+    from pip._vendor.packaging.version import InvalidVersion, Version
 
 ROOT = Path(__file__).resolve().parents[1]
 LOCK = ROOT / "tools/bundle.lock.json"
@@ -104,7 +111,7 @@ def check_requirements(meta, entries: list) -> None:
         # No extras are requested by these bundles. Other markers are treated
         # as required even when false here: a file copied elsewhere must not
         # quietly acquire a dependency this build's interpreter did not need.
-        if req.marker and re.search(r'\bextra\s*==\s*[\'"]', str(req.marker)):
+        if req.marker and " or " not in str(req.marker) and re.search(r'\bextra\s*==\s*[\'"]', str(req.marker)):
             continue
         name = distribution_name(req.name)
         if name not in versions:

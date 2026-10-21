@@ -1,10 +1,12 @@
 """The lock describes the bytes carried across, including transitive requirements."""
 import importlib
+import io
 import json
 import sys
 
 import pytest
 
+from bundle_wheels import wheels_at
 from conftest import ROOT
 
 sys.path.insert(0, str(ROOT / "tools"))
@@ -53,6 +55,8 @@ def test_both_notice_files_name_every_bundled_version():
 def test_a_malformed_lock_is_refused(field, value, tmp_path):
     tool = lock_tool()
     entries = tool.read_lock()
+    if field == "url":
+        value = value.replace("a.whl", entries[0]["file"])
     entries[0][field] = value
     path = tmp_path / "bundle.lock.json"
     path.write_text(json.dumps(entries), encoding="utf-8")
@@ -92,8 +96,56 @@ def test_environment_markers_cannot_hide_an_unlocked_requirement():
     tool.check_requirements(message_from_string('Requires-Dist: unknown; extra == "docs"\n'), entries)
 
 
+def test_an_extra_alternative_does_not_hide_a_required_dependency():
+    from email import message_from_string
+    meta = message_from_string('Requires-Dist: unknown; extra == "docs" or python_version >= "3.9"\n')
+    with pytest.raises(SystemExit, match="unknown.*outside the lock"):
+        lock_tool().check_requirements(meta, lock_tool().read_lock())
+
+
 def test_an_extra_on_a_required_distribution_cannot_escape_the_lock():
     from email import message_from_string
     with pytest.raises(SystemExit, match="extra"):
         lock_tool().check_requirements(message_from_string('Requires-Dist: xmlschema[docs]\n'),
                                        lock_tool().read_lock())
+
+
+@pytest.mark.parametrize("version,filename,accepted", [
+    ("5.2.0", "elementpath-5.2.0-py3-none-any.whl", True),
+    ("6.1.0", "elementpath-6.1.0-py3-none-any.whl", False),
+    ("5.2.0", "elementpath-5.2.0-cp313-none-any.whl", False),
+])
+def test_an_update_checks_the_entire_candidate_before_writing(version, filename, accepted, tmp_path, monkeypatch):
+    tool = lock_tool()
+    current = wheels_at(tmp_path / "current")
+    candidate = wheels_at(tmp_path / "candidate", element_version=version)
+    new = candidate[0]
+    monkeypatch.setattr(tool, "read_lock", lambda: current)
+    output = tmp_path / "bundle.lock.json"
+    output.write_text("unchanged\n", encoding="utf-8")
+    monkeypatch.setattr(tool, "LOCK", output)
+    response = {"urls": [{"packagetype": "bdist_wheel", "filename": filename,
+                          "url": new["url"], "digests": {"sha256": new["sha256"]}, "size": new["size"]}]}
+    monkeypatch.setattr(tool.urllib.request, "urlopen", lambda *a, **k: io.BytesIO(json.dumps(response).encode()))
+    import build_zipapp
+    payloads = {e["url"]: (tmp_path / "candidate" / e["file"]).read_bytes() for e in candidate}
+    monkeypatch.setattr(build_zipapp, "fetch", lambda url, *args: payloads[url])
+    if accepted:
+        tool.set_version(f"elementpath=={version}")
+        assert json.loads(output.read_text())[0] == new
+    else:
+        with pytest.raises(SystemExit):
+            tool.set_version(f"elementpath=={version}")
+        assert output.read_text() == "unchanged\n"
+
+
+def test_normalized_metadata_names_are_compared_as_distribution_names(tmp_path):
+    tool = lock_tool()
+    entries = wheels_at(tmp_path)
+    assert tool.distribution_name("Some_Package>=1") == "some-package"
+    import zipfile
+    with zipfile.ZipFile(tmp_path / entries[1]["file"]) as z:
+        from email import message_from_bytes
+        meta = message_from_bytes(z.read("xmlschema-4.2.0.dist-info/METADATA"))
+    meta.replace_header("Name", "XMLSchema")
+    tool.check_requirements(meta, entries)
