@@ -27,7 +27,8 @@ code should read the paragraph after the list.
   **This moves verdicts:** each is `Z1` now on every Python, and the ends every
   release already refused are refused in one sentence of this tool's rather
   than in whichever one the running Python's library had. Fifteen fixtures hold
-  the cases, and wait for the reference implementation's run.
+  the cases; the reference implementation reports an error on eight of them and
+  none on seven, which the page on divergences describes.
 - **An archive whose end contradicts itself is not read.** Every Python reads
   these, and each says two things about one archive: bytes after the end record
   and its comment, or a comment longer than what is left of the file (APPNOTE

@@ -14,13 +14,9 @@ check that — the normative text is paywalled.
 ## How much of this was measured
 
 There are 155 containers in `corpus/` and
-`tests/fixtures/`. 140 of the 155 containers were put through the reference
-implementation at its pinned commit `e47c13c`, with locale `en_US`. The fifteen
-fixtures whose archives end in records Python's own ZIP reading has not read
-alike on every release have only our verdict, and wait in the recording's
-`_unswept` block for a real reference run; no reference evidence is invented
-for them.
-[docs/oracle-sweep.json](oracle-sweep.json) records both states.
+`tests/fixtures/`. All 155 containers were put through the reference
+implementation at its pinned commit `e47c13c`, with locale `en_US`.
+[docs/oracle-sweep.json](oracle-sweep.json) records both implementations' verdicts.
 
 A container added after a sweep carries our column and an empty one for the
 reference until the next run, named in the sweep's `_unswept` block with the
@@ -38,9 +34,9 @@ are about is not something this repository can print — §4 says why — but th
 sentence was wrong, and wrong in the direction this whole page exists to guard
 against: an assertion about the other implementation that nobody had asked it.
 
-The reference columns for the 136 previously recorded containers were reproduced
+The reference columns for the 140 previously recorded containers were reproduced
 **byte-identically** with the same pinned commit and locale; our columns for all
-140 containers are unchanged.
+155 containers are unchanged.
 `tools/oracle/README.md` says what you need to repeat it, including the two
 things that will bite you.
 
@@ -55,10 +51,11 @@ What the sweep settled:
   agreement are not — the same limitation §4 discloses, and it applies here too.) The `refKeys`/`refCodes` split earns its keep:
   thirteen of the reference's displayed codes are emitted from more than one key
   with different meanings, so a comparison keyed on the code alone is unsound.
-- **68 containers where it reports an error and we do not**, and **nine where we
+- **68 containers where it reports an error and we do not**, and **sixteen where we
   do and it does not**. The differences include the policies in §1 and §2,
   the PDF/A identification and text-reading checks in §5, our own budget rules,
-  and the archives the reference throws on rather than reports (§3).
+  the archives the reference throws on rather than reports, and archives whose
+  end records say two things (both §3).
 - **It throws rather than reports on three of our fixtures.** More on that in §3.
 
 The remaining "read from its source" claims in this document are marked where
@@ -215,7 +212,7 @@ Java toolchain — so the summaries below are not checkable from a clone:
 - `MainDocument` overrides only the two-argument `validate`, so main-document rules
   are skipped entirely when it is validated through the three-argument entry point.
 
-Four more, this time observed in the sweep rather than read:
+Five more, this time observed in the sweep rather than read:
 
 - **A path-traversal member ends the run with an unhandled `ProcessorException`,
   so the container gets no report at all.** This is *not* a vulnerability: the
@@ -247,6 +244,21 @@ Four more, this time observed in the sweep rather than read:
   codes a run records, and is not claimed here. On the two fixtures whose
   declaration is never closed or follows a UTF-16 mark it does not agree with,
   it reports an error as this tool does.
+- **An archive whose end records say two things is read past.** Fifteen
+  fixtures end in records that Python's own ZIP reading has not read alike on
+  every release, each built from the conforming container by rewriting its end
+  field by field; this tool reports `Z1` on all fifteen, on every Python. The
+  reference reports an error on eight: a zip64 locator pointing past or short of
+  its record (three) or at no record at all (two), placeholders in the end
+  record with no zip64 record, a zip64 record placing the central directory past
+  where it is, and an archive with bytes in front whose locator counts from the
+  start of the file. It reports none on seven: a central directory said to be as
+  long as the whole file, four bytes between the central directory and the zip64
+  record, a zip64 record giving the wrong size or carrying extensible data (each
+  with and without its values in the end record too), and an end record a byte
+  further back than the longest comment reaches. Which bytes that project took
+  for the central directory in those seven is not visible in the codes a run
+  records, and is not claimed here.
 
 One structural difference, not a defect on either side: the reference extracts
 every container to a temporary folder on disk before validating

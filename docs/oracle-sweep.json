@@ -3582,7 +3582,271 @@
         ]
       }
     },
+    "z1-end-record-directory-larger-than-what-precedes-it.zip": {
+      "reference": {
+        "INFO": [
+          "REP_003",
+          "REP_005",
+          "REP_008",
+          "REP_009",
+          "REP_010",
+          "REP_011",
+          "REP_015",
+          "REP_020",
+          "REP_028",
+          "REP_036",
+          "REP_041",
+          "REP_043",
+          "ZU_005"
+        ]
+      },
+      "ours": {
+        "error": [
+          "Z1"
+        ]
+      }
+    },
+    "z1-end-record-placeholders-and-no-zip64.zip": {
+      "reference": {
+        "ERROR": [
+          "ZU_003"
+        ]
+      },
+      "ours": {
+        "error": [
+          "Z1"
+        ]
+      }
+    },
+    "z1-end-record-with-the-longest-comment-and-a-byte-after-it.zip": {
+      "reference": {
+        "INFO": [
+          "REP_003",
+          "REP_005",
+          "REP_008",
+          "REP_009",
+          "REP_010",
+          "REP_011",
+          "REP_015",
+          "REP_020",
+          "REP_028",
+          "REP_036",
+          "REP_041",
+          "REP_043",
+          "ZU_005"
+        ]
+      },
+      "ours": {
+        "error": [
+          "Z1"
+        ]
+      }
+    },
     "z1-not-a-zip.zip": {
+      "reference": {
+        "ERROR": [
+          "ZU_003"
+        ]
+      },
+      "ours": {
+        "error": [
+          "Z1"
+        ]
+      }
+    },
+    "z1-zip64-locator-before-its-record-values-in-the-end-record.zip": {
+      "reference": {
+        "ERROR": [
+          "ZU_003"
+        ]
+      },
+      "ours": {
+        "error": [
+          "Z1"
+        ]
+      }
+    },
+    "z1-zip64-locator-before-its-record.zip": {
+      "reference": {
+        "ERROR": [
+          "ZU_003"
+        ]
+      },
+      "ours": {
+        "error": [
+          "Z1"
+        ]
+      }
+    },
+    "z1-zip64-locator-past-its-record.zip": {
+      "reference": {
+        "ERROR": [
+          "ZU_003"
+        ]
+      },
+      "ours": {
+        "error": [
+          "Z1"
+        ]
+      }
+    },
+    "z1-zip64-locator-pointing-at-nothing-values-in-the-end-record.zip": {
+      "reference": {
+        "ERROR": [
+          "ZU_003"
+        ]
+      },
+      "ours": {
+        "error": [
+          "Z1"
+        ]
+      }
+    },
+    "z1-zip64-locator-pointing-at-nothing.zip": {
+      "reference": {
+        "ERROR": [
+          "ZU_003"
+        ]
+      },
+      "ours": {
+        "error": [
+          "Z1"
+        ]
+      }
+    },
+    "z1-zip64-record-after-a-gap.zip": {
+      "reference": {
+        "INFO": [
+          "REP_003",
+          "REP_005",
+          "REP_008",
+          "REP_009",
+          "REP_010",
+          "REP_011",
+          "REP_015",
+          "REP_020",
+          "REP_028",
+          "REP_036",
+          "REP_041",
+          "REP_043",
+          "ZU_005"
+        ]
+      },
+      "ours": {
+        "error": [
+          "Z1"
+        ]
+      }
+    },
+    "z1-zip64-record-of-the-wrong-size-values-in-the-end-record.zip": {
+      "reference": {
+        "INFO": [
+          "REP_003",
+          "REP_005",
+          "REP_008",
+          "REP_009",
+          "REP_010",
+          "REP_011",
+          "REP_015",
+          "REP_020",
+          "REP_028",
+          "REP_036",
+          "REP_041",
+          "REP_043",
+          "ZU_005"
+        ]
+      },
+      "ours": {
+        "error": [
+          "Z1"
+        ]
+      }
+    },
+    "z1-zip64-record-of-the-wrong-size.zip": {
+      "reference": {
+        "INFO": [
+          "REP_003",
+          "REP_005",
+          "REP_008",
+          "REP_009",
+          "REP_010",
+          "REP_011",
+          "REP_015",
+          "REP_020",
+          "REP_028",
+          "REP_036",
+          "REP_041",
+          "REP_043",
+          "ZU_005"
+        ]
+      },
+      "ours": {
+        "error": [
+          "Z1"
+        ]
+      }
+    },
+    "z1-zip64-record-placing-the-directory-past-where-it-is.zip": {
+      "reference": {
+        "ERROR": [
+          "ZU_003"
+        ]
+      },
+      "ours": {
+        "error": [
+          "Z1"
+        ]
+      }
+    },
+    "z1-zip64-record-with-extensible-data-values-in-the-end-record.zip": {
+      "reference": {
+        "INFO": [
+          "REP_003",
+          "REP_005",
+          "REP_008",
+          "REP_009",
+          "REP_010",
+          "REP_011",
+          "REP_015",
+          "REP_020",
+          "REP_028",
+          "REP_036",
+          "REP_041",
+          "REP_043",
+          "ZU_005"
+        ]
+      },
+      "ours": {
+        "error": [
+          "Z1"
+        ]
+      }
+    },
+    "z1-zip64-record-with-extensible-data.zip": {
+      "reference": {
+        "INFO": [
+          "REP_003",
+          "REP_005",
+          "REP_008",
+          "REP_009",
+          "REP_010",
+          "REP_011",
+          "REP_015",
+          "REP_020",
+          "REP_028",
+          "REP_036",
+          "REP_041",
+          "REP_043",
+          "ZU_005"
+        ]
+      },
+      "ours": {
+        "error": [
+          "Z1"
+        ]
+      }
+    },
+    "z1-zip64-with-bytes-in-front-located-from-the-file.zip": {
       "reference": {
         "ERROR": [
           "ZU_003"
@@ -4003,143 +4267,6 @@
           "P6"
         ]
       }
-    },
-    "z1-end-record-directory-larger-than-what-precedes-it.zip": {
-      "reference": {},
-      "ours": {
-        "error": [
-          "Z1"
-        ]
-      }
-    },
-    "z1-end-record-placeholders-and-no-zip64.zip": {
-      "reference": {},
-      "ours": {
-        "error": [
-          "Z1"
-        ]
-      }
-    },
-    "z1-zip64-locator-before-its-record-values-in-the-end-record.zip": {
-      "reference": {},
-      "ours": {
-        "error": [
-          "Z1"
-        ]
-      }
-    },
-    "z1-zip64-locator-before-its-record.zip": {
-      "reference": {},
-      "ours": {
-        "error": [
-          "Z1"
-        ]
-      }
-    },
-    "z1-zip64-locator-past-its-record.zip": {
-      "reference": {},
-      "ours": {
-        "error": [
-          "Z1"
-        ]
-      }
-    },
-    "z1-zip64-locator-pointing-at-nothing-values-in-the-end-record.zip": {
-      "reference": {},
-      "ours": {
-        "error": [
-          "Z1"
-        ]
-      }
-    },
-    "z1-zip64-locator-pointing-at-nothing.zip": {
-      "reference": {},
-      "ours": {
-        "error": [
-          "Z1"
-        ]
-      }
-    },
-    "z1-zip64-record-after-a-gap.zip": {
-      "reference": {},
-      "ours": {
-        "error": [
-          "Z1"
-        ]
-      }
-    },
-    "z1-zip64-record-of-the-wrong-size-values-in-the-end-record.zip": {
-      "reference": {},
-      "ours": {
-        "error": [
-          "Z1"
-        ]
-      }
-    },
-    "z1-zip64-record-of-the-wrong-size.zip": {
-      "reference": {},
-      "ours": {
-        "error": [
-          "Z1"
-        ]
-      }
-    },
-    "z1-zip64-record-placing-the-directory-past-where-it-is.zip": {
-      "reference": {},
-      "ours": {
-        "error": [
-          "Z1"
-        ]
-      }
-    },
-    "z1-zip64-record-with-extensible-data-values-in-the-end-record.zip": {
-      "reference": {},
-      "ours": {
-        "error": [
-          "Z1"
-        ]
-      }
-    },
-    "z1-zip64-record-with-extensible-data.zip": {
-      "reference": {},
-      "ours": {
-        "error": [
-          "Z1"
-        ]
-      }
-    },
-    "z1-zip64-with-bytes-in-front-located-from-the-file.zip": {
-      "reference": {},
-      "ours": {
-        "error": [
-          "Z1"
-        ]
-      }
-    },
-    "z1-end-record-with-the-longest-comment-and-a-byte-after-it.zip": {
-      "reference": {},
-      "ours": {
-        "error": [
-          "Z1"
-        ]
-      }
     }
-  },
-  "_unswept": {
-    "z1-end-record-directory-larger-than-what-precedes-it.zip": "New generated container; the pinned reference has not been run on it.",
-    "z1-end-record-placeholders-and-no-zip64.zip": "New generated container; the pinned reference has not been run on it.",
-    "z1-zip64-locator-before-its-record-values-in-the-end-record.zip": "New generated container; the pinned reference has not been run on it.",
-    "z1-zip64-locator-before-its-record.zip": "New generated container; the pinned reference has not been run on it.",
-    "z1-zip64-locator-past-its-record.zip": "New generated container; the pinned reference has not been run on it.",
-    "z1-zip64-locator-pointing-at-nothing-values-in-the-end-record.zip": "New generated container; the pinned reference has not been run on it.",
-    "z1-zip64-locator-pointing-at-nothing.zip": "New generated container; the pinned reference has not been run on it.",
-    "z1-zip64-record-after-a-gap.zip": "New generated container; the pinned reference has not been run on it.",
-    "z1-zip64-record-of-the-wrong-size-values-in-the-end-record.zip": "New generated container; the pinned reference has not been run on it.",
-    "z1-zip64-record-of-the-wrong-size.zip": "New generated container; the pinned reference has not been run on it.",
-    "z1-zip64-record-placing-the-directory-past-where-it-is.zip": "New generated container; the pinned reference has not been run on it.",
-    "z1-zip64-record-with-extensible-data-values-in-the-end-record.zip": "New generated container; the pinned reference has not been run on it.",
-    "z1-zip64-record-with-extensible-data.zip": "New generated container; the pinned reference has not been run on it.",
-    "z1-zip64-with-bytes-in-front-located-from-the-file.zip": "New generated container; the pinned reference has not been run on it.",
-    "z1-end-record-with-the-longest-comment-and-a-byte-after-it.zip": "New generated container; the pinned reference has not been run on it."
   }
 }
