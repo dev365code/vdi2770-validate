@@ -106,7 +106,10 @@ jobs:
           python-version: "3.12"
       - name: Install
         run: |
-          python -m pip install --upgrade pip build
+          python -m pip install --upgrade pip build packaging
+          python -m pip install "packaging==26.3"
+          python tools/bundle_lock.py --requirements bundle-requirements.txt
+          python -m pip install --require-hashes --no-deps -r bundle-requirements.txt
           # The reader first, from the working tree. The rules pin it exactly,
           # and this commit's reader is the only thing that satisfies that pin
           # before the release exists — going to an index here would run the
@@ -276,11 +279,16 @@ jobs:
   upgrade-gate:
     needs: [build-reader, build-rules]
     runs-on: ubuntu-latest
+    permissions:
+      # Run history and its artifacts are a separate read scope. This job
+      # compares against the page CI opened before offering a release asset.
+      actions: read
+      contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
         with:
-          python-version: "3.12"
+          python-version: "3.13.2"
       # `check_upgrade_paths` imports `packaging`, and this job installs nothing
       # else -- the runner's system Python carries it, but `setup-python` gives a
       # fresh one that does not, so a tag was the first place this ran without it.
@@ -353,14 +361,25 @@ jobs:
       # machine that made it.
       #
       # The browser page beside it, for the same reason: the front page points
-      # at `releases/latest/download/vdi2770.html`. Built here and not judged
-      # again -- the commit this tags has to have passed the `check` workflow,
-      # whose page job opened it and compared it with the command.
+      # at `releases/latest/download/vdi2770.html`. A release once built it on
+      # another Python than the one that judged it. Build on that same Python
+      # here, then compare with the actual file CI opened on this commit.
       - name: Build the single file and the browser page
         run: |
           python tools/build_zipapp.py --check -o pyz/vdi2770.pyz
           python tools/build_browser.py -o pyz/vdi2770.html
           (cd pyz && sha256sum vdi2770.pyz vdi2770.html | tee SHA256SUMS)
+      - name: This is the page CI opened on this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          run_id=$(python "$GITHUB_WORKSPACE/tools/check_ci_judged_this_commit.py" --run-id)
+          test -n "$run_id" || { echo "no successful ci.yml run judged this commit"; exit 1; }
+          if ! gh run download "$run_id" --name the-page --dir ci-page; then
+            echo "If the page artifact expired or was deleted, run ci.yml again on this commit: rerun the run or use workflow_dispatch on a branch at this commit." >&2
+            exit 1
+          fi
+          cmp pyz/vdi2770.html ci-page/vdi2770.html
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
           name: dist-single-file

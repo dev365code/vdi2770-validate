@@ -17,13 +17,15 @@ convenience when the approval is the hard part.
     python tools/build_zipapp.py                  # dist/vdi2770.pyz
     python tools/build_zipapp.py --check          # build it and run it
 
-Needs the network once, to fetch the one dependency being bundled.
+Needs the network once, to fetch the locked wheels, or their copies via --wheels.
 """
 from __future__ import annotations
 
 import argparse
 import email
 import hashlib
+import http.client
+import io
 import os
 import re
 import shutil
@@ -31,8 +33,11 @@ import subprocess
 import sys
 import tempfile
 import time
+import urllib.request
 import zipfile
 from pathlib import Path
+
+import bundle_lock
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -56,6 +61,42 @@ ZIP_EARLIEST = (1980, 1, 1, 0, 0, 0)
 ZIP_LATEST = (2107, 12, 31, 23, 59, 58)
 
 
+def verified(data: bytes, sha256: str, what: str) -> bytes:
+    got = hashlib.sha256(data).hexdigest()
+    if got != sha256:
+        raise SystemExit(f"{what} has sha256 {got}, and this build takes only {sha256}. "
+                         f"Nothing was built. If the pin is what should move, move it "
+                         f"here and say why in the commit.")
+    return data
+
+
+def fetch(url: str, sha256: str, what: str, local: Path | None = None,
+          local_option: str = "--wheels DIR") -> bytes:
+    if local is not None:
+        try:
+            data = local.read_bytes()
+        except OSError as exc:
+            raise SystemExit(f"cannot read {local}: {exc}") from None
+        return verified(data, sha256, what)
+    try:
+        with urllib.request.urlopen(url, timeout=300) as answer:
+            data = answer.read()
+    except (OSError, http.client.HTTPException) as exc:
+        reason = " ".join(str(exc).split())
+        raise SystemExit(f"cannot fetch {what} from {url}: {reason}; "
+                         f"use a local copy with {local_option}") from None
+    return verified(data, sha256, what)
+
+
+def python_floor() -> str:
+    """The lowest Python the project promises, rather than the builder's."""
+    manifest = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    found = re.search(r'^requires-python\s*=\s*">=([0-9.]+)"', manifest, re.M)
+    if not found:
+        raise SystemExit("pyproject.toml declares no requires-python floor")
+    return found.group(1)
+
+
 def _timestamp():
     epoch = os.environ.get("SOURCE_DATE_EPOCH")
     if not epoch:
@@ -70,92 +111,30 @@ def _timestamp():
     return min(max(stamp, ZIP_EARLIEST), ZIP_LATEST)
 
 
-#: Read with a regex rather than a TOML parser. `tomllib` is 3.11+ and this
-#: project's floor is 3.9 — a build tool that will not run on the oldest Python
-#: the thing it builds supports is a tool nobody can use where it matters.
-_MANIFEST = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+def stage(into: Path, wheels: Path | None = None, notices: list | None = None) -> None:
+    """Copy this tree beside only the wheels the bundle lock describes.
 
-
-def python_floor() -> str:
-    """The lowest Python this project claims, read from where it is declared.
-
-    Dependencies are resolved against it rather than against the interpreter
-    doing the building. A wheel chosen for 3.13 can be one a 3.9 cannot import,
-    and the file is meant to be copied to a machine nobody here has seen.
+    No resolver runs here. Each wheel is checked before anything is unpacked,
+    including its declared requirements: a wheel cannot silently extend the
+    list of code carried across. Local copies pass exactly the same checks.
+    Licence texts are read before the distribution metadata is removed.
     """
-    found = re.search(r'^requires-python\s*=\s*"([^"]+)"', _MANIFEST, re.M)
-    if not found:
-        raise SystemExit("pyproject.toml declares no requires-python")
-    return found.group(1).lstrip(">=~^ ").split(",")[0].strip()
-
-
-def _distribution_name(spec: str) -> str:
-    return re.split(r"[<>=!~\[; ]", spec, maxsplit=1)[0].strip().lower().replace("_", "-")
-
-
-#: What is copied from the tree instead of fetched. `vdi2770` is in this
-#: project's `dependencies` — it is the reader, published separately and pinned
-#: exactly — and without this filter the build would fetch a *released* reader
-#: off an index and put it inside a file built from this working tree. The
-#: single-file form would still run, on code nobody here wrote this commit
-#: against. `vdi2770-validate` is listed for the same reason, against the day
-#: something declares it.
-FIRST_PARTY = {"vdi2770", "vdi2770-validate"}
-
-
-def dependencies() -> list:
-    """The runtime dependencies to bundle, as written. Not `pip freeze` of this
-    environment: that carries whatever the development extras dragged in."""
-    # The reader's manifest, because that is where the validator lives and what
-    # it needs is declared as its `validate` extra. The alias distribution's own
-    # requirement is `vdi2770[validate]`, which names this project and would
-    # send pip to an index for a package this file is assembling by hand.
-    reader = (ROOT / "packages" / "vdi2770" / "pyproject.toml").read_text(encoding="utf-8")
-    block = re.search(r"^validate\s*=\s*\[(.*?)\]", reader, re.M | re.S)
-    if not block:
-        raise SystemExit("the reader declares no `validate` extra to bundle")
-    return [s for s in re.findall(r'"([^"]+)"', block.group(1))
-            if _distribution_name(s) not in FIRST_PARTY]
-
-
-def stage(into: Path, python_version: str | None = None, notices: list | None = None) -> None:
-    """Copy the packages from the tree and install the dependencies beside them.
-
-    `python_version` is the Python the dependencies are resolved for. The
-    default, the oldest one this project supports, is right for a file that is
-    copied to machines nobody here has seen; the browser page carries its own
-    Python and asks for that one instead.
-
-    `notices`, when given, is filled with each bundled distribution's name,
-    version, licence and licence files. They live in its `.dist-info`, which is
-    removed below, so they are read first or not at all.
-    """
+    entries = bundle_lock.read_lock()
+    checked = []
+    for entry in entries:
+        data = fetch(entry["url"], entry["sha256"], entry["file"],
+                     wheels / entry["file"] if wheels is not None else None)
+        if len(data) != entry["size"]:
+            raise SystemExit(f"{entry['file']} has size {len(data)}, and this build takes only {entry['size']}")
+        bundle_lock.wheel_metadata(data, entry, entries)
+        checked.append(data)
+    into.mkdir(parents=True, exist_ok=True)
     for package in PACKAGES:
         shutil.copytree(package, into / package.name,
                         ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
-    subprocess.run([sys.executable, "-m", "pip", "install", "--quiet",
-                    "--target", str(into), "--only-binary", ":all:",
-                    "--python-version", python_version or python_floor(),
-                    *dependencies()], check=True,
-                   # A subprocess that caches leaves `.pyc` files wherever this
-                   # interpreter decided to put them, which is not always
-                   # somewhere anything cleans. Spelled out at each call rather
-                   # than behind a helper: the gate that checks for this reads
-                   # the line, and a function call is not a line it can read.
-                   env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"})
-    # `bin/` too. `pip install --target` writes the console scripts a
-    # dependency declares, and the first line of each is the absolute path of
-    # the interpreter that installed them -- so the bundle carries the build
-    # machine's filesystem layout, and two machines building this file produce
-    # different bytes for a reason that has nothing to do with the code.
-    # Measured: two builds of one commit differed in exactly those three
-    # entries and agreed on the other two hundred and three. A zipapp cannot
-    # run them either -- they are files in an archive, not executables on a
-    # PATH -- so nothing is lost by leaving them out.
-    # `__pycache__` recursively: pip's `--target` install byte-compiles beside
-    # every module, `PYTHONDONTWRITEBYTECODE` does not reach pip's own compile
-    # step, and each nested `.pyc` is stamped with the mtime of its source --
-    # which no two builds share. A top-level glob left a hundred and forty in.
+    for data in checked:
+        with zipfile.ZipFile(io.BytesIO(data)) as wheel:
+            wheel.extractall(into)
     if notices is not None:
         notices.extend(_notices(into))
     for junk in (list(into.glob("*.dist-info")) + list(into.glob("*.egg-info"))
@@ -166,7 +145,7 @@ def stage(into: Path, python_version: str | None = None, notices: list | None = 
 
 
 def _notices(into: Path) -> list:
-    """What each distribution `pip` wrote here says about its own licence."""
+    """What each locked wheel says about its own licence."""
     found = []
     for info in sorted(into.glob("*.dist-info")):
         meta = email.message_from_string((info / "METADATA").read_text(encoding="utf-8"))
@@ -308,13 +287,15 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("-o", "--output", default=str(ROOT / "dist" / "vdi2770.pyz"))
     ap.add_argument("--check", action="store_true", help="build it and run it")
+    ap.add_argument("--wheels", type=Path, help="locked wheel files, already downloaded; "
+                                             "their digests are checked all the same")
     args = ap.parse_args()
 
     target = Path(args.output)
     with tempfile.TemporaryDirectory() as tmp:
         staged = Path(tmp) / "app"
         staged.mkdir()
-        stage(staged)
+        stage(staged, wheels=args.wheels)
         create_archive(staged, target)
 
     digest = hashlib.sha256(target.read_bytes()).hexdigest()

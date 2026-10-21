@@ -20,8 +20,12 @@ repair that has to be found again.
 
 Read from the file, offline, as pure functions of its text.
 """
+import os
 import re
+import subprocess
+import sys
 
+import pytest
 import yaml
 
 from conftest import ROOT
@@ -93,6 +97,86 @@ def test_the_release_states_its_own_floor():
         assert stated is None or stated, (
             f"{name} declares an empty permissions block, which reads as a "
             f"decision and is one only if it is written as one")
+
+
+def test_the_release_page_is_built_on_the_python_that_opened_it():
+    ci = workflow(ROOT / ".github/workflows/ci.yml")["jobs"]["the-page-this-repo-offers"]
+    release = workflow(RELEASE)["jobs"]["upgrade-gate"]
+
+    def python(job):
+        return next(s["with"]["python-version"] for s in job["steps"]
+                    if "setup-python@" in s.get("uses", ""))
+
+    assert python(release) == python(ci) == "3.13.2"
+    assert release["permissions"] == {"actions": "read", "contents": "read"}
+
+
+def test_the_release_compares_its_page_with_successful_ci_on_this_commit_before_uploading():
+    job = workflow(RELEASE)["jobs"]["upgrade-gate"]
+    steps = job["steps"]
+    build = next(i for i, s in enumerate(steps) if "build_browser.py -o pyz/vdi2770.html" in s.get("run", ""))
+    compare = next(i for i, s in enumerate(steps)
+                   if "cmp pyz/vdi2770.html ci-page/vdi2770.html" in s.get("run", ""))
+    upload = next(i for i, s in enumerate(steps) if s.get("with", {}).get("name") == "dist-single-file")
+    assert build < compare < upload
+    step = steps[compare]
+    assert not step.get("if") and not step.get("continue-on-error")
+    assert step["env"]["GH_TOKEN"] == "${{ github.token }}"
+    command = step["run"]
+    for needed in ('python "$GITHUB_WORKSPACE/tools/check_ci_judged_this_commit.py" --run-id',
+                   'test -n "$run_id"', 'exit 1',
+                   'gh run download "$run_id" --name the-page --dir ci-page'):
+        assert needed in command, needed
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="the release comparison runs in bash on its Linux runner")
+@pytest.mark.parametrize("case,passes", [("same", True), ("different", False),
+                                        ("no-run", False), ("missing", False), ("outage", False)])
+def test_the_release_page_comparison_runs_and_refuses_missing_evidence(case, passes, tmp_path):
+    steps = workflow(RELEASE)["jobs"]["upgrade-gate"]["steps"]
+    command = next(s["run"] for s in steps if "cmp pyz/vdi2770.html ci-page/vdi2770.html" in s.get("run", ""))
+    (tmp_path / "pyz").mkdir()
+    (tmp_path / "pyz/vdi2770.html").write_text("page bytes\n", encoding="utf-8")
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    gh = bin_dir / "gh"
+    gh.write_text('''#!/bin/sh
+echo "$1 $2" >> calls
+case "$1" in
+  run)
+    if test "$2" = list; then
+      test "$CASE" != outage || exit 1
+      if test "$CASE" = no-run; then
+        echo '[]'
+      else
+        echo '[{"databaseId":123,"headSha":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","status":"completed","conclusion":"success"}]'
+      fi
+      exit 0
+    fi
+    test "$2 $3 $4 $5 $6 $7 $8" = 'download 123 --name the-page --dir ci-page ' || exit 2
+    test "$CASE" != missing || exit 1
+    mkdir -p ci-page
+    if test "$CASE" = different; then
+      echo 'fake bytes' > ci-page/vdi2770.html
+    else
+      echo 'page bytes' > ci-page/vdi2770.html
+    fi
+    ;;
+  *) exit 2 ;;
+esac
+''', encoding="utf-8")
+    gh.chmod(0o755)
+    done = subprocess.run(["bash", "--noprofile", "--norc", "-e", "-o", "pipefail", "-c", command],
+                          cwd=tmp_path, capture_output=True, text=True,
+                          env={**os.environ, "PATH": str(bin_dir) + os.pathsep + os.environ["PATH"],
+                               "CASE": case, "GITHUB_SHA": "a" * 40, "GITHUB_REPOSITORY": "owner/project",
+                               "GITHUB_WORKSPACE": str(ROOT)})
+    assert (done.returncode == 0) is passes, done.stdout + done.stderr
+    assert (tmp_path / "calls").read_text(encoding="utf-8").splitlines() == (
+        ["run list"] if case in ("no-run", "outage") else ["run list", "run download"])
+    if case == "missing":
+        assert "expired or was deleted" in done.stderr
+        assert "ci.yml" in done.stderr and "workflow_dispatch" in done.stderr
 
 
 def test_every_action_is_pinned_to_a_commit():

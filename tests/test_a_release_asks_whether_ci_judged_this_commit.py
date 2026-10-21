@@ -177,3 +177,16 @@ def test_an_abbreviated_commit_is_named_as_the_reason(tmp_path):
     code, said = ask(tmp_path, [], sha="b0db7e3")
     assert code != 0
     assert "40" in said and "b0db7e3" in said, said
+
+
+@pytest.mark.skipif(os.name == "nt", reason="the release run selector uses a Linux PATH shim for gh")
+def test_the_page_uses_the_newest_successful_run_on_this_commit(tmp_path):
+    runs = [{"databaseId": number, "status": status, "conclusion": conclusion, "headSha": sha}
+            for number, status, conclusion, sha in [
+                (20, "completed", "success", SHA), (30, "completed", "failure", SHA),
+                (10, "completed", "success", SHA), (40, "completed", "success", "f" * 40),
+                (50, "in_progress", None, SHA)]]
+    done = subprocess.run([sys.executable, str(GATE), "--commit", SHA, "--run-id"],
+                          capture_output=True, text=True, env=with_a_gh_that_says(tmp_path, runs))
+    assert done.returncode == 0, done.stderr
+    assert done.stdout.strip() == "20"

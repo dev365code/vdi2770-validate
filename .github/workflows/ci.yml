@@ -47,6 +47,7 @@ jobs:
   # executable there and a shebang file here, and `pip` writes both from the
   # same `entry_points.txt`.
   check:
+    name: check (${{ matrix.os }}, ${{ matrix.python-version }}, ${{ matrix.dependencies || 'locked' }})
     runs-on: ${{ matrix.os }}
     strategy:
       # `fail-fast` off: one platform failing while the other is still running
@@ -56,9 +57,14 @@ jobs:
       matrix:
         os: [ubuntu-latest]
         python-version: ["3.9", "3.12", "3.13"]
+        dependencies: ["locked"]
         include:
           - os: windows-latest
             python-version: "3.12"
+          - os: ubuntu-latest
+            python-version: "3.13"
+            dependencies: "as pip gives it"
+            test-selection: tests/test_cli.py tests/test_offline.py tests/test_the_json_says_what_produced_it.py
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
@@ -73,12 +79,24 @@ jobs:
       - name: Install
         run: |
           python -m pip install --upgrade pip
+          python -m pip install "packaging==26.3"
+      - name: Install the wheels the page carries
+        if: matrix.dependencies != 'as pip gives it'
+        run: |
+          python tools/bundle_lock.py --requirements bundle-requirements.txt
+          python -m pip install --require-hashes --no-deps -r bundle-requirements.txt
+      - name: Install both distributions from this tree
+        run: |
           # The reader first, and from the working tree. The rules pin it
           # exactly, so a pip that reaches an index here would either fail (the
           # version is not published yet) or install a reader that is not the
           # one in this commit -- and the run would be about that instead.
           python -m pip install -e packages/vdi2770
           python -m pip install -e ".[dev]"
+      - name: Check the installed lock
+        if: matrix.dependencies != 'as pip gives it'
+        run: |
+          python tools/bundle_lock.py --check
       - name: Lint
         run: python -m ruff check --no-cache src tests tools packages browser
       - name: Build fixtures
@@ -98,7 +116,9 @@ jobs:
       - name: Test
         env:
           VDI2770_ZIPFILE_GENERATION: ${{ matrix.python-version == '3.13' && 'G2' || '' }}
-        run: python -m pytest
+        # The added row witnesses the command with index dependencies. The
+        # other rows keep the whole suite, including the installed-lock gate.
+        run: python -m pytest ${{ matrix.test-selection }}
       # The question no reading of a tree can answer: does the file pip wrote
       # start, on the machine it wrote it on. This release moves where the tool
       # is installed from and which distribution owns the executable, and this
@@ -184,6 +204,8 @@ jobs:
       # No editable install: the builder reads the source tree, and a third
       # `pip install -e` here would make this workflow look like it builds its
       # distributions in three places.
+      - name: Install the builder's requirement parser
+        run: python -m pip install --upgrade pip packaging
       - name: Build the single file this working tree produces
         run: python tools/build_zipapp.py --check
       # The offline path: a file you already have, and nothing fetched.
@@ -298,6 +320,8 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.12"
+      - name: Install the builder's requirement parser
+        run: python -m pip install --upgrade pip packaging
       - name: Build the single file this working tree produces, into the runner's temp
         run: python tools/build_zipapp.py --check -o "$RUNNER_TEMP/vdi2770.pyz"
       - name: Its hash, the way somebody pinning it would take it
@@ -323,12 +347,15 @@ jobs:
         with:
           python-version: "3.13.2"
       # Not editable, and not this project: the gate runs the command from the
-      # tree itself. What it needs installed is the one dependency, at the
-      # version the page bundles, and the browser the page is opened in.
+      # tree itself. The locked wheels give it the same dependency bytes the
+      # page carries; the browser is installed beside them to open that page.
       - name: Install
         run: |
           python -m pip install --upgrade pip
-          python -m pip install "xmlschema==4.2.0" "playwright==1.63.0" "pytest==8.3.4"
+          python -m pip install "packaging==26.3"
+          python tools/bundle_lock.py --requirements bundle-requirements.txt
+          python -m pip install --require-hashes --no-deps -r bundle-requirements.txt
+          python -m pip install "playwright==1.63.0" "pytest==8.3.4"
           python -m playwright install --with-deps chromium
       # The ends of an archive Python's own ZIP reading takes two ways, held on a
       # release from before the repair for CVE-2025-8291: the page's own, pinned,
@@ -344,6 +371,19 @@ jobs:
         run: python tools/build_browser.py
       - name: The page sends nothing once it has loaded, and says what the command says
         run: python tools/browser_gates.py
+
+      # Keep the page the gate opened. A release compares its own build with
+      # this file, and a second build here catches bytes that drift between
+      # two builds before either one can stand for this commit.
+      - name: A second build must agree with the page that was opened
+        run: |
+          python tools/build_browser.py -o dist/again.html
+          cmp dist/vdi2770.html dist/again.html
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        with:
+          name: the-page
+          path: dist/vdi2770.html
+          if-no-files-found: error
 
   # The README's shortest example is `- uses:` and `paths:` -- no `setup-python`,
   # no build. Every other use of the action here is preceded by both, so the line

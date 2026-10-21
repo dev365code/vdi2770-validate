@@ -8,7 +8,16 @@ XMLSCHEMA_VERSION := 4.2.0
 
 .PHONY: paths-disjoint upgrade-paths wheels installed-runs upgrade-paths-from-wheels zipapp check lint test fixtures corpus coverage-check rules-doc golden-report time-budget oracle-half sdist-runs-its-own-tests wheel-installs-and-runs reader-api-matches-its-version mutations standalone clean oracle-fully-swept browser
 
+.PHONY: bundle-install
+
 check: lint fixtures test corpus coverage-check rules-doc golden-report time-budget oracle-half reader-api-matches-its-version sdist-runs-its-own-tests wheel-installs-and-runs
+
+# Setup before the editable installs, not an offline check of the tree.
+bundle-install:
+	$(PYTHON) -m pip install "packaging==26.3"
+	@set -e; requirements=$$(mktemp); trap 'rm -f "$$requirements"' EXIT HUP INT TERM; \
+	  $(PYTHON) tools/bundle_lock.py --requirements "$$requirements"; \
+	  $(PYTHON) -m pip install --require-hashes --no-deps -r "$$requirements"
 
 # `--no-cache`: ruff keys its cache on file contents and settings, and a tree
 # where files had moved kept answering from it -- 84 import-order errors were
@@ -17,6 +26,7 @@ check: lint fixtures test corpus coverage-check rules-doc golden-report time-bud
 # The comment lives above the recipe: a `#` line inside one is a command as far
 # as anything reading recipes is concerned, and the parity gate read it as one.
 lint:
+	$(PYTHON) tools/bundle_lock.py --check
 	$(PYTHON) -m ruff check --no-cache src tests tools packages browser
 
 test:

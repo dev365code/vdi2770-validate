@@ -41,6 +41,19 @@ code should read the paragraph after the list.
   half of one of these at its word reads another archive.
   **This moves verdicts:** each is `Z1` now, on every Python. None of the
   containers in this repository is one.
+- **The single file and the page carry locked third-party wheels.** Names,
+  versions, filenames, URLs and SHA-256 digests select everything bundled, so
+  repeated builds of the same commit carry the same bytes for the
+  single file on any supported Python and the
+  page built on the Python it carries (3.13). Local wheel copies pass the same
+  checks. The page now carries elementpath 5.0.4, the version the single file
+  has always carried; judged against 5.1.4 on every corpus and fixture input,
+  nothing moved. This changes no judgment, finding ID or exit code.
+- **A release page must match the page CI opened.** The release builds it on
+  the same Python as the page job, then compares it byte for byte with that
+  commit's successful CI artifact before offering it for download. A release
+  built the page on another Python than the one that judged it; that difference
+  now stops the release. This changes no judgment or exit code.
 
 **If your build gates on the exit code, this is the paragraph for you.** A
 container whose ZIP64 locator or record disagrees with where the record is,

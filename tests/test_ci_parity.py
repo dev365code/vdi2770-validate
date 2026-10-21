@@ -5,16 +5,68 @@ already, in the sibling project, so the version pins are asserted too.
 """
 import re
 
+import yaml
+
 from conftest import ROOT, spelled
 
 MAKEFILE = (ROOT / "Makefile").read_text(encoding="utf-8")
 CI = (ROOT / ".github" / "workflows" / "ci.yml")
 
 
+def test_ci_installs_the_wheels_the_page_bundles_before_resolving_anything_else():
+    jobs = yaml.safe_load(CI.read_text(encoding="utf-8"))["jobs"]
+    for name in ("check", "the-page-this-repo-offers"):
+        commands = [line.strip() for s in jobs[name]["steps"]
+                    if not s.get("if") or (name == "check" and s.get("if") == "matrix.dependencies != 'as pip gives it'")
+                    for line in s.get("run", "").splitlines() if not line.strip().startswith("#")]
+        generated = commands.index("python tools/bundle_lock.py --requirements bundle-requirements.txt")
+        installed = commands.index("python -m pip install --require-hashes --no-deps -r bundle-requirements.txt")
+        assert generated < installed
+        editable = [i for i, c in enumerate(commands) if "pip install -e" in c]
+        assert all(installed < i for i in editable)
+        assert not any('pip install "xmlschema==' in c for c in commands)
+
+
+def test_ci_keeps_the_page_it_opened_only_after_a_second_build_agrees():
+    job = yaml.safe_load(CI.read_text(encoding="utf-8"))["jobs"]["the-page-this-repo-offers"]
+    steps = job["steps"]
+    gate = next(i for i, s in enumerate(steps) if s.get("run") == "python tools/browser_gates.py")
+    again = next(i for i, s in enumerate(steps)
+                 if "python tools/build_browser.py -o dist/again.html" in s.get("run", ""))
+    assert "cmp dist/vdi2770.html dist/again.html" in steps[again]["run"]
+    assert not steps[again].get("if")
+    upload = next(i for i, s in enumerate(steps) if s.get("with", {}).get("name") == "the-page")
+    assert gate < again < upload
+    assert "upload-artifact@" in steps[upload]["uses"]
+    assert steps[upload]["with"]["path"] == "dist/vdi2770.html"
+    assert steps[upload]["with"]["if-no-files-found"] == "error"
+    assert not steps[upload].get("if")
+
+
+def test_ci_checks_the_command_as_pip_gives_it_without_applying_the_page_lock():
+    job = yaml.safe_load(CI.read_text(encoding="utf-8"))["jobs"]["check"]
+    matrix = job["strategy"]["matrix"]
+    rows = [row for row in matrix["include"] if row.get("dependencies") == "as pip gives it"]
+    assert len(rows) == 1
+    assert rows[0] == {"os": "ubuntu-latest", "python-version": "3.13",
+                       "dependencies": "as pip gives it",
+                       "test-selection": "tests/test_cli.py tests/test_offline.py tests/test_the_json_says_what_produced_it.py"}
+    assert matrix["dependencies"] == ["locked"]
+    assert "matrix.dependencies" in job["name"]
+    steps = job["steps"]
+    locked = [s for s in steps if "bundle_lock.py" in s.get("run", "")]
+    assert len(locked) == 2
+    assert all(s.get("if") == "matrix.dependencies != 'as pip gives it'" for s in locked)
+    assert next(s["run"] for s in steps if s.get("name") == "Test") == "python -m pytest ${{ matrix.test-selection }}"
+    assert not any("browser_gates.py" in s.get("run", "") for s in steps)
+
+
 #: Targets `make check` deliberately does not depend on, with the reason. A
 #: target here is not exempt from being explained — it is exempt from being run
 #: on every contributor's machine on every change.
 OUTSIDE_CHECK = {
+    "bundle-install": "it installs the locked wheels before the editable installs; "
+                      "setup needs the network and must precede the offline gate",
     "check": "the target itself; it cannot be one of its own prerequisites",
     "clean": "it deletes things and judges nothing, so running it as part of the "
              "gate would only mean the gate throws away its own inputs",
@@ -204,6 +256,12 @@ def test_ci_runs_nothing_the_gate_does_not():
         # Fetching the browser the page gate opens the page in. Like `pip
         # install`, it installs something and judges nothing.
         "python -m playwright install",
+        # The pip input is generated from the lock before either editable
+        # install can ask an index for a transitive dependency.
+        "python tools/bundle_lock.py --requirements",
+        # The page is opened in CI, so its repeat-build comparison belongs
+        # beside that gate. The assertion above binds both paths and order.
+        "cmp dist/vdi2770.html dist/again.html",
     )
     #: And the third kind: a gate CI runs that `make check` does not, with the
     #: reason. `OUTSIDE_CHECK` says why a target is not in `check`; this says
@@ -462,8 +520,13 @@ def test_a_workflow_that_publishes_runs_the_whole_gate():
         text = w.read_text(encoding="utf-8")
         if "pypi-publish" in text:
             return True
-        return any("dist" in ln.split("path:", 1)[1]
-                   for ln in text.splitlines() if ln.strip().startswith("path:"))
+        # The page kept by CI is evidence for the release's byte comparison.
+        # It publishes no distribution or divergence counts. Its exact path,
+        # browser gate and repeat-build comparison are asserted above.
+        return any("dist" in str(step.get("with", {}).get("path", ""))
+                   and step.get("with", {}).get("name") != "the-page"
+                   for job in _yaml(w).get("jobs", {}).values()
+                   for step in job.get("steps", []))
 
     publishing = [w for w in workflows() if publishes(w)]
     assert publishing, "no workflow publishes anything; this test is looking in the wrong place"
@@ -479,6 +542,21 @@ def test_a_workflow_that_publishes_runs_the_whole_gate():
         assert any(c.strip() == "make oracle-fully-swept" for c in ran), (
             f"{w.name} publishes divergence counts and does not check the sweep "
             f"is complete. It runs: {ran}")
+
+
+def test_an_html_artifact_with_another_name_still_needs_the_whole_gate(tmp_path, monkeypatch):
+    import sys
+
+    import pytest
+
+    page = tmp_path / "page.yml"
+    page.write_text("jobs:\n  page:\n    steps:\n      - uses: actions/upload-artifact@pinned\n"
+                    "        with:\n          name: another-page\n          path: dist/page.html\n",
+                    encoding="utf-8")
+    release = ROOT / ".github/workflows/release.yml"
+    monkeypatch.setattr(sys.modules[__name__], "workflows", lambda: [release, page])
+    with pytest.raises(AssertionError, match="page.yml publishes and does not run"):
+        test_a_workflow_that_publishes_runs_the_whole_gate()
 
 
 def test_a_step_that_runs_make_check_runs_it_where_the_makefile_is():
