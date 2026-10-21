@@ -31,7 +31,7 @@ try:
     from packaging.markers import Marker
     from packaging.requirements import InvalidRequirement, Requirement
     from packaging.specifiers import InvalidSpecifier, SpecifierSet
-    from packaging.utils import InvalidWheelFilename, parse_wheel_filename
+    from packaging.utils import InvalidWheelFilename, canonicalize_name, parse_wheel_filename
     from packaging.version import InvalidVersion, Version
 except ImportError:
     raise SystemExit("install packaging before reading the bundle lock") from None
@@ -42,7 +42,7 @@ FIELDS = {"name", "version", "file", "url", "sha256", "size", "requires_python",
 
 
 def distribution_name(spec: str) -> str:
-    return re.split(r"[<>=!~\[; ]", spec, maxsplit=1)[0].strip().lower().replace("_", "-")
+    return canonicalize_name(re.split(r"[<>=!~\[; ]", spec, maxsplit=1)[0].strip())
 
 
 def validate(entries: list) -> list:

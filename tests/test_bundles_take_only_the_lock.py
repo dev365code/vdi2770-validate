@@ -237,3 +237,7 @@ def test_extra_markers_are_evaluated_without_hiding_other_environments(marker, r
             tool.check_requirements(meta, tool.read_lock())
     else:
         tool.check_requirements(meta, tool.read_lock())
+
+
+def test_distribution_names_collapse_dots_and_repeated_separators():
+    assert lock_tool().distribution_name("Some...___--Package[docs]>=1") == "some-package"
