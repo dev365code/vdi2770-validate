@@ -8,6 +8,7 @@ nowhere: it is read where the page is open.
 
     python tools/build_browser.py                    # dist/vdi2770.html
     python tools/build_browser.py --runtime FILE     # with the runtime release already here
+    python tools/build_browser.py --runtime FILE --wheels DIR --notices DIR  # entirely local
 
 Everything the check needs is inside the page: the reader and the rules, copied
 from this tree the way the single file copies them; `xmlschema`; and Pyodide, a
@@ -18,7 +19,9 @@ to giving the command's report byte for byte.
 
 Needs the network once, as the single file does: for the runtime, which is
 pinned by its digest and refused if it differs, its licences, and the one
-dependency.
+dependency, or local copies via --runtime, --wheels and --notices. Put notice
+copies under the local_file names in RUNTIME_LICENCES; their digests are checked
+before the notice is extracted, exactly as for a download.
 """
 from __future__ import annotations
 
@@ -70,6 +73,7 @@ RUNTIME_LICENCES = (
      "licence": "MPL-2.0", "file": "LICENSE",
      "source": "https://github.com/pyodide/pyodide/tree/0.29.5",
      "url": "https://raw.githubusercontent.com/pyodide/pyodide/0.29.5/LICENSE",
+     "local_file": "pyodide-LICENSE",
      "sha256": "1f256ecad192880510e84ad60474eab7589218784b9a50bc7ceee34c2b91f1d5"},
     {"name": "hiwire, which Pyodide compiles into the runtime", "notice": "hiwire",
      "version": "6a1e672", "revision": "6a1e67280a15d929ebeceee54a6358c9c8d5f697",
@@ -77,11 +81,13 @@ RUNTIME_LICENCES = (
      "source": "https://github.com/pyodide/hiwire/tree/6a1e67280a15d929ebeceee54a6358c9c8d5f697",
      "url": "https://raw.githubusercontent.com/pyodide/hiwire/"
             "6a1e67280a15d929ebeceee54a6358c9c8d5f697/LICENSE",
+     "local_file": "hiwire-LICENSE",
      "sha256": "1f256ecad192880510e84ad60474eab7589218784b9a50bc7ceee34c2b91f1d5"},
     {"name": "CPython, with its standard library", "notice": "CPython", "version": "3.13.2",
      "revision": "v3.13.2", "licence": "PSF-2.0", "file": "LICENSE",
      "source": "https://github.com/python/cpython/tree/v3.13.2",
      "url": "https://raw.githubusercontent.com/python/cpython/v3.13.2/LICENSE",
+     "local_file": "cpython-LICENSE",
      "sha256": "78b12c3a81360b357002334f0e70ea0e92eebf7a9b358805c03c48484945f3bb"},
     {"name": "What CPython incorporates: expat, libffi, zlib, libmpdec, mimalloc and the "
              "rest its licence page lists", "notice": "CPython incorporates",
@@ -89,12 +95,14 @@ RUNTIME_LICENCES = (
      "file": "Doc/license.rst",
      "source": "https://github.com/python/cpython/tree/v3.13.2",
      "url": "https://raw.githubusercontent.com/python/cpython/v3.13.2/Doc/license.rst",
+     "local_file": "cpython-license.rst",
      "sha256": "62f2c9c2c75d511170eb464ad5f83b78cc1f37eb2eb49c2846c9aa6c4557ee99"},
     {"name": "HACL*, as CPython carries it", "notice": "HACL*", "version": "3.13.2",
      "revision": "v3.13.2", "licence": "MIT", "file": "Modules/_hacl/Hacl_Hash_SHA2.c, its notice",
      "source": "https://github.com/python/cpython/tree/v3.13.2/Modules/_hacl",
      "url": "https://raw.githubusercontent.com/python/cpython/v3.13.2/Modules/_hacl/Hacl_Hash_SHA2.c",
      "between": ("/* MIT License", "*/"),
+     "local_file": "hacl-Hacl_Hash_SHA2.c",
      "sha256": "30638efb75c8b185bb09c3df6977e3f3c5d21a1e696218cf7ade6bc4d5201b31"},
     {"name": "libffi, which Pyodide compiles into the runtime", "notice": "libffi",
      "version": "f08493d", "revision": "f08493d249d2067c8b3207ba46693dd858f95db3",
@@ -102,23 +110,27 @@ RUNTIME_LICENCES = (
      "source": "https://github.com/libffi/libffi/tree/f08493d249d2067c8b3207ba46693dd858f95db3",
      "url": "https://raw.githubusercontent.com/libffi/libffi/"
             "f08493d249d2067c8b3207ba46693dd858f95db3/LICENSE",
+     "local_file": "libffi-LICENSE",
      "sha256": "2c9c2acb9743e6b007b91350475308aee44691d96aa20eacef8e199988c8c388"},
     {"name": "bzip2, as Emscripten's port builds it", "notice": "bzip2", "version": "1.0.6",
      "revision": "1.0.6", "licence": "bzip2's own, BSD-style", "file": "LICENSE",
      "source": "https://github.com/emscripten-ports/bzip2/tree/1.0.6",
      "url": "https://raw.githubusercontent.com/emscripten-ports/bzip2/1.0.6/LICENSE",
+     "local_file": "bzip2-LICENSE",
      "sha256": "4919cfb14a73cd64fcef67b107613970cf1659a09aa675dba31314f373bc7204"},
     {"name": "Emscripten, the compiler and runtime the build used", "notice": "Emscripten",
      "version": "4.0.9", "revision": "4.0.9", "licence": "MIT or University of Illinois/NCSA",
      "file": "LICENSE",
      "source": "https://github.com/emscripten-core/emscripten/tree/4.0.9",
      "url": "https://raw.githubusercontent.com/emscripten-core/emscripten/4.0.9/LICENSE",
+     "local_file": "emscripten-LICENSE",
      "sha256": "620a78084fc7ca97c0b5dea9abf891f3ffcadfdbf305276f099c9c4e12fc1d86"},
     {"name": "musl, the C library Emscripten carries", "notice": "musl", "version": "4.0.9",
      "revision": "4.0.9", "licence": "MIT", "file": "COPYRIGHT",
      "source": "https://github.com/emscripten-core/emscripten/tree/4.0.9/system/lib/libc/musl",
      "url": "https://raw.githubusercontent.com/emscripten-core/emscripten/4.0.9/"
             "system/lib/libc/musl/COPYRIGHT",
+     "local_file": "musl-COPYRIGHT",
      "sha256": "f9bc4423732350eb0b3f7ed7e91d530298476f8fec0c6c427a1c04ade22655af"},
 )
 
@@ -224,7 +236,8 @@ def licences_html(bundled: list, runtime: list) -> str:
     return "\n".join(parts)
 
 
-def build(output: Path, runtime_asset: Path | None = None, wheels: Path | None = None) -> bytes:
+def build(output: Path, runtime_asset: Path | None = None, wheels: Path | None = None,
+          notices: Path | None = None) -> bytes:
     # gzip headers made by another Python once changed a release page while
     # every unpacked asset stayed the same. Build on the Python that opens it
     # in CI, before any download can make a refused build look like work done.
@@ -235,9 +248,11 @@ def build(output: Path, runtime_asset: Path | None = None, wheels: Path | None =
                          "Nothing was built.")
     runtime = runtime_files(fetch(RUNTIME["url"], RUNTIME["sha256"],
                                   f"the {RUNTIME['name']} {RUNTIME['version']} release",
-                                  runtime_asset))
+                                  runtime_asset, "--runtime FILE"))
     licences = [dict(entry, text=notice_text(fetch(entry["url"], entry["sha256"],
-                                                   f"the {entry['notice']} notice"),
+                                                   f"the {entry['notice']} notice",
+                                                   notices / entry["local_file"] if notices is not None else None,
+                                                   "--notices DIR"),
                                              entry.get("between")))
                 for entry in RUNTIME_LICENCES]
     with tempfile.TemporaryDirectory() as tmp:
@@ -277,9 +292,11 @@ def main() -> int:
                                       "its digest is checked all the same")
     ap.add_argument("--wheels", type=Path, help="locked wheel files, already downloaded; "
                                              "their digests are checked all the same")
+    ap.add_argument("--notices", type=Path, help="runtime notice files under the local_file names in "
+                                              "RUNTIME_LICENCES; their digests are checked all the same")
     args = ap.parse_args()
     target = Path(args.output)
-    page = build(target, Path(args.runtime) if args.runtime else None, wheels=args.wheels)
+    page = build(target, Path(args.runtime) if args.runtime else None, wheels=args.wheels, notices=args.notices)
     print(f"{target} ({len(page):,} bytes)")
     print(f"sha256 {hashlib.sha256(page).hexdigest()}")
     return 0

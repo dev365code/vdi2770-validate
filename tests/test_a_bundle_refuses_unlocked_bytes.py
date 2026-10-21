@@ -182,3 +182,38 @@ def test_a_failed_download_refuses_in_one_line_with_a_local_remedy(failure, duri
     assert "--wheels" in said
     assert len(said.splitlines()) == 1
     assert refused.value.__suppress_context__
+
+
+@pytest.mark.skipif(sys.version_info[:2] != (3, 13), reason="the page is built on the Python 3.13 it carries")
+@pytest.mark.parametrize("damaged", [None, "changed", "missing"])
+def test_local_runtime_notices_are_verified_without_a_network_fallback(damaged, local_wheels, tmp_path, monkeypatch):
+    import hashlib
+
+    folder, _entries = local_wheels
+    notices = tmp_path / "notices"
+    notices.mkdir()
+    entries = []
+    for n, entry in enumerate(PAGE.RUNTIME_LICENCES):
+        data = f"the {entry['notice']} licence\n".encode()
+        filename = f"notice-{n}.txt"
+        (notices / filename).write_bytes(data)
+        entries.append(dict(entry, local_file=filename, sha256=hashlib.sha256(data).hexdigest(), between=None))
+    monkeypatch.setattr(PAGE, "RUNTIME_LICENCES", entries)
+    asset = tmp_path / "runtime.tar.bz2"
+    asset.write_bytes(b"runtime file")
+    monkeypatch.setitem(PAGE.RUNTIME, "sha256", hashlib.sha256(asset.read_bytes()).hexdigest())
+    monkeypatch.setattr(PAGE, "runtime_files", lambda data: dict.fromkeys(PAGE.RUNTIME_FILES, data))
+    monkeypatch.setattr(BUILD.urllib.request, "urlopen", lambda *a, **k: pytest.fail("local build used the network"))
+    if damaged:
+        path = notices / entries[0]["local_file"]
+        if damaged == "missing":
+            path.unlink()
+        else:
+            path.write_bytes(b"another notice")
+        with pytest.raises(SystemExit, match="cannot read" if damaged == "missing" else "has sha256"):
+            PAGE.build(tmp_path / "page.html", runtime_asset=asset, wheels=folder, notices=notices)
+        assert not (tmp_path / "page.html").exists()
+    else:
+        page = PAGE.build(tmp_path / "page.html", runtime_asset=asset, wheels=folder, notices=notices)
+        assert all(f"the {entry['notice']} licence".encode() in page for entry in entries)
+        assert page == (tmp_path / "page.html").read_bytes()
