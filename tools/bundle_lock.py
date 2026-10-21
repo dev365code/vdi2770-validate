@@ -21,12 +21,14 @@ import email
 import io
 import json
 import re
+import shlex
 import urllib.request
 import zipfile
 from importlib import metadata
 from pathlib import Path
 
 try:
+    from packaging.markers import Marker
     from packaging.requirements import InvalidRequirement, Requirement
     from packaging.specifiers import InvalidSpecifier, SpecifierSet
     from packaging.utils import InvalidWheelFilename, parse_wheel_filename
@@ -116,7 +118,7 @@ def check_requirements(meta, entries: list) -> None:
         # No extras are requested by these bundles. Other markers are treated
         # as required even when false here: a file copied elsewhere must not
         # quietly acquire a dependency this build's interpreter did not need.
-        if req.marker and " or " not in str(req.marker) and re.search(r'\bextra\s*==\s*[\'"]', str(req.marker)):
+        if req.marker and not needed_without_extras(req.marker):
             continue
         name = distribution_name(req.name)
         if name not in versions:
@@ -125,6 +127,28 @@ def check_requirements(meta, entries: list) -> None:
             raise SystemExit(f"{said}: the bundle lock does not select extras or requirement URLs")
         if not req.specifier.contains(versions[name], prereleases=True):
             raise SystemExit(f"{said} does not accept locked {name} {versions[name]}")
+
+
+def needed_without_extras(marker: Marker) -> bool:
+    """Can this requirement apply with no extra, on any other environment?
+
+    Keep extra comparisons and let every other comparison be true: even one
+    possible environment makes it required. Split packaging's canonical text
+    with quotes intact, then use its evaluator for the extra comparisons and
+    the AND/OR structure, including parentheses and reversed operands.
+    """
+    tokens = shlex.shlex(str(marker), posix=False, punctuation_chars="()")
+    tokens.whitespace_split = True
+    projected, atom = [], []
+    for token in [*tokens, "and"]:
+        if token in ("and", "or") or token[0] in "()":
+            if atom:
+                projected.append(" ".join(atom) if "extra" in atom else 'extra == ""')
+                atom = []
+            projected.append(token)
+        else:
+            atom.append(token)
+    return Marker(" ".join(projected[:-1])).evaluate(environment={"extra": ""})
 
 
 def check_installed(entries: list) -> None:

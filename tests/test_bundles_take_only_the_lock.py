@@ -217,3 +217,23 @@ def test_an_update_refuses_a_dist_info_directory_for_another_name_or_version(dir
     with pytest.raises(SystemExit, match="dist-info.*name or version"):
         tool.set_version("elementpath==5.1.4")
     assert output.read_text(encoding="utf-8") == "unchanged\n"
+
+
+@pytest.mark.parametrize("marker,required", [
+    ('"docs" == extra', False),
+    ('extra == "docs" or extra == "test"', False),
+    ('(extra == "docs" or extra == "test") and python_version < "3.8"', False),
+    ('extra == "docs" or python_version < "3.8"', True),
+    ('extra != "docs"', True),
+    ('extra == "and or sys_platform"', False),
+])
+def test_extra_markers_are_evaluated_without_hiding_other_environments(marker, required):
+    from email import message_from_string
+
+    tool = lock_tool()
+    meta = message_from_string(f"Requires-Dist: unknown; {marker}\n")
+    if required:
+        with pytest.raises(SystemExit, match="unknown.*outside the lock"):
+            tool.check_requirements(meta, tool.read_lock())
+    else:
+        tool.check_requirements(meta, tool.read_lock())
