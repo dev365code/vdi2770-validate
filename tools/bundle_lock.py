@@ -30,12 +30,8 @@ try:
     from packaging.requirements import InvalidRequirement, Requirement
     from packaging.utils import InvalidWheelFilename, parse_wheel_filename
     from packaging.version import InvalidVersion, Version
-except ModuleNotFoundError:
-    # Build-only jobs have pip, without this project's development extras.
-    # Its copy supplies the same parsers; no resolver or installer runs here.
-    from pip._vendor.packaging.requirements import InvalidRequirement, Requirement
-    from pip._vendor.packaging.utils import InvalidWheelFilename, parse_wheel_filename
-    from pip._vendor.packaging.version import InvalidVersion, Version
+except ImportError:
+    raise SystemExit("install packaging before reading the bundle lock") from None
 
 ROOT = Path(__file__).resolve().parents[1]
 LOCK = ROOT / "tools/bundle.lock.json"

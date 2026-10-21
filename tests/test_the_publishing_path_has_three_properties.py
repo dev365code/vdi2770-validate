@@ -168,7 +168,7 @@ esac
                           env={**os.environ, "PATH": str(bin_dir) + os.pathsep + os.environ["PATH"],
                                "CASE": case, "GITHUB_SHA": "a" * 40, "GITHUB_REPOSITORY": "owner/project"})
     assert (done.returncode == 0) is passes, done.stdout + done.stderr
-    assert (tmp_path / "calls").read_text().splitlines() == (
+    assert (tmp_path / "calls").read_text(encoding="utf-8").splitlines() == (
         ["api"] if case in ("no-run", "outage") else ["api", "run"])
 
 

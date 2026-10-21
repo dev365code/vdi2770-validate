@@ -132,11 +132,11 @@ def test_an_update_checks_the_entire_candidate_before_writing(version, filename,
     monkeypatch.setattr(build_zipapp, "fetch", lambda url, *args: payloads[url])
     if accepted:
         tool.set_version(f"elementpath=={version}")
-        assert json.loads(output.read_text())[0] == new
+        assert json.loads(output.read_text(encoding="utf-8"))[0] == new
     else:
         with pytest.raises(SystemExit):
             tool.set_version(f"elementpath=={version}")
-        assert output.read_text() == "unchanged\n"
+        assert output.read_text(encoding="utf-8") == "unchanged\n"
 
 
 def test_normalized_metadata_names_are_compared_as_distribution_names(tmp_path):

@@ -181,6 +181,8 @@ jobs:
       # No editable install: the builder reads the source tree, and a third
       # `pip install -e` here would make this workflow look like it builds its
       # distributions in three places.
+      - name: Install the builder's requirement parser
+        run: python -m pip install --upgrade pip packaging
       - name: Build the single file this working tree produces
         run: python tools/build_zipapp.py --check
       # The offline path: a file you already have, and nothing fetched.
@@ -295,6 +297,8 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.12"
+      - name: Install the builder's requirement parser
+        run: python -m pip install --upgrade pip packaging
       - name: Build the single file this working tree produces, into the runner's temp
         run: python tools/build_zipapp.py --check -o "$RUNNER_TEMP/vdi2770.pyz"
       - name: Its hash, the way somebody pinning it would take it

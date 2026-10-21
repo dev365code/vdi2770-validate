@@ -82,7 +82,7 @@ def test_staging_uses_the_lock_without_a_pip_subprocess(local_wheels, tmp_path, 
     assert all(n["licence"] == "MIT" for n in notices)
     assert all(n["texts"] == {"licenses/LICENSE": "the MIT text\n"} for n in notices)
     assert not list(into.glob("*.dist-info"))
-    assert (into / "xmlschema/__init__.py").read_text() == "__version__ = '4.2.0'\n"
+    assert (into / "xmlschema/__init__.py").read_text(encoding="utf-8") == "__version__ = '4.2.0'\n"
 
 
 def test_building_twice_from_local_wheels_produces_identical_zipapps(local_wheels, tmp_path):
