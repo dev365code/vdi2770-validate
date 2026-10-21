@@ -95,6 +95,37 @@ def test_the_release_states_its_own_floor():
             f"decision and is one only if it is written as one")
 
 
+def test_the_release_page_is_built_on_the_python_that_opened_it():
+    ci = workflow(ROOT / ".github/workflows/ci.yml")["jobs"]["the-page-this-repo-offers"]
+    release = workflow(RELEASE)["jobs"]["upgrade-gate"]
+
+    def python(job):
+        return next(s["with"]["python-version"] for s in job["steps"]
+                    if "setup-python@" in s.get("uses", ""))
+
+    assert python(release) == python(ci) == "3.13.2"
+    assert release["permissions"] == {"actions": "read", "contents": "read"}
+
+
+def test_the_release_compares_its_page_with_successful_ci_on_this_commit_before_uploading():
+    job = workflow(RELEASE)["jobs"]["upgrade-gate"]
+    steps = job["steps"]
+    build = next(i for i, s in enumerate(steps) if "build_browser.py -o pyz/vdi2770.html" in s.get("run", ""))
+    compare = next(i for i, s in enumerate(steps)
+                   if "cmp pyz/vdi2770.html ci-page/vdi2770.html" in s.get("run", ""))
+    upload = next(i for i, s in enumerate(steps) if s.get("with", {}).get("name") == "dist-single-file")
+    assert build < compare < upload
+    step = steps[compare]
+    assert not step.get("if") and not step.get("continue-on-error")
+    assert step["env"]["GH_TOKEN"] == "${{ github.token }}"
+    command = step["run"]
+    for needed in ("actions/workflows/ci.yml/runs", 'head_sha=$GITHUB_SHA',
+                   '.head_sha ==', '.status ==', '.conclusion ==',
+                   'completed', 'success', 'test -n "$run_id"', 'exit 1',
+                   'gh run download "$run_id" --name the-page --dir ci-page'):
+        assert needed in command, needed
+
+
 def test_every_action_is_pinned_to_a_commit():
     """A tag or a branch is a name somebody else can repoint.
 
