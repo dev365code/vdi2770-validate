@@ -28,6 +28,7 @@ import gzip
 import hashlib
 import html
 import io
+import platform
 import re
 import sys
 import tarfile
@@ -223,7 +224,15 @@ def licences_html(bundled: list, runtime: list) -> str:
     return "\n".join(parts)
 
 
-def build(output: Path, runtime_asset: Path | None = None) -> bytes:
+def build(output: Path, runtime_asset: Path | None = None, wheels: Path | None = None) -> bytes:
+    # gzip headers made by another Python once changed a release page while
+    # every unpacked asset stayed the same. Build on the Python that opens it
+    # in CI, before any download can make a refused build look like work done.
+    running = platform.python_version()
+    expected = ".".join(RUNTIME["python"].split(".")[:2])
+    if ".".join(running.split(".")[:2]) != expected:
+        raise SystemExit(f"the page builder runs Python {running}, and this build takes only Python {expected}. "
+                         "Nothing was built.")
     runtime = runtime_files(fetch(RUNTIME["url"], RUNTIME["sha256"],
                                   f"the {RUNTIME['name']} {RUNTIME['version']} release",
                                   runtime_asset))
@@ -235,8 +244,7 @@ def build(output: Path, runtime_asset: Path | None = None) -> bytes:
         staged = Path(tmp) / "app"
         staged.mkdir()
         bundled = []
-        build_zipapp.stage(staged, python_version=".".join(RUNTIME["python"].split(".")[:2]),
-                           notices=bundled)
+        build_zipapp.stage(staged, wheels=wheels, notices=bundled)
         (staged / "__main__.py").unlink()
         (staged / "vdi2770_page.py").write_bytes((BROWSER / "vdi2770_page.py").read_bytes())
         archive = Path(tmp) / "app.zip"
@@ -267,9 +275,11 @@ def main() -> int:
     ap.add_argument("-o", "--output", default=str(ROOT / "dist" / "vdi2770.html"))
     ap.add_argument("--runtime", help="the runtime release asset, already downloaded; "
                                       "its digest is checked all the same")
+    ap.add_argument("--wheels", type=Path, help="locked wheel files, already downloaded; "
+                                             "their digests are checked all the same")
     args = ap.parse_args()
     target = Path(args.output)
-    page = build(target, Path(args.runtime) if args.runtime else None)
+    page = build(target, Path(args.runtime) if args.runtime else None, wheels=args.wheels)
     print(f"{target} ({len(page):,} bytes)")
     print(f"sha256 {hashlib.sha256(page).hexdigest()}")
     return 0
