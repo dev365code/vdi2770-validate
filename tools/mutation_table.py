@@ -4010,6 +4010,12 @@ TABLE += [
      "            if False:\n",
      ["tests/test_a_bundle_refuses_unlocked_bytes.py::test_a_wheel_carries_exactly_one_dist_info_directory"],
      "a wheel could carry another distribution's metadata or licence directory"),
+    ("bundle/an-empty-requires-python-is-no-requirement",
+     "tools/bundle_lock.py",
+     '        requires_python = meta.get("Requires-Python") or None\n',
+     '        requires_python = meta.get("Requires-Python")\n',
+     ["tests/test_bundles_take_only_the_lock.py::test_an_update_records_an_empty_requires_python_as_no_requirement"],
+     "an update would write a lock its own check refuses, for a wheel that states no Python requirement"),
 ]
 
 

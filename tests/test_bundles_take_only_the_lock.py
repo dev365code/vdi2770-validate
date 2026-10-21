@@ -185,6 +185,30 @@ def test_an_update_refuses_metadata_that_excludes_the_projects_python_floor(tmp_
     assert output.read_text(encoding="utf-8") == "unchanged\n"
 
 
+def test_an_update_records_an_empty_requires_python_as_no_requirement(tmp_path, monkeypatch):
+    """A wheel whose METADATA carries `Requires-Python:` with nothing after it
+    states no requirement. Written into the lock as the empty string, it made
+    the update leave a lock its own `--check` refuses -- the check takes a
+    requirement or none, and the next build stopped on the line the update had
+    just written."""
+    tool = lock_tool()
+    entries = [dict(e, requires_python=None) for e in wheels_at(tmp_path, requires_python="")]
+    monkeypatch.setattr(tool, "read_lock", lambda: entries)
+    output = tmp_path / "bundle.lock.json"
+    monkeypatch.setattr(tool, "LOCK", output)
+    new = entries[0]
+    response = {"urls": [{"packagetype": "bdist_wheel", "filename": new["file"],
+                          "url": new["url"], "digests": {"sha256": new["sha256"]}, "size": new["size"]}]}
+    monkeypatch.setattr(tool.urllib.request, "urlopen", lambda *a, **k: io.BytesIO(json.dumps(response).encode()))
+    import build_zipapp
+    payloads = {e["url"]: (tmp_path / e["file"]).read_bytes() for e in entries}
+    monkeypatch.setattr(build_zipapp, "fetch", lambda url, *args: payloads[url])
+    tool.set_version("elementpath==5.1.4")
+    written = json.loads(output.read_text(encoding="utf-8"))
+    assert [e["requires_python"] for e in written] == [None, None]
+    tool.validate(written)
+
+
 def test_the_repeated_build_claim_names_each_artifacts_python_scope():
     said = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8").split("## 0.12.0", 1)[0]
     assert "single file on any supported Python" in said

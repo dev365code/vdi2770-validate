@@ -229,7 +229,9 @@ def set_version(spec: str) -> None:
         if len(data) != entry["size"]:
             raise SystemExit(f"{entry['file']} has size {len(data)}, and the lock takes only {entry['size']}")
         meta = wheel_metadata(data, entry, candidate)
-        requires_python = meta.get("Requires-Python")
+        # A header with nothing after it states no requirement, and the lock
+        # spells "none" as null: the empty string is what its own check refuses.
+        requires_python = meta.get("Requires-Python") or None
         floor = python_floor()
         if requires_python and not SpecifierSet(requires_python).contains(floor, prereleases=True):
             raise SystemExit(f"{entry['file']}: Requires-Python {requires_python} excludes project Python floor {floor}")
