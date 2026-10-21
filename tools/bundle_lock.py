@@ -123,9 +123,11 @@ def check_installed(entries: list) -> None:
         try:
             meta = metadata.metadata(entry["name"])
         except metadata.PackageNotFoundError:
-            raise SystemExit(f"install locked {entry['name']} before checking its METADATA") from None
+            raise SystemExit(f"install locked {entry['name']} before checking its METADATA; "
+                             "run `make bundle-install`") from None
         if meta["Version"] != entry["version"]:
-            raise SystemExit(f"installed {entry['name']} {meta['Version']} differs from locked {entry['version']}")
+            raise SystemExit(f"installed {entry['name']} {meta['Version']} differs from locked {entry['version']}; "
+                             "run `make bundle-install`")
         check_requirements(meta, entries)
 
 

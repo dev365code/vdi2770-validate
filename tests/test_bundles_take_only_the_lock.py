@@ -157,3 +157,10 @@ def test_normalized_metadata_names_are_compared_as_distribution_names(tmp_path):
         else:
             with pytest.raises(SystemExit, match="METADATA name or version"):
                 tool.wheel_metadata(raw.getvalue(), entries[1], entries)
+
+
+def test_an_installed_version_mismatch_says_how_to_install_the_lock(monkeypatch):
+    tool = lock_tool()
+    monkeypatch.setattr(tool.metadata, "metadata", lambda name: {"Version": "99.0"})
+    with pytest.raises(SystemExit, match=r"differs from locked 5\.0\.4; run `make bundle-install`"):
+        tool.check_installed(tool.read_lock())

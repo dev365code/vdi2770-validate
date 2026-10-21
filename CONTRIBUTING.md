@@ -26,6 +26,7 @@ instead of being absorbed into a total.
 ## Before you open a pull request
 
 ```bash
+make bundle-install
 python -m pip install -e packages/vdi2770
 python -m pip install -e ".[dev]"
 make check

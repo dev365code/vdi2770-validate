@@ -46,6 +46,8 @@ def test_ci_keeps_the_page_it_opened_only_after_a_second_build_agrees():
 #: target here is not exempt from being explained — it is exempt from being run
 #: on every contributor's machine on every change.
 OUTSIDE_CHECK = {
+    "bundle-install": "it installs the locked wheels before the editable installs; "
+                      "setup needs the network and must precede the offline gate",
     "check": "the target itself; it cannot be one of its own prerequisites",
     "clean": "it deletes things and judges nothing, so running it as part of the "
              "gate would only mean the gate throws away its own inputs",
