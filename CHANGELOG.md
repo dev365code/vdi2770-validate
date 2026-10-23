@@ -2,6 +2,26 @@
 
 Sections through 0.7.0 had their wording tidied after their tags; the text each version carried when it was published is in that tag's own `CHANGELOG.md`. From 0.8.0 on, a released section is frozen at its tag and takes only appended `*(Correction ...)*` lines.
 
+## 1.0.0 — unreleased
+
+Who should take this release: anyone whose deliveries are zipped on macOS, or by
+any tool that writes an entry's name in UTF-8 without saying so -- the finding
+on a file such a name was meant to declare now says why it is not found, and
+what to set.
+
+- **A name written in UTF-8 without saying so is told what to set.** APPNOTE
+  reads an entry's name as UTF-8 when general purpose bit 11 says so and as IBM
+  Code Page 437 when it does not (4.4.4, APPENDIX D), and this tool reads it that
+  way, as the reference implementation does. A metadata file that declares the
+  UTF-8 spelling of such a name -- the decomposed spelling macOS's `zip` and
+  `ditto` write included -- still finds no file by it, and the `F1` on it now
+  says that the member's name is UTF-8 bytes read as IBM Code Page 437, and that
+  setting bit 11 on the entry is what makes it read as UTF-8. The member draws no
+  `F2` beside it: the declaration does mean it. `Container.unflagged_utf8` holds,
+  by the name an entry is read under, what its bytes spell in UTF-8.
+  **This moves verdicts:** none -- such a container exits `1` as before, with
+  one finding fewer.
+
 ## 0.14.0 — 2026-10-24
 
 Who should take this release: anyone who checks deliveries on more than one

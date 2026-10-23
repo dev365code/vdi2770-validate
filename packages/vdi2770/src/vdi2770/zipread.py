@@ -151,6 +151,13 @@ class Container:
     # `AB393/` -- so they cannot be turned back into these, and a caller that
     # wants the same bytes again asks with these.
     folder_members: Tuple[str, ...] = ()
+    #: For a member whose header stores its name as UTF-8 bytes without general
+    #: purpose bit 11 -- read, as APPNOTE reads it, as IBM Code Page 437 (4.4.4,
+    #: APPENDIX D) -- the name those bytes spell in UTF-8, by the name it is
+    #: read under. Only for bytes that are not ASCII, and only where no Unicode
+    #: Path field named the entry: there the two readings differ, and a
+    #: declaration of the UTF-8 one can be told why it finds nothing.
+    unflagged_utf8: Dict[str, str] = field(default_factory=dict)
 
     @property
     def where(self) -> Location:
@@ -655,8 +662,9 @@ def _name(info: zipfile.ZipInfo, header: _Header) -> Optional[str]:
 def _library(data: bytes, found: _Directory):
     """The archive opened by the library, as this reader has it read: from the
     copy without Unicode Path fields, each entry it lists named by this reader,
-    and why any entry has more than one name, by `id` of its `ZipInfo` -- or
-    the reason the two did not list the same entries. Raises what the library
+    and why any entry has more than one name, by `id` of its `ZipInfo`, and
+    what each name stored as UTF-8 without bit 11 spells in UTF-8 -- or the
+    reason the two did not list the same entries. Raises what the library
     raises.
 
     The entries are paired in the order both list them, which is the central
@@ -672,12 +680,16 @@ def _library(data: bytes, found: _Directory):
             for i, h in zip(infos, headers)):
         return ("the central directory lists its entries one way to this reader and another "
                 "way to the library it reads them with")
-    named = {}
+    named, unflagged = {}, {}
     for info, header in zip(infos, headers):
+        before = info.filename
         why = _name(info, header)
         if why:
             named[id(info)] = why
-    return zf, named
+        elif info.filename == before and not header.utf8 and not header.raw.isascii():
+            with contextlib.suppress(UnicodeDecodeError):
+                unflagged[info.filename] = header.raw.decode("utf-8")
+    return zf, named, unflagged
 
 
 class _Named:
@@ -777,7 +789,7 @@ def _read(data: bytes, path: str, depth: int, _budget: Optional[_Budget],
         c.kind = Kind.UNREADABLE
         c.defects.append(Defect("not-a-zip", c.where, opened))
         return c
-    zf, contradicted = opened
+    zf, contradicted, unflagged = opened
     # As many entries as the end records count (4.4.22). The library lists the
     # central directory to its size and never asks the count; a reader that
     # lists it to its count lists other entries. Before a nameless one is set
@@ -1001,6 +1013,7 @@ def _read(data: bytes, path: str, depth: int, _budget: Optional[_Budget],
     members = readable
 
     c.members = tuple(members)
+    c.unflagged_utf8 = {m.name: unflagged[m.name] for m in c.members if m.name in unflagged}
     # Two members whose names differ only by Unicode normalisation are two
     # different files that print identically, and on a composing filesystem one
     # overwrites the other on extraction. That is the situation this rule is

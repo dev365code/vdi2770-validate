@@ -731,7 +731,7 @@ TABLE = [
 
     ("gates/the-pin-names-the-reader-that-was-built",
      "packages/vdi2770/pyproject.toml",
-     'version = "0.14.0"',
+     'version = "1.0.0"',
      'version = "0.7.1"',
      ["tools/check_wheel.py"],
      "the two manifests agree with each other and the artifacts do not: the "
@@ -1485,7 +1485,7 @@ FRONT_DOOR = [
 
     ("gates/the-page-quotes-the-requirement-the-project-declares",
      "README.md",
-     "`vdi2770[validate]==0.14.0`",
+     "`vdi2770[validate]==1.0.0`",
      "`vdi2770[validate]>=0.7.0`",
      ["tests/test_the_front_page_points_at_what_it_shows.py::"
       "test_the_requirement_the_page_quotes_is_the_one_the_project_declares"],
@@ -1494,7 +1494,7 @@ FRONT_DOOR = [
 
     ("gates/the-page-pypi-shows-quotes-the-requirement-the-project-declares",
      "README-vdi2770-validate.md",
-     "`vdi2770[validate]==0.14.0`",
+     "`vdi2770[validate]==1.0.0`",
      "`vdi2770[validate]==0.9.1`",
      ["tests/test_the_front_page_points_at_what_it_shows.py::"
       "test_the_requirement_the_page_quotes_is_the_one_the_project_declares"],
@@ -3501,6 +3501,13 @@ LISTING_BUDGET_ROWS = [
     ('zip/a-field-tidied-to-nothing-is-no-name', 'packages/vdi2770/src/vdi2770/zipread.py', '    if not given:\n', '    if False:\n', ['tests/test_an_entry_is_named_and_placed_as_its_headers_say.py::test_an_entry_is_named_the_same_way_on_every_python'], "a field the library cuts to nothing would take the entry's name away"),
     ('zip/a-later-read-refuses-what-the-first-did', 'packages/vdi2770/src/vdi2770/zipread.py', '            if id(info) in refused:\n', '            if False:\n', ['tests/test_an_entry_is_named_and_placed_as_its_headers_say.py::test_a_later_read_with_no_list_refuses_what_the_first_one_refused'], 'a caller passing no list of accepted names would get, on some Pythons, an entry the first read refused'),
     ('zip/a-later-read-refuses-an-entry-with-no-name', 'packages/vdi2770/src/vdi2770/zipread.py', '            if not name:\n', '            if False:\n', ['tests/test_an_entry_is_named_and_placed_as_its_headers_say.py::test_a_later_read_with_no_list_refuses_what_the_first_one_refused'], 'a caller passing no list of accepted names would get the bytes of an entry that has none'),
+    ('zip/a-name-stored-as-utf-8-without-its-flag-is-recorded', 'packages/vdi2770/src/vdi2770/zipread.py', '        elif info.filename == before and not header.utf8 and not header.raw.isascii():\n', '        elif False:\n', ['tests/test_an_entry_is_named_and_placed_as_its_headers_say.py::test_a_name_stored_as_utf_8_without_its_flag_is_recorded_as_such'], 'a declaration of the UTF-8 spelling of such a name would not be told why it finds nothing'),
+    ('zip/a-flagged-name-is-not-recorded-as-unflagged', 'packages/vdi2770/src/vdi2770/zipread.py', '        elif info.filename == before and not header.utf8 and not header.raw.isascii():\n', '        elif info.filename == before and not header.raw.isascii():\n', ['tests/test_an_entry_is_named_and_placed_as_its_headers_say.py::test_a_name_stored_as_utf_8_without_its_flag_is_recorded_as_such'], 'a name bit 11 already says is UTF-8 would be recorded as read in IBM Code Page 437'),
+    ('zip/a-name-a-field-gave-is-not-recorded-as-unflagged', 'packages/vdi2770/src/vdi2770/zipread.py', '        elif info.filename == before and not header.utf8 and not header.raw.isascii():\n', '        elif not header.utf8 and not header.raw.isascii():\n', ['tests/test_an_entry_is_named_and_placed_as_its_headers_say.py::test_a_name_stored_as_utf_8_without_its_flag_is_recorded_as_such'], 'an entry a Unicode Path field named would be said to be read in IBM Code Page 437'),
+    ('zip/an-ascii-name-is-not-recorded-as-unflagged', 'packages/vdi2770/src/vdi2770/zipread.py', '        elif info.filename == before and not header.utf8 and not header.raw.isascii():\n', '        elif info.filename == before and not header.utf8:\n', ['tests/test_an_entry_is_named_and_placed_as_its_headers_say.py::test_a_name_stored_as_utf_8_without_its_flag_is_recorded_as_such'], 'a name in ASCII, which reads alike either way, would be recorded as two readings'),
+    ('files/a-declaration-of-the-utf-8-spelling-is-told-the-flag', 'packages/vdi2770/src/vdi2770/validate/rules/files.py', '            elif because is None and len(meant.get(folder_path(f.file_name), ())) == 1:\n', '            elif False:\n', ['tests/test_an_entry_is_named_and_placed_as_its_headers_say.py::test_a_declaration_of_a_name_stored_as_utf_8_without_its_flag_is_told_to_set_it'], 'a declaration of the spelling the member meant would be told only that the file is not there'),
+    ('files/the-member-a-declaration-meant-draws-no-f2', 'packages/vdi2770/src/vdi2770/validate/rules/files.py', '    collides |= read_as_cp437\n', '    pass\n', ['tests/test_an_entry_is_named_and_placed_as_its_headers_say.py::test_a_declaration_of_a_name_stored_as_utf_8_without_its_flag_is_told_to_set_it'], 'the member the remedy names would also be called undeclared, with a remedy pointing the other way'),
+    ('files/the-utf-8-spelling-is-compared-as-names-are', 'packages/vdi2770/src/vdi2770/validate/rules/files.py', '        meant.setdefault(folder_path(spelled), []).append(member)\n', '        meant.setdefault(spelled, []).append(member)\n', ['tests/test_an_entry_is_named_and_placed_as_its_headers_say.py::test_a_declaration_of_a_name_stored_as_utf_8_without_its_flag_is_told_to_set_it'], 'a name macOS stored decomposed would not answer to the composed declaration a sender typed'),
     ('zip/a-later-read-refuses-a-name-that-leads-out', 'packages/vdi2770/src/vdi2770/zipread.py', '            if _unsafe(name):\n', '            if False:\n', ['tests/test_an_entry_is_named_and_placed_as_its_headers_say.py::test_a_later_read_with_no_list_refuses_what_the_first_one_refused'], 'a caller passing no list of accepted names would get the bytes of a member whose name leads out of the folder it is extracted to'),
     ('zip/the-data-begins-after-the-local-headers-own-name', 'packages/vdi2770/src/vdi2770/zipread.py', '        ends = i.header_offset + 30 + name_length + extra_length + i.compress_size\n', '        ends = i.header_offset + 30 + len(i.orig_filename.encode("utf-8" if i.flag_bits & 0x800 else "cp437")) + extra_length + i.compress_size\n', ['tests/test_an_entry_is_named_and_placed_as_its_headers_say.py::test_an_entry_is_refused_in_one_sentence_on_every_python'], 'the data would be measured from the central directory\'s name, which the local header need not repeat'),
     ('zip/a-unicode-path-is-hidden-under-an-id-nothing-assigns', 'packages/vdi2770/src/vdi2770/zipread.py', '_UNASSIGNED = 0xFFFF\n', '_UNASSIGNED = 0x0001\n', ['tests/test_an_entry_is_named_and_placed_as_its_headers_say.py::test_an_entry_is_named_the_same_way_on_every_python'], 'a Unicode Path field would be handed to the library as a ZIP64 field, which gives an entry\'s sizes'),

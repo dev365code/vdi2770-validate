@@ -92,6 +92,14 @@ def check(container, document, foreign) -> Iterator[Finding]:
     members = Members(container.file_names, container.rejected)
     accounted_for = set()
     reached_ambiguously = set()
+    # A name stored as UTF-8 without bit 11 is read as IBM Code Page 437, and
+    # a declaration of the spelling its bytes meant finds nothing under it.
+    # By that spelling, as names are compared here; a spelling two members
+    # would answer to identifies neither of them.
+    meant = {}
+    for member, spelled in container.unflagged_utf8.items():
+        meant.setdefault(folder_path(spelled), []).append(member)
+    read_as_cp437 = set()
     # Built once: the missing-declaration branch asked, per declaration, whether
     # any member's name explains the miss because its edge whitespace cannot be
     # declared -- a scan of every member through `without_edge_space`, once per
@@ -176,6 +184,19 @@ def check(container, document, foreign) -> Iterator[Finding]:
                 fix = ("Remove the repeats. The name denotes more than one member, "
                        "and which one a reader extracts is its own business — so "
                        "this tool will not say which of them you declared.")
+                whose = None
+            elif because is None and len(meant.get(folder_path(f.file_name), ())) == 1:
+                # The verdict is the one APPNOTE gives -- the reference
+                # implementation reads the entry the same way -- and what the
+                # sender can change is the flag, so the sentence says that.
+                member, = meant[folder_path(f.file_name)]
+                read_as_cp437.add(member)
+                message = ("A file named in the metadata is in the container under a "
+                           "name read as IBM Code Page 437")
+                fix = (f"The member {member!r} stores this name as UTF-8 bytes without "
+                       "general purpose bit 11 (APPNOTE 4.4.4), so it reads as IBM Code "
+                       "Page 437 (APPENDIX D). Set bit 11 on that entry -- or write the "
+                       "archive with a tool that sets it -- for the name to read as UTF-8.")
                 whose = None
             elif because is None:
                 message, fix, whose = r.title, None, None
@@ -311,6 +332,8 @@ def check(container, document, foreign) -> Iterator[Finding]:
     # it*, points away from the one `F1` had just given. Whichever spelling the
     # sender keeps, the declaration is already there.
     collides |= reached_ambiguously
+    # The member a declaration meant in UTF-8: `F1` named it, with the remedy.
+    collides |= read_as_cp437
     for name in sorted(set(members.present) - accounted_for - structural - collides):
         if name.lower().endswith(".zip"):
             continue

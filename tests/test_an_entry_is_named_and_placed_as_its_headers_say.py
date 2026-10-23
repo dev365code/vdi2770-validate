@@ -22,6 +22,7 @@ import inspect
 import io
 import struct
 import sys
+import unicodedata
 import warnings
 import zipfile
 
@@ -322,6 +323,58 @@ def test_an_archive_with_a_unicode_path_field_is_held_twice_not_three_times():
             tracemalloc.stop()
     assert len(copy) == len(data) and copy != data
     assert peak - before < 1.5 * len(data), f"{peak - before:,} bytes held at once to copy {len(data):,}"
+
+
+#: What the reader records of a name stored as UTF-8 bytes without general
+#: purpose bit 11, read as IBM Code Page 437 as APPNOTE says (4.4.4, APPENDIX
+#: D): by the name the entry is read under, the name its bytes spell in UTF-8.
+#: An entry whose bytes are ASCII, or not UTF-8, or that bit 11 or a Unicode
+#: Path field names, has nothing to record.
+UNFLAGGED = {
+    "an-unflagged-utf-8-name": {"B\u251c\u255d.pdf": "B\u00fc.pdf"},
+    # A field of a version this reader does not know names nothing, so the
+    # header's bytes are what the entry is read by.
+    "a-unicode-path-of-version-2": {"B\u251c\u255d.pdf": "B\u00fc.pdf"},
+}
+
+
+@pytest.mark.parametrize("name", sorted(NAMED))
+def test_a_name_stored_as_utf_8_without_its_flag_is_recorded_as_such(name):
+    """The entry is read as APPNOTE reads it, and the reader keeps what its
+    bytes would have spelled, so that a finding can say why a declaration of
+    that spelling finds nothing."""
+    assert _read(name).unflagged_utf8 == UNFLAGGED.get(name, {})
+
+
+def _unflagged(raw: bytes) -> bytes:
+    """The conforming container with its PDF stored under `raw`, without bit
+    11, and its metadata declaring the PDF as `B\u00fc.pdf`."""
+    files = dict(FILES)
+    files[LAST] = files[LAST].replace(b"B.pdf", "B\u00fc.pdf".encode("utf-8"))
+    entries = [ENTRIES.entry(n.encode("utf-8"), d) for n, d in files.items()]
+    entries[list(files).index(SUBJECT)] = ENTRIES.entry(raw, files[SUBJECT])
+    return ENTRIES.build(entries)
+
+
+@pytest.mark.parametrize("form", ["NFC", "NFD"])
+def test_a_declaration_of_a_name_stored_as_utf_8_without_its_flag_is_told_to_set_it(form):
+    """The declaration still names a file the container does not hold under
+    that name -- the reference implementation reads the entry as IBM Code Page
+    437 too -- so the verdict stays: `F1`, and no `F2` for the member, which
+    the declaration does mean. The sentence says why, and what to set. macOS's
+    `zip` and `ditto` write names decomposed, and the metadata a sender types
+    is composed; both are the spelling the declaration meant."""
+    raw = unicodedata.normalize(form, "B\u00fc.pdf").encode("utf-8")
+    found = {f.rule.id: f for f in check_bytes(_unflagged(raw), "unflagged.zip").findings}
+    assert found["F1"].message == ("A file named in the metadata is in the container under a "
+                                   "name read as IBM Code Page 437")
+    member = raw.decode("cp437")
+    assert found["F1"].fix == (
+        f"The member {member!r} stores this name as UTF-8 bytes without general purpose bit 11 "
+        "(APPNOTE 4.4.4), so it reads as IBM Code Page 437 (APPENDIX D). Set bit 11 on that "
+        "entry -- or write the archive with a tool that sets it -- for the name to read as "
+        "UTF-8.")
+    assert "F2" not in found
 
 
 def test_the_library_is_handed_no_unicode_path_field(monkeypatch):
