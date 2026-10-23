@@ -7,10 +7,12 @@ rules turn into a Finding with a remedy.
 """
 from __future__ import annotations
 
+import contextlib
 import io
 import struct
 import unicodedata
 import zipfile
+import zlib
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Dict, List, Optional, Set, Tuple
@@ -523,6 +525,213 @@ def _placed(which: str, offset: int, size: int, follows: int, entries: int):
     return _Directory(offset, size, follows, entries, which)
 
 
+#: A local file header's signature (4.3.7).
+_LOCAL = b"PK\x03\x04"
+#: General purpose bit 11: the entry's name is UTF-8 (4.4.4).
+_UTF8_NAME = 0x800
+#: The Info-ZIP Unicode Path extra field (4.6.9): the UTF-8 version of a name
+#: its header holds in another character set.
+_UNICODE_PATH = 0x7075
+#: What the copy of an archive handed to the library carries where a Unicode
+#: Path field's Header ID was: an ID no mapping assigns (4.5.2, 4.6.1), so one
+#: no release of the library reads.
+_UNASSIGNED = 0xFFFF
+
+
+@dataclass(frozen=True)
+class _Header:
+    """What a central directory header (4.3.12) says of its entry's name: the
+    bytes of its File Name field, whether bit 11 says they are UTF-8, how many
+    Unicode Path fields its extra field carries, and the name each of those
+    that is one gives."""
+    raw: bytes
+    utf8: bool
+    fields: int
+    unicode: Tuple[str, ...]
+
+
+def _headers(data: bytes, found: _Directory):
+    """The central directory's headers as the library lists them -- to the
+    directory's size, each one's fields where APPNOTE puts them -- and where in
+    `data` each Unicode Path field's Header ID is.
+
+    A Unicode Path field gives a name when it is of version 1, holds the CRC-32
+    of the header's File Name field, and its UnicodeName is UTF-8 and not empty
+    (4.6.9). APPNOTE says to pass over one whose CRC-32 does not match, and one
+    that is not a name says no more than that one does. Where the library stops
+    -- a header cut short, or without its signature -- this stops too, and an
+    extra field is walked by its Header IDs and lengths only as far as they fit
+    it: past there the library refuses the archive, in the same words on every
+    release.
+    """
+    start = found.follows - found.size
+    directory = data[start:found.follows]
+    headers, tags, pos = [], [], 0
+    while pos < len(directory):
+        head = directory[pos:pos + 46]
+        if len(head) < 46 or head[:4] != _CENTRAL:
+            break
+        flags, = struct.unpack_from("<H", head, 8)
+        n, m, k = struct.unpack_from("<3H", head, 28)
+        raw = directory[pos + 46:pos + 46 + n]
+        at = pos + 46 + n
+        extra = directory[at:at + m]
+        fields, names, q = 0, [], 0
+        while q + 4 <= len(extra):
+            tag, size = struct.unpack_from("<2H", extra, q)
+            if q + 4 + size > len(extra):
+                break
+            if tag == _UNICODE_PATH:
+                fields += 1
+                tags.append(start + at + q)
+                body = extra[q + 4:q + 4 + size]
+                if len(body) > 5 and body[0] == 1 and struct.unpack_from("<L", body, 1)[0] == zlib.crc32(raw):
+                    with contextlib.suppress(UnicodeDecodeError):
+                        names.append(body[5:].decode("utf-8"))
+            q += 4 + size
+        headers.append(_Header(raw, bool(flags & _UTF8_NAME), fields, tuple(names)))
+        pos += 46 + n + m + k
+    return headers, tags
+
+
+def _unread(data: bytes, tags) -> bytes:
+    """`data` as the library is to read it: each Unicode Path field's Header ID
+    replaced by one no mapping assigns.
+
+    The library's releases from 3.12 take an entry's name from that field,
+    refuse the whole archive when the field is not a name and warn when it is
+    empty; the releases before pass it over. So the field is this reader's to
+    read, and no release of the library sees one. An archive without one is
+    handed over as it is: the copy is a second one of the archive, and is made
+    only where it changes what the library reads.
+    """
+    if not tags:
+        return data
+    copy = bytearray(data)
+    for at in tags:
+        struct.pack_into("<H", copy, at, _UNASSIGNED)
+    return bytes(copy)
+
+
+def _name(info: zipfile.ZipInfo, header: _Header) -> Optional[str]:
+    """Name the entry `info` stands for as APPNOTE names it -- or say why it has
+    more than one name.
+
+    The library has read the header's name by bit 11, or as IBM Code Page 437
+    without it (4.4.4, APPENDIX D), and that stands unless a Unicode Path field
+    gives the UTF-8 version of it (4.6.9). A header holding bytes other than
+    printable ASCII is in a character set nothing here can know, which is what
+    the field is for, and the field is taken at its word. But printable ASCII
+    reads the same in every character set the name could be in, so a field
+    giving such a header another name is not its UTF-8 version: the entry names
+    two files. So does an extra field carrying two of them. Compared as the
+    library tidies a name -- cut at its first NUL, its separators made `/` --
+    so that only a difference the name keeps is one.
+    """
+    if not info.filename:
+        return None
+    if header.fields > 1:
+        return (f"its extra field carries {header.fields} Info-ZIP Unicode Path fields (APPNOTE "
+                "4.6.9); such a field is the UTF-8 version of the header's name, and an entry "
+                "has one name")
+    if not header.unicode:
+        return None
+    given = zipfile.ZipInfo(header.unicode[0]).filename
+    if given != info.filename and all(0x20 <= b <= 0x7E for b in header.raw):
+        return (f"its header calls it {info.filename!r} and its Info-ZIP Unicode Path field "
+                f"(APPNOTE 4.6.9) calls it {given!r}; that field is the UTF-8 version of the "
+                "header's name, so the entry names two files")
+    info.filename = given
+    return None
+
+
+def _library(data: bytes, found: _Directory):
+    """The archive opened by the library, as this reader has it read: from the
+    copy without Unicode Path fields, each entry it lists named by this reader,
+    and why any entry has more than one name, by `id` of its `ZipInfo` -- or
+    the reason the two did not list the same entries. Raises what the library
+    raises.
+
+    The entries are paired in the order both list them, which is the central
+    directory's, and each pair has to agree on the header's name as the
+    library decodes it: a reader naming one entry by another's field would be
+    the silent version of exactly the failure this is here to prevent.
+    """
+    headers, tags = _headers(data, found)
+    zf = zipfile.ZipFile(io.BytesIO(_unread(data, tags)))
+    infos = zf.infolist()
+    if len(headers) != len(infos) or any(
+            i.orig_filename != h.raw.decode("utf-8" if h.utf8 else "cp437")
+            for i, h in zip(infos, headers)):
+        return ("the central directory lists its entries one way to this reader and another "
+                "way to the library it reads them with")
+    named = {}
+    for info, header in zip(infos, headers):
+        why = _name(info, header)
+        if why:
+            named[id(info)] = why
+    return zf, named
+
+
+class _Named:
+    """The library's archive, asked for its entries by the names this reader
+    gave them. The library's own table is keyed by the header's name, which is
+    not the name of an entry a Unicode Path field names: asked for that one, it
+    found nothing, and the metadata, a nested container or a folder behind such
+    a name was reported unreadable."""
+
+    def __init__(self, zf: zipfile.ZipFile, infos) -> None:
+        self._zf = zf
+        self._by_name = {i.filename: i for i in infos}
+
+    def getinfo(self, name: str) -> zipfile.ZipInfo:
+        return self._by_name[name]
+
+    def open(self, name: str):
+        return self._zf.open(self._by_name[name])
+
+
+def _overlapping(data: bytes, infos, directory_at: int) -> Dict[int, str]:
+    """The entries whose data would be read as another entry's too, by `id` of
+    their `ZipInfo`, each with the reason: two entries pointing at one local
+    header, and an entry whose data runs past where the next local header -- or,
+    after the last one, the central directory -- begins (4.3.6).
+
+    That is what the repair for CVE-2024-0450 refuses, and only some of the
+    library's releases carry it; of two entries sharing a header, the releases
+    that do refuse one or the other, or only warn. The data ends where the
+    library starts reading it, plus its compressed size: after the local header
+    and its name and extra field, as that header gives their lengths. An entry
+    whose local header cannot be read is left to the library, which refuses it
+    in the same words on every release.
+    """
+    shared: Dict[int, int] = {}
+    for i in infos:
+        shared[i.header_offset] = shared.get(i.header_offset, 0) + 1
+    bounds = sorted(set(shared) | {directory_at})
+    after = dict(zip(bounds, bounds[1:]))
+    out = {}
+    for i in infos:
+        if shared[i.header_offset] > 1:
+            out[id(i)] = (f"its local header, at byte {i.header_offset:,}, is another entry's too: "
+                          "one stretch of bytes would be read as two members")
+            continue
+        head = data[i.header_offset:i.header_offset + 30]
+        if len(head) < 30 or head[:4] != _LOCAL:
+            continue
+        name_length, extra_length = struct.unpack_from("<2H", head, 26)
+        ends = i.header_offset + 30 + name_length + extra_length + i.compress_size
+        limit = after.get(i.header_offset, directory_at)
+        if ends <= limit:
+            continue
+        out[id(i)] = (f"its data runs to byte {ends:,}, and the next entry's local header begins "
+                      f"at byte {limit:,}: one stretch of bytes would be read as two members"
+                      if limit < directory_at else
+                      f"its data runs to byte {ends:,}, and the central directory begins at byte "
+                      f"{limit:,}: the directory would be read as part of a member")
+    return out
+
+
 def read(data: bytes, path: str, depth: int = 0, _budget: Optional[_Budget] = None) -> Container:
     return _read(data, path, depth, _budget, None)
 
@@ -540,7 +749,7 @@ def _read(data: bytes, path: str, depth: int, _budget: Optional[_Budget],
         c.defects.append(Defect("not-a-zip", c.where, found))
         return c
     try:
-        zf = zipfile.ZipFile(io.BytesIO(data))
+        opened = _library(data, found)
     except Exception as e:                       # noqa: BLE001
         # Not just BadZipFile. `_RealGetContents` raises UnicodeDecodeError when
         # a name is flagged UTF-8 and is not — an ordinary mislabelling by older
@@ -551,6 +760,11 @@ def _read(data: bytes, path: str, depth: int, _budget: Optional[_Budget],
         c.kind = Kind.UNREADABLE
         c.defects.append(Defect("not-a-zip", c.where, str(e)))
         return c
+    if isinstance(opened, str):
+        c.kind = Kind.UNREADABLE
+        c.defects.append(Defect("not-a-zip", c.where, opened))
+        return c
+    zf, contradicted = opened
     # As many entries as the end records count (4.4.22). The library lists the
     # central directory to its size and never asks the count; a reader that
     # lists it to its count lists other entries. Before a nameless one is set
@@ -627,6 +841,8 @@ def _read(data: bytes, path: str, depth: int, _budget: Optional[_Budget],
             f"this read has listed {budget.members} entries and this archive "
             f"lists {len(infos)} more, past its limit of {MAX_TOTAL_MEMBERS}"))
         return c
+    overlapping = _overlapping(data, zf.infolist(), found.follows - found.size)
+    zf = _Named(zf, infos)
     if len(infos) > MAX_MEMBERS:
         c.kind = Kind.UNREADABLE
         c.defects.append(Defect("too-many-members", c.where,
@@ -668,6 +884,13 @@ def _read(data: bytes, path: str, depth: int, _budget: Optional[_Budget],
         if reason:
             c.rejected[i.filename] = _refuse(
                 c, "unsafe-member-name", c.where.child(member=i.filename), reason)
+            continue
+        # An entry that names two files is neither of them. Its bytes are fine;
+        # which file they are is what the entry does not say.
+        reason = contradicted.get(id(i))
+        if reason:
+            c.rejected[i.filename] = _refuse(
+                c, "member-unreadable", c.where.child(member=i.filename), reason)
             continue
         # Whose number this is. Every size here comes from the central
         # directory, which is whatever the writer put there -- `member_bytes`
@@ -730,6 +953,13 @@ def _read(data: bytes, path: str, depth: int, _budget: Optional[_Budget],
                 c, "member-unreadable", c.where.child(member=m.name),
                 f"member compressed with {METHOD_NAMES.get(method, method)}; this "
                 f"reader accepts stored and deflate")
+            continue
+        # Before the budget too, for the same reason: data that is another
+        # entry's as well is not read twice, whatever is left to spend.
+        reason = overlapping.get(id(zf.getinfo(m.name)))
+        if reason:
+            c.rejected[m.name] = _refuse(
+                c, "member-unreadable", c.where.child(member=m.name), reason)
             continue
         if not exhausted and not budget.take_bytes(m.size):
             # Stop verifying rather than stop reading: the members are still
@@ -1095,7 +1325,15 @@ def member_reader(data: bytes, allowed: Optional[Set[str]] = None):
     that could reach past them would make the budget in `read()` worthless.
     """
     try:
-        archive = zipfile.ZipFile(io.BytesIO(data))
+        # Opened and named the way `read` opens and names them: the library's
+        # releases name an entry with a Unicode Path field two ways, and a
+        # second read that asked the library would find the PDF the first read
+        # named under one name on one Python and nothing on another.
+        found = _directory(data)
+        opened = _library(data, found) if isinstance(found, _Directory) else None
+        if not isinstance(opened, tuple):
+            return lambda name: None
+        archive = _Named(opened[0], opened[0].infolist())
         # Counted once. `getinfo` and `open` resolve a duplicated name to the
         # *last* entry, while everything upstream -- the accepted `Member`, the
         # budget charge, the allow-list -- came from the first. A 505 KiB archive
@@ -1103,7 +1341,7 @@ def member_reader(data: bytes, allowed: Optional[Set[str]] = None):
         # saying the member had been refused. A name that means two entries
         # identifies neither of them.
         counted: Dict[str, int] = {}
-        for entry in archive.infolist():
+        for entry in opened[0].infolist():
             counted[entry.filename] = counted.get(entry.filename, 0) + 1
     except Exception:
         return lambda name: None

@@ -557,8 +557,10 @@ def test_no_document_cites_a_file_that_is_not_here():
     # makes no repository-path citation. All current paths are still checked.
     # 60 to 61 when the reader came to read where an archive ends itself:
     # docs/what-it-catches.md names the test that holds it to each such end.
-    assert seen == 61, (
-        f"{seen} citations found, not 61. If you added or removed one, say so "
+    # 61 to 62 when the reader came to name and place an archive's entries
+    # itself: docs/what-it-catches.md names the test that holds it to each one.
+    assert seen == 62, (
+        f"{seen} citations found, not 62. If you added or removed one, say so "
         f"here; if you did not, some of them just stopped being checked.")
 
 

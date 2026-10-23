@@ -6,7 +6,7 @@ from typing import Iterator
 from ..catalog import rule
 from ..model import MAIN_PDF, MAIN_XML, METADATA_XML, About, Finding, Kind
 from ..names import Members, as_written, escaped, extracts_to, folder_path, nfc, without_edge_space
-from .container import MAX_ALIKE, _inside
+from .container import MAX_ALIKE, ONE_NAME, _inside
 
 #: Declared media types whose file extension is not a matter of taste, and the
 #: spellings each one is honestly carried by. `F3` compares a declaration
@@ -214,6 +214,13 @@ def check(container, document, foreign) -> Iterator[Finding]:
                        "container over. A recipient who cannot open a file has "
                        "not been given it, and nothing here can check what it "
                        "cannot read.")
+                whose = None
+            elif "Info-ZIP Unicode Path" in (because.detail or ""):
+                # Its bytes are readable: what the entry does not settle is
+                # which file they are, and that is in the archive as written.
+                message = ("A file named in the metadata is in the container under "
+                           "more than one name")
+                fix = ONE_NAME
                 whose = None
             else:
                 message = ("A file named in the metadata is in the container but could "

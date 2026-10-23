@@ -366,6 +366,14 @@ jobs:
           VDI2770_ZIPFILE_GENERATION: G1
           PYTHONPATH: src:packages/vdi2770/src
         run: python -m pytest tests/test_an_archive_ends_where_its_end_records_say.py
+      # And the entries of an archive, named and placed alike on the page's own
+      # release: one whose library reads Unicode Path fields, as releases do from
+      # 3.12, and refuses an entry sharing a local header, as releases before
+      # 3.12.10 and 3.13.3 do. No check row runs a release with both.
+      - name: The entries of an archive are read alike on the page's own release
+        env:
+          PYTHONPATH: src:packages/vdi2770/src
+        run: python -m pytest tests/test_an_entry_is_named_and_placed_as_its_headers_say.py
       - name: Build fixtures
         run: python tools/make_fixtures.py
       - name: Build the page
