@@ -1350,7 +1350,8 @@ def member_reader(data: bytes, allowed: Optional[Set[str]] = None):
         # And refused where the first read refuses: an entry naming two files,
         # or whose data another entry holds too. A caller that passes no list
         # of accepted names asked the library for those, and its releases did
-        # not answer alike.
+        # not answer alike -- and for a name that would land outside the folder
+        # it is extracted to, which every release gave.
         found_at = found.follows - found.size
         refused = set(opened[1]) | set(_overlapping(data, opened[0].infolist(), found_at))
         # Counted once. `getinfo` and `open` resolve a duplicated name to the
@@ -1370,6 +1371,8 @@ def member_reader(data: bytes, allowed: Optional[Set[str]] = None):
             if allowed is not None and name not in allowed:
                 return None
             if counted.get(name) != 1:
+                return None
+            if _unsafe(name):
                 return None
             info = archive.getinfo(name)
             if id(info) in refused:

@@ -25,6 +25,8 @@ LOCAL_FIELDS = "<4s5H3L2H"       # 30 bytes, then the name and the extra field
 CENTRAL_FIELDS = "<4s6H3L5H2L"   # 46 bytes, then the name, the extra field and the comment
 END_FIELDS = "<4s4H2LH"          # 22 bytes, then the comment
 
+#: The ZIP64 extended information extra field's Header ID (4.5.3).
+ZIP64 = 0x0001
 #: General purpose bit 11, the language encoding flag: the name is UTF-8 (4.4.4).
 UTF8 = 0x800
 #: The Info-ZIP Unicode Path extra field's Header ID (4.6.9).
@@ -38,12 +40,21 @@ def unicode_path(name: bytes, *, of: bytes, version: int = 1, crc=None) -> bytes
     return struct.pack("<2H", UNICODE_PATH, len(body)) + body
 
 
-def entry(name: bytes, data: bytes, *, flags=0, extra=b"", local_name=None, at=None) -> dict:
+def entry(name: bytes, data: bytes, *, flags=0, extra=b"", local_name=None, at=None,
+          zip64=False) -> dict:
     """One central directory header: its name, flags and extra field -- and,
     unless `at` gives the index of the entry whose local header it points at,
-    a local header and data of its own, under `local_name` if that differs."""
+    a local header and data of its own, under `local_name` if that differs.
+    With `zip64`, the header gives its uncompressed size as 0xFFFFFFFF and a
+    ZIP64 extended information field after its extra field gives the size
+    (4.5.3)."""
     return {"name": name, "data": data, "flags": flags, "extra": extra,
-            "local_name": name if local_name is None else local_name, "at": at}
+            "local_name": name if local_name is None else local_name, "at": at, "zip64": zip64}
+
+
+def _extra(e: dict, size: int) -> bytes:
+    """The extra field an entry's central directory header carries."""
+    return e["extra"] + (struct.pack("<2HQ", ZIP64, 8, size) if e["zip64"] else b"")
 
 
 def build(entries, *, runs_on=None, past_directory=None) -> bytes:
@@ -91,17 +102,18 @@ def build(entries, *, runs_on=None, past_directory=None) -> bytes:
     if past_directory is not None:
         e = entries[past_directory]
         crcs[past_directory], sizes[past_directory] = zlib.crc32(e["data"]), len(e["data"])
-        where[past_directory] = len(body) + sum(46 + len(x["name"]) + len(x["extra"]) for x in entries) + 22
+        where[past_directory] = len(body) + sum(46 + len(x["name"]) + len(_extra(x, 0)) for x in entries) + 22
         comment = struct.pack(LOCAL_FIELDS, LOCAL, 20, e["flags"], 0, 0, 33, crcs[past_directory],
                               sizes[past_directory], sizes[past_directory], len(e["local_name"]), 0)
         comment += e["local_name"] + e["data"]
     directory = b""
     for i, e in enumerate(entries):
         j = i if e["at"] is None else e["at"]
+        extra = _extra(e, sizes[j])
         directory += struct.pack(CENTRAL_FIELDS, CENTRAL, 20, 20, e["flags"], 0, 0, 33, crcs[j],
-                                 sizes[j], sizes[j], len(e["name"]), len(e["extra"]), 0, 0, 0, 0,
-                                 where[j])
-        directory += e["name"] + e["extra"]
+                                 sizes[j], 0xFFFFFFFF if e["zip64"] else sizes[j], len(e["name"]),
+                                 len(extra), 0, 0, 0, 0, where[j])
+        directory += e["name"] + extra
     return body + directory + struct.pack(END_FIELDS, END, 0, 0, len(entries), len(entries),
                                           len(directory), len(body), len(comment)) + comment
 
@@ -155,6 +167,8 @@ def cases(files: dict, subject: str) -> dict:
         "a-name-flagged-utf-8-that-is-not": build(renamed(entry(plain[:1] + b"\xff" + plain[1:], data,
                                                                 flags=UTF8))),
         "a-local-name-other-than-the-directorys": build(renamed(entry(plain, data, local_name=b"C" + plain[1:]))),
+        # Shorter, so that where its data begins is the local header's to say.
+        "a-local-name-shorter-than-the-directorys": build(renamed(entry(plain, data, local_name=b"C"))),
         "a-unicode-path-whose-crc-is-another-names": build(renamed(entry(other, data, extra=up(
             plain, of=other, crc=zlib.crc32(b"Y" + plain[1:]))))),
         "a-unicode-path-of-version-2": build(renamed(entry(utf8, data, extra=up(utf8, of=utf8, version=2)))),
@@ -185,6 +199,9 @@ def cases(files: dict, subject: str) -> dict:
         # warn about, and those before pass over.
         "a-unicode-path-that-is-not-utf-8": build(renamed(entry(plain, data, extra=up(b"\xff\xfe", of=plain)))),
         "an-empty-unicode-path": build(renamed(entry(plain, data, extra=up(b"", of=plain)))),
+        # A field beside the one that gives the size the header leaves to it.
+        "a-unicode-path-beside-a-zip64-field": build(renamed(entry(latin, data, extra=up(utf8, of=latin),
+                                                                   zip64=True))),
         "a-unicode-path-too-short-for-its-crc": build(renamed(entry(plain, data, extra=struct.pack(
             "<2H3B", UNICODE_PATH, 3, 1, 0, 0)))),
         # Entries that say two things about their own name.

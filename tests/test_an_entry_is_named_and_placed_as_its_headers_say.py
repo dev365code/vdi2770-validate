@@ -92,6 +92,7 @@ NAMED = {
     # A field that is not one is passed over, and says nothing.
     "a-unicode-path-that-is-not-utf-8": "B.pdf",
     "an-empty-unicode-path": "B.pdf",
+    "a-unicode-path-beside-a-zip64-field": "B\u00fc.pdf",
     "a-unicode-path-too-short-for-its-crc": "B.pdf",
 }
 
@@ -117,6 +118,9 @@ REFUSED = {
         "B.pdf": ("member-unreadable", "BadZipFile: File name in directory 'B.pdf' and header "
                                        "b'C.pdf' differ.")}),
     # The rules on names hold on the name the field gives.
+    "a-local-name-shorter-than-the-directorys": (OTHERS, {
+        "B.pdf": ("member-unreadable", "BadZipFile: File name in directory 'B.pdf' and header "
+                                       "b'C' differ.")}),
     "a-unicode-path-naming-a-path-out": (OTHERS, {
         "../B.pdf": ("unsafe-member-name", "parent-directory segment")}),
     "a-unicode-path-repeating-another-members-name": (sorted(set(OTHERS) - {"B.docx"}), {
@@ -267,17 +271,17 @@ def test_an_entry_naming_two_files_is_told_to_name_one():
     assert found["F1"].fix == ONE_NAME and found["Z12"].fix == ONE_NAME
 
 
-@pytest.mark.parametrize("name", sorted(REFUSED))
+@pytest.mark.parametrize("name", sorted(CASES))
 def test_a_later_read_with_no_list_refuses_what_the_first_one_refused(name):
     """`member_bytes` and `member_reader` are public, and a caller need not
     pass the names the first read accepted. Asked for an entry the first read
     refused for naming two files, or for data another entry holds too, the
     library's releases answered differently: bytes on one, nothing on the
-    next."""
+    next. Asked for one a name the field gives would put outside the folder it
+    is extracted to, every release gave its bytes."""
     c = _read(name)
-    for member, defect in sorted(c.rejected.items()):
-        if defect.kind == "member-unreadable" and not defect.detail.startswith("BadZipFile"):
-            assert zipread.member_bytes(CASES[name], member) is None, member
+    for member in sorted(c.rejected):
+        assert zipread.member_bytes(CASES[name], member) is None, member
 
 
 def test_an_archive_without_a_unicode_path_field_is_handed_over_as_it_is():

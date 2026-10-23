@@ -21,10 +21,12 @@ should read the paragraph after the list.
   reads the field itself, before the library is asked: an entry whose field is
   one is named by it, and a field that is not one is passed over without a
   word. The library is shown none of them, and `member_bytes` and
-  `member_reader` find a member by the name `read` gives it. A name stored as
-  UTF-8 without bit 11, and with no such field, reads as IBM Code Page 437 on
-  every Python, as it did before -- so metadata declaring its UTF-8 spelling
-  still draws `F1`.
+  `member_reader` find a member by the name `read` gives it -- and, asked
+  without the names `read` accepted, refuse the ones it refuses for naming two
+  files, for data another entry holds too, or for a name that leads out of the
+  folder it is extracted to. A name stored as UTF-8 without bit 11, and with no
+  such field, reads as IBM Code Page 437 on every Python, as it did before --
+  so metadata declaring its UTF-8 spelling still draws `F1`.
   **This moves verdicts:** a member such a field names is that member on Python
   3.9 to 3.11 as well, where a declaration naming it drew `F1` and one naming
   the header's spelling did not; and an archive whose field is not UTF-8, or
