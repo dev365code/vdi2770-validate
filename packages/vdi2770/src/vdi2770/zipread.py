@@ -603,14 +603,17 @@ def _unread(data: bytes, tags) -> bytes:
     empty; the releases before pass it over. So the field is this reader's to
     read, and no release of the library sees one. An archive without one is
     handed over as it is: the copy is a second one of the archive, and is made
-    only where it changes what the library reads.
+    only where it changes what the library reads -- in one piece, from views of
+    the bytes around each Header ID, so that making it holds no third.
     """
     if not tags:
         return data
-    copy = bytearray(data)
-    for at in tags:
-        struct.pack_into("<H", copy, at, _UNASSIGNED)
-    return bytes(copy)
+    view, pieces, start = memoryview(data), [], 0
+    for at in sorted(tags):
+        pieces += [view[start:at], struct.pack("<H", _UNASSIGNED)]
+        start = at + 2
+    pieces.append(view[start:])
+    return b"".join(pieces)
 
 
 def _name(info: zipfile.ZipInfo, header: _Header) -> Optional[str]:
@@ -707,7 +710,9 @@ def _overlapping(data: bytes, infos, directory_at: int) -> Dict[int, str]:
     library starts reading it, plus its compressed size: after the local header
     and its name and extra field, as that header gives their lengths. An entry
     whose local header cannot be read is left to the library, which refuses it
-    in the same words on every release.
+    in the same words on every release. One whose local header lies past where
+    the central directory begins is said to lie there: its data does not run
+    into the directory, it starts beyond it.
     """
     shared: Dict[int, int] = {}
     for i in infos:
@@ -727,6 +732,10 @@ def _overlapping(data: bytes, infos, directory_at: int) -> Dict[int, str]:
         ends = i.header_offset + 30 + name_length + extra_length + i.compress_size
         limit = after.get(i.header_offset, directory_at)
         if ends <= limit:
+            continue
+        if i.header_offset >= directory_at:
+            out[id(i)] = (f"its local header, at byte {i.header_offset:,}, lies past where the "
+                          f"central directory begins, at byte {directory_at:,}")
             continue
         out[id(i)] = (f"its data runs to byte {ends:,}, and the next entry's local header begins "
                       f"at byte {limit:,}: one stretch of bytes would be read as two members"

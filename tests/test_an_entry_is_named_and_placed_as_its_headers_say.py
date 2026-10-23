@@ -63,6 +63,10 @@ def _layout():
 
 STARTS, DIRECTORY = _layout()
 LAST = list(FILES)[-1]
+#: Where the last member's local header lies when it is written after the end
+#: record, as its comment: past the other members, the central directory and
+#: the end record's 22 bytes.
+PAST = STARTS[LAST] + sum(46 + len(name.encode("utf-8")) for name in FILES) + 22
 
 #: Read on every Python, with nothing refused: the name the PDF has.
 NAMED = {
@@ -147,6 +151,12 @@ REFUSED = {
         LAST: ("member-unreadable",
                f"its data runs to byte {DIRECTORY + 8:,}, and the central directory begins at "
                f"byte {DIRECTORY:,}: the directory would be read as part of a member")}),
+    # A local header past where the directory begins: its data does not run
+    # into the directory, so the sentence says where the header is.
+    "a-local-header-past-the-central-directory": (sorted(set(FILES) - {LAST}), {
+        LAST: ("member-unreadable",
+               f"its local header, at byte {PAST:,}, lies past where the central directory "
+               f"begins, at byte {STARTS[LAST]:,}")}),
     # Two entries and one local header: both are refused, whichever comes first.
     "two-entries-one-local-header": (OTHERS, {
         "C.pdf": ("member-unreadable", _SHARED), "B.pdf": ("member-unreadable", _SHARED)}),
@@ -274,6 +284,27 @@ def test_an_archive_without_a_unicode_path_field_is_handed_over_as_it_is():
     """The copy costs a second archive's worth of memory for as long as the
     archive is open, so it is made only where there is a field to take out."""
     assert zipread._unread(CASES["plain"], []) is CASES["plain"]
+
+
+def test_an_archive_with_a_unicode_path_field_is_held_twice_not_three_times():
+    """The copy the library reads is the second time the archive is held while
+    it is open, and making it is not to hold a third: a mutable copy turned
+    into the one handed over held one more for as long as that took -- a
+    hundred megabytes more for an archive of a hundred."""
+    import tracemalloc
+
+    data = ENTRIES.build([ENTRIES.entry(b"B.pdf", bytes(4 << 20),
+                                        extra=ENTRIES.unicode_path(b"B.pdf", of=b"B.pdf"))])
+    _, tags = zipread._headers(data, zipread._directory(data))
+    assert tags
+    tracemalloc.start()
+    try:
+        copy = zipread._unread(data, tags)
+        _, peak = tracemalloc.get_traced_memory()
+    finally:
+        tracemalloc.stop()
+    assert len(copy) == len(data) and copy != data
+    assert peak < 1.5 * len(data), f"{peak:,} bytes held at once to copy {len(data):,}"
 
 
 def test_the_library_is_handed_no_unicode_path_field(monkeypatch):
