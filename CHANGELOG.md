@@ -2,6 +2,71 @@
 
 Sections through 0.7.0 had their wording tidied after their tags; the text each version carried when it was published is in that tag's own `CHANGELOG.md`. From 0.8.0 on, a released section is frozen at its tag and takes only appended `*(Correction ...)*` lines.
 
+## 0.14.0 — unreleased
+
+Who should take this release: anyone who checks deliveries on more than one
+Python, or in the browser page and on a command line -- the names of an
+archive's entries, and where each one's data lies, were read by Python's own
+ZIP library, whose releases do not read them alike, and they are read by this
+tool the same way on all of them now. Whoever gates a build on the exit code
+should read the paragraph after the list.
+
+- **An entry is named by this tool, the same way on every Python.** APPNOTE
+  names an entry in UTF-8 when general purpose bit 11 says so and in IBM Code
+  Page 437 when it does not (4.4.4, APPENDIX D), and an Info-ZIP Unicode Path
+  extra field may carry the UTF-8 version of a name its header holds in another
+  character set (4.6.9). Python's `zipfile` reads that field from 3.12.0 on and
+  not before, and from then on refuses the whole archive when the field is not
+  UTF-8 or too short for its CRC-32, and warns when it is empty. This tool now
+  reads the field itself, before the library is asked: an entry whose field is
+  one is named by it, and a field that is not one is passed over without a
+  word. The library is shown none of them, and `member_bytes` and
+  `member_reader` find a member by the name `read` gives it. A name stored as
+  UTF-8 without bit 11, and with no such field, reads as IBM Code Page 437 on
+  every Python, as it did before -- so metadata declaring its UTF-8 spelling
+  still draws `F1`.
+  **This moves verdicts:** a member such a field names is that member on Python
+  3.9 to 3.11 as well, where a declaration naming it drew `F1` and one naming
+  the header's spelling did not; and an archive whose field is not UTF-8, or
+  too short, is read on Python 3.12 and later, where it was `Z1`. No container
+  that was already in this repository moves.
+- **An entry that names two files is not read.** A header whose name is
+  printable ASCII reads the same in every character set the name could be in,
+  and one that general purpose bit 11 says is UTF-8 already is its UTF-8
+  version, so a Unicode Path field giving either another name is not the UTF-8
+  version of that name; and an entry carries one such field, not two. Either entry is
+  refused, as `Z12`, with what each name is in the sentence, on every Python --
+  the releases from 3.12 took the field's name without a word, and those before
+  the header's. Its bytes are readable, so the finding says to name the entry
+  once rather than to send the same archive again.
+  **This moves verdicts:** each is `Z12` now, on every Python.
+- **Data another entry holds too is not read.** The repair for CVE-2024-0450
+  refuses an entry whose data runs on past where the next local header, or the
+  central directory, begins, and Python 3.9.6 is a release without it. Of two
+  entries pointing at one local header, the releases with that repair refuse
+  the one the central directory lists second before 3.12.10 and 3.13.3, and
+  from those on only warn. This tool now refuses each such entry itself, as
+  `Z12` in its own sentence, on every Python.
+  **This moves verdicts:** an entry whose data runs on is `Z12` on Python 3.9.6
+  too, and of two entries sharing a local header both are `Z12` on every
+  Python. Four fixtures hold the cases; the reference implementation reports an
+  error on one of them, none on two, and throws on the fourth, which the page on
+  divergences describes.
+
+**If your build gates on the exit code, this is the paragraph for you.** A
+container whose metadata declares a member by the name a Unicode Path field
+gives it now exits with what its content earns before Python 3.12 as well,
+where it exited `1`; one that declares that member by the name its header
+spells now exits `1` there, as it already did from 3.12. One carrying a field
+that is not UTF-8, or too short, which exited `1` on 3.12 and later, now exits
+with what its content earns everywhere. One holding an entry that names two
+files, or carries two such fields, now exits `1` on every Python -- before, it
+exited with what its content earns on 3.12 and later when its metadata
+declared the field's name, and before 3.12 when it declared the header's. And
+one whose data another entry holds too, which exited with what its content
+earns on Python 3.9.6, now exits `1` there as well. Two entries sharing one
+local header made every Python exit `1` already, and still do.
+
 ## 0.13.0 — 2026-10-22
 
 Who should take this release: anyone who checks deliveries on more than one
