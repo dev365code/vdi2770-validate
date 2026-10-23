@@ -253,10 +253,13 @@ TABLE = [
      ["tests/test_the_samples_page_is_what_the_tool_says.py::test_each_exit_on_the_page_is_what_the_command_returns"],
      "the page says a sample exits 1 that the command passes with 0"),
 
+    # F3: a corpus container fires it and one fixture pairs it. F1 stopped being
+    # such a rule when a second fixture came to pair it, and dropping one of its
+    # two pairs left the gate green.
     ("gates/a-rule-a-container-can-break-has-a-pair",
      "tools/make_fixtures.py",
-     '    add("f1-named-file-missing.zip"',
-     '    _dropped = lambda *a, **k: None; _dropped("f1-named-file-missing.zip"',
+     '    add("f3-format-extension.zip"',
+     '    _dropped = lambda *a, **k: None; _dropped("f3-format-extension.zip"',
      ["tools/make_fixtures.py",
       "tests/test_rule_pairs.py::test_every_rule_that_can_have_a_pair_has_one"],
      "a rule that loses its pair while a corpus container still fires it: firing "
