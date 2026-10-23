@@ -278,9 +278,13 @@ def test_a_later_read_with_no_list_refuses_what_the_first_one_refused(name):
     refused for naming two files, or for data another entry holds too, the
     library's releases answered differently: bytes on one, nothing on the
     next. Asked for one a name the field gives would put outside the folder it
-    is extracted to, every release gave its bytes."""
+    is extracted to, every release gave its bytes -- and for one set aside for
+    having no name, which nothing can extract and the empty name still found."""
     c = _read(name)
-    for member in sorted(c.rejected):
+    asked = sorted(c.rejected)
+    if any(d.kind == "nameless-member" for d in c.defects):
+        asked.append("")
+    for member in asked:
         assert zipread.member_bytes(CASES[name], member) is None, member
 
 
@@ -301,14 +305,22 @@ def test_an_archive_with_a_unicode_path_field_is_held_twice_not_three_times():
                                         extra=ENTRIES.unicode_path(b"B.pdf", of=b"B.pdf"))])
     _, tags = zipread._headers(data, zipread._directory(data))
     assert tags
-    tracemalloc.start()
+    # Measured from here, whether or not tracing was already on: an
+    # interpreter started with `-X tracemalloc` has been tracing since it began,
+    # and its peak is the whole process's.
+    started = not tracemalloc.is_tracing()
+    if started:
+        tracemalloc.start()
     try:
+        tracemalloc.reset_peak()
+        before, _ = tracemalloc.get_traced_memory()
         copy = zipread._unread(data, tags)
         _, peak = tracemalloc.get_traced_memory()
     finally:
-        tracemalloc.stop()
+        if started:
+            tracemalloc.stop()
     assert len(copy) == len(data) and copy != data
-    assert peak < 1.5 * len(data), f"{peak:,} bytes held at once to copy {len(data):,}"
+    assert peak - before < 1.5 * len(data), f"{peak - before:,} bytes held at once to copy {len(data):,}"
 
 
 def test_the_library_is_handed_no_unicode_path_field(monkeypatch):

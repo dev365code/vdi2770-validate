@@ -1368,6 +1368,10 @@ def member_reader(data: bytes, allowed: Optional[Set[str]] = None):
 
     def read_one(name: str) -> Optional[bytes]:
         try:
+            # An entry with no name is one `read` sets aside -- nothing can
+            # extract it -- and the empty name still found it here.
+            if not name:
+                return None
             if allowed is not None and name not in allowed:
                 return None
             if counted.get(name) != 1:

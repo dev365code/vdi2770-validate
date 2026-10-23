@@ -21,10 +21,11 @@ should read the paragraph after the list.
   reads the field itself, before the library is asked: an entry whose field is
   one is named by it, and a field that is not one is passed over without a
   word. The library is shown none of them, and `member_bytes` and
-  `member_reader` find a member by the name `read` gives it -- and, asked
-  without the names `read` accepted, refuse the ones it refuses for naming two
-  files, for data another entry holds too, or for a name that leads out of the
-  folder it is extracted to. A name stored as UTF-8 without bit 11, and with no
+  `member_reader` find a member by the name `read` gives it. Asked without the
+  names `read` accepted, they refuse what `read` refuses: an entry that names
+  two files, data another entry holds too, a name that leads out of the folder
+  it is extracted to or holds a backslash, and an entry with no name. A name
+  stored as UTF-8 without bit 11, and with no
   such field, reads as IBM Code Page 437 on every Python, as it did before --
   so metadata declaring its UTF-8 spelling still draws `F1`.
   **This moves verdicts:** a member such a field names is that member on Python
@@ -48,12 +49,15 @@ should read the paragraph after the list.
   entries pointing at one local header, the releases with that repair refuse
   the one the central directory lists second before 3.12.10 and 3.13.3, and
   from those on only warn. This tool now refuses each such entry itself, as
-  `Z12` in its own sentence, on every Python.
-  **This moves verdicts:** an entry whose data runs on is `Z12` on Python 3.9.6
-  too, and of two entries sharing a local header both are `Z12` on every
-  Python. Four fixtures hold the cases; the reference implementation reports an
-  error on one of them, none on two, and throws on the fourth, which the page on
-  divergences describes.
+  `Z12` in its own sentence, on every Python. An entry whose local header lies
+  past where the central directory begins is refused too, in a sentence that
+  says where it lies.
+  **This moves verdicts:** an entry whose data runs on, or whose local header
+  lies past the central directory, is `Z12` on Python 3.9.6 too, and of two
+  entries sharing a local header both are `Z12` on every Python. Four fixtures
+  hold the cases; the reference implementation reports an error on one of them,
+  none on two, and throws on the fourth, which the page on divergences
+  describes.
 
 **If your build gates on the exit code, this is the paragraph for you.** A
 container whose metadata declares a member by the name a Unicode Path field
@@ -65,8 +69,9 @@ with what its content earns everywhere. One holding an entry that names two
 files, or carries two such fields, now exits `1` on every Python -- before, it
 exited with what its content earns on 3.12 and later when its metadata
 declared the field's name, and before 3.12 when it declared the header's. And
-one whose data another entry holds too, which exited with what its content
-earns on Python 3.9.6, now exits `1` there as well. Two entries sharing one
+one whose data another entry holds too, or whose local header lies past the
+central directory, which exited with what its content earns on Python 3.9.6,
+now exits `1` there as well. Two entries sharing one
 local header made every Python exit `1` already, and still do.
 
 ## 0.13.0 — 2026-10-22
