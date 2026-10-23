@@ -178,10 +178,10 @@ DEFECT_TO_RULE = {
 #: re-zips the same files into the same field -- the loop `_remedy_for` already
 #: ends for a locked member.
 ONE_NAME = ("Give the entry one name. An Info-ZIP Unicode Path field (APPNOTE 4.6.9) "
-            "holds the UTF-8 version of the name its header already carries, and this "
-            "entry's says something else -- zipping the same files again writes the "
-            "same field. Store the name once, in UTF-8 with general purpose bit 11 set "
-            "(APPNOTE 4.4.4), or leave the field out.")
+            "holds the UTF-8 version of the name its header already carries, once, and "
+            "this entry's says something else or says it twice -- zipping the same "
+            "files again writes the same fields. Store the name once, in UTF-8 with "
+            "general purpose bit 11 set (APPNOTE 4.4.4), or leave the field out.")
 
 
 def _remedy_for(defect):

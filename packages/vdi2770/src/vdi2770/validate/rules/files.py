@@ -219,7 +219,7 @@ def check(container, document, foreign) -> Iterator[Finding]:
                 # Its bytes are readable: what the entry does not settle is
                 # which file they are, and that is in the archive as written.
                 message = ("A file named in the metadata is in the container under "
-                           "more than one name")
+                           "an entry that names itself more than once")
                 fix = ONE_NAME
                 whose = None
             else:
