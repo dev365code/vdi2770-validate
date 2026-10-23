@@ -278,8 +278,9 @@ def test_a_later_read_with_no_list_refuses_what_the_first_one_refused(name):
     refused for naming two files, or for data another entry holds too, the
     library's releases answered differently: bytes on one, nothing on the
     next. Asked for one a name the field gives would put outside the folder it
-    is extracted to, every release gave its bytes -- and for one set aside for
-    having no name, which nothing can extract and the empty name still found."""
+    is extracted to, or that holds a backslash, every release gave its bytes --
+    and for one set aside for having no name, which nothing can extract and the
+    empty name still found."""
     c = _read(name)
     asked = sorted(c.rejected)
     if any(d.kind == "nameless-member" for d in c.defects):
