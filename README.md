@@ -317,9 +317,9 @@ timeline
             : 44 rules, each with a source and a remedy
             : Versioned JSON report, exit codes, single-file offline build
             : Browser-local checking — no install, and the file never leaves the machine
-    Building : An obligation index — what is asked for, and how much of it is covered
-             : Deeper documentation-container checks
-    Planned : Cross-checks with neighbouring handover standards
+    Building : Deeper documentation-container checks
+    Planned : An obligation index — what the guideline asks for, and how much of it is covered, once its text is read
+            : Cross-checks with neighbouring handover standards
 ```
 
 ## One install, two layers
@@ -376,13 +376,13 @@ declining to look, not a verdict on the container.
 
 ### What is stable here, and what is not
 
-**This is 0.x, and the packaging can still move.** This release is the example:
-the validator used to be its own distribution and now lives inside the reader,
-with the old name kept working as an alias. That changed how the tool is
-installed and which distribution owns the executable, and it went out under a
-minor version.
+**From 1.0.0, breaking anything below takes a new major version**, except a
+verdict: verdicts move across releases, the way the first item says. Through
+0.x the packaging moved under minor versions: 0.8.0 moved the validator
+inside the reader, with the old name kept working as an alias, which changed
+how the tool is installed and which distribution owns the executable.
 
-What has not moved, and what a build script can rely on:
+What a build script can rely on:
 
 - **The verdicts, within a release.** Across releases they move, and never
   quietly: the CHANGELOG section for the release that moves one names it. `0.7.0`
@@ -405,6 +405,8 @@ What has not moved, and what a build script can rely on:
   `python -m vdi2770.validate`, which is how a `pip install "vdi2770[validate]"`
   is run because that install carries no command.
 - **The report.** The JSON a run writes, and the `schemaVersion` inside it.
+- **The reader's names.** What `import vdi2770` exports, and their signatures,
+  as `packages/vdi2770/API.json` records them.
 - **The old import name.** `import vdi2770_validate` resolves to the same
   objects as `vdi2770.validate` rather than to copies of them.
 
@@ -474,9 +476,13 @@ is public.
 
 ## Releases and version numbers
 
-**This is 0.x.** A release goes out when a unit of judgement is ready rather
-than on a calendar, and the packaging is not the contract: 0.8.0 moved the
-validator inside the reader, and 0.9.1 changed how this package asks for it.
+**This is 1.x.** A release goes out when a unit of judgement is ready rather
+than on a calendar. Breaking anything
+[What is stable](#what-is-stable-here-and-what-is-not) lists — the exit codes,
+the command line, the report, the reader's names, the old import name — takes
+a new major version; how a verdict moves is below. Through 0.x the packaging
+was not the contract: 0.8.0 moved the validator inside the reader, and 0.9.1
+changed how this package asks for it.
 
 Releases come in batches rather than one per fix. Three things do not wait for a
 batch: a security fix, a wrong verdict (a conforming container refused, or a
@@ -552,15 +558,20 @@ does not name this package back, so upgrading the engine alone beside an older
 command leaves a mismatched pair, and a command from 0.8.0 on refuses that pair
 rather than judging with it (exit `3`).
 
-**1.0 means one thing that is not true yet.** This page will say which parts of
-VDI 2770 are checked and to what depth, so that "checks VDI 2770 containers"
-stops being a phrase you have to read the source to size. The report's
-`schemaVersion` is already `1` and is already on the list above; 1.0 does not
-change it, it commits to not changing it. Neither meaning is that the rule set
-is finished.
+**1.0 means two things.** This page says which parts of VDI 2770 are checked
+and to what depth, so that "checks VDI 2770 containers" is not a phrase you
+have to read the source to size: *What it catches* and *What it will not tell
+you* above, the 44 rules in [docs/rules.md](https://github.com/dev365code/vdi2770-validate/blob/main/docs/rules.md) with where each one's
+requirement comes from — the XSD VDI publishes free, the class table IDTA 02004
+publishes, the mechanics of ZIP and XML, what the MIT reference implementation
+was observed to do, or a judgement of this project's own with its reason — and
+the limits in [docs/scope.md](https://github.com/dev365code/vdi2770-validate/blob/main/docs/scope.md). What it cannot say is which clauses of
+the guideline those are: the guideline is sold by DIN Media and was not read,
+so an index of what it asks for, and how much of that is checked, waits on its
+text. And the report's `schemaVersion` is `1`, on the list above, and 1.0
+commits to not changing it. Neither meaning is that the rule set is finished.
 
-That is what 1.0 will mean, and not everything it waits for. The picture under
-*Where it stands* draws the rest; in words:
+What 1.0 waited for besides is drawn under *Where it stands*; in words:
 
 Before it calls a release 1.0, this project asks of itself — Coverage: 41 of 44, every rule that can have one; Explanation: what is wrong, in one sentence · the evidence as read from the file · a remedy, for every rule · the source of every rule's requirement · the line, for every metadata finding; Report contract: schemaVersion in every report · a golden report held by a test · exit codes under test · a field-by-field schema page; Entrances: command line · Python library · single file, nothing to install · GitHub Action · browser, nothing installed; Input safety: read budgets, per member and per archive · a security fix ships with an advisory · tests verified against their own mutations · declared encodings read without loss; Upstream: upstream corpus pinned by commit · checked weekly for change.
 
@@ -589,9 +600,10 @@ Details in [docs/divergences.md](https://github.com/dev365code/vdi2770-validate/
 Apache-2.0. You may embed it in commercial products, ship it to your customers and
 run it inside closed networks; keep the LICENSE and NOTICE files with it. A run
 makes no network requests and uploads nothing. The surfaces you can build on are the
-report JSON, the exit codes and the command-line options documented above — those
-are versioned, and a change to any of them is announced as a breaking change in the
-CHANGELOG. Everything else may change between releases.
+report JSON, the exit codes, the command-line options documented above and the names
+the reader exports — those are versioned: a change that breaks one of them comes in a
+new major version, announced as a breaking change in the CHANGELOG. Everything else
+may change between releases.
 
 Releases follow semantic versioning, and the reader and the rule set move together
 under one tag. Released files are not deleted; a release with a security problem is

@@ -4,10 +4,12 @@ Sections through 0.7.0 had their wording tidied after their tags; the text each 
 
 ## 1.0.0 — unreleased
 
-Who should take this release: anyone whose deliveries are zipped on macOS, or by
-any tool that writes an entry's name in UTF-8 without saying so -- the finding
-on a file such a name was meant to declare now says why it is not found, and
-what to set.
+Who should take this release: everyone on 0.14.0, and anyone who waited for a
+1.x promise before building on the report, the exit codes, the command line or
+the reader's names -- the README now says what 1.x keeps, and a change that
+breaks one of them comes in a new major version. No exit code 0.14.0 gave
+moves; a container whose metadata declares a name its archive stores in UTF-8
+without saying so draws one finding fewer, and the one left says what to set.
 
 - **A name written in UTF-8 without saying so is told what to set.** APPNOTE
   reads an entry's name as UTF-8 when general purpose bit 11 says so and as IBM
@@ -21,6 +23,20 @@ what to set.
   by the name an entry is read under, what its bytes spell in UTF-8.
   **This moves verdicts:** none -- such a container exits `1` as before, with
   one finding fewer.
+- **What 1.x keeps is written down.** The README's list of what a build can
+  rely on -- the exit codes, the command line, the report and its
+  `schemaVersion`, the old import name, and now the reader's names -- says that
+  a change breaking one of them comes in a new major version; a minor release
+  moves judgement and names every verdict it moves, and a patch release
+  repairs. The page says, too, which parts of VDI 2770 are checked and to what
+  depth, and what it cannot say: which clauses of the guideline those are,
+  since the guideline is sold and was not read.
+- **A name the reader stops exporting needs the major to move.** The gate that
+  compares the reader's public surface with the record of the previous release
+  used to ask a removal, or a changed signature, to move the minor -- the rule
+  for 0.x, where a pin is written `~=0.6.0` and admits only 0.6.x. From 1.0 a
+  pin is written `~=1.0` and admits every 1.x, so the gate now asks for the
+  major.
 
 ## 0.14.0 — 2026-10-24
 

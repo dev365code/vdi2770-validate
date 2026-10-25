@@ -2,7 +2,7 @@
 
 The picture on the [front page](https://github.com/dev365code/vdi2770-validate#where-it-stands)
 draws six things this tool holds itself to, measured on the code this page
-describes, against what it asks of itself before it calls a release 1.0. This
+describes, against what it asked of itself before it called a release 1.0. This
 page is the evidence behind each of them: a case first, then what stands now,
 then the 1.0 condition and the reason for it. Every case can be rerun from a
 clone of this repository after `make fixtures`.

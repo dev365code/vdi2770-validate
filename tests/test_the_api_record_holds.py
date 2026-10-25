@@ -247,6 +247,42 @@ def test_a_breaking_change_needs_the_minor_to_move_not_the_patch():
     assert verdict("0.7.0", moved) is None
 
 
+def test_past_1_0_a_breaking_change_needs_the_major_to_move():
+    """Past 1.0 a compatible-release pin is written on the minor, and admits one.
+
+    The rule above is the one for 0.x: `~=0.6.0` admits every 0.6.x, so moving
+    the minor is how a removal stops reaching machines that asked for 0.6.0.
+    From 1.0 the pin a caller writes is `~=1.0`, which admits 1.1.0 as readily
+    as 1.0.1 -- and the same rule let 1.0.0 -> 1.1.0 remove a name the library
+    exports. The README says releases follow semantic versioning, and that asks
+    for 2.0.0.
+
+    Adding a name stays compatible, in a patch release or a minor one.
+    """
+    sys.path.insert(0, str(ROOT / "tools"))
+    import api_fingerprint as fp
+
+    was = {"format": fp.FORMAT, "version": "1.0.0",
+           "surface": {"read": "(data, path)", "nfc": "(name)"}}
+
+    def verdict(version, surface):
+        return fp.compatible(was, {"format": fp.FORMAT, "version": version, "surface": surface})
+
+    added = {**was["surface"], "ClassName": "(language, text, src)"}
+    assert verdict("1.0.1", added) is None, "adding a name is compatible; a patch bump is honest"
+    assert verdict("1.1.0", added) is None, "and so is a minor bump"
+
+    removed = {"read": "(data, path)"}
+    assert verdict("1.0.1", removed), "removing `nfc` in a patch release is not compatible"
+    assert verdict("1.1.0", removed), "nor in a minor one past 1.0: `~=1.0` admits 1.1.0"
+    assert verdict("2.0.0", removed) is None, "a major bump is how a removal is announced past 1.0"
+    assert "Move the major" in verdict("1.1.0", removed), verdict("1.1.0", removed)
+
+    moved = {**was["surface"], "read": "(data, path, depth)"}
+    assert verdict("1.1.0", moved), "changing a signature in a minor release past 1.0 is not compatible"
+    assert verdict("2.0.0", moved) is None
+
+
 def test_the_version_itself_is_not_a_breaking_change():
     """The synthetic surface in the test above is why this was missed.
 
@@ -379,8 +415,9 @@ def test_a_version_that_is_already_published_is_not_recorded_over(tmp_path):
     major, minor, _patch = (int(x) for x in was.split(".")[:3])
     # The *minor*: the addition below changes a dataclass's signature, and the
     # pin is `~=`, so a patch bump is refused one guard earlier and this test
-    # would pass on the wrong sentence.
-    now = f"{major}.{minor + 1}.0"
+    # would pass on the wrong sentence. From 1.0 the pin admits a minor too,
+    # and the number that clears that guard is the next major.
+    now = f"{major + 1}.0.0" if major >= 1 else f"{major}.{minor + 1}.0"
     subprocess.run(["git", "tag", tag_for(now)], cwd=tree, check=True)
     # `__init__.py` and nothing else: the reader had a `pyproject.toml` of its
     # own while it was published separately, and the number lives in one place

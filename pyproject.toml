@@ -16,7 +16,7 @@ license = { text = "Apache-2.0" }
 authors = [{ name = "Wooyong Lee" }]
 keywords = ["vdi2770", "technical documentation", "conformance", "validation", "industry 4.0"]
 classifiers = [
-  "Development Status :: 3 - Alpha",
+  "Development Status :: 5 - Production/Stable",
   "Intended Audience :: Manufacturing",
   "License :: OSI Approved :: Apache Software License",
   "Programming Language :: Python :: 3",

@@ -562,8 +562,10 @@ def test_no_document_cites_a_file_that_is_not_here():
     # docs/what-it-catches.md names the test that holds it to each such end.
     # 61 to 62 when the reader came to name and place an archive's entries
     # itself: docs/what-it-catches.md names the test that holds it to each one.
-    assert seen == 62, (
-        f"{seen} citations found, not 62. If you added or removed one, say so "
+    # 62 to 63 when the README came to list the reader's names among what a
+    # build can rely on: it names the record that holds them.
+    assert seen == 63, (
+        f"{seen} citations found, not 63. If you added or removed one, say so "
         f"here; if you did not, some of them just stopped being checked.")
 
 

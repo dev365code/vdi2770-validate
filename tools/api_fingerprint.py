@@ -117,6 +117,11 @@ def compatible(recorded: dict, now: dict) -> Optional[str]:
     Additions are compatible; a patch bump is an honest way to ship one.
     Removals and signature changes are not, and the minor has to move so the
     pin stops admitting them.
+
+    That is 0.x, where the pin is written on the patch. From 1.0 it is written
+    on the minor — `~=1.0` admits every 1.x — and the same rule let a
+    removal through as 1.1.0. Past 1.0 the major moves instead, which is what
+    semantic versioning asks and what the README says releases follow.
     """
     # `__version__` is in `__all__` and `surface()` records its value, so it
     # moves in every comparison this function is ever asked to make -- and this
@@ -140,13 +145,19 @@ def compatible(recorded: dict, now: dict) -> Optional[str]:
     if was is None or is_ is None:
         return (f"cannot compare {recorded['version']!r} with {now['version']!r} as "
                 f"release numbers, and this change needs the minor to move")
-    if is_[:2] > was[:2]:
+    step = 1 if was[0] >= 1 else 2
+    if is_[:step] > was[:step]:
         return None
     what = []
     if lost:
         what.append(f"removed {lost}")
     if moved:
         what.append(f"changed the signature of {moved}")
+    if step == 1:
+        return (f"{recorded['version']} -> {now['version']} " + " and ".join(what) +
+                f". A compatible-release pin `~={was[0]}.{was[1]}` admits every "
+                f"{was[0]}.x — this release would install itself on machines that "
+                f"asked for {recorded['version']}. Move the major.")
     return (f"{recorded['version']} -> {now['version']} " + " and ".join(what) +
             f". A compatible-release pin admits every "
             f"{was[0]}.{was[1]}.x — this release would install itself on machines "

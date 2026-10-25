@@ -308,6 +308,15 @@ TABLE = [
      "installs itself on machines that asked for 0.6.0 -- which this project "
      "shipped once already"),
 
+    ("gates/past-1-0-a-breaking-change-needs-the-major",
+     "tools/api_fingerprint.py",
+     "    step = 1 if was[0] >= 1 else 2",
+     "    step = 2",
+     ["tests/test_the_api_record_holds.py::"
+      "test_past_1_0_a_breaking_change_needs_the_major_to_move"],
+     "past 1.0 a pin is written `~=1.0` and admits 1.1.0, so a removal let through "
+     "on the minor installs itself on machines that asked for 1.0.0"),
+
     ("gates/the-front-page-names-the-classes-that-are-disputed",
      "README.md",
      "disagree on five English ones**",
