@@ -7,13 +7,15 @@ Sections through 0.7.0 had their wording tidied after their tags; the text each 
 Who should take this release: everyone on 0.14.0, and anyone who waited for a
 1.x promise before building on the report, the exit codes, the command line or
 the reader's names -- the README now says what 1.x keeps, and a change that
-breaks one of them comes in a new major version. No exit code 0.14.0 gave
-moves but one, on Windows, where a container holding an entry whose name
-carries a backslash exits `1` now, as it already did everywhere else. A
+breaks one of them comes in a new major version. Two exit codes 0.14.0 gave
+move: on Windows, a container holding an entry whose name carries a backslash
+exits `1` now, as it already did everywhere else; and an archive whose local
+headers past where its central directory begins are a file entry's and then,
+last, a directory entry's exits `1` now, where 0.14.0 read the file. A
 container whose metadata declares a name its archive stores in UTF-8
 without saying so draws one finding fewer, and the one left says what to set;
 an archive with more than one local header past where its central directory
-begins has each of them refused, not only the last.
+begins has each such file entry refused, not only the last.
 
 - **A name written in UTF-8 without saying so is told what to set.** APPNOTE
   reads an entry's name as UTF-8 when general purpose bit 11 says so and as IBM
@@ -27,20 +29,23 @@ begins has each of them refused, not only the last.
   by the name an entry is read under, what its bytes spell in UTF-8.
   **This moves verdicts:** none -- such a container exits `1` as before, with
   one finding fewer.
-- **Every local header past where the central directory begins is refused.**
-  APPNOTE lays an archive out as local headers and their data, then the
-  central directory, then the end record (4.3.6). Of entries whose local
-  headers lie past where the directory begins, 0.14.0 refused the last, and
-  one before it only when its data ran on past the next header -- the bound
-  the repair for CVE-2024-0450 draws -- so of two such headers it read the
-  first, whose data ends where the second's begins. Each is refused now, as
-  `Z12`, in the sentence that says where its header lies: a reader that walks
-  local headers from the start stops at the directory and finds none of them.
-  Python 3.13.15's own ZIP library reads the first of two, and 3.9.6's reads
-  both.
-  **This moves verdicts:** the entries before the last are `Z12` too now, on
-  every Python; such an archive exited `1` already, for the last of them. No
-  container in this repository moves.
+- **Every file entry whose local header lies past where the central directory
+  begins is refused.** APPNOTE lays an archive out as local headers and their
+  data, then the central directory, then the end record (4.3.6). Of entries
+  whose local headers lie past where the directory begins, 0.14.0 refused the
+  last unless it was a directory entry, and each one before it only when its
+  data ran on past the next header -- the bound the repair for CVE-2024-0450
+  draws -- so of two such headers it read the first, whose data ends where the
+  second's begins. Each file entry is refused now, as `Z12`, in the sentence
+  that says where its header lies: a reader that walks local headers from the
+  start stops at the directory and finds none of them. A directory entry there
+  is let through, as before: it has no data to read. Python 3.13.15's own ZIP
+  library reads the first of two, and 3.9.6's reads both.
+  **This moves verdicts:** the file entries before the last are `Z12` too now,
+  on every Python. Such an archive exited `1` already, for the last of them --
+  unless the last is a directory entry, which 0.14.0 let through as well: then
+  it exited with what the rest of it earns, `0` for an otherwise conforming
+  container, and it exits `1` now. No container in this repository moves.
 - **An entry its header and its Unicode Path field name differently is refused
   for a reason that holds.** APPNOTE gives an entry's name two character sets,
   IBM Code Page 437 and, with general purpose bit 11, UTF-8 (4.4.4, APPENDIX D),
@@ -61,7 +66,8 @@ begins has each of them refused, not only the last.
   sixteen megabytes from one of zeros -- and so did the members past the total
   an archive may declare, and every member of an archive listing more entries
   than `read` reads. Those are refused now too.
-  **This moves verdicts:** none -- the validator passes the list.
+  **This moves verdicts:** none -- the validator asks again only for members
+  the first read accepted, and those meet these limits by construction.
 - **A later read without the list refuses an archive the first read refused
   whole.** `read` refuses an archive that does not begin the file it is in --
   bytes in front, a first entry somewhere past the start, a container cut short
@@ -71,7 +77,8 @@ begins has each of them refused, not only the last.
   archive anyway and handed over its members: of a cut container, the metadata
   of the document container inside, which nobody delivered. They refuse every
   member of it now.
-  **This moves verdicts:** none -- the validator passes the list.
+  **This moves verdicts:** none -- the validator asks again only for members
+  of an archive the first read accepted.
 - **A backslash in an entry's name is refused on every platform.** Python's
   `zipfile` turns a backslash in an entry's name into `/` as it reads an
   archive on Windows, and only there, so a name this tool refuses as `Z4` on
@@ -107,7 +114,10 @@ begins has each of them refused, not only the last.
 
 **If your build gates on the exit code, this is the paragraph for you.** On
 Windows, a container holding an entry whose name carries a backslash exits
-`1` now, as it already did on Linux, on macOS and in the browser page.
+`1` now, as it already did on Linux, on macOS and in the browser page. And
+an archive whose local headers past where its central directory begins are a
+file entry's and then, last, a directory entry's exits `1` now, on every
+Python, where 0.14.0 read the file and let the directory entry through.
 Nothing else exits differently.
 
 ## 0.14.0 — 2026-10-24
@@ -182,7 +192,7 @@ central directory, which exited with what its content earns on Python 3.9.6,
 now exits `1` there as well. Two entries sharing one
 local header made every Python exit `1` already, and still do.
 
-*(Correction, 1.0.0: of two or more entries whose local headers lie past where the central directory begins, 0.14.0 refuses the last and reads one before it whose data ends where the next header begins; "An entry whose local header lies past where the central directory begins is refused too" holds from 1.0.0, which refuses each.)*
+*(Correction, 1.0.0: of two or more entries whose local headers lie past where the central directory begins, 0.14.0 refuses the last unless it is a directory entry, and reads each one before it whose data does not run past the next header; "An entry whose local header lies past where the central directory begins is refused too" holds from 1.0.0 for every file entry, and a directory entry there is still let through.)*
 *(Correction, 1.0.0: printable ASCII reads the same in the two character sets APPNOTE gives an entry's name, IBM Code Page 437 and UTF-8, and not in every character set -- ISO 646's national variants and JIS X 0201 read some of those bytes as other letters; the refusal of an entry whose Unicode Path field gives such a header another name stands on the first.)*
 *(Correction, 1.0.0: "named by this tool, the same way on every Python" held on every Python but not on every platform -- on Windows the library still made a backslash in a name `/`, and such an entry was read there as a path; 1.0.0 names it as written there too.)*
 

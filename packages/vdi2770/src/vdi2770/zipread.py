@@ -739,8 +739,9 @@ def _overlapping(data: bytes, infos, directory_at: int) -> Dict[int, str]:
 
     A local header past where the central directory begins is outside the
     layout 4.3.6 gives an archive -- headers and data, then the directory, then
-    the end record -- and is refused for lying there, whether or not its data
-    would run into anything. The repair asks only whether it would: of two such
+    the end record -- and a file entry is refused for lying there, whether or
+    not its data would run into anything; `read` lets a directory entry
+    through, which has no data to read. The repair asks only whether it would: of two such
     headers it reads the first, whose data ends where the second's begins --
     and a reader that walks local headers from the start stops at the directory
     and finds neither.

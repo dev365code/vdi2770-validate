@@ -604,10 +604,10 @@ Details in [docs/divergences.md](https://github.com/dev365code/vdi2770-validate/
 Apache-2.0. You may embed it in commercial products, ship it to your customers and
 run it inside closed networks; keep the LICENSE and NOTICE files with it. A run
 makes no network requests and uploads nothing. The surfaces you can build on are the
-report JSON, the exit codes, the command-line options documented above and the names
-the reader exports — those are versioned: a change that breaks one of them comes in a
-new major version, announced as a breaking change in the CHANGELOG. Everything else
-may change between releases.
+ones [What is stable](#what-is-stable-here-and-what-is-not) lists — the exit codes,
+the command line, the report, the reader's names, the old import name — and a change
+that breaks one of them comes in a new major version, announced as a breaking change
+in the CHANGELOG. Everything else may change between releases.
 
 Releases follow semantic versioning, and the reader and the rule set move together
 under one tag. Released files are not deleted, and a release with a security problem
