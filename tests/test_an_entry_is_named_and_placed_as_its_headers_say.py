@@ -354,6 +354,21 @@ def test_a_later_read_with_no_list_meets_the_limits_the_first_one_met(limit, mon
         assert (zipread.member_bytes(data, member) is not None) is (member in accepted), member
 
 
+def test_a_later_read_with_no_list_counts_a_repeated_name_as_the_first_one_does(monkeypatch):
+    """`read` sets aside a name repeated among file entries and adds up the
+    declared size of every other entry, a directory entry's with a repeated
+    name included. The later read without the list set aside a repeated
+    directory name too, came to a smaller total, and gave a member `read` had
+    refused for passing it."""
+    data = ENTRIES.build([ENTRIES.entry(b"D/", b"abc"), ENTRIES.entry(b"D/", b"abc"),
+                          ENTRIES.entry(b"E/", b"abc"), ENTRIES.entry(b"E/", b"abc"),
+                          ENTRIES.entry(b"x.pdf", b"x")])
+    monkeypatch.setattr(zipread, "MAX_TOTAL_BYTES", 12)
+    c = zipread.read(data, "dirs.zip")
+    assert c.rejected.get("x.pdf") is not None and c.rejected["x.pdf"].kind == "archive-too-large", c.rejected
+    assert zipread.member_bytes(data, "x.pdf") is None
+
+
 def test_an_archive_without_a_unicode_path_field_is_handed_over_as_it_is():
     """The copy costs a second archive's worth of memory for as long as the
     archive is open, so it is made only where there is a field to take out."""

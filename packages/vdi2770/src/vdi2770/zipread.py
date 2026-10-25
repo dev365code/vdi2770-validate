@@ -1415,9 +1415,15 @@ def member_reader(data: bytes, allowed: Optional[Set[str]] = None):
         listed = [i for i in opened[0].infolist() if i.filename]
         if len(listed) > MAX_MEMBERS:
             return lambda name: None
+        # A name repeated among file entries, counted as `read` counts it: it
+        # sets aside no directory entry for its name, and adds up its size.
+        files: Dict[str, int] = {}
+        for i in listed:
+            if not i.is_dir():
+                files[i.filename] = files.get(i.filename, 0) + 1
         oversized, total = set(), 0
         for at, i in enumerate(listed):
-            if (counted.get(i.filename) != 1 or _unsafe(i.filename) or id(i) in opened[1]
+            if (files.get(i.filename, 0) > 1 or _unsafe(i.filename) or id(i) in opened[1]
                     or i.file_size > MAX_MEMBER_BYTES):
                 continue
             if (i.compress_size > 0 and i.file_size > MIN_SUSPICIOUS_BYTES
