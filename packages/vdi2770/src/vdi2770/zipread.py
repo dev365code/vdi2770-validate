@@ -421,7 +421,7 @@ def _directory(data: bytes):
     # The end record the library takes: the last 22 bytes when they are one
     # with no comment, or else the last of its signature in the last 64 KiB of
     # comment and the record -- the longest comment and the record, to the
-    # byte, as the releases from 3.12.10 on have it; those before looked one
+    # byte, as the releases from 3.12.8 and 3.13.1 on have it; those before looked one
     # byte further back, where no record the file ends with can begin. Without
     # one there is no archive, which the library says in these words on every
     # release.

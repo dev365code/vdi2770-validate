@@ -3390,7 +3390,7 @@ LISTING_BUDGET_ROWS = [
      '        p = data.rfind(_END, max(0, n - 22 - 0xFFFF))\n',
      '        p = data.rfind(_END, max(0, n - 22 - 0x10000))\n',
      ['tests/test_an_archive_ends_where_its_end_records_say.py::test_an_end_the_releases_disagree_on_is_refused_for_the_same_reason_on_each'],
-     'an end record a byte further back than the longest comment reaches would be taken, as the releases before 3.12.10 take it'),
+     'an end record a byte further back than the longest comment reaches would be taken, as the releases before 3.12.8 and 3.13.1 take it'),
     ('zip/the-search-for-the-end-record-reaches-as-far-as-a-comment-can',
      'packages/vdi2770/src/vdi2770/zipread.py',
      '        p = data.rfind(_END, max(0, n - 22 - 0xFFFF))\n',

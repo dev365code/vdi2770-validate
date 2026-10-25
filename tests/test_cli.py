@@ -448,6 +448,27 @@ def test_the_exit_codes_the_docstring_promises_are_the_ones_it_returns(tmp_path,
     assert "warning(s)" in out and " 0 error(s)" in out, out
 
 
+def test_the_page_lists_every_exit_code_the_command_returns():
+    """The README's list of what a build can rely on is the 1.x promise about
+    the exit codes, and it named six of the seven this command returns: `70`,
+    this tool's own failure on a file, was in `--help`, in the Action and in
+    this module's first paragraph, and not on that list. Read from the
+    paragraph here, which is where the codes are written down."""
+    import re
+
+    from conftest import ROOT
+    from vdi2770_validate import cli
+
+    said = cli.__doc__.split("Exit codes:", 1)[1]
+    codes = set(re.findall(r"(?<![\w.])(\d+)(?![\w.])", said))
+    assert {"0", "1", "2", "3", "64", "70", "141"} <= codes, sorted(codes)
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    item = readme.split("- **The exit codes.**", 1)[1].split("\n- **", 1)[0]
+    listed = set(re.findall(r"`(\d+)`", item))
+    assert codes <= listed, (
+        f"the README's list of what a build can rely on leaves out {sorted(codes - listed)}")
+
+
 def test_quiet_hides_notes_in_both_shapes(tmp_path, capsys):
     """`--quiet` says "hide notes" and only the human shape obeyed it."""
     import json as _json

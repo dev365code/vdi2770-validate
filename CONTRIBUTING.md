@@ -12,7 +12,7 @@ Thirty-two are a lapse: the practice was in place, stopped for a run of commits,
 and resumed; nothing caught it, because the check that exists for this reads
 pull requests and every one of those commits arrived by a direct push.
 
-The other is `d4d647d`, a merge made on 2026-09-23. A `--no-ff` merge that meets
+The other is `d4d647d`, a merge. A `--no-ff` merge that meets
 no conflict is committed by git with a default message, so it carried no
 trailer, and the gate that would have said so ran against the branch — before
 the merge commit existed. It is one commit and nothing was pushed after it, so

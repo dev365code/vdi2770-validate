@@ -99,8 +99,8 @@ REFUSED = {
     "zip64-with-bytes-in-front-located-from-the-file": _PREFIX,
     "zip64-record-placing-the-directory-past-where-it-is":
         "the zip64 end record places its central directory 4 bytes past where it is",
-    # Read by the releases before 3.12.10, which look for the record one byte
-    # further back than the longest comment reaches, and refused after.
+    # Read by the releases before 3.12.8 and 3.13.1, which look for the record one
+    # byte further back than the longest comment reaches, and refused after.
     "end-record-with-the-longest-comment-and-a-byte-after-it": "File is not a zip file",
 }
 

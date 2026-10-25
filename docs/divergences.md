@@ -305,13 +305,13 @@ alongside `refCodes` (display only).
 
 ## 5. What the reference reports that we do not
 
-**21 containers draw reference errors or warnings while we report only notes.**
+**22 containers draw reference errors or warnings while we report only notes.**
 They are generated page-tree fixtures: the pinned reference reports `REP_017`
 and `REP_044`, while our report contains a `P4` note. These are different
 questions from whether a metadata page declaration agrees with a PDF's Count.
 
-Across the 62 generated fixtures whose reference column was empty, `REP_017`
-is an error on 57. Its key, `processor:REP_MESSAGE_017`, is emitted when reading
+`REP_017` is an error on 62 of the generated fixtures, 59 of them page-tree
+fixtures. Its key, `processor:REP_MESSAGE_017`, is emitted when reading
 the PDF/A identification fails. The pinned source follows the catalog's XMP
 metadata and checks its part and conformance level against a supported list;
 this code does not establish the result of a full PDF/A preflight. The generated
@@ -321,23 +321,23 @@ without verifying it or applying the level policy of §2. `P6` compares the two
 page declarations when its conditions hold, or reports its own reading limit;
 neither is a PDF/A conformance check.
 
-Seven of those 57 also draw `REP_042` and `REP_045` errors. Read from the pinned
+Eight of those 62 also draw `REP_042` and `REP_045` errors. Read from the pinned
 source, `processor:REP_MESSAGE_042` catches an I/O failure while reading
 encryption status; `processor:REP_MESSAGE_045` catches one while extracting
 text. They do not prove encryption or a page-count mismatch. Here six of the
-seven draw a P6 tool-limit warning, and the fixture with an encryption declaration
-draws P2. Our reader reports the declaration or its bounded reading failure
+eight draw a P6 tool-limit warning, the fixture with an encryption declaration
+draws P2, and the one whose PDF the bounded scan cannot confirm draws P5. Our reader reports the declaration or its bounded reading failure
 instead of making a verdict from a full PDF load or text extraction.
 
-On 50 of the generated fixtures, the reference also warns `REP_044`.
+On 52 of the generated fixtures, the reference also warns `REP_044`.
 `processor:REP_MESSAGE_044` follows a text-extraction pass that found no text;
 the class-dependent policy makes it a warning. We do not extract page text.
-Of these 50, 21 draw only P4 here, 28 also draw a P6 warning, and one draws a
+Of these 52, 22 draw only P4 here, 29 also draw a P6 warning, and one draws a
 P5 error because our bounded scan cannot confirm the PDF. These findings answer
 separate questions from whether its pages contain text.
 
 Four generated fixtures with invalid NumberOfPages values draw both `REP_023`
-and `REP_039` errors; six other containers in the sweep carry the same pair.
+and `REP_039` errors; eight other containers in the sweep carry the same pair.
 Read from the pinned source, `processor:REP_MESSAGE_023` turns XML schema errors
 into report entries, while `processor:REP_MESSAGE_039` follows a failure to read
 the metadata object. On these four fixtures it also warns `REP_016` for schema

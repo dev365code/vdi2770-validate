@@ -217,6 +217,9 @@ longest comment reaches, which exited with what its content earns on Python
 ways above, which exited with what its content earns everywhere -- but for a
 second end record, which was already refused as bytes in front of an archive.
 
+*(Correction, 1.0.0: the releases that look for the end record one byte further back than the longest comment reaches are 3.12.7 and earlier, 3.13.0, and every 3.9, 3.10 and 3.11 release; from 3.12.8 and 3.13.1 on they look where the longest comment reaches. The releases named as measured read and refuse as said.)*
+*(Correction, 1.0.0: "the signature of a second end record after the first (4.3.1)" is the signature of an end record inside the comment, which APPNOTE does not forbid there (4.4.26); this tool refuses it because a reader that searches back from the end of the file takes it for the record.)*
+
 ## 0.12.0 — 2026-10-21
 
 Who should take this release: anyone who has to check a delivery on a machine

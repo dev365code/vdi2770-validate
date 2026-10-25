@@ -398,7 +398,11 @@ What a build script can rely on:
   severity or an unreadable path, `2` nothing could be read at all, `3` this tool
   refused to judge because its two halves disagree about which release they are,
   `64` a command-line usage error — a bad option, a missing argument, an unknown
-  subcommand — and `141` a closed pipe. `3` is not a verdict on any container.
+  subcommand — and `70` this tool's own code failed on a file, raised out of the
+  check or caught inside it and reported as `X5`: a failure of ours, not a verdict
+  on the delivery. A run whose reader goes away — `| head` — ends by `SIGPIPE`
+  where the platform has one and with `141` where it does not, because it did not
+  finish. `3` is not a verdict on any container.
 - **The command line.** `vdi2770-validate check <container>` and its options.
   There is one console script, and two module doors that run the same code:
   `python -m vdi2770_validate` for anything written against the old name, and
@@ -606,8 +610,9 @@ new major version, announced as a breaking change in the CHANGELOG. Everything e
 may change between releases.
 
 Releases follow semantic versioning, and the reader and the rule set move together
-under one tag. Released files are not deleted; a release with a security problem is
-marked as yanked and superseded, so a version you have pinned keeps installing. When
+under one tag. Released files are not deleted, and a release with a security problem
+stays installable, so a version you have pinned keeps installing; SECURITY.md lists
+the advisory that reaches it and the release that closes it. When
 the free sources a rule is built on change, the CHANGELOG says what changed in the
 judgement and why.
 

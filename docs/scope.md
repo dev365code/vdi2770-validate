@@ -75,6 +75,14 @@ failure — files that never claimed at all.
   The browser page carries CPython 3.13.2, a release from before the repair for
   CVE-2025-8291, and its comparison with the command runs on that same release.
 
+- **Archives APPNOTE allows and this tool refuses**: a self-extracting archive
+  (APPNOTE 4.1.9) and any other file with bytes in front of the archive; an
+  archive comment holding the end record's signature, which a reader that
+  searches back from the end of the file takes for the record (4.4.26 sets no
+  rule on what a comment holds); and a zip64 end record carrying extensible data
+  or a version-2 record (4.3.14.2, 4.3.14.3). Each is `Z1`, on every Python, in a
+  sentence that names the bytes.
+
 - **Text spelling at the listing limit**: the page charges the visible spelling
   of runner syntax against the existing listing allowance. It can list fewer
   findings at that limit and says how many; the stored report, JSON, counts and
@@ -177,9 +185,9 @@ failure — files that never claimed at all.
 ## What was rewritten, and what was not
 
 Some commit messages in this repository once described how a change came to be
-found. A published artifact carries the verdict and not the method, so on
-2026-08-26 the **messages** of the commits and tags were rewritten to say what
-changed rather than how it was noticed.
+found. A published artifact carries the verdict and not the method, so the
+**messages** of the commits and tags were rewritten, once, to say what changed
+rather than how it was noticed.
 
 Only the messages. Every tree, author and date is unchanged, so each published
 version still corresponds byte-for-byte to the tag it was built from — checked
@@ -202,7 +210,7 @@ over, because there the cost of rewriting exceeded what it would have bought.
 and a file this tool cannot open at all used to print the same shape as a
 container with one small thing wrong. So a run carries two sentences that are
 about this tool rather than about the container — one per report, one per run,
-and this page said "every report" about both until somebody read it twice.
+and this page once said "every report" about both.
 
 The first is a count of what was read, and every report has its own:
 

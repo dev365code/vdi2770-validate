@@ -177,7 +177,7 @@ def cases(data: bytes) -> dict:
         "zip64-with-bytes-in-front-located-from-the-file": b"\0" * 7 + zip64(data, points=7),
         "zip64-record-placing-the-directory-past-where-it-is": zip64(data, moved=4),
         # Searched for one byte further back than the longest comment reaches
-        # by the releases before 3.12.10, and not by those after.
+        # by the releases before 3.12.8 and 3.13.1, and not by those after.
         "end-record-with-the-longest-comment-and-a-byte-after-it":
             end(data, comment=b"\0" * 0xFFFF, after=b"\0"),
         # Ends every release reads, and reads alike, that contradict themselves.

@@ -54,3 +54,48 @@ def test_a_verdict_we_do_not_make_is_named_on_the_page():
         "the reference reports a warning or worse and this tool reports nothing "
         "louder than a note, and the page does not say so:\n"
         + "\n".join(f"    {n}: {k}" for n, k in sorted(unrecorded.items())))
+
+
+#: As the page spells a count it writes as a word.
+WORDS = {1: "one", 2: "two", 3: "three", 4: "four", 5: "five", 6: "six", 7: "seven",
+         8: "eight", 9: "nine", 10: "ten", 11: "eleven", 12: "twelve"}
+
+
+def test_the_counts_the_page_gives_are_the_sweeps():
+    """Section 5 counted the sweep once, and the sweep grew past the count:
+    it said 21 containers where the record holds 22, 50 fixtures warned
+    `REP_044` where it holds 52, and six other containers carrying `REP_023`
+    and `REP_039` where it holds eight. Each number is counted here from the
+    record the page describes."""
+    found = SWEEP["containers"]
+    text = " ".join(PAGE.split())
+
+    def ours(e, severity):
+        return e["ours"].get(severity, [])
+
+    quiet = [n for n, e in found.items()
+             if _louder_than_a_note(e["reference"]) and not (ours(e, "error") or ours(e, "warning"))]
+    assert f"**{len(quiet)} containers draw reference errors or warnings while we report only notes.**" in text
+
+    rep017 = [n for n, e in found.items() if "REP_017" in e["reference"].get("ERROR", [])]
+    assert f"`REP_017` is an error on {len(rep017)} of the generated fixtures" in text
+    io = [n for n in rep017 if {"REP_042", "REP_045"} <= set(found[n]["reference"].get("ERROR", []))]
+    capped = sum("P6" in ours(found[n], "warning") for n in io)
+    assert f"{WORDS[len(io)].capitalize()} of those {len(rep017)} also draw `REP_042` and `REP_045` errors." in text
+    assert f"Here {WORDS[capped]} of the {WORDS[len(io)]} draw a P6 tool-limit warning" in text
+
+    rep044 = [n for n, e in found.items() if "REP_044" in e["reference"].get("WARN", [])]
+    notes = sum(not (ours(found[n], "error") or ours(found[n], "warning")) for n in rep044)
+    limited = sum("P6" in ours(found[n], "warning") and not ours(found[n], "error") for n in rep044)
+    unconfirmed = sum("P5" in ours(found[n], "error") for n in rep044)
+    assert f"On {len(rep044)} of the generated fixtures, the reference also warns `REP_044`." in text
+    assert (f"Of these {len(rep044)}, {notes} draw only P4 here, {limited} also draw a P6 warning, "
+            f"and {WORDS[unconfirmed]} draws a P5 error") in text
+
+    pair = [n for n, e in found.items() if {"REP_023", "REP_039"} <= set(e["reference"].get("ERROR", []))]
+    # The generated page-tree fixtures that declare an invalid NumberOfPages are
+    # named for the value they hold: invalid-zero, invalid-negative, ...
+    invalid = [n for n in pair if n.startswith("invalid-")]
+    assert (f"{WORDS[len(invalid)].capitalize()} generated fixtures with invalid NumberOfPages values "
+            f"draw both `REP_023` and `REP_039` errors; {WORDS[len(pair) - len(invalid)]} other "
+            f"containers in the sweep carry the same pair.") in text

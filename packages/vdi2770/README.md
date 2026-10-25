@@ -117,7 +117,8 @@ code grows a kind that this list does not name.
 `Container.rejected` — what a caller needs a sentence for. Working that subset
 out by reading this module's source is how two of them came to be missed.
 
-The last three are the budgets that span the whole read rather than one archive: a
+The three `*-budget-exhausted` kinds are the budgets that span the whole read rather
+than one archive: a
 documentation container may legitimately hold hundreds of inner containers, and
 their metadata is held for as long as you walk the tree. Ten thousand of them,
 each with sixteen megabytes of metadata, is a permitted input under every

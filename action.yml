@@ -207,7 +207,7 @@ runs:
         # as `bash --noprofile --norc -e -o pipefail`, so errexit is already on
         # before this script says anything: a bare call that exits non-zero ends
         # the step *there*, and everything below -- the output, the branch, the
-        # message -- never happens. That is what shipped an hour ago, and it read
+        # message -- never happens. That is what an earlier version did, and it read
         # as "a failed step publishes no outputs" because the output was never
         # written. `set -uo pipefail` above does not turn `-e` off, and this line
         # is why it does not need to.
