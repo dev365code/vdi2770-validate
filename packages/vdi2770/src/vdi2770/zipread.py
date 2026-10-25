@@ -1385,6 +1385,28 @@ def member_reader(data: bytes, allowed: Optional[Set[str]] = None):
         counted: Dict[str, int] = {}
         for entry in opened[0].infolist():
             counted[entry.filename] = counted.get(entry.filename, 0) + 1
+        # And the limits `read` sets by the archive's own sizes, met the way it
+        # meets them: no member of an archive listing more than `MAX_MEMBERS`
+        # entries, none said to expand past `MAX_RATIO`, and none from where the
+        # sizes it declares pass `MAX_TOTAL_BYTES`. A caller with the list of
+        # accepted names cannot ask for those; one without it was handed sixteen
+        # megabytes from a member of zeros `read` had refused for its ratio.
+        listed = [i for i in opened[0].infolist() if i.filename]
+        if len(listed) > MAX_MEMBERS:
+            return lambda name: None
+        oversized, total = set(), 0
+        for at, i in enumerate(listed):
+            if (counted.get(i.filename) != 1 or _unsafe(i.filename) or id(i) in opened[1]
+                    or i.file_size > MAX_MEMBER_BYTES):
+                continue
+            if (i.compress_size > 0 and i.file_size > MIN_SUSPICIOUS_BYTES
+                    and i.file_size // max(i.compress_size, 1) > MAX_RATIO):
+                oversized.add(i.filename)
+                continue
+            total += i.file_size
+            if total > MAX_TOTAL_BYTES:
+                oversized.update(rest.filename for rest in listed[at:] if not rest.is_dir())
+                break
     except Exception:
         return lambda name: None
 
@@ -1402,6 +1424,8 @@ def member_reader(data: bytes, allowed: Optional[Set[str]] = None):
                 return None
             info = archive.getinfo(name)
             if id(info) in refused:
+                return None
+            if name in oversized:
                 return None
             if info.compress_type not in SUPPORTED_METHODS:
                 return None            # not one this reader inflates; see the sweep

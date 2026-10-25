@@ -39,6 +39,14 @@ begins has each of them refused, not only the last.
   **This moves verdicts:** the entries before the last are `Z12` too now, on
   every Python; such an archive exited `1` already, for the last of them. No
   container in this repository moves.
+- **A later read without the list meets the first read's limits.** Asked
+  without the names `read` accepted, `member_bytes` and `member_reader`
+  refused what `read` refuses for a name or a place, and not what it refuses
+  for size: a member said to expand past the ratio `read` allows came back --
+  sixteen megabytes from one of zeros -- and so did the members past the total
+  an archive may declare, and every member of an archive listing more entries
+  than `read` reads. Those are refused now too.
+  **This moves verdicts:** none -- the validator passes the list.
 - **What 1.x keeps is written down.** The README's list of what a build can
   rely on -- the exit codes, the command line, the report and its
   `schemaVersion`, the old import name, and now the reader's names -- says that

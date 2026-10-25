@@ -330,6 +330,30 @@ def test_a_later_read_with_no_list_refuses_what_the_first_one_refused(name):
         assert zipread.member_bytes(CASES[name], member) is None, member
 
 
+@pytest.mark.parametrize("limit", ["count", "ratio", "total"])
+def test_a_later_read_with_no_list_meets_the_limits_the_first_one_met(limit, monkeypatch):
+    """Asked without the names `read` accepted, `member_bytes` refused what
+    `read` refused for a name or a place, and not what it refused for size: a
+    member said to expand past the ratio `read` allows came back -- sixteen
+    megabytes from one of zeros -- and so did the members past the total an
+    archive may declare, and every member of an archive listing more entries
+    than `read` reads. The limits are made small here; what is held is that
+    both reads meet the same ones."""
+    data = CASES["plain"]
+    if limit == "count":
+        monkeypatch.setattr(zipread, "MAX_MEMBERS", len(FILES) - 1)
+    elif limit == "ratio":
+        monkeypatch.setattr(zipread, "MIN_SUSPICIOUS_BYTES", 0)
+        monkeypatch.setattr(zipread, "MAX_RATIO", 0)
+    else:
+        monkeypatch.setattr(zipread, "MAX_TOTAL_BYTES", len(FILES[list(FILES)[0]]))
+    c = zipread.read(data, "limits.zip")
+    accepted = {m.name for m in c.members}
+    assert accepted != set(FILES), "the limit stopped nothing; the case holds nothing"
+    for member in FILES:
+        assert (zipread.member_bytes(data, member) is not None) is (member in accepted), member
+
+
 def test_an_archive_without_a_unicode_path_field_is_handed_over_as_it_is():
     """The copy costs a second archive's worth of memory for as long as the
     archive is open, so it is made only where there is a field to take out."""
