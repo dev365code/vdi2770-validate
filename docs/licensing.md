@@ -57,13 +57,16 @@ Full table, licence texts and modification statements are in
    implementation `DigitalDataChainConsortium/vdi2770`, Copyright (C) 2021
    Johannes Schmidt. Verbatim, hash-pinned, attributed in `corpus/NOTICE`.
 
-## The reader package carries none of this
+## Which wheel carries it
 
-`vdi2770`, the reader library in `packages/`, bundles no third-party material at
-all — no schema, no table, no vendored corpus. It is Apache-2.0 and that is the
-whole story, which is one more reason the split was worth doing: the package most
-likely to be embedded in someone else's product is the one with nothing attached
-to it. The schema and the IDTA-derived table stay here, with the notices.
+`vdi2770`, the reader library in `packages/`, has carried the validator since
+0.8.0, and with it the two files of third-party origin the validator reads: the
+schema and the IDTA-derived table, under `vdi2770/validate/data/` in its wheel
+beside `rules.json`, which is this project's own. Its `NOTICE` and
+`THIRD_PARTY.md` travel beside the licence in the same wheel, so a product that
+embeds the reader embeds the two files and their notices together. The corpus
+is test material and is in neither wheel. `vdi2770-validate` is two lines of
+alias and carries none of it, which its own `NOTICE` says.
 
 ## The remedy-text gate
 

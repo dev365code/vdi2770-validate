@@ -81,11 +81,10 @@ def test_the_readers_notice_sends_people_where_the_material_actually_is():
         "the reader's NOTICE no longer says where the bundled material is "
         "accounted for")
     assert "vdi2770-validate" in reader, (
-        "the reader's NOTICE no longer names the distribution that actually "
-        "carries the schema, the class table and the corpus. `vdi2770` ships "
-        "none of it and has no THIRD_PARTY.md of its own, so a reader who "
-        "follows this notice has to be sent to the sibling distribution by "
-        "name.")
+        "the reader's NOTICE no longer names `vdi2770-validate`, the "
+        "distribution the schema and the class table shipped in until 0.8.0. "
+        "They ship in `vdi2770` now, beside its own THIRD_PARTY.md, and a "
+        "reader who knew the old place has to be told it moved.")
 
 
 def test_mit_permission_notice_is_reproduced_in_full():
