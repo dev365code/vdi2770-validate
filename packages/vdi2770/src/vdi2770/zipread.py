@@ -711,10 +711,12 @@ class _Named:
 
 
 def _overlapping(data: bytes, infos, directory_at: int) -> Dict[int, str]:
-    """The entries whose data would be read as another entry's too, by `id` of
-    their `ZipInfo`, each with the reason: two entries pointing at one local
-    header, and an entry whose data runs past where the next local header -- or,
-    after the last one, the central directory -- begins (4.3.6).
+    """The entries whose data would be read as another entry's too, or that
+    are not in the archive's body at all, by `id` of their `ZipInfo`, each with
+    the reason: two entries pointing at one local header, an entry whose local
+    header lies past where the central directory begins, and an entry whose
+    data runs past where the next local header -- or, after the last one, the
+    central directory -- begins (4.3.6).
 
     That is what the repair for CVE-2024-0450 refuses, and only some of the
     library's releases carry it; of two entries sharing a header, the releases
@@ -722,9 +724,15 @@ def _overlapping(data: bytes, infos, directory_at: int) -> Dict[int, str]:
     library starts reading it, plus its compressed size: after the local header
     and its name and extra field, as that header gives their lengths. An entry
     whose local header cannot be read is left to the library, which refuses it
-    in the same words on every release. One whose local header lies past where
-    the central directory begins is said to lie there: its data does not run
-    into the directory, it starts beyond it.
+    in the same words on every release.
+
+    A local header past where the central directory begins is outside the
+    layout 4.3.6 gives an archive -- headers and data, then the directory, then
+    the end record -- and is refused for lying there, whether or not its data
+    would run into anything. The repair asks only whether it would: of two such
+    headers it reads the first, whose data ends where the second's begins --
+    and a reader that walks local headers from the start stops at the directory
+    and finds neither.
     """
     shared: Dict[int, int] = {}
     for i in infos:
@@ -740,14 +748,14 @@ def _overlapping(data: bytes, infos, directory_at: int) -> Dict[int, str]:
         head = data[i.header_offset:i.header_offset + 30]
         if len(head) < 30 or head[:4] != _LOCAL:
             continue
+        if i.header_offset >= directory_at:
+            out[id(i)] = (f"its local header, at byte {i.header_offset:,}, lies past where the "
+                          f"central directory begins, at byte {directory_at:,}")
+            continue
         name_length, extra_length = struct.unpack_from("<2H", head, 26)
         ends = i.header_offset + 30 + name_length + extra_length + i.compress_size
         limit = after.get(i.header_offset, directory_at)
         if ends <= limit:
-            continue
-        if i.header_offset >= directory_at:
-            out[id(i)] = (f"its local header, at byte {i.header_offset:,}, lies past where the "
-                          f"central directory begins, at byte {directory_at:,}")
             continue
         out[id(i)] = (f"its data runs to byte {ends:,}, and the next entry's local header begins "
                       f"at byte {limit:,}: one stretch of bytes would be read as two members"

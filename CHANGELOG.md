@@ -8,8 +8,10 @@ Who should take this release: everyone on 0.14.0, and anyone who waited for a
 1.x promise before building on the report, the exit codes, the command line or
 the reader's names -- the README now says what 1.x keeps, and a change that
 breaks one of them comes in a new major version. No exit code 0.14.0 gave
-moves; a container whose metadata declares a name its archive stores in UTF-8
-without saying so draws one finding fewer, and the one left says what to set.
+moves. A container whose metadata declares a name its archive stores in UTF-8
+without saying so draws one finding fewer, and the one left says what to set;
+an archive with more than one local header past where its central directory
+begins has each of them refused, not only the last.
 
 - **A name written in UTF-8 without saying so is told what to set.** APPNOTE
   reads an entry's name as UTF-8 when general purpose bit 11 says so and as IBM
@@ -23,6 +25,20 @@ without saying so draws one finding fewer, and the one left says what to set.
   by the name an entry is read under, what its bytes spell in UTF-8.
   **This moves verdicts:** none -- such a container exits `1` as before, with
   one finding fewer.
+- **Every local header past where the central directory begins is refused.**
+  APPNOTE lays an archive out as local headers and their data, then the
+  central directory, then the end record (4.3.6). Of entries whose local
+  headers lie past where the directory begins, 0.14.0 refused the last, and
+  one before it only when its data ran on past the next header -- the bound
+  the repair for CVE-2024-0450 draws -- so of two such headers it read the
+  first, whose data ends where the second's begins. Each is refused now, as
+  `Z12`, in the sentence that says where its header lies: a reader that walks
+  local headers from the start stops at the directory and finds none of them.
+  Python 3.13.15's own ZIP library reads the first of two, and 3.9.6's reads
+  both.
+  **This moves verdicts:** the entries before the last are `Z12` too now, on
+  every Python; such an archive exited `1` already, for the last of them. No
+  container in this repository moves.
 - **What 1.x keeps is written down.** The README's list of what a build can
   rely on -- the exit codes, the command line, the report and its
   `schemaVersion`, the old import name, and now the reader's names -- says that
@@ -109,6 +125,8 @@ one whose data another entry holds too, or whose local header lies past the
 central directory, which exited with what its content earns on Python 3.9.6,
 now exits `1` there as well. Two entries sharing one
 local header made every Python exit `1` already, and still do.
+
+*(Correction, 1.0.0: of two or more entries whose local headers lie past where the central directory begins, 0.14.0 refuses the last and reads one before it whose data ends where the next header begins; "An entry whose local header lies past where the central directory begins is refused too" holds from 1.0.0, which refuses each.)*
 
 ## 0.13.0 — 2026-10-22
 

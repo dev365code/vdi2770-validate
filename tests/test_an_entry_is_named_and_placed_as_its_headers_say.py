@@ -68,6 +68,13 @@ LAST = list(FILES)[-1]
 #: record, as its comment: past the other members, the central directory and
 #: the end record's 22 bytes.
 PAST = STARTS[LAST] + sum(46 + len(name.encode("utf-8")) for name in FILES) + 22
+#: The entry one case adds after the last member, and where the last
+#: member's local header and that entry's lie when both are written after
+#: the end record, in that order: past the central directory, which lists
+#: one entry more, and the end record's 22 bytes.
+ADDED = "C.txt"
+PAST_FIRST = STARTS[LAST] + sum(46 + len(name.encode("utf-8")) for name in [*FILES, ADDED]) + 22
+PAST_SECOND = PAST_FIRST + 30 + len(LAST.encode("utf-8")) + len(FILES[LAST])
 
 #: Read on every Python, with nothing refused: the name the PDF has.
 NAMED = {
@@ -162,6 +169,15 @@ REFUSED = {
         LAST: ("member-unreadable",
                f"its local header, at byte {PAST:,}, lies past where the central directory "
                f"begins, at byte {STARTS[LAST]:,}")}),
+    # Two of them: the first one's data ends where the second's header begins,
+    # so it does not run into anything, and it is not in the archive's body either.
+    "two-local-headers-past-the-central-directory": (sorted(set(FILES) - {LAST}), {
+        LAST: ("member-unreadable",
+               f"its local header, at byte {PAST_FIRST:,}, lies past where the central "
+               f"directory begins, at byte {STARTS[LAST]:,}"),
+        ADDED: ("member-unreadable",
+                f"its local header, at byte {PAST_SECOND:,}, lies past where the central "
+                f"directory begins, at byte {STARTS[LAST]:,}")}),
     # Two entries and one local header: both are refused, whichever comes first.
     "two-entries-one-local-header": (OTHERS, {
         "C.pdf": ("member-unreadable", _SHARED), "B.pdf": ("member-unreadable", _SHARED)}),
@@ -215,6 +231,30 @@ def test_an_entry_is_refused_in_one_sentence_on_every_python(name):
     assert sorted(c.file_names) == readable
     assert {n: (d.kind, d.detail) for n, d in c.rejected.items()} == refused
     assert [d for d in c.defects if d.kind == "not-a-zip"] == []
+
+
+@pytest.mark.parametrize("form", ["plain", "zip64", "behind-a-stub"])
+def test_no_archive_the_library_writes_has_a_local_header_past_its_directory(form, monkeypatch):
+    """The refusal of a local header past where the central directory begins
+    reaches no archive written the ordinary way: the library's writer lays
+    every one out as 4.3.6 does -- with ZIP64 fields and end records, and
+    behind bytes put in front of the archive as a self-extracting one has.
+    """
+    if form == "zip64":
+        monkeypatch.setattr(zipfile, "ZIP64_LIMIT", 1 << 6)
+        monkeypatch.setattr(zipfile, "ZIP_FILECOUNT_LIMIT", 2)
+    raw = io.BytesIO(b"#!stub\n" * 50 if form == "behind-a-stub" else b"")
+    raw.seek(0, io.SEEK_END)
+    with zipfile.ZipFile(raw, "a" if form == "behind-a-stub" else "w", zipfile.ZIP_DEFLATED) as z:
+        for name, data in FILES.items():
+            z.writestr(name, data)
+    data = raw.getvalue()
+    assert (b"PK\x06\x06" in data) is (form == "zip64"), "the library wrote the end records it was asked to"
+    found = zipread._directory(data)
+    begins = found.follows - found.size
+    infos = zipfile.ZipFile(io.BytesIO(data)).infolist()
+    assert len(infos) == len(FILES) and all(i.header_offset < begins for i in infos)
+    assert zipread._overlapping(data, infos, begins) == {}
 
 
 @pytest.mark.parametrize("name", sorted(NAMELESS))

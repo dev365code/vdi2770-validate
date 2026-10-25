@@ -60,9 +60,10 @@ def _extra(e: dict, size: int) -> bytes:
 def build(entries, *, runs_on=None, past_directory=None) -> bytes:
     """The entries' local headers and data, in order; then the central
     directory, in order; then an end record (4.3.16), one disk, no comment --
-    unless `past_directory` gives the index of an entry whose local header and
-    data come after the end record instead, as its comment, past where 4.3.6
-    lays every local header out: before the central directory.
+    unless `past_directory` gives the index of an entry, or a tuple of them,
+    whose local header and data come after the end record instead, as its
+    comment and in that order, past where 4.3.6 lays every local header out:
+    before the central directory.
 
     `runs_on` gives, by index, how many bytes past its own data an entry's
     sizes say its data runs: over what follows it, and at most into the fields
@@ -71,9 +72,11 @@ def build(entries, *, runs_on=None, past_directory=None) -> bytes:
     begins reads them as this entry's.
     """
     runs_on = runs_on or {}
+    past = (past_directory if isinstance(past_directory, tuple)
+            else () if past_directory is None else (past_directory,))
     body, where = b"", {}
     for i, e in enumerate(entries):
-        if e["at"] is None and i != past_directory:
+        if e["at"] is None and i not in past:
             where[i] = len(body)
             body += struct.pack(LOCAL_FIELDS, LOCAL, 20, e["flags"], 0, 0, 33, zlib.crc32(e["data"]),
                                 len(e["data"]), len(e["data"]), len(e["local_name"]), 0)
@@ -84,7 +87,7 @@ def build(entries, *, runs_on=None, past_directory=None) -> bytes:
     ahead = struct.pack("<4s6H", CENTRAL, 20, 20, entries[0]["flags"], 0, 0, 33)
     crcs, sizes = {}, {}
     for i, e in enumerate(entries):
-        if e["at"] is not None or i == past_directory:
+        if e["at"] is not None or i in past:
             continue
         begins = where[i] + 30 + len(e["local_name"])
         sizes[i] = len(e["data"]) + runs_on.get(i, 0)
@@ -99,12 +102,13 @@ def build(entries, *, runs_on=None, past_directory=None) -> bytes:
                                                   crcs[i], sizes[i], sizes[i], len(e["local_name"]), 0)
                     + body[where[i] + 30:])
     comment = b""
-    if past_directory is not None:
-        e = entries[past_directory]
-        crcs[past_directory], sizes[past_directory] = zlib.crc32(e["data"]), len(e["data"])
-        where[past_directory] = len(body) + sum(46 + len(x["name"]) + len(_extra(x, 0)) for x in entries) + 22
-        comment = struct.pack(LOCAL_FIELDS, LOCAL, 20, e["flags"], 0, 0, 33, crcs[past_directory],
-                              sizes[past_directory], sizes[past_directory], len(e["local_name"]), 0)
+    after_end = len(body) + sum(46 + len(x["name"]) + len(_extra(x, 0)) for x in entries) + 22
+    for i in past:
+        e = entries[i]
+        crcs[i], sizes[i] = zlib.crc32(e["data"]), len(e["data"])
+        where[i] = after_end + len(comment)
+        comment += struct.pack(LOCAL_FIELDS, LOCAL, 20, e["flags"], 0, 0, 33, crcs[i],
+                               sizes[i], sizes[i], len(e["local_name"]), 0)
         comment += e["local_name"] + e["data"]
     directory = b""
     for i, e in enumerate(entries):
@@ -235,6 +239,12 @@ def cases(files: dict, subject: str) -> dict:
         # record's comment, which only the last entry's small data fits.
         "a-local-header-past-the-central-directory": build(renamed(entry(plain, data)),
                                                             past_directory=len(names) - 1),
+        # Two of them, the last entry and one more after it: the first one's
+        # data ends where the second's header begins, so where they lie is all
+        # that says neither is in the archive's body.
+        "two-local-headers-past-the-central-directory": build(
+            renamed(entry(plain, data)) + [entry(b"C.txt", b"c\n")],
+            past_directory=(len(names) - 1, len(names))),
         # Two central directory entries and one local header between them.
         "two-entries-one-local-header": build(_aliased(renamed(entry(plain, data)), k, b"C" + plain[1:])),
         "two-entries-one-local-header-one-name": build(_aliased(renamed(entry(plain, data)), k, plain)),

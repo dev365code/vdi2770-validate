@@ -270,7 +270,11 @@ Six more, this time observed in the sweep rather than read:
   no error; on the entry whose header and field name two files it reports an
   error, as this tool does; on two entries sharing one local header it throws
   rather than reports. Which name or which bytes it took for those entries is
-  not visible in the codes a run records, and is not claimed here.
+  not visible in the codes a run records, and is not claimed here. An entry
+  whose local header lies past where the central directory begins is refused
+  too, every one: of two such, Python 3.13.15's library reads the first, whose
+  data ends where the second's header begins, and 3.9.6's reads both. No
+  fixture holds two of them, so the reference has not been run on that case.
 
 One structural difference, not a defect on either side: the reference extracts
 every container to a temporary folder on disk before validating
