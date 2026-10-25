@@ -623,6 +623,15 @@ def _unread(data: bytes, tags) -> bytes:
     return b"".join(pieces)
 
 
+def _as_written(name: str) -> str:
+    """A name as the archive writes it, cut at its first NUL as the library
+    cuts it on every platform -- and not with its backslashes made `/`, which
+    the library does on Windows only. There a member named `a\\b.pdf` was read
+    as a path into a folder, where every other platform refuses it.
+    """
+    return name.split("\0", 1)[0]
+
+
 def _name(info: zipfile.ZipInfo, header: _Header) -> Optional[str]:
     """Name the entry `info` stands for as APPNOTE names it -- or say why it has
     more than one name.
@@ -637,9 +646,9 @@ def _name(info: zipfile.ZipInfo, header: _Header) -> Optional[str]:
     Page 437 and UTF-8 -- so a field giving either of those another name is not
     its UTF-8 version: the entry names two files, and a reader that ignores the
     field reads the other one. So does an extra field carrying two of them.
-    Compared as the library tidies a name -- cut at its first NUL, its
-    separators made `/` -- so that only a difference the name keeps is one, and
-    a field the tidying leaves no name in is no name at all.
+    Compared as this reader names an entry -- cut at its first NUL, its
+    separators as written -- so that only a difference the name keeps is one,
+    and a field the cut leaves no name in is no name at all.
     """
     if not info.filename:
         return None
@@ -649,7 +658,7 @@ def _name(info: zipfile.ZipInfo, header: _Header) -> Optional[str]:
                 "has one name")
     if not header.unicode:
         return None
-    given = zipfile.ZipInfo(header.unicode[0]).filename
+    given = _as_written(header.unicode[0])
     if not given:
         return None
     if given != info.filename and (header.utf8 or all(0x20 <= b <= 0x7E for b in header.raw)):
@@ -683,6 +692,7 @@ def _library(data: bytes, found: _Directory):
                 "way to the library it reads them with")
     named, unflagged = {}, {}
     for info, header in zip(infos, headers):
+        info.filename = _as_written(info.orig_filename)
         before = info.filename
         why = _name(info, header)
         if why:

@@ -8,7 +8,9 @@ Who should take this release: everyone on 0.14.0, and anyone who waited for a
 1.x promise before building on the report, the exit codes, the command line or
 the reader's names -- the README now says what 1.x keeps, and a change that
 breaks one of them comes in a new major version. No exit code 0.14.0 gave
-moves. A container whose metadata declares a name its archive stores in UTF-8
+moves but one, on Windows, where a container holding an entry whose name
+carries a backslash exits `1` now, as it already did everywhere else. A
+container whose metadata declares a name its archive stores in UTF-8
 without saying so draws one finding fewer, and the one left says what to set;
 an archive with more than one local header past where its central directory
 begins has each of them refused, not only the last.
@@ -70,6 +72,17 @@ begins has each of them refused, not only the last.
   of the document container inside, which nobody delivered. They refuse every
   member of it now.
   **This moves verdicts:** none -- the validator passes the list.
+- **A backslash in an entry's name is refused on every platform.** Python's
+  `zipfile` turns a backslash in an entry's name into `/` as it reads an
+  archive on Windows, and only there, so a name this tool refuses as `Z4` on
+  Linux, on macOS and in the browser page was read in a Windows terminal, and
+  by the Action on a Windows runner, as a path into a folder. The reader names
+  an entry as it is written now, cut at its first NUL as the library cuts it
+  everywhere. A test writes such an archive byte by byte, which is how a
+  backslash survives being written on Windows too, and runs on the Windows
+  row of the CI.
+  **This moves verdicts:** on Windows only -- an entry whose name holds a
+  backslash is `Z4` there too, and a container holding one exits `1`.
 - **A member in a method this reader does not expand is told which method to
   use.** Both findings on such a member, `Z12` and the `F1` on the file the
   metadata declares under its name, told the sender to re-create the archive
@@ -91,6 +104,11 @@ begins has each of them refused, not only the last.
   for 0.x, where a pin is written `~=0.6.0` and admits only 0.6.x. From 1.0 a
   pin is written `~=1.0` and admits every 1.x, so the gate now asks for the
   major.
+
+**If your build gates on the exit code, this is the paragraph for you.** On
+Windows, a container holding an entry whose name carries a backslash exits
+`1` now, as it already did on Linux, on macOS and in the browser page.
+Nothing else exits differently.
 
 ## 0.14.0 — 2026-10-24
 
@@ -166,6 +184,7 @@ local header made every Python exit `1` already, and still do.
 
 *(Correction, 1.0.0: of two or more entries whose local headers lie past where the central directory begins, 0.14.0 refuses the last and reads one before it whose data ends where the next header begins; "An entry whose local header lies past where the central directory begins is refused too" holds from 1.0.0, which refuses each.)*
 *(Correction, 1.0.0: printable ASCII reads the same in the two character sets APPNOTE gives an entry's name, IBM Code Page 437 and UTF-8, and not in every character set -- ISO 646's national variants and JIS X 0201 read some of those bytes as other letters; the refusal of an entry whose Unicode Path field gives such a header another name stands on the first.)*
+*(Correction, 1.0.0: "named by this tool, the same way on every Python" held on every Python but not on every platform -- on Windows the library still made a backslash in a name `/`, and such an entry was read there as a path; 1.0.0 names it as written there too.)*
 
 ## 0.13.0 — 2026-10-22
 

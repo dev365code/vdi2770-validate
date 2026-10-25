@@ -288,6 +288,35 @@ def test_a_hostile_member_name_never_reaches_the_member_list(name, why, reason):
         f"{why}: refused as {refusal.kind}/{refusal.detail!r}, expected {reason!r}")
 
 
+
+@pytest.mark.parametrize("platform", ["as it is", "as on Windows"])
+def test_a_backslash_in_a_name_is_refused_on_every_platform(platform, monkeypatch):
+    """Python's `zipfile` turns a backslash in an entry's name into `/` as it
+    reads an archive on Windows, and only there: a name this tool refuses as
+    `Z4` on Linux, on macOS and in the page was read in a Windows terminal, and
+    by the Action on a Windows runner, as a path into a folder. The archive is
+    written byte by byte -- the one way a backslash survives being written on
+    Windows too -- so this runs on every row of the CI, and once more here with
+    the separators Windows has."""
+    import sys as _sys
+
+    from conftest import ROOT
+
+    _sys.path.insert(0, str(ROOT / "tools"))
+    import archive_entries
+
+    if platform == "as on Windows":
+        monkeypatch.setattr(os, "sep", "\\")
+        monkeypatch.setattr(os, "altsep", "/")
+    data = archive_entries.build([archive_entries.entry(b"VDI2770_Metadata.xml", b"<x/>"),
+                                  archive_entries.entry(b"subdir\\evil.txt", b"x")])
+    c = zipread.read(data, "x.zip")
+    assert not {"subdir\\evil.txt", "subdir/evil.txt"} & set(c.file_names), c.file_names
+    refusal = c.rejected.get("subdir\\evil.txt")
+    assert refusal is not None, sorted(c.rejected)
+    assert (refusal.kind, refusal.detail) == ("unsafe-member-name", "backslash path separator")
+
+
 # --- names are case-sensitive ------------------------------------------------
 
 @pytest.mark.parametrize("name", ["vdi2770_metadata.xml", "VDI2770_METADATA.XML",

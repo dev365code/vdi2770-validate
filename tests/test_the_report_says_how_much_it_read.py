@@ -304,7 +304,8 @@ def test_quiet_does_not_hide_the_line_from_the_page_either():
 
 
 @pytest.mark.skipif(os.name == "nt", reason="zipfile turns a backslash in a member's name into / "
-                    "as it reads an archive on Windows, so there is no backslash name to refuse")
+                    "as it writes an archive on Windows, so this fixture cannot hold one there; "
+                    "test_defences reads one written byte by byte on every platform")
 def test_a_name_the_reader_refuses_for_a_backslash_is_still_counted():
     """`a\\b\\VDI2770_Metadata.xml` is refused as an unsafe name, and the
     predicate that recognises a metadata file split on `/` only — so the one
