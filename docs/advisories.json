@@ -1,6 +1,23 @@
 {
   "advisories": [
     {
+      "id": "GHSA-fv32-69r4-3fm7",
+      "text": "asked without the names `read` accepted, `member_bytes` and `member_reader` read an archive `read` refused whole -- a file cut short on the way or with bytes in front of it, or whose end records count other entries than it lists -- and could hand a caller a member of the archive it held; and they inflated members `read` refuses for their ratio, past the total an archive may declare, or of an archive listing more entries than it reads, bounded only by the 512 MiB limit on one member. The validator asks again only for members `read` accepted and was not affected.",
+      "from": {
+        "vdi2770-validate": "0.1.0",
+        "vdi2770": "0.1.0"
+      },
+      "through": "0.14.0",
+      "fixed_in": "1.0.0",
+      "corrections": [
+        {
+          "in": "1.0.0",
+          "on": "2026-10-26",
+          "took_back": false
+        }
+      ]
+    },
+    {
       "id": "GHSA-h676-59p4-6632",
       "text": "a file cut short on the way, or with bytes in front of it, could be read as an archive it held and pass: a container that stores a document container without compressing it, cut short at the right length, was read as that document container, with no error and exit 0.",
       "from": {

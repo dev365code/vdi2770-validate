@@ -2620,8 +2620,8 @@ LISTING_BUDGET_ROWS = [
 
     ('pages/a-correction-sends-a-reader-past-every-advisory',
      'CHANGELOG.md',
-     'move to 0.11.0 or later, which closes every advisory SECURITY.md lists and pins both halves exactly.)*',
-     'move to 0.10.3 or later, which closes every advisory SECURITY.md lists and pins both halves exactly.)*',
+     'move to 1.0.0 or later, which closes every advisory SECURITY.md lists, one of them reaching every release up to 0.14.0, and pins both halves exactly.)*',
+     'move to 0.14.0 or later, which closes every advisory SECURITY.md lists, one of them reaching every release up to 0.14.0, and pins both halves exactly.)*',
      ['tests/test_an_advisory_and_its_release_name_each_other.py::test_every_release_a_page_sends_a_reader_to_is_past_every_advisory'],
      "one release earlier is inside an advisory's range, and a correction that sends a reader there moves them onto an affected release"),
 
@@ -2637,7 +2637,7 @@ LISTING_BUDGET_ROWS = [
 
     ("pages/an-action-ref-a-reader-copies-is-past-every-advisory",
      "README.md",
-     "| `uses: dev365code/vdi2770-validate@v0.14.0` |",
+     "| `uses: dev365code/vdi2770-validate@v1.0.0` |",
      "| `uses: dev365code/vdi2770-validate@v0.7.0` |",
      ["tests/test_an_advisory_and_its_release_name_each_other.py::"
       "test_every_pin_a_page_hands_a_reader_is_past_every_advisory"],
@@ -2647,7 +2647,7 @@ LISTING_BUDGET_ROWS = [
 
     ("pages/a-ref-written-alone-is-past-every-advisory",
      "README.md",
-     "`@v0.14.0` installs 0.14.0",
+     "`@v1.0.0` installs 1.0.0",
      "`@v0.7.0` installs 0.7.0",
      ["tests/test_an_advisory_and_its_release_name_each_other.py::"
       "test_every_pin_a_page_hands_a_reader_is_past_every_advisory"],

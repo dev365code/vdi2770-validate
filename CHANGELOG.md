@@ -120,6 +120,8 @@ file entry's and then, last, a directory entry's exits `1` now, on every
 Python, where 0.14.0 read the file and let the directory entry through.
 Nothing else exits differently.
 
+*(Correction 2026-10-26: the fixes above to reading a member without the list of what `read` accepted have advisory GHSA-fv32-69r4-3fm7, published after this section was written and reaching every release of both distributions up to 0.14.0.)*
+
 ## 0.14.0 — 2026-10-24
 
 Who should take this release: anyone who checks deliveries on more than one
@@ -1151,6 +1153,8 @@ same way here; the only difference a report shows is `toolVersion`.
 *(Correction 2026-09-24: pinning 0.8.0, 0.8.1, 0.8.2 or 0.9.0 by both names, as advised above, keeps a release inside the range of five security advisories published since, which SECURITY.md lists; move to 0.9.7 or later instead, which pins both halves exactly.)*
 
 *(Correction 2026-10-06: the version advice in the correction above is superseded; move to 0.11.0 or later, which closes every advisory SECURITY.md lists and pins both halves exactly.)*
+
+*(Correction 2026-10-26: the version advice in the corrections above is superseded; move to 1.0.0 or later, which closes every advisory SECURITY.md lists, one of them reaching every release up to 0.14.0, and pins both halves exactly.)*
 
 ## 0.9.0 — 2026-09-20
 

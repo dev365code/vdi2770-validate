@@ -564,8 +564,11 @@ def test_no_document_cites_a_file_that_is_not_here():
     # itself: docs/what-it-catches.md names the test that holds it to each one.
     # 62 to 63 when the README came to list the reader's names among what a
     # build can rely on: it names the record that holds them.
-    assert seen == 63, (
-        f"{seen} citations found, not 63. If you added or removed one, say so "
+    # 63 to 64 when the security page's row on oversized members came to cite
+    # the test that holds a later read without the list to the first read's
+    # limits.
+    assert seen == 64, (
+        f"{seen} citations found, not 64. If you added or removed one, say so "
         f"here; if you did not, some of them just stopped being checked.")
 
 

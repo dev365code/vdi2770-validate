@@ -13,7 +13,7 @@ is the working assumption, not an edge case.
 | Attack | What we do | Test |
 |---|---|---|
 | Path traversal (`../`, absolute paths, backslashes) | Refused as a finding. **Nothing is ever extracted to disk** — members are read into memory. | fixture `z4-path-traversal.zip` for the refusal; `tests/test_promises.py::test_nothing_is_written_to_disk` for the disk claim, which watches `sys.addaudithook` rather than trusting that no call site opens a file |
-| Zip bomb | Per-member size, total size, member count and compression-ratio caps. A member over the line becomes a finding and is never decompressed — including when the metadata declares it a PDF, which is how it got past the caps once. | fixtures `z5-compression-ratio.zip`, `z5b-declared-bomb.zip`; `packages/vdi2770/tests/test_the_public_api.py::test_a_member_the_reader_refused_cannot_be_read_by_a_later_layer`; `packages/vdi2770/tests/test_a_refused_member_is_never_read.py` |
+| Zip bomb | Per-member size, total size, member count and compression-ratio caps. A member over the line becomes a finding and is never decompressed — including when the metadata declares it a PDF, which is how it got past the caps once, and, from 1.0.0, when a later read asks for it without the list of members the first read accepted (GHSA-fv32-69r4-3fm7). | fixtures `z5-compression-ratio.zip`, `z5b-declared-bomb.zip`; `packages/vdi2770/tests/test_the_public_api.py::test_a_member_the_reader_refused_cannot_be_read_by_a_later_layer`; `packages/vdi2770/tests/test_a_refused_member_is_never_read.py`; `tests/test_an_entry_is_named_and_placed_as_its_headers_say.py::test_a_later_read_with_no_list_meets_the_limits_the_first_one_met` |
 | Amplification **after** a member is accepted | The archive caps do not bound what an accepted member costs to process. Inflating PDF streams is bounded per stream, in total, and by stream count; metadata larger than this tool will parse is refused rather than expanded into a tree and then validated; and an accepted member read out of the archive a second time, to hand it to the checks, is taken in the same one-megabyte steps as the first read, whatever size it claims; a member compressed with a method this reader does not inflate -- anything other than stored or deflate, which the library would decode whole -- is refused rather than decompressed. | `tests/test_amplification.py`, `packages/vdi2770/tests/test_the_budget_covers_every_read.py` |
 | Deeply nested archives | Three container levels are opened — the deepest seen in real containers — and anything below is reported, not opened. | fixture `z6-nesting-too-deep.zip` |
 | XXE / entity expansion | The XML parser refuses every entity declaration — internal, external and parameter — before the entity can be referenced. An external DTD subset on its own is not fetched either. | fixture `x3-entity-expansion.zip`; `tests/test_defences.py` |
@@ -59,6 +59,17 @@ goes out: nothing in this repository reaches the network to ask, which is the
 same promise the table above makes.
 
 <!-- advisories: written by tools/advisories.py from docs/advisories.json; edit the data, not this list -->
+
+- [GHSA-fv32-69r4-3fm7](https://github.com/dev365code/vdi2770-validate/security/advisories/GHSA-fv32-69r4-3fm7):
+  asked without the names `read` accepted, `member_bytes` and `member_reader`
+  read an archive `read` refused whole -- a file cut short on the way or with
+  bytes in front of it, or whose end records count other entries than it lists
+  -- and could hand a caller a member of the archive it held; and they inflated
+  members `read` refuses for their ratio, past the total an archive may
+  declare, or of an archive listing more entries than it reads, bounded only by
+  the 512 MiB limit on one member. The validator asks again only for members
+  `read` accepted and was not affected. `vdi2770-validate` and `vdi2770` from
+  0.1.0, up to 0.14.0; fixed in 1.0.0.
 
 - [GHSA-h676-59p4-6632](https://github.com/dev365code/vdi2770-validate/security/advisories/GHSA-h676-59p4-6632):
   a file cut short on the way, or with bytes in front of it, could be read as
@@ -123,13 +134,15 @@ whichever the unzip tool wrote last, a spent budget that silenced a
 path-traversal member. Each was found in this repository's own testing rather
 than reported from outside, and each is described in the CHANGELOG section that
 announces it. **If you pin a version below 0.8.0, those sections are the list**
-— read them where you would otherwise be looking for an advisory. Five
+— read them where you would otherwise be looking for an advisory. Six
 advisories written later reach those releases all the same —
 GHSA-xp97-jcmj-h45f every release of both up to 0.8.0, GHSA-6hqr-phm3-chpf
 every release of the command up to 0.9.4, GHSA-3pfq-57fx-w4q5 every release of
 the command up to 0.9.5, GHSA-h676-59p4-6632 every release of both up to 0.9.6,
-and GHSA-62p8-4642-mwfp every release of the command up to 0.10.3, closed in full by
-0.11.0 — so the release to move to is 0.11.0 or later.
+GHSA-62p8-4642-mwfp every release of the command up to 0.10.3, closed in full by
+0.11.0, and GHSA-fv32-69r4-3fm7 every release of both up to 0.14.0, for code
+that reads a member without the list of what the reader accepted — so the
+release to move to is 1.0.0 or later.
 
 One thing about reading them: below 0.7.0 the reader and the command carried
 separate numbers, and a heading does not say which of the two it belongs to. The
@@ -163,8 +176,10 @@ affected, and a mismatched pair is not judged at all. Every release of the
 command up to 0.9.4 is inside the range of GHSA-6hqr-phm3-chpf, every one up to
 0.9.5 inside that of GHSA-3pfq-57fx-w4q5, and every one up to 0.9.6 inside that of
 GHSA-h676-59p4-6632, as well; GHSA-62p8-4642-mwfp reaches releases up to
-0.10.3; 0.11.0 closes both forms of the runner's command syntax.
-Move to **0.11.0** or later, which carries every listed repair and pins both halves
+0.10.3; 0.11.0 closes both forms of the runner's command syntax; and
+GHSA-fv32-69r4-3fm7 reaches every release of both up to 0.14.0, for code that reads a
+member without the list of what the reader accepted, and 1.0.0 closes it.
+Move to **1.0.0** or later, which carries every listed repair and pins both halves
 exactly. Do not get there by upgrading the reader on its own — the
 two halves ship under one number and the tool refuses to judge a pair that
 disagrees with itself, which is exit `3` rather than a verdict about your
