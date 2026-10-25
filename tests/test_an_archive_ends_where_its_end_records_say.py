@@ -178,6 +178,33 @@ def test_an_end_that_contradicts_itself_is_refused_though_every_release_reads_it
     assert c.kind is Kind.UNREADABLE and refused == [CONTRADICTORY[name]], refused
 
 
+@pytest.mark.parametrize("name", sorted(REFUSED) + sorted(CONTRADICTORY))
+def test_a_later_read_with_no_list_refuses_an_archive_the_first_one_refused(name):
+    """`read` refuses each of these whole, and `member_bytes` asked without the
+    names `read` accepted read some of them anyway: an archive with bytes in
+    front of it, or whose end records count other entries than its central
+    directory lists, gave the library an archive to open, and the later read
+    took it."""
+    c, _ = _refusals(name)
+    assert c.kind is Kind.UNREADABLE
+    for member in _members(CLEAN_DOCUMENT):
+        assert zipread.member_bytes(CASES[name], member) is None, member
+
+
+def test_a_later_read_with_no_list_refuses_a_container_cut_short_in_one_it_stores():
+    """A container that stores a document container without compressing it,
+    cut short in transit, can end in that document container. `read` refuses
+    the file: the archive its end record describes does not begin it. Asked
+    without the list, `member_bytes` handed over the metadata of the document
+    container inside -- a file nobody delivered."""
+    inner = PLAIN
+    outer = ENDS.plain({"inner.zip": inner, "VDI2770_Metadata.xml": b"<x/>"})
+    cut = outer[:outer.index(inner) + len(inner)]
+    assert zipread.read(cut, "cut.zip").kind is Kind.UNREADABLE
+    for member in _members(CLEAN_DOCUMENT):
+        assert zipread.member_bytes(cut, member) is None, member
+
+
 def test_the_reader_asks_the_library_nothing_private_about_where_an_archive_ends():
     """Where the central directory is was worked out from `zipfile._EndRecData`
     and `zipfile._ECD_OFFSET`, which are not the library's to promise and which

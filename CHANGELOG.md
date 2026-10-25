@@ -60,6 +60,16 @@ begins has each of them refused, not only the last.
   an archive may declare, and every member of an archive listing more entries
   than `read` reads. Those are refused now too.
   **This moves verdicts:** none -- the validator passes the list.
+- **A later read without the list refuses an archive the first read refused
+  whole.** `read` refuses an archive that does not begin the file it is in --
+  bytes in front, a first entry somewhere past the start, a container cut short
+  in transit that ends in a document container it stores -- and one whose end
+  records count other entries than its central directory lists. Asked without
+  the names `read` accepted, `member_bytes` and `member_reader` read such an
+  archive anyway and handed over its members: of a cut container, the metadata
+  of the document container inside, which nobody delivered. They refuse every
+  member of it now.
+  **This moves verdicts:** none -- the validator passes the list.
 - **A member in a method this reader does not expand is told which method to
   use.** Both findings on such a member, `Z12` and the `F1` on the file the
   metadata declares under its name, told the sender to re-create the archive

@@ -766,6 +766,51 @@ def _overlapping(data: bytes, infos, directory_at: int) -> Dict[int, str]:
     return out
 
 
+def _not_the_file(data: bytes, found: _Directory, zf: zipfile.ZipFile) -> Optional[str]:
+    """Why the archive the library opened is not the file it was given, or
+    None. `read` refuses the whole archive for these, and `member_reader`
+    every member of it: asked without the names `read` accepted, it read
+    such an archive anyway, and handed over a member of one a container
+    cut short in transit ended in -- a file nobody delivered.
+    """
+    # As many entries as the end records count (4.4.22). The library lists the
+    # central directory to its size and never asks the count; a reader that
+    # lists it to its count lists other entries. Before a nameless one is set
+    # aside below, because it is an entry all the same.
+    if len(zf.infolist()) != found.entries:
+        return (f"the {found.which} counts {found.entries:,} entries and the central directory "
+                f"holds {len(zf.infolist()):,}")
+
+    # From the start of the file. The library finds an archive by its end
+    # record, searching back from the end of the file, and counts whatever comes
+    # before that archive as a prefix to skip, the way a self-extracting archive
+    # is read. A container that stores a document container without compressing
+    # it, cut short in transit, can end in that document container -- and was
+    # read, and passed, as that one: a verdict on a file nobody delivered.
+    #
+    # How far in the library went to reach it: where the central directory
+    # ends -- the record after it -- less where the end records say it ends,
+    # which is zero for an archive that is the file. Worked out from the end
+    # records this reader read itself, because the library's own account of a
+    # zip64 end differs between its patch releases.
+    skipped = found.follows - found.size - found.offset
+    # And the file begins with the archive. A split archive small enough to be
+    # one file begins with a marker (APPNOTE 8.5.3 and 8.5.4; `zip -s` writes
+    # one) whose four bytes its offsets count as its own; an archive with
+    # nothing in it may begin with its zip64 end record.
+    lead = 4 if data[:4] in (b"PK\x07\x08", b"PK00") else 0
+    starts = min((i.header_offset for i in zf.infolist()), default=lead)
+    begins = data[lead:lead + 4] in (b"PK\x03\x04", b"PK\x05\x06", b"PK\x06\x06")
+    if skipped or starts != lead or not begins:
+        return (_prefixed(skipped) if skipped > 0 else
+                f"the archive's end record places its central directory {-skipped:,} "
+                "bytes past where it is" if skipped < 0 else
+                f"the archive's first entry begins {starts:,} bytes into the file, and "
+                "the file does not begin with it" if starts != lead else
+                "the file does not begin with a ZIP record")
+    return None
+
+
 def read(data: bytes, path: str, depth: int = 0, _budget: Optional[_Budget] = None) -> Container:
     return _read(data, path, depth, _budget, None)
 
@@ -799,46 +844,10 @@ def _read(data: bytes, path: str, depth: int, _budget: Optional[_Budget],
         c.defects.append(Defect("not-a-zip", c.where, opened))
         return c
     zf, contradicted, unflagged = opened
-    # As many entries as the end records count (4.4.22). The library lists the
-    # central directory to its size and never asks the count; a reader that
-    # lists it to its count lists other entries. Before a nameless one is set
-    # aside below, because it is an entry all the same.
-    if len(zf.infolist()) != found.entries:
+    reason = _not_the_file(data, found, zf)
+    if reason:
         c.kind = Kind.UNREADABLE
-        c.defects.append(Defect("not-a-zip", c.where, (
-            f"the {found.which} counts {found.entries:,} entries and the central directory "
-            f"holds {len(zf.infolist()):,}")))
-        return c
-
-    # From the start of the file. The library finds an archive by its end
-    # record, searching back from the end of the file, and counts whatever comes
-    # before that archive as a prefix to skip, the way a self-extracting archive
-    # is read. A container that stores a document container without compressing
-    # it, cut short in transit, can end in that document container -- and was
-    # read, and passed, as that one: a verdict on a file nobody delivered.
-    #
-    # How far in the library went to reach it: where the central directory
-    # ends -- the record after it -- less where the end records say it ends,
-    # which is zero for an archive that is the file. Worked out from the end
-    # records this reader read itself, because the library's own account of a
-    # zip64 end differs between its patch releases.
-    skipped = found.follows - found.size - found.offset
-    # And the file begins with the archive. A split archive small enough to be
-    # one file begins with a marker (APPNOTE 8.5.3 and 8.5.4; `zip -s` writes
-    # one) whose four bytes its offsets count as its own; an archive with
-    # nothing in it may begin with its zip64 end record.
-    lead = 4 if data[:4] in (b"PK\x07\x08", b"PK00") else 0
-    starts = min((i.header_offset for i in zf.infolist()), default=lead)
-    begins = data[lead:lead + 4] in (b"PK\x03\x04", b"PK\x05\x06", b"PK\x06\x06")
-    if skipped or starts != lead or not begins:
-        c.kind = Kind.UNREADABLE
-        c.defects.append(Defect("not-a-zip", c.where, (
-            _prefixed(skipped) if skipped > 0 else
-            f"the archive's end record places its central directory {-skipped:,} "
-            "bytes past where it is" if skipped < 0 else
-            f"the archive's first entry begins {starts:,} bytes into the file, and "
-            "the file does not begin with it" if starts != lead else
-            "the file does not begin with a ZIP record")))
+        c.defects.append(Defect("not-a-zip", c.where, reason))
         return c
 
     infos = zf.infolist()
@@ -1366,7 +1375,7 @@ def member_reader(data: bytes, allowed: Optional[Set[str]] = None):
         # named under one name on one Python and nothing on another.
         found = _directory(data)
         opened = _library(data, found) if isinstance(found, _Directory) else None
-        if not isinstance(opened, tuple):
+        if not isinstance(opened, tuple) or _not_the_file(data, found, opened[0]):
             return lambda name: None
         archive = _Named(opened[0], opened[0].infolist())
         # And refused where the first read refuses: an entry naming two files,
