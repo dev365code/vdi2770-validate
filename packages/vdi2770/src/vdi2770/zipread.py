@@ -633,9 +633,10 @@ def _name(info: zipfile.ZipInfo, header: _Header) -> Optional[str]:
     other than printable ASCII is in a character set nothing here can know,
     which is what the field is for, and the field is taken at its word. But a
     header bit 11 says is UTF-8 already is the UTF-8 version, and printable
-    ASCII reads the same in every character set the name could be in -- so a
-    field giving either of those another name is not its UTF-8 version: the
-    entry names two files. So does an extra field carrying two of them.
+    ASCII reads the same in both character sets APPNOTE gives a name, IBM Code
+    Page 437 and UTF-8 -- so a field giving either of those another name is not
+    its UTF-8 version: the entry names two files, and a reader that ignores the
+    field reads the other one. So does an extra field carrying two of them.
     Compared as the library tidies a name -- cut at its first NUL, its
     separators made `/` -- so that only a difference the name keeps is one, and
     a field the tidying leaves no name in is no name at all.

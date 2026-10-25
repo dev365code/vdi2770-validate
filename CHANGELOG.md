@@ -39,6 +39,19 @@ begins has each of them refused, not only the last.
   **This moves verdicts:** the entries before the last are `Z12` too now, on
   every Python; such an archive exited `1` already, for the last of them. No
   container in this repository moves.
+- **An entry its header and its Unicode Path field name differently is refused
+  for a reason that holds.** APPNOTE gives an entry's name two character sets,
+  IBM Code Page 437 and, with general purpose bit 11, UTF-8 (4.4.4, APPENDIX D),
+  and printable ASCII reads the same in both; an Info-ZIP Unicode Path field is
+  the UTF-8 version of the header's name (4.6.9). A field giving a
+  printable-ASCII header another name is a second name, which a reader that
+  ignores the field and one that honours it read differently -- so is the
+  ASCII spelling some writers put in a header for letters its character set
+  lacks, with the real name in the field. Such an entry is `Z12`, as it was, and
+  the finding says to store the name once, in UTF-8 with bit 11 set. 0.14.0 gave
+  the reason as printable ASCII reading the same in every character set, which
+  ISO 646's national variants and JIS X 0201 do not.
+  **This moves verdicts:** none.
 - **A later read without the list meets the first read's limits.** Asked
   without the names `read` accepted, `member_bytes` and `member_reader`
   refused what `read` refuses for a name or a place, and not what it refuses
@@ -135,6 +148,7 @@ now exits `1` there as well. Two entries sharing one
 local header made every Python exit `1` already, and still do.
 
 *(Correction, 1.0.0: of two or more entries whose local headers lie past where the central directory begins, 0.14.0 refuses the last and reads one before it whose data ends where the next header begins; "An entry whose local header lies past where the central directory begins is refused too" holds from 1.0.0, which refuses each.)*
+*(Correction, 1.0.0: printable ASCII reads the same in the two character sets APPNOTE gives an entry's name, IBM Code Page 437 and UTF-8, and not in every character set -- ISO 646's national variants and JIS X 0201 read some of those bytes as other letters; the refusal of an entry whose Unicode Path field gives such a header another name stands on the first.)*
 
 ## 0.13.0 — 2026-10-22
 
