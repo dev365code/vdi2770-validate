@@ -6,7 +6,7 @@ from typing import Iterator
 from ..catalog import rule
 from ..model import MAIN_PDF, MAIN_XML, METADATA_XML, About, Finding, Kind
 from ..names import Members, as_written, escaped, extracts_to, folder_path, nfc, without_edge_space
-from .container import MAX_ALIKE, ONE_NAME, _inside
+from .container import MAX_ALIKE, ONE_NAME, _inside, method_remedy
 
 #: Declared media types whose file extension is not a matter of taste, and the
 #: spellings each one is honestly carried by. `F3` compares a declaration
@@ -242,6 +242,15 @@ def check(container, document, foreign) -> Iterator[Finding]:
                 message = ("A file named in the metadata is in the container under "
                            "an entry that names itself more than once")
                 fix = ONE_NAME
+                whose = None
+            elif method_remedy(because.detail):
+                # Not a truncated transfer either: the tool and the settings
+                # that wrote this member write it again, so "send it again"
+                # brings the finding back. What the sender can change is the
+                # method, and the reader's sentence names it.
+                message = ("A file named in the metadata is in the container, "
+                           "compressed with a method this tool does not expand")
+                fix = method_remedy(because.detail)
                 whose = None
             else:
                 message = ("A file named in the metadata is in the container but could "

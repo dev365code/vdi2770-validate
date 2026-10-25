@@ -60,6 +60,13 @@ begins has each of them refused, not only the last.
   an archive may declare, and every member of an archive listing more entries
   than `read` reads. Those are refused now too.
   **This moves verdicts:** none -- the validator passes the list.
+- **A member in a method this reader does not expand is told which method to
+  use.** Both findings on such a member, `Z12` and the `F1` on the file the
+  metadata declares under its name, told the sender to re-create the archive
+  and send it again -- which, from the same tool with the same settings, writes
+  the same member. They name the method now and say to recompress the member
+  with deflate, or store it.
+  **This moves verdicts:** none.
 - **What 1.x keeps is written down.** The README's list of what a build can
   rely on -- the exit codes, the command line, the report and its
   `schemaVersion`, the old import name, and now the reader's names -- says that

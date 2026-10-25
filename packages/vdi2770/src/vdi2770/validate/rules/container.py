@@ -184,6 +184,24 @@ ONE_NAME = ("Give the entry one name. An Info-ZIP Unicode Path field (APPNOTE 4.
             "general purpose bit 11 set (APPNOTE 4.4.4), or leave the field out.")
 
 
+def method_remedy(detail):
+    """The remedy for a member compressed with a method the reader does not
+    expand, read from the sentence the reader refused it in -- or None.
+
+    *Re-create the archive and send it again* brings such a member back: the
+    tool and the settings that wrote it write it again, and the finding comes
+    with it. What the sender can change is the method.
+    """
+    if not (detail or "").startswith("member compressed with "):
+        return None
+    method = detail[len("member compressed with "):].split(";", 1)[0]
+    return (f"Recompress this member with deflate, or store it, and send the "
+            f"container again. It is compressed with {method}, and this tool "
+            f"expands stored and deflate members and no other method, so "
+            f"zipping it again the same way draws the same finding; the file "
+            f"itself may be fine.")
+
+
 def _remedy_for(defect):
     """The remedy for a refusal, by what the refusal actually says.
 
@@ -202,6 +220,8 @@ def _remedy_for(defect):
     if (defect.kind == "member-unreadable"
             and "Info-ZIP Unicode Path" in (defect.detail or "")):
         return ONE_NAME
+    if defect.kind == "member-unreadable" and method_remedy(defect.detail):
+        return method_remedy(defect.detail)
     return REMEDY_FOR_DEFECT.get(defect.kind)
 
 

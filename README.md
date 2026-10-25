@@ -508,8 +508,8 @@ changed what a pipeline sees:**
   `vdi2770-validate==0.5.0` installed beside the *unfixed* reader, so the hang
   0.5.0 announced a fix for went on happening to anyone who took that fix.
 - `0.8.1` bounded what one member of an archive may cost, and began refusing a
-  member compressed with a method it does not expand — naming the method, as a
-  limit of this reader rather than a verdict on the container.
+  member compressed with a method it does not expand — naming the method, and
+  the two this reader does expand.
 - `0.8.2` turned a PDF it had silently skipped into an `X5` error, so a
   container that came back clean can come back with a finding against that file.
 - `0.9.7` reads an archive from the start of the file, so a container cut short,

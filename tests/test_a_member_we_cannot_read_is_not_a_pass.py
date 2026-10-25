@@ -191,3 +191,26 @@ def test_a_password_protected_member_is_told_to_remove_the_password(tmp_path):
     remedy = f1[0].remedy or ""
     assert "Re-create the archive and send it again" not in remedy, remedy
     assert "password" in remedy.lower(), remedy
+
+
+def test_a_member_in_a_method_this_reader_does_not_expand_is_told_which_method_to_use():
+    """"Re-create the archive and send it again" reproduces this member too.
+
+    A member compressed with bzip2 is not a truncated transfer: this reader
+    expands stored and deflate members and no other method, so the tool and the
+    settings that wrote it write it again and the finding comes back. Both
+    findings on it -- the archive's `Z12` and the `F1` on the file the metadata
+    declares under its name -- told the sender to do exactly that.
+    """
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        for info in SRC.infolist():
+            z.writestr(info.filename, SRC.read(info.filename),
+                       compress_type=zipfile.ZIP_BZIP2 if info.filename == "B.pdf" else zipfile.ZIP_DEFLATED)
+    findings = check_bytes(buf.getvalue(), "bzip2.zip").findings
+    for rule in ("Z12", "F1"):
+        on = [f for f in findings if f.rule.id == rule]
+        assert len(on) == 1, [f.rule.id for f in findings]
+        remedy = on[0].remedy or ""
+        assert "Re-create the archive and send it again" not in remedy, (rule, remedy)
+        assert "bzip2" in remedy and "deflate" in remedy, (rule, remedy)
