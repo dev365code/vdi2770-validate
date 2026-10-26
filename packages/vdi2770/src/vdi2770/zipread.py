@@ -646,7 +646,7 @@ def _name(info: zipfile.ZipInfo, header: _Header) -> Optional[str]:
     Page 437 and UTF-8 -- so a field giving either of those another name is not
     its UTF-8 version: the entry names two files, and a reader that ignores the
     field reads the other one. So does an extra field carrying two of them.
-    Compared as this reader names an entry -- cut at its first NUL, its
+    Compared as this reader names an entry -- composed (NFC), cut at its first NUL, its
     separators as written -- so that only a difference the name keeps is one,
     and a field the cut leaves no name in is no name at all.
     """
@@ -661,7 +661,7 @@ def _name(info: zipfile.ZipInfo, header: _Header) -> Optional[str]:
     given = _as_written(header.unicode[0])
     if not given:
         return None
-    if given != info.filename and (header.utf8 or all(0x20 <= b <= 0x7E for b in header.raw)):
+    if nfc(given) != nfc(info.filename) and (header.utf8 or all(0x20 <= b <= 0x7E for b in header.raw)):
         return (f"its header calls it {info.filename!r} and its Info-ZIP Unicode Path field "
                 f"(APPNOTE 4.6.9) calls it {given!r}; that field is the UTF-8 version of the "
                 "header's name, so the entry names two files")

@@ -26,6 +26,22 @@ read the paragraph after the list.
   methods keep their names, and the advice still says to recompress with
   deflate or store the member.
   **This moves verdicts:** none.
+- **Canonically equivalent spellings name one entry.** A header and its
+  Info-ZIP Unicode Path field (APPNOTE 4.6.9) are compared in NFC, as names
+  already are when matching files to declarations. A composed spelling in
+  one and a decomposed spelling in the other no longer make the entry name
+  two files. The field's spelling is kept; a genuinely different name, or
+  more than one Unicode Path field, is refused as before.
+  **This moves verdicts:** such an entry no longer draws `Z12` for naming two
+  files, nor an `F1` caused by that refusal. A delivery whose only error was
+  that `Z12`, or that refusal and its `F1`, exits `0` now instead of `1`.
+
+**If your build gates on the exit code, this is the paragraph for you.** An
+otherwise conforming delivery whose header and Unicode Path field name the
+same entry in canonically equivalent spellings exits `0` now, where the
+name refusal made it exit `1`. This also holds when the entry is undeclared
+and its remaining `F2` is a warning, under the default `--fail-on error`.
+Nothing else exits differently.
 
 ## 1.0.0 — 2026-10-26
 

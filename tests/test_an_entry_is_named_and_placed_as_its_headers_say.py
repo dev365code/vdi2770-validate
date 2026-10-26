@@ -553,3 +553,69 @@ def test_a_method_has_its_name_or_an_explicit_method_number(method, label):
         assert findings[0].severity.value == "error"
         assert findings[0].about.value == "container"
         assert f"It is compressed with {label}, and this tool" in findings[0].fix
+
+
+def _unicode_case(flag, form, ascii_header, version, crc_matches, equivalent):
+    """Generate the header and its Unicode Path field (APPNOTE 4.6.9)."""
+    stem, dot, ext = SUBJECT.rpartition(".")
+    base = SUBJECT if ascii_header else f"{stem}\u00e9{dot}{ext}"
+    header = unicodedata.normalize(form, base).encode("utf-8")
+    other = "NFC" if form == "NFD" else "NFD"
+    given = unicodedata.normalize(other, base) if equivalent else "X" + base
+    extra = ENTRIES.unicode_path(given.encode("utf-8"), of=header, version=version,
+                                 **({} if crc_matches else {"crc": 0}))
+    valid_field = version == 1 and crc_matches
+    refused = valid_field and not equivalent and (bool(flag) or ascii_header)
+    expected = given if valid_field else header.decode("utf-8" if flag else "cp437")
+    entries = []
+    for name, data in FILES.items():
+        if name == SUBJECT:
+            entries.append(ENTRIES.entry(header, data, flags=flag, extra=extra))
+        else:
+            if name == zipread.METADATA_XML:
+                data = data.replace(SUBJECT.encode(), expected.encode("utf-8"))
+            entries.append(ENTRIES.entry(name.encode(), data))
+    return ENTRIES.build(entries), expected, refused
+
+
+@pytest.mark.parametrize("flag", [0, ENTRIES.UTF8])
+@pytest.mark.parametrize("form", ["NFD", "NFC"])
+@pytest.mark.parametrize("ascii_header", [False, True])
+@pytest.mark.parametrize("version", [1, 2])
+@pytest.mark.parametrize("crc_matches", [False, True])
+@pytest.mark.parametrize("equivalent", [False, True])
+def test_a_unicode_path_compares_canonical_spellings(
+        flag, form, ascii_header, version, crc_matches, equivalent):
+    """APPNOTE 4.6.9: the UTF-8 version of the header's name has one NFC spelling."""
+    raw, expected, refused = _unicode_case(flag, form, ascii_header, version, crc_matches, equivalent)
+    container = zipread.read(raw, "0")
+    report = check_bytes(raw, "0")
+    name_findings = [f for f in report.findings if f.rule.id == "Z12"]
+    if refused:
+        assert len(name_findings) == 1
+        assert "names two files" in name_findings[0].detail
+    else:
+        assert not name_findings
+        assert expected in container.file_names
+        assert zipread.member_bytes(raw, expected, allowed=container.file_names) == FILES[SUBJECT]
+        assert not {"F1", "F2"} & {f.rule.id for f in report.findings}
+
+
+def _canonical_extra_case(form):
+    """One extra entry whose two spellings are canonically equivalent."""
+    base = "\u00e9.txt"
+    header = unicodedata.normalize(form, base).encode("utf-8")
+    given = unicodedata.normalize("NFC" if form == "NFD" else "NFD", base).encode("utf-8")
+    entries = [ENTRIES.entry(n.encode(), data) for n, data in FILES.items()]
+    entries.append(ENTRIES.entry(header, b"x", flags=ENTRIES.UTF8,
+                                 extra=ENTRIES.unicode_path(given, of=header)))
+    return ENTRIES.build(entries)
+
+
+@pytest.mark.parametrize("form", ["NFD", "NFC"])
+def test_canonical_equivalence_can_leave_only_a_warning(form):
+    """APPNOTE 4.6.9: equivalent spellings alone must not fail the delivery."""
+    report = check_bytes(_canonical_extra_case(form), "0")
+    assert "Z12" not in {f.rule.id for f in report.findings}
+    assert not any(f.severity.value == "error" for f in report.findings)
+    assert "F2" in {f.rule.id for f in report.findings}

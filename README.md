@@ -520,7 +520,11 @@ changed what a pipeline sees:**
   matching declarations now pass with `--fail-on warning`.
 - `1.0.1` keeps `M11` and `M12` silent when the delivery holds an archive
   this tool did not open, as *What it catches* says they are, instead of
-  reporting the documents inside it as missing.
+  reporting the documents inside it as missing. It also reads as one name the
+  two spellings an entry's header and its Unicode Path field give it when they
+  differ only in Unicode normalization, where 1.0.0 refused that entry as `Z12`
+  and missed the file it holds — so a container with nothing else wrong exits
+  `0` now.
 
 The other nine moved no verdict at all: `0.9.1`; `0.9.2`, which repaired what
 a delivery costs to check and left every finding, every location and every exit
