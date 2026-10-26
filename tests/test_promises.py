@@ -209,7 +209,8 @@ def test_every_test_security_md_cites_exists():
     from conftest import ROOT
 
     prose = (ROOT / "SECURITY.md").read_text(encoding="utf-8")
-    cited = re.findall(r"`((?:tests|packages)/[\w/]+\.py)(?:::(\w+))?`", prose)
+    cited = re.findall(r"`((?:tests|tools|packages)/[\w/]+\.py)(?:::(\w+))?`", prose)
+    assert ("tools/browser_gates.py", "main") in cited
     assert len(cited) >= 5, f"only found {cited}; has the table been reworded?"
     for path, func in cited:
         f = ROOT / path

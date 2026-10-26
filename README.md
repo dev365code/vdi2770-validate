@@ -232,8 +232,9 @@ is the usual way to be sure.
 By default the action installs the released checker from PyPI and runs it —
 `pip` checks what the index serves against the hashes the index publishes, and
 publishing to the index is something the release workflow does by itself.
-Release assets are attached by a person, and a person can forget; two of this
-project's own releases carry none, so the default path does not lean on one.
+Release assets are attached by a person, and a person can forget; the reader's
+first five releases and the command's first seven carry none, so the default
+path does not lean on one.
 
 If your runners cannot reach an index at all, commit the single file and point
 `pyz` at it: the step then installs nothing and fetches nothing, and `sha256`

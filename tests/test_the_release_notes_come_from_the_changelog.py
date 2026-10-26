@@ -91,8 +91,10 @@ def test_the_body_promises_only_files_a_release_actually_carries():
     release has ever had -- a verification instruction that cannot be followed
     is worse than none."""
     body = release_notes.body("9.9.9", SHA, CHANGELOG, PAGE)
-    assert "sha256sum -c SHA256SUMS-reader" in body
-    assert "sha256sum -c SHA256SUMS-rules" in body
+    # A reader may have downloaded only one of the files in either list.
+    for sums in ("SHA256SUMS-reader", "SHA256SUMS-rules"):
+        assert f"sha256sum --ignore-missing -c {sums}" in body
+        assert f"shasum -a 256 --ignore-missing -c {sums}" in body
     assert "-c SHA256SUMS\n" not in body, "the body names a file releases do not carry"
 
 

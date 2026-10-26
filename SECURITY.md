@@ -20,6 +20,7 @@ is the working assumption, not an edge case.
 | Remote schema fetch | The schema is bundled. `xsi:schemaLocation` in the document is never dereferenced. | `tests/test_offline.py` |
 | Any network access at all | No socket is opened. A test counts attempts rather than waiting for one to fail, because a tool that reaches out and falls back quietly on error would satisfy the weaker check. | `tests/test_promises.py::test_nothing_reaches_for_the_network` — which watches `sys.addaudithook`, because patching names on the `socket` module misses a caller that bound the constructor before the patch; `tests/test_offline.py` for the verdict being the same either way |
 | The GitHub Action's install | The action this repository publishes installs the released checker from PyPI unless you hand it a file with `pyz:`; `pip` checks what the index serves against the hashes that index publishes. That install is the action's, not the tool's: the checker still opens no socket for any input. A runner that may not reach an index carries the single file and passes `pyz:`, which removes the step entirely, and `sha256:` holds that carried file to a hash. | `action.yml`, `tests/test_the_action_behaves_the_way_its_names_claim.py` |
+| Browser page after loading | No requests and no stored state | `tools/browser_gates.py::main` |
 
 ## Reporting a vulnerability
 

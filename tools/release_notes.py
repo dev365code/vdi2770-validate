@@ -108,11 +108,19 @@ sha256  {page_sha}
 ```
 
 The wheels and sdists are the same bytes PyPI serves, and `SHA256SUMS-reader`
-and `SHA256SUMS-rules` record them:
+and `SHA256SUMS-rules` record them. Check the list for the distribution you
+downloaded; files in that list you did not download are skipped:
 
 ```
-sha256sum -c SHA256SUMS-reader
-sha256sum -c SHA256SUMS-rules
+sha256sum --ignore-missing -c SHA256SUMS-reader
+sha256sum --ignore-missing -c SHA256SUMS-rules
+```
+
+On macOS:
+
+```
+shasum -a 256 --ignore-missing -c SHA256SUMS-reader
+shasum -a 256 --ignore-missing -c SHA256SUMS-rules
 ```
 
 A workflow does not need any of this: `uses: dev365code/vdi2770-validate@v{version}`

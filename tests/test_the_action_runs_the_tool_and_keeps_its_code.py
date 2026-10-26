@@ -108,8 +108,9 @@ def test_only_the_install_step_can_reach_an_index(action):
 
 
 def test_the_default_path_takes_the_release_from_the_index(action):
-    """Release assets are attached by a person, and a person can forget -- two
-    of this repository's own releases carry none. Publishing to the index is
+    """Release assets are attached by a person, and a person can forget -- the
+    reader's first five releases and the command's first seven carry none.
+    Publishing to the index is
     what the release workflow does by itself, so that is what the action leans
     on; `pyz:` remains for a runner that cannot reach an index at all."""
     install = next(s for s in action["runs"]["steps"] if s.get("id") == "obtain")

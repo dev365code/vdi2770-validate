@@ -10,7 +10,7 @@ gives. A browser can be made to answer each of those by counting, so this
 counts.
 
 * **Nothing is sent.** The page carries a Content-Security-Policy that lets it
-  connect to nothing but its own blobs, so a request it made would be refused
+  connect to nothing but its own `blob:` and `data:` URLs, so a request it made would be refused
   before it left; the policy has to be there once, as it is written here.
   Every request is counted six ways: by the browser's own network events,
   which see the page and the worker it starts; by the server that hands the
@@ -286,7 +286,7 @@ TIMING = "performance.getEntriesByType('resource').map(e => e.name)"
 
 #: The page's own policy, written into its head: nothing but its inline script,
 #: its blob worker and WebAssembly may run, and it may connect to nothing but its
-#: own blobs. A request the page made anyway would be refused by the browser
+#: own `blob:` and `data:` URLs. A request the page made anyway would be refused by the browser
 #: before it left, so the gate counts what is refused as well as what is sent.
 POLICY = ("default-src 'none'; script-src 'unsafe-inline' 'wasm-unsafe-eval' blob:; "
           "worker-src blob:; connect-src blob: data:; img-src data:; style-src 'unsafe-inline'; "
@@ -392,7 +392,7 @@ class Watched:
                 "worker refused": self.worker.evaluate("self.__vdi2770_refused")[mark["worker refused"]:]}
 
     def asked_while_loading(self):
-        """What the page fetched before it was ready, other than its own blobs,
+        """What the page fetched before it was ready, other than its own `blob:` and `data:` URLs,
         and any socket it opened."""
         return ([u for u in self.requests[:self.loaded["browser"]] if not u.startswith(("blob:", "data:"))]
                 + self.sockets[:self.loaded["sockets"]]

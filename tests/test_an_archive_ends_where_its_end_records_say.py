@@ -15,7 +15,7 @@ asks the library about an archive only when every release would read that end
 alike. And an end that contradicts itself is refused even where every release
 reads it: one end record, and nothing after it (4.3.1, 4.3.16); one disk
 (4.4.19 to 4.4.21); and fields that say one thing, whichever record holds them
-(4.4.22 to 4.4.24) -- because a reader that takes the other half of a
+(4.4.21 to 4.4.24) -- because a reader that takes the other half of a
 contradiction at its word reads a different archive. Each case below is a
 plain archive whose end has been rewritten field by field
 (`tools/archive_ends.py`), and the reason one is refused is asserted to the

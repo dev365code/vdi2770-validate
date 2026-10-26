@@ -35,6 +35,14 @@ read the paragraph after the list.
   **This moves verdicts:** such an entry no longer draws `Z12` for naming two
   files, nor an `F1` caused by that refusal. A delivery whose only error was
   that `Z12`, or that refusal and its `F1`, exits `0` now instead of `1`.
+- **The documentation describes the checks and commands it offers.** Release
+  asset counts match the published releases, the browser policy names both
+  `blob:` and `data:` URLs, and the page's request and storage gate is cited.
+  Download checks skip files not downloaded and include the macOS command.
+  The archive-end citation includes the entry count, the encoding-name claim
+  is limited to names an XML declaration can carry, and the contributing
+  instructions explain the bundle install and the page rows' Python version.
+  **This moves verdicts:** none.
 
 **If your build gates on the exit code, this is the paragraph for you.** An
 otherwise conforming delivery whose header and Unicode Path field name the

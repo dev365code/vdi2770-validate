@@ -113,7 +113,7 @@ report's `schemaVersion` is `1`, and 1.0 commits to not changing it.
   and through the command, run on the Python the page carries to the patch
   release, comparing stdout, stderr and the exit code as bytes. The page
   carries a Content-Security-Policy, the one the gate knows, that lets it
-  connect to nothing but its own blobs. The gate counts the page's requests six
+  connect to nothing but its own `blob:` and `data:` URLs. The gate counts the page's requests six
   ways -- the WebSockets the page and its worker open among them, which is how
   a Python socket leaves the worker -- and counts what the policy refuses, in
   the page and in its worker, from the moment the page is ready until after its
@@ -184,8 +184,9 @@ reader to each such entry.
   `tests/test_a_document_is_read_in_the_encoding_it_declares.py` reads metadata
   declared in UTF-8, UTF-16, five of the ISO-8859 family, windows-1252, Shift_JIS,
   Windows-31J, EUC-JP, ISO-2022-JP, EUC-KR, GB2312, GBK, GB18030, Big5,
-  HZ-GB-2312 and UTF-7, and a document under every name the IANA charset
-  registry gives a charset it decodes, the same on every Python. The class name
+  HZ-GB-2312 and UTF-7, and, for each charset it decodes, a document under every
+  IANA registry name that an encoding declaration can carry, the same on every
+  Python. The class name
   `M3` quotes comes back as the characters the file holds, and the report is the
   one the same document draws in UTF-8. Bytes that are not the encoding a file
   declares are still `X1`, at the byte:

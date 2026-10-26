@@ -32,10 +32,13 @@ python -m pip install -e ".[dev]"
 make check
 ```
 
+The first line installs the dependencies from the bundle lock with
+`--require-hashes --no-deps` before either editable install.
+
 Two installs, and the order is the point. This repository builds two
 distributions — the engine `vdi2770`, which now carries the rules as well, and
 `vdi2770-validate`, which is the old import name kept working and asks for the
-engine at exactly its own version. Skip the first line and pip resolves `vdi2770`
+engine at exactly its own version. Skip the first of the two installs and pip resolves `vdi2770`
 from PyPI, so the gate you ran was the published reader rather than the one in
 the commit you were changing: that is exactly the split that shipped a release
 whose own fix never reached the user. CI installs the same two, in the same
@@ -49,7 +52,9 @@ notices — including one row that must *survive*, because a harness that
 reports red for a change that does not matter is reporting red for
 everything. Run it when you add or change a gate. `tools/mutation_table.py`
 with no arguments lists the table; it holds 529 rows, each naming the pytest
-selection or the tool that has to go red.
+selection or the tool that has to go red. Rows that build the page run their
+checks only on the page's Python (3.13); on other versions those checks are
+skipped.
 
 `make standalone` runs each of the 122 test files on its own. A suite is a shared
 process, so a file can pass because an earlier one imported something —
