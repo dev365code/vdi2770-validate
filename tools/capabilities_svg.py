@@ -301,7 +301,7 @@ def condition_paragraph(data):
             parts.append(f"{ax['label']}: " + " · ".join(it["text"] for it in ax["items"]))
         else:
             parts.append(f"{ax['label']}: {ax['target_text']}")
-    return "Before it calls a release 1.0, this project asks of itself — " + "; ".join(parts) + "."
+    return "Before it called a release 1.0, this project asked of itself — " + "; ".join(parts) + "."
 
 
 COMMENT = re.compile(r"<!--(?:-?>|.*?-->)", re.DOTALL)
@@ -408,7 +408,7 @@ def render_svg(data):
     out.append(f'<text x="{PANEL_X}" y="40" font-family="{FONT}" font-size="16" font-weight="600" fill="{INK}">'
                f'{escape(title)}</text>')
     out.append(f'<text x="{PANEL_X}" y="62" font-family="{FONT}" font-size="12" fill="{INK2}">'
-               f'Checked now, and what this project asks of itself for 1.0.</text>')
+               f'Checked now, and what this project asked of itself for 1.0.</text>')
     out.append(f'<line x1="{PANEL_X}" y1="72" x2="{W - 24}" y2="72" stroke="{LINE}"/>')
     for i, ax in enumerate(axes):
         y = ROW_Y0 + i * ROW_DY

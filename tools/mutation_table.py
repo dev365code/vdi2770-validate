@@ -3169,8 +3169,8 @@ LISTING_BUDGET_ROWS = [
 
     ("gates/the-readme-states-every-1-0-condition",
      "README.md",
-     "this project asks of itself",
-     "this project asks",
+     "this project asked of itself",
+     "this project asked",
      ["tests/test_capabilities_current.py::test_every_condition_on_the_picture_is_in_the_readme"],
      "a condition the picture draws for 1.0 that the page no longer states"),
 
