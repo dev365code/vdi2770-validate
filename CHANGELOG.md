@@ -50,6 +50,12 @@ read the paragraph after the list.
   name, or none of them, or refuse the archive. The remedy that comes with
   it says the same.
   **This moves verdicts:** none.
+- **Metadata in an encoding this reader does not read is told to be saved
+  again.** For a file whose first bytes say it is in UCS-4 or EBCDIC, `X1`
+  now says to save the metadata as UTF-8 (or UTF-16) and send it again. It
+  said to open the file in an XML editor and fix the reported position,
+  and such a file has no position to fix.
+  **This moves verdicts:** none.
 - **The documentation describes the checks and commands it offers.** Release
   asset counts match the published releases, the browser policy names both
   `blob:` and `data:` URLs, and the page's request and storage gate is cited.

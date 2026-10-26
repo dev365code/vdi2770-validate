@@ -6,6 +6,19 @@ from typing import Iterator
 from ..catalog import rule
 from ..model import Finding, UnsafeXml, XmlTooLarge
 
+#: The remedy for a document in an encoding this reader does not read. Its first
+#: bytes said what it is in (XML 1.0 Appendix F), so there is no position in it
+#: to fix, which is what `X1`'s own remedy says to do.
+RESAVE = "Save the metadata as UTF-8 (or UTF-16) and send it again."
+
+
+def encoding_remedy(message):
+    """`RESAVE` for a document the reader refused for the encoding its first
+    bytes say it is in, read from the sentence it refused it in -- or None."""
+    if ", as its first bytes say, and this reader does not read " in (message or ""):
+        return RESAVE
+    return None
+
 
 def check(container, parse_error, schema_errors) -> Iterator[Finding]:
     if parse_error is not None:
@@ -22,7 +35,8 @@ def check(container, parse_error, schema_errors) -> Iterator[Finding]:
         r = rule(rid)
         where = container.where.child(member=container.metadata_name,
                                       line=parse_error.line, column=parse_error.column)
-        yield Finding(r, r.title, where, detail=parse_error.message)
+        yield Finding(r, r.title, where, detail=parse_error.message,
+                      fix=encoding_remedy(parse_error.message) if rid == "X1" else None)
         return
 
     for err in schema_errors:

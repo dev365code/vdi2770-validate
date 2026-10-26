@@ -372,6 +372,20 @@ def test_a_document_in_an_encoding_this_reader_does_not_read_is_told_so(label, w
     assert what in x1[0][1] and "does not read" in x1[0][1], x1[0][1]
 
 
+@pytest.mark.parametrize("label,what,mark,codec", NOT_READ, ids=[n[0] for n in NOT_READ])
+def test_a_document_in_an_encoding_this_reader_does_not_read_is_told_to_save_it_again(
+        label, what, mark, codec):
+    """Its first bytes said what it is in, so there is no position in it to fix:
+    the remedy `X1` carries for a document that does not parse -- open it in an
+    XML editor and fix the reported position -- is the wrong instruction. What
+    the sender can change is the encoding. The verdict is the one it was."""
+    declared = {"UCS-4": "UTF-32", "EBCDIC": "IBM037"}[what]
+    raw = _container(mark + _metadata(declared, "Technische Spezifikation").encode(codec))
+    findings = check_bytes(raw, "unread.zip").findings
+    assert [(f.rule.id, f.severity.value) for f in findings] == [("X1", "error")]
+    assert findings[0].fix == "Save the metadata as UTF-8 (or UTF-16) and send it again."
+
+
 #: A byte order mark, the declaration that follows it, and what the file is in.
 #: The mark settles the encoding before any declaration is read (Appendix F),
 #: and the declaration still has to name the encoding the file is in (4.3.3).
