@@ -235,17 +235,20 @@ ARCHIVE_PATHS = (
     "method", "member-read", "whole-read", "member-limit", "listing-budget",
     "depth", "container-budget", "byte-budget", "folder-depth",
     "folder-container-budget", "folder-byte-budget", "folder-size",
+    "directory-read", "library-read", "member-size", "archive-size",
+    "name-shape", "name-repeat", "ratio", "verification-budget",
 )
 
 
-def _delivery_bytes(entries):
+def _delivery_bytes(entries, deflate=None):
     import io
     import zipfile
 
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_STORED) as out:
         for name, data in entries.items():
-            out.writestr(zipfile.ZipInfo(name, (1980, 1, 1, 0, 0, 0)), data)
+            out.writestr(zipfile.ZipInfo(name, (1980, 1, 1, 0, 0, 0)), data,
+                         compress_type=zipfile.ZIP_DEFLATED if name == deflate else zipfile.ZIP_STORED)
     return buf.getvalue()
 
 
@@ -271,6 +274,9 @@ def _delivery_case(shape, references, contradiction, monkeypatch):
                       f'<DocumentId DomainId="BSP-OEM">{identity}</DocumentId>', text, count=1)
         text = re.sub(r"<ObjectId\b[^>]*>[^<]*</ObjectId>",
                       f'<ObjectId ObjectType="{kind}">OBJECT</ObjectId>', text)
+        if identity == "ROOT" and contradiction:
+            at = text.index('<ObjectId ObjectType="Type">')
+            text = text[:at] + text[at:].replace('ObjectType="Type"', 'ObjectType="Individual"', 1)
         if refers:
             relation = ('<DocumentRelationship Type="RefersTo">'
                         '<DocumentId DomainId="BSP-OEM">HELD</DocumentId>'
@@ -287,8 +293,24 @@ def _delivery_case(shape, references, contradiction, monkeypatch):
     known_bytes = _delivery_bytes(known)
     held_bytes = _delivery_bytes(held)
     entries = dict(main, **{"known.zip": known_bytes})
-    if shape == "whole-read":
+    if shape == "directory-read":
+        held_bytes = b"not an archive"
+    elif shape == "library-read":
+        data = bytearray(held_bytes)
+        with zipfile.ZipFile(io.BytesIO(data)) as src:
+            struct.pack_into("<H", data, src.start_dir + 6, 99)
+        held_bytes = bytes(data)
+    elif shape == "whole-read":
         held_bytes = b"prefix" + held_bytes
+    elif shape == "member-size":
+        ceiling = max(map(len, [*main.values(), *known.values(), known_bytes])) + 1
+        held["0.txt"] = b"x" * (ceiling + 1)
+        held_bytes = _delivery_bytes(held)
+        monkeypatch.setattr(zipread, "MAX_MEMBER_BYTES", ceiling)
+    elif shape == "ratio":
+        held["0.txt"] = b"x" * (9 * 1024 * 1024)
+        held_bytes = _delivery_bytes(held)
+        monkeypatch.setattr(zipread, "MAX_RATIO", 1)
     elif shape == "member-limit":
         held.update({f"{i}.txt": b"x" for i in range(12)})
         held_bytes = _delivery_bytes(held)
@@ -320,11 +342,25 @@ def _delivery_case(shape, references, contradiction, monkeypatch):
             b"</DocumentVersion>", declaration.encode() + b"</DocumentVersion>", 1)
     else:
         entries["held.zip"] = held_bytes
+    if shape == "archive-size":
+        monkeypatch.setattr(zipread, "MAX_TOTAL_BYTES", sum(map(len, entries.values())) - 1)
+    elif shape == "name-shape":
+        entries["/held.zip"] = entries.pop("held.zip")
+    elif shape == "verification-budget":
+        monkeypatch.setattr(zipread, "MAX_TOTAL_DECOMPRESSED", sum(map(len, entries.values())) - 1)
     if shape in ("byte-budget", "folder-byte-budget"):
         second = (sum(map(len, held.values())) if shape.startswith("folder-") else len(held_bytes))
         ceiling = sum(map(len, entries.values())) + len(known_bytes) + sum(map(len, known.values())) + second - 1
         monkeypatch.setattr(zipread, "MAX_TOTAL_DECOMPRESSED", ceiling)
-    raw = _delivery_bytes(entries)
+    raw = _delivery_bytes(entries, deflate="held.zip" if shape == "ratio" else None)
+    if shape == "name-repeat":
+        import warnings
+
+        buf = io.BytesIO(raw)
+        with warnings.catch_warnings(), zipfile.ZipFile(buf, "a") as out:
+            warnings.simplefilter("ignore", UserWarning)
+            out.writestr(zipfile.ZipInfo("held.zip", (1980, 1, 1, 0, 0, 0)), held_bytes)
+        raw = buf.getvalue()
     if shape == "member-read":
         raw = unopened(raw, "held.zip")
     elif shape == "method":
