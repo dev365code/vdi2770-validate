@@ -32,8 +32,9 @@ python -m pip install -e ".[dev]"
 make check
 ```
 
-The first line installs the dependencies from the bundle lock with
-`--require-hashes --no-deps` before either editable install.
+The first line installs `packaging`, which the lock tool needs, and then the
+dependencies from the bundle lock with `--require-hashes --no-deps`, before either
+editable install.
 
 Two installs, and the order is the point. This repository builds two
 distributions — the engine `vdi2770`, which now carries the rules as well, and

@@ -617,7 +617,8 @@ def _unicode_case(flag, form, ascii_header, version, crc_matches, equivalent):
 @pytest.mark.parametrize("equivalent", [False, True])
 def test_a_unicode_path_compares_canonical_spellings(
         flag, form, ascii_header, version, crc_matches, equivalent):
-    """APPNOTE 4.6.9: the UTF-8 version of the header's name has one NFC spelling."""
+    """APPNOTE 4.6.9 makes the field the UTF-8 version of the header's name; this
+    reader compares the two in NFC, as it matches names to declarations."""
     raw, expected, refused = _unicode_case(flag, form, ascii_header, version, crc_matches, equivalent)
     container = zipread.read(raw, "0")
     report = check_bytes(raw, "0")
@@ -645,7 +646,8 @@ def _canonical_extra_case(form):
 
 @pytest.mark.parametrize("form", ["NFD", "NFC"])
 def test_canonical_equivalence_can_leave_only_a_warning(form):
-    """APPNOTE 4.6.9: equivalent spellings alone must not fail the delivery."""
+    """Two canonically equivalent spellings alone, compared in NFC, must not fail
+    the delivery."""
     report = check_bytes(_canonical_extra_case(form), "0")
     assert "Z12" not in {f.rule.id for f in report.findings}
     assert not any(f.severity.value == "error" for f in report.findings)

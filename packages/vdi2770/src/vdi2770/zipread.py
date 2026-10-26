@@ -657,8 +657,9 @@ def _name(info: zipfile.ZipInfo, header: _Header) -> Optional[str]:
     if header.fields > 1:
         # Not a sentence of APPNOTE's, which forbids neither: what the library's
         # releases do with them. Before 3.12 they read the header's name; from
-        # 3.12 they read the last field's, and refuse the archive when a field
-        # before it is not UTF-8.
+        # 3.12 they read the last field of version 1 whose CRC-32 is the header
+        # name's, and refuse the archive when any such field is not UTF-8 or a
+        # field is too short to hold its version and CRC-32.
         return (f"its extra field carries {header.fields} Info-ZIP Unicode Path fields (APPNOTE "
                 "4.6.9); Python's zipfile releases take the last of them as its name, or none "
                 "of them, or refuse the archive, so this tool takes none of them and does not "

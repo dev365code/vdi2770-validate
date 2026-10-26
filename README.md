@@ -527,10 +527,11 @@ changed what a pipeline sees:**
   xref entry outside Size. A mismatch now produces a `P6` container warning;
   matching declarations now pass with `--fail-on warning`.
 - `1.0.1` keeps `M11` and `M12` silent when the delivery holds an archive
-  this tool did not open, as *What it catches* says they are, instead of
+  this tool did not open, as *What it catches* says `M11` is, instead of
   reporting the documents inside it as missing. It also reads as one name the
   two spellings an entry's header and its Unicode Path field give it when they
-  differ only in Unicode normalization, where 1.0.0 refused that entry as `Z12`
+  differ only in how the same characters are composed (canonically equivalent,
+  compared in NFC), where 1.0.0 refused that entry as `Z12`
   and missed the file it holds — so a container with nothing else wrong exits
   `0` now.
 
@@ -572,7 +573,8 @@ every one up to 0.9.4 inside GHSA-6hqr-phm3-chpf, and every one before 0.9.2
 inside another advisory as well — GHSA-xp97-jcmj-h45f reaches every release up
 to 0.8.0, and GHSA-f9xw-89gp-x52p every release from 0.8.0 to 0.9.1 — so 0.9.7
 is the first release outside those five. GHSA-62p8-4642-mwfp reaches releases
-up to 0.10.3 and is closed in full by 0.11.0. The pin runs one way: the engine
+up to 0.10.3 and is closed in full by 0.11.0. GHSA-fv32-69r4-3fm7 reaches every
+release of both up to 0.14.0 and is closed by 1.0.0. The pin runs one way: the engine
 does not name this package back, so upgrading the engine alone beside an older
 command leaves a mismatched pair, and a command from 0.8.0 on refuses that pair
 rather than judging with it (exit `3`).

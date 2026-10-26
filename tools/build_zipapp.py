@@ -148,8 +148,9 @@ def stage(into: Path, wheels: Path | None = None, notices: list | None = None) -
 #: Where the staged tree, and so the single file, carries the terms it ships
 #: under: this project's notices as the engine's wheel carries them, and each
 #: bundled distribution's licence files as its wheel carries them, under its
-#: name and version. The wheels' metadata is removed after staging, and with it
-#: went the only copy of those texts -- 1.0.0's single file carried none.
+#: name and version. The bundled wheels' metadata is removed after staging, and
+#: with it went the only copy of their texts; the engine is copied from its
+#: source, which never held its notices -- 1.0.0's single file carried none.
 LICENCES = "licenses"
 #: This project's notices, as the engine's wheel carries them -- the three the
 #: page reproduces too.

@@ -8,8 +8,8 @@ Who should take this release: anyone checking deliveries with an archive this
 reader could not open, or entries whose header and Unicode Path field spell
 the same name in canonically equivalent forms. This release repairs those
 judgements, makes the method number in a finding explicit when it has no
-name in this reader's table, and gives three refusals the reason and the
-remedy that fit them. Whoever passes the single file on should take it as
+name in this reader's table, and gives three refusals the remedy that fits
+them, and one of them its reason. Whoever passes the single file on should take it as
 well: it now carries the licence texts of what it bundles. Whoever gates a
 build on the exit code should read the paragraph after the list.
 
@@ -45,15 +45,16 @@ build on the exit code should read the paragraph after the list.
   be read as another entry's too, or reach into or past the central
   directory, the `Z12` remedy, and the `F1` remedy where the metadata
   declares that file, say to rebuild the archive with a standard ZIP tool.
-  They said to re-create the archive and send it again, which sends the
-  same layout.
+  They said to re-create the archive and send it again, which, done with
+  the writer that laid it out, sends the same layout.
   **This moves verdicts:** none.
 - **The refusal of an entry with more than one Unicode Path field gives
   the reason it has.** The sentence read as if APPNOTE said an entry has
   one name, which APPNOTE does not say. It now says what Python's
   `zipfile` releases do with such an entry: take the last field as its
   name, or none of them, or refuse the archive. The remedy that comes with
-  it says the same.
+  it, which the refusal of a field naming another file shares, now says
+  that readers differ on which file such an entry is.
   **This moves verdicts:** none.
 - **Metadata in an encoding this reader does not read is told to be saved
   again.** For a file whose first bytes say it is in UCS-4 or EBCDIC, `X1`
@@ -61,20 +62,21 @@ build on the exit code should read the paragraph after the list.
   said to open the file in an XML editor and fix the reported position,
   and such a file has no position to fix.
   **This moves verdicts:** none.
-- **The documentation describes the checks and commands it offers.** Release
-  asset counts match the published releases, the browser policy names both
-  `blob:` and `data:` URLs, and the page's request and storage gate is cited.
-  Download checks skip files not downloaded and include the macOS command.
-  The archive-end citation includes the entry count, the encoding-name claim
-  is limited to names an XML declaration can carry, and the contributing
-  instructions explain the bundle install and the page rows' Python version.
-  **This moves verdicts:** none.
 - **The single file carries the terms of what it bundles.** `vdi2770.pyz`
   holds, in its `licenses` folder, the reader's `LICENSE`, `NOTICE` and
   `THIRD_PARTY.md` and the licence files of `xmlschema` and `elementpath`,
   byte for byte as their wheels carry them. The 1.0.0 single file carried
-  none of them: the build removed the wheels' metadata, and the licence
-  texts went with it.
+  none of them: the build copied the reader from its source, without them,
+  and removed the bundled wheels' metadata, which held the other two.
+  **This moves verdicts:** none.
+- **The documentation describes the checks and commands it offers.** Release
+  asset counts match the published releases, the browser policy names both
+  `blob:` and `data:` URLs, and the page's request and storage gate is cited.
+  Download checks skip files not downloaded and include the macOS command.
+  The archive-end citation includes the count of entries on this disk
+  (4.4.21), the encoding-name claim
+  is limited to names an XML declaration can carry, and the contributing
+  instructions explain the bundle install and the page rows' Python version.
   **This moves verdicts:** none.
 - **The documentation says what ships, what the action publishes and what
   the library refuses.** The front page speaks of the 1.0 conditions as
