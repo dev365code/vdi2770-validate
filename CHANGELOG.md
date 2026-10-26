@@ -43,6 +43,13 @@ read the paragraph after the list.
   They said to re-create the archive and send it again, which sends the
   same layout.
   **This moves verdicts:** none.
+- **The refusal of an entry with more than one Unicode Path field gives
+  the reason it has.** The sentence read as if APPNOTE said an entry has
+  one name, which APPNOTE does not say. It now says what Python's
+  `zipfile` releases do with such an entry: take the last field as its
+  name, or none of them, or refuse the archive. The remedy that comes with
+  it says the same.
+  **This moves verdicts:** none.
 - **The documentation describes the checks and commands it offers.** Release
   asset counts match the published releases, the browser policy names both
   `blob:` and `data:` URLs, and the page's request and storage gate is cited.

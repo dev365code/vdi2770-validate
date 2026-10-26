@@ -108,8 +108,13 @@ _TWO = "one stretch of bytes would be read as two members"
 _SHARED = f"its local header, at byte {STARTS[SUBJECT]:,}, is another entry's too: {_TWO}"
 _AMBIGUOUS = ("2 entries in this archive carry this name; the reader cannot say which one is "
               "meant and read none of them")
-_TWICE = ("its extra field carries 2 Info-ZIP Unicode Path fields (APPNOTE 4.6.9); such a field "
-          "is the UTF-8 version of the header's name, and an entry has one name")
+#: Why two fields name nothing: not a sentence of APPNOTE's, which forbids
+#: neither, but what the releases of Python's `zipfile` do with them -- 3.9.6
+#: reads the header's name, 3.12.10, 3.13.2 and 3.13.15 the last field's, and
+#: those refuse the archive when the first is not UTF-8.
+_TWICE = ("its extra field carries 2 Info-ZIP Unicode Path fields (APPNOTE 4.6.9); Python's "
+          "zipfile releases take the last of them as its name, or none of them, or refuse the "
+          "archive, so this tool takes none of them and does not read the entry")
 
 
 def _two_names(field):

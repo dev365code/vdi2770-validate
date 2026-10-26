@@ -178,10 +178,11 @@ DEFECT_TO_RULE = {
 #: re-zips the same files into the same field -- the loop `_remedy_for` already
 #: ends for a locked member.
 ONE_NAME = ("Give the entry one name. An Info-ZIP Unicode Path field (APPNOTE 4.6.9) "
-            "holds the UTF-8 version of the name its header already carries, once, and "
-            "this entry's says something else or says it twice -- zipping the same "
-            "files again writes the same fields. Store the name once, in UTF-8 with "
-            "general purpose bit 11 set (APPNOTE 4.4.4), or leave the field out.")
+            "holds the UTF-8 version of the name its header already carries; this "
+            "entry's says something else, or there is more than one, and readers then "
+            "differ on which file it is -- zipping the same files again writes the same "
+            "fields. Store the name once, in UTF-8 with general purpose bit 11 set "
+            "(APPNOTE 4.4.4), or leave the field out.")
 
 #: What to do about an entry the reader refused for where its bytes lie -- the
 #: sentences `zipread._overlapping` gives. Its bytes may be whole: what is wrong

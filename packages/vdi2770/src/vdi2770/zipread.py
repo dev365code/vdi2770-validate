@@ -653,9 +653,14 @@ def _name(info: zipfile.ZipInfo, header: _Header) -> Optional[str]:
     if not info.filename:
         return None
     if header.fields > 1:
+        # Not a sentence of APPNOTE's, which forbids neither: what the library's
+        # releases do with them. Before 3.12 they read the header's name; from
+        # 3.12 they read the last field's, and refuse the archive when a field
+        # before it is not UTF-8.
         return (f"its extra field carries {header.fields} Info-ZIP Unicode Path fields (APPNOTE "
-                "4.6.9); such a field is the UTF-8 version of the header's name, and an entry "
-                "has one name")
+                "4.6.9); Python's zipfile releases take the last of them as its name, or none "
+                "of them, or refuse the archive, so this tool takes none of them and does not "
+                "read the entry")
     if not header.unicode:
         return None
     given = _as_written(header.unicode[0])
