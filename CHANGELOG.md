@@ -268,6 +268,8 @@ local header made every Python exit `1` already, and still do.
 *(Correction, 1.0.0: printable ASCII reads the same in the two character sets APPNOTE gives an entry's name, IBM Code Page 437 and UTF-8, and not in every character set -- ISO 646's national variants and JIS X 0201 read some of those bytes as other letters; the refusal of an entry whose Unicode Path field gives such a header another name stands on the first.)*
 *(Correction, 1.0.0: "named by this tool, the same way on every Python" held on every Python but not on every platform -- on Windows the library still made a backslash in a name `/`, and such an entry was read there as a path; 1.0.0 names it as written there too.)*
 
+*(Correction 2026-10-27: Python's `zipfile` refuses the whole archive for a Unicode Path field only when the field is of version 1, its CRC-32 is that of the header's name and the name it gives is not UTF-8, or when the field is too short to hold its version and CRC-32; it warns about an empty name only in such a field, and passes over a field of another version or CRC-32 whatever it holds.)*
+
 ## 0.13.0 — 2026-10-22
 
 Who should take this release: anyone who checks deliveries on more than one

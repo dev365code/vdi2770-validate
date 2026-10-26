@@ -606,8 +606,10 @@ def _unread(data: bytes, tags) -> bytes:
     replaced by one no mapping assigns.
 
     The library's releases from 3.12 take an entry's name from that field,
-    refuse the whole archive when the field is not a name and warn when it is
-    empty; the releases before pass it over. So the field is this reader's to
+    refuse the whole archive when a field of version 1 whose CRC-32 matches the
+    header's name is not UTF-8, or when a field is too short to hold its version
+    and CRC-32, and warn when such a field's name is empty; the releases before
+    pass it over. So the field is this reader's to
     read, and no release of the library sees one. An archive without one is
     handed over as it is: the copy is a second one of the archive, and is made
     only where it changes what the library reads -- in one piece, from views of

@@ -62,9 +62,11 @@ failure — files that never claimed at all.
   reader's words, and what reaches the library is an end every release of it
   reads alike. The entries the central directory lists are named and placed
   here too. The library reads an Info-ZIP Unicode Path field (APPNOTE 4.6.9)
-  from 3.12.0 on and not before, and from then on refuses a whole archive whose
-  field is not UTF-8; it refuses an entry whose data runs on into the next only
-  in the releases that carry the repair for CVE-2024-0450. So this reader names
+  from 3.12.0 on and not before, and from then on refuses the whole archive when
+  a field of version 1 whose CRC-32 matches the header's name is not UTF-8, or
+  when a field is too short to hold its version and CRC-32; it refuses an entry
+  whose data runs on into the next only in the releases that carry the repair
+  for CVE-2024-0450. So this reader names
   every entry itself -- by general purpose bit 11 or as IBM Code Page 437 (4.4.4,
   APPENDIX D), or by such a field where the field is one -- and refuses an entry
   that names two files, or whose data another entry holds too, before the
@@ -76,12 +78,13 @@ failure — files that never claimed at all.
   CVE-2025-8291, and its comparison with the command runs on that same release.
 
 - **Archives APPNOTE allows and this tool refuses**: a self-extracting archive
-  (APPNOTE 4.1.9) and any other file with bytes in front of the archive; an
-  archive comment holding the end record's signature, which a reader that
-  searches back from the end of the file takes for the record (4.4.26 sets no
-  rule on what a comment holds); and a zip64 end record carrying extensible data
-  or a version-2 record (4.3.14.2, 4.3.14.3). Each is `Z1`, on every Python, in a
-  sentence that names the bytes.
+  (APPNOTE 4.1.9) — and with it any file with bytes in front of the archive,
+  since nothing here can tell extraction code from other bytes; an archive
+  comment holding the end record's signature, which a reader that searches back
+  from the end of the file takes for the record (4.4.26 sets no rule on what a
+  comment holds); and a zip64 end record carrying extensible data or a version-2
+  record (4.3.14.2, 4.3.14.3). Each is `Z1`, on every Python, in a sentence that
+  names the bytes.
 
 - **Text spelling at the listing limit**: the page charges the visible spelling
   of runner syntax against the existing listing allowance. It can list fewer

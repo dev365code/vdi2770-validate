@@ -274,24 +274,28 @@ Six more, this time observed in the sweep rather than read:
   entry whose local header lies past where the central directory begins is
   refused too, every one: of two such, Python 3.13.15's library reads the first, whose
   data ends where the second's header begins, and 3.9.6's reads both. No
-  fixture holds two of them, so the reference has not been run on that case.
-- **A name some writers spell twice is read as naming two files.** Info-ZIP's
-  zip 3.0 stores the UTF-8 of a path in a Unicode Path field where the system's
-  character set is not UTF-8, and its manual says characters not valid in that
-  character set are escaped as `#Uxxxx` or `#Lxxxxxx`; Apache Commons Compress
-  writes a character its encoding cannot map as `%Uxxxx` and, when it is set to,
-  the real name in such a field. A header of printable ASCII beside a field
-  giving another name is refused here as `Z12`, on every Python: Python's
-  library reads the field's name from 3.12 on and the header's before, and a
-  reader that ignores the field reads the escapes. The finding says to store
-  the name once, in UTF-8 with general purpose bit 11 set; zip 3.0's
-  `-UN=UTF8`, its manual says, stores UTF-8 as native in the archive. No
-  fixture holds such an entry, so the reference has not been run on it.
+  fixture holds an entry placed there, so the reference has not been run on
+  that case.
 
 One structural difference, not a defect on either side: the reference extracts
 every container to a temporary folder on disk before validating
 (`ZipUtils.unzipToTemperaryFolder`). This tool extracts nothing to disk, which
 is asserted by a test rather than promised.
+
+One refusal, not a defect on either side: **a name some writers spell twice is
+read as naming two files.** Info-ZIP's zip 3.0 stores the UTF-8 of a path in a
+Unicode Path field where the system's character set is not UTF-8, and its manual
+says characters not valid in that character set are escaped as `#Uxxxx` or
+`#Lxxxxxx`; Apache Commons Compress writes a character its encoding cannot map
+as `%Uxxxx` and, when it is set to, the real name in such a field. A header of
+printable ASCII beside a field giving another name is refused here as `Z12`, on
+every Python: Python's library reads the field's name from 3.12 on and the
+header's before, and a reader that ignores the field reads the escapes. The
+finding says to store the name once, in UTF-8 with general purpose bit 11 set;
+zip 3.0's `-UN=UTF8`, its manual says, stores UTF-8 as native in the archive. No
+fixture spells a header with those escapes; on the fixture whose printable-ASCII
+header and field name two files, the reference reports an error, as this tool
+does.
 
 ## 4. Codes are ambiguous, so we key on message keys
 
