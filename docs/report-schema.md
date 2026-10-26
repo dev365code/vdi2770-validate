@@ -22,7 +22,7 @@ as from the text.
 {
   "path": "handover.zip",
   "schemaVersion": 1,
-  "toolVersion": "1.0.0",
+  "toolVersion": "1.0.1",
   "vdiSchema": "2019-08-23",
   "target": "handover.zip",
   "tool": "vdi2770-validate",

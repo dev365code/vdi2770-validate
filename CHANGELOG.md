@@ -2,6 +2,15 @@
 
 Sections through 0.7.0 had their wording tidied after their tags; the text each version carried when it was published is in that tag's own `CHANGELOG.md`. From 0.8.0 on, a released section is frozen at its tag and takes only appended `*(Correction ...)*` lines.
 
+## 1.0.1 — unreleased
+
+Who should take this release: anyone checking deliveries with an archive this
+reader could not open, or entries whose header and Unicode Path field spell
+the same name in canonically equivalent forms. This release repairs those
+judgements and makes the method number in a finding explicit when it has no
+name in this reader's table. Whoever gates a build on the exit code should
+read the paragraph after the list.
+
 ## 1.0.0 — 2026-10-26
 
 Who should take this release: everyone on 0.14.0, and anyone who waited for a
