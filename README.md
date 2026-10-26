@@ -146,6 +146,9 @@ produces:
 python tools/build_zipapp.py --check     # writes dist/vdi2770.pyz and runs it
 ```
 
+With the locked wheels already downloaded, `--wheels DIR` builds it without a
+network.
+
 Pure Python, nothing compiled, and an ordinary readable zip: whoever has to
 approve software entering the network can open it and read every line, which
 matters more than convenience when the approval is the hard part.

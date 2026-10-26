@@ -7,9 +7,10 @@ Sections through 0.7.0 had their wording tidied after their tags; the text each 
 Who should take this release: anyone checking deliveries with an archive this
 reader could not open, or entries whose header and Unicode Path field spell
 the same name in canonically equivalent forms. This release repairs those
-judgements and makes the method number in a finding explicit when it has no
-name in this reader's table. Whoever gates a build on the exit code should
-read the paragraph after the list.
+judgements, makes the method number in a finding explicit when it has no
+name in this reader's table, and gives three refusals the reason and the
+remedy that fit them. Whoever gates a build on the exit code should read the
+paragraph after the list.
 
 - **Missing documents are reported only after every archive was opened.**
   `M11` and `M12` need every archive as well as every listed metadata file to
@@ -63,6 +64,18 @@ read the paragraph after the list.
   The archive-end citation includes the entry count, the encoding-name claim
   is limited to names an XML declaration can carry, and the contributing
   instructions explain the bundle install and the page rows' Python version.
+  **This moves verdicts:** none.
+- **The documentation says what ships, what the action publishes and what
+  the library refuses.** The front page speaks of the 1.0 conditions as
+  met. The alias distribution is described as the alias it is, whoever
+  embeds the reader is told to keep THIRD_PARTY.md with it, and the
+  elementpath row says what an installation from the index takes. The scope
+  page states when Python's `zipfile` refuses a whole archive for a Unicode
+  Path field, and why bytes in front of an archive are refused; the 0.14.0
+  and 0.13.0 sections carry dated corrections. The README says when the
+  action leaves `exit-code` empty and that `--wheels DIR` builds the single
+  file without a network, and the contributing guide says a `PYTHON=` path
+  with a space breaks `make`.
   **This moves verdicts:** none.
 
 **If your build gates on the exit code, this is the paragraph for you.** An
@@ -339,6 +352,8 @@ second end record, which was already refused as bytes in front of an archive.
 
 *(Correction, 1.0.0: the releases that look for the end record one byte further back than the longest comment reaches are 3.12.7 and earlier, 3.13.0, and every 3.9, 3.10 and 3.11 release; from 3.12.8 and 3.13.1 on they look where the longest comment reaches. The releases named as measured read and refuse as said.)*
 *(Correction, 1.0.0: "the signature of a second end record after the first (4.3.1)" is the signature of an end record inside the comment, which APPNOTE does not forbid there (4.4.26); this tool refuses it because a reader that searches back from the end of the file takes it for the record.)*
+
+*(Correction 2026-10-27: two builds of one commit carry the same bytes when the Pythons building them compress alike: the archive holds the deflate output of the zlib each links, and the release assets are built on CI's runner.)*
 
 ## 0.12.0 — 2026-10-21
 

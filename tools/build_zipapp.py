@@ -202,6 +202,8 @@ def create_archive(source: Path, target: Path) -> None:
     Written out rather than called, because `zipapp` walks the directory in
     whatever order the filesystem hands back and stamps each entry with its
     mtime — two things that make one tree build into two different files.
+    Pinned, one tree builds into one file wherever the zlib the building Python
+    links compresses alike.
     """
     stamp = _timestamp()
     target.parent.mkdir(parents=True, exist_ok=True)

@@ -186,7 +186,8 @@ def version() -> str:
 
 def app_archive(staged: Path, into: Path) -> bytes:
     """The staged tree as one zip, entries in name order, every stamp the same,
-    so one tree builds into one page."""
+    so one tree builds into one page wherever the zlib the building Python links
+    compresses alike."""
     stamp = build_zipapp._timestamp()
     raw = io.BytesIO()
     with zipfile.ZipFile(raw, "w", zipfile.ZIP_DEFLATED) as z:
