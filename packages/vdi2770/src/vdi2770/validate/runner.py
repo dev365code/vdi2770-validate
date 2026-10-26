@@ -573,7 +573,8 @@ def check_bytes(data: bytes, name: str) -> Report:
     # inside the container doing the pointing can answer it.
     _into(report,
           r_delivery.check(delivery,
-                           report.read.metadata_read >= report.read.metadata_found),
+                           report.read.archives_opened == report.read.archives_found
+                           and report.read.metadata_read >= report.read.metadata_found),
           root.where, "delivery")
     return report
 

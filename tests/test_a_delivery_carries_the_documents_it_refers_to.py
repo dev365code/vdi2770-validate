@@ -228,3 +228,159 @@ def test_a_document_does_not_satisfy_its_own_reference(tmp_path):
         "the main document's only relationship names itself, and no other "
         "document in the delivery declares that id")
     assert "XCP328490" in (found["M11"].detail or ""), found["M11"].detail
+
+
+# The directory of an unopened archive cannot contribute metadata to the count.
+ARCHIVE_PATHS = (
+    "method", "member-read", "whole-read", "member-limit", "listing-budget",
+    "depth", "container-budget", "byte-budget", "folder-depth",
+    "folder-container-budget", "folder-byte-budget", "folder-size",
+)
+
+
+def _delivery_bytes(entries):
+    import io
+    import zipfile
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_STORED) as out:
+        for name, data in entries.items():
+            out.writestr(zipfile.ZipInfo(name, (1980, 1, 1, 0, 0, 0)), data)
+    return buf.getvalue()
+
+
+def _delivery_case(shape, references, contradiction, monkeypatch):
+    """Generate one unopened path with two documents still available to read."""
+    import io
+    import re
+    import struct
+    import zipfile
+
+    from conftest import CLEAN_DOCUMENT, CLEAN_DOCUMENTATION, unopened
+    from vdi2770 import zipread
+
+    with zipfile.ZipFile(CLEAN_DOCUMENTATION) as src:
+        main = {n: src.read(n) for n in src.namelist() if not n.lower().endswith(".zip")}
+    with zipfile.ZipFile(CLEAN_DOCUMENT) as src:
+        document = {n: src.read(n) for n in src.namelist()}
+
+    def metadata(raw, identity, kind, refers):
+        text = raw.decode("utf-8")
+        text = re.sub(r"<DocumentRelationship\b.*?</DocumentRelationship>", "", text, flags=re.S)
+        text = re.sub(r"<DocumentId\b[^>]*>[^<]*</DocumentId>",
+                      f'<DocumentId DomainId="BSP-OEM">{identity}</DocumentId>', text, count=1)
+        text = re.sub(r"<ObjectId\b[^>]*>[^<]*</ObjectId>",
+                      f'<ObjectId ObjectType="{kind}">OBJECT</ObjectId>', text)
+        if refers:
+            relation = ('<DocumentRelationship Type="RefersTo">'
+                        '<DocumentId DomainId="BSP-OEM">HELD</DocumentId>'
+                        '</DocumentRelationship>')
+            text = text.replace("<DigitalFile", relation + "<DigitalFile", 1)
+        return text.encode("utf-8")
+
+    main[zipread.MAIN_XML] = metadata(main[zipread.MAIN_XML], "ROOT", "Type", references)
+    known = dict(document)
+    known[zipread.METADATA_XML] = metadata(
+        known[zipread.METADATA_XML], "KNOWN", "Individual" if contradiction else "Type", references)
+    held = dict(document)
+    held[zipread.METADATA_XML] = metadata(held[zipread.METADATA_XML], "HELD", "Type", False)
+    known_bytes = _delivery_bytes(known)
+    held_bytes = _delivery_bytes(held)
+    entries = dict(main, **{"known.zip": known_bytes})
+    if shape == "whole-read":
+        held_bytes = b"prefix" + held_bytes
+    elif shape == "member-limit":
+        held.update({f"{i}.txt": b"x" for i in range(12)})
+        held_bytes = _delivery_bytes(held)
+        monkeypatch.setattr(zipread, "MAX_MEMBERS", 10)
+    elif shape == "listing-budget":
+        monkeypatch.setattr(zipread, "MAX_TOTAL_MEMBERS", len(entries) + 1 + len(known))
+    elif shape == "depth":
+        held_bytes = _delivery_bytes({"held.zip": held_bytes})
+        monkeypatch.setattr(zipread, "MAX_CONTAINER_LEVELS", 2)
+    elif shape == "container-budget":
+        monkeypatch.setattr(zipread, "MAX_CONTAINERS", 1)
+    elif shape == "folder-depth":
+        monkeypatch.setattr(zipread, "MAX_CONTAINER_LEVELS", 2)
+    elif shape == "folder-container-budget":
+        monkeypatch.setattr(zipread, "MAX_CONTAINERS", 1)
+    elif shape == "folder-size":
+        ceiling = max(map(len, [*main.values(), *known.values(), known_bytes])) + 1
+        held.update({f"{i}.txt": b"x" * ceiling for i in range(2)})
+        monkeypatch.setattr(zipread, "MAX_MEMBER_BYTES", ceiling)
+    if shape == "folder-depth":
+        entries["held.zip"] = _delivery_bytes({"held/" + n: value for n, value in held.items()})
+    elif shape.startswith("folder-"):
+        entries.update({"held/" + n: value for n, value in held.items()})
+    elif shape == "declared-bundle":
+        held_bytes = _delivery_bytes({"held.zip": held_bytes})
+        entries["held.zip"] = held_bytes
+        declaration = '<DigitalFile FileFormat="application/zip">held.zip</DigitalFile>'
+        entries[zipread.MAIN_XML] = entries[zipread.MAIN_XML].replace(
+            b"</DocumentVersion>", declaration.encode() + b"</DocumentVersion>", 1)
+    else:
+        entries["held.zip"] = held_bytes
+    if shape in ("byte-budget", "folder-byte-budget"):
+        second = (sum(map(len, held.values())) if shape.startswith("folder-") else len(held_bytes))
+        ceiling = sum(map(len, entries.values())) + len(known_bytes) + sum(map(len, known.values())) + second - 1
+        monkeypatch.setattr(zipread, "MAX_TOTAL_DECOMPRESSED", ceiling)
+    raw = _delivery_bytes(entries)
+    if shape == "member-read":
+        raw = unopened(raw, "held.zip")
+    elif shape == "method":
+        data = bytearray(raw)
+        with zipfile.ZipFile(io.BytesIO(raw)) as src:
+            item = src.getinfo("held.zip")
+            struct.pack_into("<H", data, item.header_offset + 8, 99)
+            at = src.start_dir
+            for info in src.infolist():
+                if info.filename == item.filename:
+                    struct.pack_into("<H", data, at + 10, 99)
+                at += 46 + len(info.filename.encode()) + len(info.extra) + len(info.comment)
+        raw = bytes(data)
+    return raw
+
+
+@pytest.mark.parametrize("shape", ARCHIVE_PATHS)
+@pytest.mark.parametrize("references", [False, True])
+@pytest.mark.parametrize("contradiction", [False, True])
+def test_missing_documents_wait_for_every_archive(shape, references, contradiction, monkeypatch):
+    """An unopened archive may hold the target; a known contradiction still holds."""
+    import json
+
+    from vdi2770_validate.report import as_json
+    from vdi2770_validate.runner import check_bytes
+
+    report = check_bytes(_delivery_case(shape, references, contradiction, monkeypatch), "0")
+    read = json.loads(as_json(report))["read"]
+    found = {f.rule.id for f in report.findings}
+    assert report.read.archives_opened < report.read.archives_found
+    assert not read["complete"]
+    assert not found & {"M11", "M12"}
+    assert ("M13" in found) is contradiction
+
+
+def test_a_declared_bundle_does_not_contribute_its_contents_to_the_read(monkeypatch):
+    """A payload's contents are outside the delivery's metadata search."""
+    from vdi2770_validate.runner import check_bytes
+
+    report = check_bytes(_delivery_case("declared-bundle", True, False, monkeypatch), "0")
+    assert report.read.archives_opened == report.read.archives_found
+    assert report.read.metadata_read == report.read.metadata_found
+    assert {"M11", "M12"} <= {f.rule.id for f in report.findings}
+
+
+def test_a_pdf_check_that_did_not_run_does_not_hide_known_missing_documents(monkeypatch):
+    """The delivery guard needs archives and metadata, not every PDF check."""
+    from vdi2770_validate import runner
+
+    data = _delivery_case("declared-bundle", True, False, monkeypatch)
+
+    def unavailable(*args, **kwargs):
+        raise RuntimeError("PDF check unavailable")
+
+    monkeypatch.setattr(runner.pdfread, "reader", lambda *args: unavailable)
+    report = runner.check_bytes(data, "0")
+    assert report.read.archives_opened == report.read.archives_found
+    assert report.read.metadata_read == report.read.metadata_found
+    assert {"M11", "M12", "X5"} <= {f.rule.id for f in report.findings}

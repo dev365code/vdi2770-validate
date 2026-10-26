@@ -44,6 +44,14 @@ ROOT = Path(__file__).resolve().parent.parent
 # (id, file, original, mutated, checks that must go red, why it matters)
 # A check is a pytest path, or `tools/<script> <args>` for a gate that is a tool.
 TABLE = [
+    ("delivery/every-archive-before-missing-documents",
+     "packages/vdi2770/src/vdi2770/validate/runner.py",
+     "                           report.read.archives_opened == report.read.archives_found\n"
+     "                           and report.read.metadata_read >= report.read.metadata_found),",
+     "                           report.read.metadata_read >= report.read.metadata_found),",
+     ["tests/test_a_delivery_carries_the_documents_it_refers_to.py::test_missing_documents_wait_for_every_archive"],
+     "an unopened archive may hold a referenced document"),
+
     ("reader/decompression-budget",
      "packages/vdi2770/src/vdi2770/zipread.py",
      "        if not exhausted and not budget.take_bytes(m.size):",

@@ -501,7 +501,7 @@ with it, says so in a paragraph addressed to whoever gates a build on the
 number. That is the paragraph to read before upgrading; it is the one place this
 project undertakes to be exhaustive.
 
-**A patch release repairs — and five of the fifteen patch releases of this package
+**A patch release repairs — and six of the fifteen patch releases of this package
 changed what a pipeline sees:**
 
 - `0.5.1` asked for a fixed reader instead of merely permitting one. Until it,
@@ -518,8 +518,11 @@ changed what a pipeline sees:**
 - `0.11.1` compares page counts previously declined because of an unrelated
   xref entry outside Size. A mismatch now produces a `P6` container warning;
   matching declarations now pass with `--fail-on warning`.
+- `1.0.1` keeps `M11` and `M12` silent when the delivery holds an archive
+  this tool did not open, as *What it catches* says they are, instead of
+  reporting the documents inside it as missing.
 
-The other ten moved no verdict at all: `0.9.1`; `0.9.2`, which repaired what
+The other nine moved no verdict at all: `0.9.1`; `0.9.2`, which repaired what
 a delivery costs to check and left every finding, every location and every exit
 code exactly where they were; `0.9.3`, which bounded how large a report can
 grow, leaving every summary count and exit code where it was and adding one
@@ -531,8 +534,7 @@ console that prints most; `0.9.6`, which keeps a value the sender wrote
 from deciding how a line begins and measures only a finding that can fit;
 `0.10.1`, which carried only this project's pages about itself; `0.10.2`,
 which writes a bug report a person can attach and leaves every verdict where it
-was; `0.10.3`, which gives every rule a container can break a fixture pair;
-and `1.0.1`, whose changes move none yet.
+was; and `0.10.3`, which gives every rule a container can break a fixture pair.
 A patch is a smaller promise than a minor release;
 it is not a promise that nothing your pipeline reads can change.
 

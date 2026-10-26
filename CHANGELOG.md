@@ -11,6 +11,16 @@ judgements and makes the method number in a finding explicit when it has no
 name in this reader's table. Whoever gates a build on the exit code should
 read the paragraph after the list.
 
+- **Missing documents are reported only after every archive was opened.**
+  `M11` and `M12` need every archive as well as every listed metadata file to
+  have been read: an archive this reader could not open may hold the document
+  a relationship names. Counting metadata only from archives that did open
+  made a partial delivery look sufficient to report a document missing.
+  `M13` still reports contradictions in the documents that were read.
+  **This moves verdicts:** `M11` and `M12` no longer fire when an archive was
+  left unopened. Such a delivery still exits `1` for the finding explaining
+  why that archive was not opened.
+
 ## 1.0.0 — 2026-10-26
 
 Who should take this release: everyone on 0.14.0, and anyone who waited for a
