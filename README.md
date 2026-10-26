@@ -425,7 +425,7 @@ The readers and the rules used to be two distributions that had to match. From
 0.2.0 to 0.6.0 `vdi2770-validate` asked for the reader with a range, which let
 the pair be half-moved, and 0.7.0 pinned it exactly. They are one distribution
 now. `vdi2770-validate` is the old import
-name kept working: two lines that make it the same object as `vdi2770.validate`,
+name kept working: an alias that makes it the same object as `vdi2770.validate`,
 asking for `vdi2770[validate]==1.0.1` — its own version, exactly. A floor
 would stop an older engine and let a newer one install beside it, and halves
 that disagree about which release they are do not judge.
@@ -610,7 +610,8 @@ Details in [docs/divergences.md](https://github.com/dev365code/vdi2770-validate/
 <summary>Embedding, versions and support</summary>
 
 Apache-2.0. You may embed it in commercial products, ship it to your customers and
-run it inside closed networks; keep the LICENSE and NOTICE files with it. A run
+run it inside closed networks; keep the LICENSE, NOTICE and THIRD_PARTY.md files
+with it. A run
 makes no network requests and uploads nothing. The surfaces you can build on are the
 ones [What is stable](#what-is-stable-here-and-what-is-not) lists — the exit codes,
 the command line, the report, the reader's names, the old import name — and a change

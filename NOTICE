@@ -8,7 +8,7 @@ Licensed under the Apache License, Version 2.0.
 Third-party material bundled with this project
 --------------------------------------------------------------------------
 
-None is in this wheel. `vdi2770-validate` is two lines of alias: it installs
+None is in this wheel. `vdi2770-validate` is an alias: it installs
 `vdi2770[validate]` and makes the old import name resolve to it, and the only
 files it ships are its own source, this notice and the licence beside it.
 

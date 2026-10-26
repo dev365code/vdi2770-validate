@@ -65,8 +65,9 @@ schema and the IDTA-derived table, under `vdi2770/validate/data/` in its wheel
 beside `rules.json`, which is this project's own. Its `NOTICE` and
 `THIRD_PARTY.md` travel beside the licence in the same wheel, so a product that
 embeds the reader embeds the two files and their notices together. The corpus
-is test material and is in neither wheel. `vdi2770-validate` is two lines of
-alias and carries none of it, which its own `NOTICE` says.
+is test material and is in neither wheel. `vdi2770-validate` is an alias — its
+own two modules, a licence and a notice — and carries none of it, which its own
+`NOTICE` says.
 
 ## The remedy-text gate
 

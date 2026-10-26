@@ -31,8 +31,8 @@ def test_the_notices_travel_with_the_wheel():
     `THIRD_PARTY.md` carries the MIT and CC BY texts for the bundled schema and
     the table derived from an IDTA publication — and those ship with `vdi2770`
     now, so the notice for them is asserted against that manifest rather than
-    this one. This distribution bundles nothing of anybody else's -- it is two
-    lines of alias -- so it does not need to carry a third party's terms, and
+    this one. This distribution bundles nothing of anybody else's -- it is an
+    alias -- so it does not need to carry a third party's terms, and
     saying it does would make the obligation look like decoration.
     """
     files = license_files()
@@ -71,10 +71,9 @@ def test_the_readers_notice_sends_people_where_the_material_actually_is():
     schema, the class table and the corpus were accounted for "in the sibling
     package `vdi2770-validate`".
 
-    That name still resolves, and after the rename it resolves to a redirect
-    that contains no notices, no THIRD_PARTY.md and no code — so the sentence
-    now sends the one reader who follows it to an empty package. The material
-    did not move; the distribution boundary the sentence described did.
+    That name still resolves, and it resolves to an alias that carries none of
+    that material: the schema and the table moved into `vdi2770` with the
+    validator at 0.8.0, and the sentence still sent readers to the old place.
     """
     reader = (ROOT / "packages" / "vdi2770" / "NOTICE").read_text(encoding="utf-8")
     assert "THIRD_PARTY.md" in reader, (
