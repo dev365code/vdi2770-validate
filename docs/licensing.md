@@ -69,6 +69,13 @@ is test material and is in neither wheel. `vdi2770-validate` is an alias — its
 own two modules, a licence and a notice — and carries none of it, which its own
 `NOTICE` says.
 
+The single file, `vdi2770.pyz`, carries the reader with the two libraries it
+bundles, `xmlschema` and `elementpath`, and from 1.0.1 their terms with them: its
+`licenses` folder holds the reader's `LICENSE`, `NOTICE` and `THIRD_PARTY.md` and
+each bundled library's licence file, byte for byte as their wheels carry them.
+The 1.0.0 single file carried none of these. The browser page reproduces the
+same texts on the page itself.
+
 ## The remedy-text gate
 
 The reference implementation's message strings are MIT and may be reused with

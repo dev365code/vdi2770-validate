@@ -5,8 +5,11 @@ else's publication, and a corpus from an MIT project. Getting the notices wrong
 is not a style problem.
 """
 import hashlib
+import importlib
 import json
 import re
+import sys
+import zipfile
 
 from conftest import ROOT
 
@@ -84,6 +87,37 @@ def test_the_readers_notice_sends_people_where_the_material_actually_is():
         "distribution the schema and the class table shipped in until 0.8.0. "
         "They ship in `vdi2770` now, beside its own THIRD_PARTY.md, and a "
         "reader who knew the old place has to be told it moved.")
+
+
+def test_the_single_file_carries_the_terms_of_what_it_bundles(tmp_path, monkeypatch):
+    """The single file is a distribution of this project's code and of the two
+    libraries it bundles, and staging removed the wheels' metadata -- the only
+    copy of their licence texts -- before the archive was written: 1.0.0's file
+    carried no LICENSE, no NOTICE, no THIRD_PARTY.md and neither MIT text. They
+    travel inside it under `licenses/`, byte for byte as the engine's wheel and
+    each bundled wheel carry them, and the metadata stays out."""
+    sys.path.insert(0, str(ROOT / "tools"))
+    build = importlib.import_module("build_zipapp")
+    lock = importlib.import_module("bundle_lock")
+    from bundle_wheels import wheels_at
+    folder = tmp_path / "wheels"
+    entries = wheels_at(folder)
+    monkeypatch.setattr(lock, "read_lock", lambda: lock.validate(entries))
+    staged, target = tmp_path / "app", tmp_path / "vdi2770.pyz"
+    build.stage(staged, wheels=folder)
+    build.create_archive(staged, target)
+    wanted = {f"licenses/{name}": (ROOT / "packages" / "vdi2770" / name).read_bytes()
+              for name in ("LICENSE", "NOTICE", "THIRD_PARTY.md")}
+    for e in entries:
+        with zipfile.ZipFile(folder / e["file"]) as wheel:
+            info = f"{e['name']}-{e['version']}.dist-info/licenses/"
+            for n in wheel.namelist():
+                if n.startswith(info):
+                    wanted[f"licenses/{e['name']}-{e['version']}/{n[len(info):]}"] = wheel.read(n)
+    with zipfile.ZipFile(target) as z:
+        held = {n: z.read(n) for n in z.namelist() if n.startswith("licenses/") and not n.endswith("/")}
+        assert not [n for n in z.namelist() if ".dist-info/" in n]
+    assert held == wanted
 
 
 def test_mit_permission_notice_is_reproduced_in_full():

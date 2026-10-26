@@ -3926,6 +3926,12 @@ TABLE += [
      "        pass\n",
      ["tests/test_a_bundle_refuses_unlocked_bytes.py::test_staging_uses_the_lock_without_a_pip_subprocess"],
      "the page would carry the bundled code without its licence texts"),
+    ("build/the-single-file-keeps-the-terms-it-ships-under",
+     "tools/build_zipapp.py",
+     "    _keep_licences(into)\n",
+     "    pass\n",
+     ["tests/test_licensing.py::test_the_single_file_carries_the_terms_of_what_it_bundles"],
+     "the single file would carry the bundled code without its licence texts, as 1.0.0's did"),
 ]
 
 #: A document read in the encoding it declares.

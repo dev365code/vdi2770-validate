@@ -9,8 +9,9 @@ reader could not open, or entries whose header and Unicode Path field spell
 the same name in canonically equivalent forms. This release repairs those
 judgements, makes the method number in a finding explicit when it has no
 name in this reader's table, and gives three refusals the reason and the
-remedy that fit them. Whoever gates a build on the exit code should read the
-paragraph after the list.
+remedy that fit them. Whoever passes the single file on should take it as
+well: it now carries the licence texts of what it bundles. Whoever gates a
+build on the exit code should read the paragraph after the list.
 
 - **Missing documents are reported only after every archive was opened.**
   `M11` and `M12` need every archive as well as every listed metadata file to
@@ -64,6 +65,13 @@ paragraph after the list.
   The archive-end citation includes the entry count, the encoding-name claim
   is limited to names an XML declaration can carry, and the contributing
   instructions explain the bundle install and the page rows' Python version.
+  **This moves verdicts:** none.
+- **The single file carries the terms of what it bundles.** `vdi2770.pyz`
+  holds, in its `licenses` folder, the reader's `LICENSE`, `NOTICE` and
+  `THIRD_PARTY.md` and the licence files of `xmlschema` and `elementpath`,
+  byte for byte as their wheels carry them. The 1.0.0 single file carried
+  none of them: the build removed the wheels' metadata, and the licence
+  texts went with it.
   **This moves verdicts:** none.
 - **The documentation says what ships, what the action publishes and what
   the library refuses.** The front page speaks of the 1.0 conditions as

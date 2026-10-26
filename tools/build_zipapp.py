@@ -137,6 +137,7 @@ def stage(into: Path, wheels: Path | None = None, notices: list | None = None) -
             wheel.extractall(into)
     if notices is not None:
         notices.extend(_notices(into))
+    _keep_licences(into)
     for junk in (list(into.glob("*.dist-info")) + list(into.glob("*.egg-info"))
                  + list(into.rglob("__pycache__"))
                  + [into / "bin", into / "Scripts"]):
@@ -144,16 +145,48 @@ def stage(into: Path, wheels: Path | None = None, notices: list | None = None) -
     (into / "__main__.py").write_text(ENTRY, encoding="utf-8")
 
 
+#: Where the staged tree, and so the single file, carries the terms it ships
+#: under: this project's notices as the engine's wheel carries them, and each
+#: bundled distribution's licence files as its wheel carries them, under its
+#: name and version. The wheels' metadata is removed after staging, and with it
+#: went the only copy of those texts -- 1.0.0's single file carried none.
+LICENCES = "licenses"
+#: This project's notices, as the engine's wheel carries them -- the three the
+#: page reproduces too.
+OWN_NOTICES = ("LICENSE", "NOTICE", "THIRD_PARTY.md")
+
+
+def _licence_files(info: Path) -> list:
+    """The licence files a wheel's metadata directory holds, as (path inside it, file)."""
+    found = []
+    for path in sorted(p for p in info.rglob("*") if p.is_file()):
+        rel = path.relative_to(info).as_posix()
+        if rel.startswith("licenses/") or re.match(r"(?i)(licen[cs]e|copying|notice)", path.name):
+            found.append((rel, path))
+    return found
+
+
+def _keep_licences(into: Path) -> None:
+    """Copy the terms into `LICENCES` before the metadata that holds them goes."""
+    room = into / LICENCES
+    room.mkdir(exist_ok=True)
+    for name in OWN_NOTICES:
+        shutil.copyfile(ROOT / "packages" / "vdi2770" / name, room / name)
+    for info in sorted(into.glob("*.dist-info")):
+        meta = email.message_from_string((info / "METADATA").read_text(encoding="utf-8"))
+        for rel, path in _licence_files(info):
+            kept = room / f"{meta['Name']}-{meta['Version']}" / rel.removeprefix("licenses/")
+            kept.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(path, kept)
+
+
 def _notices(into: Path) -> list:
     """What each locked wheel says about its own licence."""
     found = []
     for info in sorted(into.glob("*.dist-info")):
         meta = email.message_from_string((info / "METADATA").read_text(encoding="utf-8"))
-        texts = {}
-        for path in sorted(p for p in info.rglob("*") if p.is_file()):
-            rel = path.relative_to(info).as_posix()
-            if rel.startswith("licenses/") or re.match(r"(?i)(licen[cs]e|copying|notice)", path.name):
-                texts[rel] = path.read_text(encoding="utf-8", errors="replace")
+        texts = {rel: path.read_text(encoding="utf-8", errors="replace")
+                 for rel, path in _licence_files(info)}
         said = meta.get("License-Expression") or meta.get("License") or ""
         if not said or "\n" in said or len(said) > 60:
             said = next((c.rsplit("::", 1)[-1].strip() for c in meta.get_all("Classifier") or []
