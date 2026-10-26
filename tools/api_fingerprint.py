@@ -114,9 +114,9 @@ def compatible(recorded: dict, now: dict) -> Optional[str]:
     fix was the point of the release. The internal pin is gone; anybody
     depending on `vdi2770` can still write one, and the rule holds for them.
 
-    Additions are compatible; a patch bump is an honest way to ship one.
-    Removals and signature changes are not, and the minor has to move so the
-    pin stops admitting them.
+    Additions are compatible with the pin; past 1.0 semantic versioning ships
+    one in a minor release. Removals and signature changes are not, and the
+    minor has to move so the pin stops admitting them.
 
     That is 0.x, where the pin is written on the patch. From 1.0 it is written
     on the minor — `~=1.0` admits every 1.x — and the same rule let a
@@ -144,7 +144,8 @@ def compatible(recorded: dict, now: dict) -> Optional[str]:
 
     if was is None or is_ is None:
         return (f"cannot compare {recorded['version']!r} with {now['version']!r} as "
-                f"release numbers, and this change needs the minor to move")
+                f"release numbers, and this change needs the minor to move before 1.0 "
+                f"and the major from it")
     step = 1 if was[0] >= 1 else 2
     if is_[:step] > was[:step]:
         return None

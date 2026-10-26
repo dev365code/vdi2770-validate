@@ -257,7 +257,8 @@ def test_past_1_0_a_breaking_change_needs_the_major_to_move():
     exports. The README says releases follow semantic versioning, and that asks
     for 2.0.0.
 
-    Adding a name stays compatible, in a patch release or a minor one.
+    Adding a name stays compatible with the pin, in a patch release or a minor
+    one; semantic versioning past 1.0 still asks a minor for it.
     """
     sys.path.insert(0, str(ROOT / "tools"))
     import api_fingerprint as fp
@@ -269,7 +270,8 @@ def test_past_1_0_a_breaking_change_needs_the_major_to_move():
         return fp.compatible(was, {"format": fp.FORMAT, "version": version, "surface": surface})
 
     added = {**was["surface"], "ClassName": "(language, text, src)"}
-    assert verdict("1.0.1", added) is None, "adding a name is compatible; a patch bump is honest"
+    assert verdict("1.0.1", added) is None, ("adding a name is compatible with the pin; semantic "
+                                             "versioning past 1.0 still asks a minor for it")
     assert verdict("1.1.0", added) is None, "and so is a minor bump"
 
     removed = {"read": "(data, path)"}
