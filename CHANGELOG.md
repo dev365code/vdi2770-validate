@@ -35,7 +35,10 @@ build on the exit code should read the paragraph after the list.
   two files. The field's spelling is kept; a genuinely different name, or
   more than one Unicode Path field, is refused as before.
   **This moves verdicts:** such an entry no longer draws `Z12` for naming two
-  files, nor an `F1` caused by that refusal. A delivery whose only error was
+  files, nor an `F1` caused by that refusal. Its file is read and judged as
+  any other is, and draws what any file draws where it drew none: a declared
+  PDF that claims PDF/A draws `P4`, an info finding, and a file the metadata
+  does not declare draws `F2`, a warning. A delivery whose only error was
   that `Z12`, or that refusal and its `F1`, exits `0` now instead of `1`.
 - **An entry laid out where no ordinary writer puts one is told to rebuild
   the archive.** When this reader refuses an entry because its bytes would
@@ -90,7 +93,7 @@ build on the exit code should read the paragraph after the list.
 otherwise conforming delivery whose header and Unicode Path field name the
 same entry in canonically equivalent spellings exits `0` now, where the
 name refusal made it exit `1`. This also holds when the entry is undeclared
-and its remaining `F2` is a warning, under the default `--fail-on error`.
+and now draws `F2`, a warning, under the default `--fail-on error`.
 Nothing else exits differently.
 
 ## 1.0.0 — 2026-10-26
