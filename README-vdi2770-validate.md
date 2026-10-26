@@ -15,7 +15,8 @@ tool is documented.
 
 ## What this distribution actually is
 
-Two lines. They make `vdi2770_validate` the same object as `vdi2770.validate`,
+An alias — two modules, a licence and a notice. They make `vdi2770_validate` the
+same object as `vdi2770.validate`,
 so the old name resolves to the code rather than to a copy of it: submodules,
 deep submodules, `python -m vdi2770_validate` and the console script all keep
 working, and what you get back is the module itself rather than a second copy

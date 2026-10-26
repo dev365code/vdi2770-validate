@@ -2,7 +2,7 @@
 
 The front page is what `vdi2770-validate` used to render on its index page and
 what the repository shows. `README-vdi2770-validate.md` is what that name
-renders now — the distribution is two lines of alias, and a page describing a
+renders now — the distribution is an alias, and a page describing a
 conformance checker for it would be a near-truth.
 
 One risk on two surfaces is how a warning ends up meaning two things: the
