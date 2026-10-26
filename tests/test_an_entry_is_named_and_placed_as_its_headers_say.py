@@ -35,7 +35,7 @@ from vdi2770_validate.runner import check_bytes  # noqa: E402
 
 import archive_entries as ENTRIES  # noqa: E402 - after sys.path
 from vdi2770 import zipread  # noqa: E402
-from vdi2770.validate.rules.container import ONE_NAME  # noqa: E402
+from vdi2770.validate.rules.container import ONE_NAME, REBUILD  # noqa: E402
 from vdi2770.zipread import Kind  # noqa: E402
 
 
@@ -310,6 +310,32 @@ def test_an_entry_naming_two_files_is_told_to_name_one():
     assert found["F1"].message == ("A file named in the metadata is in the container under an "
                                    "entry that names itself more than once")
     assert found["F1"].fix == ONE_NAME and found["Z12"].fix == ONE_NAME
+
+
+#: The cases whose entry is refused for where its bytes lie, with the findings
+#: each draws: rule, severity and what it is about. `F1` comes with them where
+#: the refused entry is a file the metadata declares.
+LAID_OUT = {
+    "data-running-into-the-next-entry": ["F1", "Z12"],
+    "data-running-one-byte-into-the-next-entry": ["F1", "Z12"],
+    "data-running-into-the-central-directory": ["Z12"],
+    "a-local-header-past-the-central-directory": ["Z12"],
+    "two-local-headers-past-the-central-directory": ["Z12", "Z12"],
+    "two-entries-one-local-header": ["F1", "Z12", "Z12"],
+}
+
+
+@pytest.mark.parametrize("name", sorted(LAID_OUT))
+def test_an_entry_laid_out_where_no_writer_puts_one_is_told_to_rebuild_the_archive(name):
+    """Its bytes are read as another entry's too, or reach into or past the
+    central directory, and sending the same file again sends the same layout --
+    the remedy for a truncated transfer, or for a member that needs a password,
+    is not the one that helps. Every finding on the entry says the same thing,
+    and the verdict is the one it was."""
+    report = check_bytes(CASES[name], "0")
+    assert sorted((f.rule.id, f.severity.value, f.about.value) for f in report.findings) == [
+        (rule, "error", "container") for rule in LAID_OUT[name]]
+    assert {f.fix for f in report.findings} == {REBUILD}
 
 
 @pytest.mark.parametrize("name", sorted(CASES))

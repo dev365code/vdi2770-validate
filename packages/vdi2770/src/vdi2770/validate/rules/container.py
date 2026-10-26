@@ -183,6 +183,23 @@ ONE_NAME = ("Give the entry one name. An Info-ZIP Unicode Path field (APPNOTE 4.
             "files again writes the same fields. Store the name once, in UTF-8 with "
             "general purpose bit 11 set (APPNOTE 4.4.4), or leave the field out.")
 
+#: What to do about an entry the reader refused for where its bytes lie -- the
+#: sentences `zipread._overlapping` gives. Its bytes may be whole: what is wrong
+#: is the layout, and sending the same file again sends the same layout, so the
+#: remedy for a truncated transfer is the one that cannot help here either.
+REBUILD = ("Rebuild the archive with a standard ZIP tool. No ordinary writer lays an "
+           "entry out this way -- its bytes are read as another entry's too, or reach "
+           "into or past the central directory (APPNOTE 4.3.6) -- so sending this file "
+           "again draws the same finding; the files themselves may be fine.")
+
+
+def layout_remedy(detail):
+    """`REBUILD` for a member the reader refused for where its bytes lie, read
+    from the sentence it refused it in -- or None."""
+    if (detail or "").startswith(("its local header, at byte ", "its data runs to byte ")):
+        return REBUILD
+    return None
+
 
 def method_remedy(detail):
     """The remedy for a member compressed with a method the reader does not
@@ -222,6 +239,8 @@ def _remedy_for(defect):
         return ONE_NAME
     if defect.kind == "member-unreadable" and method_remedy(defect.detail):
         return method_remedy(defect.detail)
+    if defect.kind == "member-unreadable" and layout_remedy(defect.detail):
+        return layout_remedy(defect.detail)
     return REMEDY_FOR_DEFECT.get(defect.kind)
 
 

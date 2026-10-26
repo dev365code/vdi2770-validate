@@ -35,6 +35,14 @@ read the paragraph after the list.
   **This moves verdicts:** such an entry no longer draws `Z12` for naming two
   files, nor an `F1` caused by that refusal. A delivery whose only error was
   that `Z12`, or that refusal and its `F1`, exits `0` now instead of `1`.
+- **An entry laid out where no ordinary writer puts one is told to rebuild
+  the archive.** When this reader refuses an entry because its bytes would
+  be read as another entry's too, or reach into or past the central
+  directory, the `Z12` remedy, and the `F1` remedy where the metadata
+  declares that file, say to rebuild the archive with a standard ZIP tool.
+  They said to re-create the archive and send it again, which sends the
+  same layout.
+  **This moves verdicts:** none.
 - **The documentation describes the checks and commands it offers.** Release
   asset counts match the published releases, the browser policy names both
   `blob:` and `data:` URLs, and the page's request and storage gate is cited.
