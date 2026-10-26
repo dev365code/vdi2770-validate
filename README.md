@@ -186,8 +186,7 @@ Exit codes and a versioned JSON report make it a CI gate in one line.
 The step fails when the checker does, which is what a gate is for. If you want
 the *number* instead — `0` clean, `1` a finding or an unreadable path, `2`
 nothing readable at all, `3` the install disagreed with itself, `64` a mistyped
-command line or a `pyz:` that is not there, `70` this tool failed on a file —
-ask for it:
+command line, `70` this tool failed on a file — ask for it:
 
 `70` (`EX_SOFTWARE`) is an exception raised by this tool's own code while
 checking a file, wherever the tool caught it — out of the check, or inside it and
@@ -225,6 +224,11 @@ on to whatever reads the number; with the default you would add
 | `exit-code` | what the checker returned: `0` nothing at the fail severity, `1` a finding or an unreadable path, `2` nothing could be read, `3` the install disagreed with itself, `64` a usage error, `70` this tool failed on a file |
 | `pyz` | the single file this step ran, when it ran one; empty on the default path, which installs instead |
 | `version` | the release this step decided to run -- from `version`, from the ref you pinned, or from the tree the action came from; empty when `pyz` is given, since nothing was installed and the file answers `--version` itself |
+
+When the action cannot run the checker — no Python, a `pyz` that is not there, a
+`sha256` that does not match, a version it cannot work out, an install that
+fails — or the checker ends with a code it does not define, such as `127`, the
+step fails whatever `fail-on-finding` says, and `exit-code` is empty.
 
 The runner needs a Python on `PATH` (`python3` or `python`); `actions/setup-python`
 is the usual way to be sure.

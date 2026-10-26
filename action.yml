@@ -228,9 +228,9 @@ runs:
         esac
         echo "exit-code=$rc" >> "$GITHUB_OUTPUT"
         echo "pyz=$PYZ" >> "$GITHUB_OUTPUT"
-        # Written before either branch, because it is the only place the code
-        # exists: on the failing branch GitHub discards this action's outputs,
-        # and the line above is then what the log has and the job does not.
+        # Written before either branch, so both publish it: a step that fails
+        # still publishes its outputs, which CI asserts, and a caller on the
+        # default reaches them with `continue-on-error: true` on the step.
         # `tr`, not bash 4's `${x,,}`: macOS runners still ship bash 3.2.
         if [ "$(printf '%s' "$FAIL_ON_FINDING" | tr '[:upper:]' '[:lower:]')" = "false" ]; then
           echo "vdi2770-validate returned $rc; the step is not failing because fail-on-finding is false"

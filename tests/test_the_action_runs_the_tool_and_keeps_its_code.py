@@ -37,12 +37,10 @@ def test_the_exit_code_reaches_the_job(action):
     """A step that returns success or failure loses the difference between "your
     container has a finding" (1) and "your workflow is misspelt" (64).
 
-    It cannot be had both ways at once, and CI is what said so: with the step
-    failing, `steps.<id>.outputs.exit-code` came back empty, because GitHub
-    publishes no outputs for a step it has decided failed. So the action does
-    one or the other on purpose -- fail with the code, or succeed and hand it
-    over -- and the code is written to the output before either branch, so the
-    log has it even when the job cannot.
+    CI is what settled it: a step that fails still publishes `exit-code`, and a
+    job reaches it only past `continue-on-error`. So the action does one or the
+    other on purpose -- fail with the code, or succeed and hand it over -- and
+    the code is written to the output before either branch, so both publish it.
     """
     body = next(b for b in _run_bodies(action) if '"$@" || rc=$?' in b)
     assert 'exit-code=$rc' in body, "the code is not published as an output"

@@ -237,9 +237,9 @@ jobs:
           # somebody else's runtime is how the first version of this action got
           # written; the log answered, and the answer became a gate.
           test "${{ steps.broken.outputs.exit-code }}" = 1 || { echo "::error::a failed step no longer publishes exit-code; the docs say it does"; exit 1; }
-      # The other mode, and the reason there are two: GitHub publishes no outputs
-      # for a step it has decided failed, so the code above is in the log and not
-      # in the job. Asked not to fail, the action succeeds and hands it over.
+      # The other mode, and the reason there are two: asked not to fail, the
+      # action succeeds and hands the code over, so the job carries on without
+      # the `continue-on-error` the step above needs to reach its outputs.
       - name: Asked not to fail, it reports the code instead
         id: reported
         uses: ./
