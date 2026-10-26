@@ -734,13 +734,14 @@ def _overlapping(data: bytes, infos, directory_at: int) -> Dict[int, str]:
     data runs past where the next local header -- or, after the last one, the
     central directory -- begins (4.3.6).
 
-    That is what the repair for CVE-2024-0450 refuses, and only some of the
-    library's releases carry it; of two entries sharing a header, the releases
-    that do refuse one or the other, or only warn. The data ends where the
-    library starts reading it, plus its compressed size: after the local header
-    and its name and extra field, as that header gives their lengths. An entry
-    whose local header cannot be read is left to the library, which refuses it
-    in the same words on every release.
+    The first and the last of those are what the repair for CVE-2024-0450
+    refuses, and only some of the library's releases carry it; of two entries
+    sharing a header, the releases that do refuse one or the other, or only
+    warn. The data ends where the library starts reading it, plus its
+    compressed size: after the local header and its name and extra field, as
+    that header gives their lengths. An entry whose local header cannot be read
+    is left to the library, which refuses it in the same words on every
+    release.
 
     A local header past where the central directory begins is outside the
     layout 4.3.6 gives an archive -- headers and data, then the directory, then

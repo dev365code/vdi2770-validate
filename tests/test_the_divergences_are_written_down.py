@@ -65,8 +65,8 @@ def test_the_counts_the_page_gives_are_the_sweeps():
     """Section 5 counted the sweep once, and the sweep grew past the count:
     it said 21 containers where the record holds 22, 50 fixtures warned
     `REP_044` where it holds 52, and six other containers carrying `REP_023`
-    and `REP_039` where it holds eight. Each number is counted here from the
-    record the page describes."""
+    and `REP_039` where it holds eight. The counts the sweep decides are counted
+    here from the record the page describes."""
     found = SWEEP["containers"]
     text = " ".join(PAGE.split())
 
