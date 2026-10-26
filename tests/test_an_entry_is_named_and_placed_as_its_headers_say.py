@@ -508,3 +508,48 @@ def test_the_reader_names_and_places_entries_without_the_librarys_private_parts(
     are not its to promise, and which its releases do not fill alike."""
     source = inspect.getsource(zipread)
     assert "_decodeExtra" not in source and "_end_offset" not in source and "NameToInfo" not in source
+
+
+METHOD_CASES = [(0, "stored"), (8, "deflate"), (12, "bzip2"), (14, "lzma"),
+                (93, "zstd"), (95, "method 95"), (98, "method 98"),
+                (99, "method 99"), (1, "method 1"), (6, "method 6")]
+
+
+def _method_case(method):
+    """Generate the method in both headers (APPNOTE 4.4.5)."""
+    buf = io.BytesIO()
+    compression = zipfile.ZIP_DEFLATED if method == 8 else zipfile.ZIP_STORED
+    with zipfile.ZipFile(buf, "w", compression=compression) as out:
+        for name, data in FILES.items():
+            info = zipfile.ZipInfo(name, (1980, 1, 1, 0, 0, 0))
+            out.writestr(info, data, compress_type=compression)
+    data = bytearray(buf.getvalue())
+    with zipfile.ZipFile(io.BytesIO(data)) as src:
+        struct.pack_into("<H", data, src.getinfo(SUBJECT).header_offset + 8, method)
+        at = src.start_dir
+        for info in src.infolist():
+            if info.filename == SUBJECT:
+                struct.pack_into("<H", data, at + 10, method)
+            at += 46 + len(info.filename.encode()) + len(info.extra) + len(info.comment)
+    return bytes(data)
+
+
+@pytest.mark.parametrize("method,label", METHOD_CASES)
+def test_a_method_has_its_name_or_an_explicit_method_number(method, label):
+    """APPNOTE 4.4.5 identifies compression by a number, including unnamed methods."""
+    raw = _method_case(method)
+    container = zipread.read(raw, "0")
+    report = check_bytes(raw, "0")
+    if method in (0, 8):
+        assert SUBJECT in container.file_names
+        assert SUBJECT not in container.rejected
+        assert not {"Z12", "F1"} & {f.rule.id for f in report.findings}
+        return
+    detail = f"member compressed with {label}; this reader accepts stored and deflate"
+    assert container.rejected[SUBJECT].detail == detail
+    for rule_id in ("Z12", "F1"):
+        findings = [f for f in report.findings if f.rule.id == rule_id]
+        assert len(findings) == 1
+        assert findings[0].severity.value == "error"
+        assert findings[0].about.value == "container"
+        assert f"It is compressed with {label}, and this tool" in findings[0].fix

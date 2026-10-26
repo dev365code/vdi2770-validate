@@ -44,6 +44,13 @@ ROOT = Path(__file__).resolve().parent.parent
 # (id, file, original, mutated, checks that must go red, why it matters)
 # A check is a pytest path, or `tools/<script> <args>` for a gate that is a tool.
 TABLE = [
+    ("zip/unnamed-method-has-a-method-number",
+     "packages/vdi2770/src/vdi2770/zipread.py",
+     "METHOD_NAMES.get(method, f'method {method}')",
+     "METHOD_NAMES.get(method, method)",
+     ["tests/test_an_entry_is_named_and_placed_as_its_headers_say.py::test_a_method_has_its_name_or_an_explicit_method_number"],
+     "a number without a method label leaves the finding unclear"),
+
     ("delivery/every-archive-before-missing-documents",
      "packages/vdi2770/src/vdi2770/validate/runner.py",
      "                           report.read.archives_opened == report.read.archives_found\n"

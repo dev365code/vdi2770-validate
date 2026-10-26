@@ -20,6 +20,12 @@ read the paragraph after the list.
   **This moves verdicts:** `M11` and `M12` no longer fire when an archive was
   left unopened. Such a delivery still exits `1` for the finding explaining
   why that archive was not opened.
+- **An unnamed compression method is identified as a method number.** A
+  method outside this reader's name table is described as `method 99`, for
+  example, in the reader's finding and in the `Z12` and `F1` remedies. Named
+  methods keep their names, and the advice still says to recompress with
+  deflate or store the member.
+  **This moves verdicts:** none.
 
 ## 1.0.0 — 2026-10-26
 

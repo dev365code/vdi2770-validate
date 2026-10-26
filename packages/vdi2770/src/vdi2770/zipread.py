@@ -1005,7 +1005,7 @@ def _read(data: bytes, path: str, depth: int, _budget: Optional[_Budget],
             # decompressor is the amplification the caps do not bound.
             c.rejected[m.name] = _refuse(
                 c, "member-unreadable", c.where.child(member=m.name),
-                f"member compressed with {METHOD_NAMES.get(method, method)}; this "
+                f"member compressed with {METHOD_NAMES.get(method, f'method {method}')}; this "
                 f"reader accepts stored and deflate")
             continue
         # Before the budget too, for the same reason: data that is another
