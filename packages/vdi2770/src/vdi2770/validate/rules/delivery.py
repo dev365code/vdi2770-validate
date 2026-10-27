@@ -264,10 +264,12 @@ def contradicting(claims) -> list:
 def check(documents, read_everything: bool) -> Iterator[Finding]:
     """`documents` is (container, document) for every document the run modelled.
 
-    `read_everything` says every metadata file the archives list was actually
-    read. When it is false this layer says nothing at all, and that is the whole
-    guard: a set of known identifiers assembled from half a delivery cannot
-    establish that anything is missing from it.
+    `read_everything` says every archive the run found was opened, every
+    metadata file those archives list was read, and none of them went
+    unmodelled because this tool stopped. When it is false this layer says
+    nothing about what is missing, and that is the whole guard: a set of known
+    identifiers assembled from half a delivery cannot establish that anything
+    is missing from it.
 
     It is not hypothetical. `corpus/examples/missingdocuments/folders.zip`
     delivers its documents as folders -- `456-29201/` and `AB393/`, each with

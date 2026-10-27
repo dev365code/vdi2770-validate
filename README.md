@@ -527,8 +527,9 @@ changed what a pipeline sees:**
   xref entry outside Size. A mismatch now produces a `P6` container warning;
   matching declarations now pass with `--fail-on warning`.
 - `1.0.1` keeps `M11` and `M12` silent when the delivery holds an archive
-  this tool did not open, as *What it catches* says `M11` is, instead of
-  reporting the documents inside it as missing. It also reads as one name the
+  this tool did not open, or metadata it read and did not model, as
+  *What it catches* says `M11` is, instead of reporting the documents in
+  them as missing. It also reads as one name the
   two spellings an entry's header and its Unicode Path field give it when they
   differ only in how the same characters are composed (canonically equivalent,
   compared in NFC wherever Unicode 3.2 had every character, so that every

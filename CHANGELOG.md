@@ -5,8 +5,9 @@ Sections through 0.7.0 had their wording tidied after their tags; the text each 
 ## 1.0.1 — unreleased
 
 Who should take this release: anyone checking deliveries with an archive this
-reader could not open, or entries whose header and Unicode Path field spell
-the same name in canonically equivalent forms. This release repairs those
+reader could not open, or metadata it read and could not model, or entries
+whose header and Unicode Path field spell the same name in canonically
+equivalent forms. This release repairs those
 judgements, makes the method number in a finding explicit when it has no
 name in this reader's table, and gives three refusals the remedy that fits
 them, and one of them its reason. Whoever passes the single file on should take it as
@@ -17,11 +18,15 @@ build on the exit code should read the paragraph after the list.
   `M11` and `M12` need every archive as well as every listed metadata file to
   have been read: an archive this reader could not open may hold the document
   a relationship names. Counting metadata only from archives that did open
-  made a partial delivery look sufficient to report a document missing.
-  `M13` still reports contradictions in the documents that were read.
+  made a partial delivery look sufficient to report a document missing. They
+  wait, too, where this tool read a metadata file and did not model it --
+  its element budget spent, the document larger than it models, or a step
+  of its own failed (`X6`, `X5`): what that file declares is unknown, not
+  absent. `M13` still reports contradictions in the documents that were read.
   **This moves verdicts:** `M11` and `M12` no longer fire when an archive was
-  left unopened. Such a delivery still exits `1` for the finding explaining
-  why that archive was not opened.
+  left unopened, or a metadata file read and left unmodelled. Such a delivery
+  still exits `1` for the finding explaining why that archive was not opened,
+  or why that file was not modelled.
 - **An unnamed compression method is identified as a method number.** A
   method outside this reader's name table is described as `method 99`, for
   example, in the reader's finding and in the `Z12` and `F1` remedies. Named

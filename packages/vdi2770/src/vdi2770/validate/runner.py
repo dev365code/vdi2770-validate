@@ -287,6 +287,11 @@ def check_bytes(data: bytes, name: str) -> Report:
     # container turned red on `.append` before anything else noticed.
     delivery = []
     declared_of = {}     # id(container) -> the names its metadata declares
+    # Metadata read and not modelled for a reason that is this tool's: its
+    # element budget, a document larger than it models, a step of its own that
+    # failed. Counted as read, as the figure says it was -- and what such a file
+    # declares is as unknown as what an archive left unopened holds.
+    unmodelled = 0
 
     beyond = set()       # id(container) of each declared payload and of all inside one
 
@@ -457,6 +462,11 @@ def check_bytes(data: bytes, name: str) -> Report:
                                  c.where.child(member=c.metadata_name))
                 if document is _CRASHED:
                     document, tree = None, None
+        # Not for the file's own sake: `X1` and `X3` are about the sender's bytes,
+        # and those declare nothing. Anything else is this tool stopping.
+        if c.metadata_bytes is not None and document is None and (
+                parse_error is None or isinstance(parse_error, xmlread.XmlTooLarge)):
+            unmodelled += 1
 
         # A container whose kind names a metadata member and has no model of it,
         # however that came about. Keying this on `metadata_bytes is not None`
@@ -550,7 +560,9 @@ def check_bytes(data: bytes, name: str) -> Report:
         # no identifiers, and counting its documents as absent would turn one
         # refusal by this tool into a page of findings about the sender -- every
         # reference into that subtree reported as dangling. `X6` already says the
-        # tool did not look, and that is the true statement.
+        # tool did not look, and that is the true statement. Leaving them out is
+        # half of it: `unmodelled` keeps the delivery check from reading their
+        # absence as the sender's.
         delivery.append((c, document))
 
         _into(report, r_files.check(c, document, foreign), c.where, "files")
@@ -574,7 +586,8 @@ def check_bytes(data: bytes, name: str) -> Report:
     _into(report,
           r_delivery.check(delivery,
                            report.read.archives_opened == report.read.archives_found
-                           and report.read.metadata_read >= report.read.metadata_found),
+                           and report.read.metadata_read >= report.read.metadata_found
+                           and not unmodelled),
           root.where, "delivery")
     return report
 

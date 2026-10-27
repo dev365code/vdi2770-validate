@@ -330,6 +330,57 @@ def _delivery_case(shape, references, contradiction, monkeypatch):
         ceiling = max(map(len, [*main.values(), *known.values(), known_bytes])) + 1
         held.update({f"{i}.txt": b"x" * ceiling for i in range(2)})
         monkeypatch.setattr(zipread, "MAX_MEMBER_BYTES", ceiling)
+    elif shape == "metadata-cap":
+        widest = max(len(main[zipread.MAIN_XML]), len(known[zipread.METADATA_XML]))
+        held[zipread.METADATA_XML] += b"<!--" + b" " * widest + b"-->"
+        held_bytes = _delivery_bytes(held)
+        monkeypatch.setattr(zipread, "MAX_METADATA_BYTES", len(held[zipread.METADATA_XML]) - 1)
+    elif shape == "metadata-budget":
+        monkeypatch.setattr(zipread, "MAX_TOTAL_METADATA_BYTES", len(main[zipread.MAIN_XML])
+                            + len(known[zipread.METADATA_XML]) + len(held[zipread.METADATA_XML]) - 1)
+    elif shape == "element-budget":
+        from vdi2770 import xmlread
+        from vdi2770_validate import runner
+
+        monkeypatch.setattr(runner, "MAX_TOTAL_ELEMENTS",
+                            xmlread._markup_charge(main[zipread.MAIN_XML])
+                            + xmlread._markup_charge(known[zipread.METADATA_XML]))
+    elif shape == "document-cap":
+        import xml.etree.ElementTree as ET
+
+        from vdi2770 import xmlread
+
+        most = max(sum(1 for _ in ET.fromstring(raw).iter())
+                   for raw in (main[zipread.MAIN_XML], known[zipread.METADATA_XML]))
+        held[zipread.METADATA_XML] = held[zipread.METADATA_XML].replace(
+            b"<DocumentId", b"<Pad/>" * most + b"<DocumentId", 1)
+        held_bytes = _delivery_bytes(held)
+        monkeypatch.setattr(xmlread, "MAX_ELEMENTS", most)
+    elif shape == "parse-step":
+        from vdi2770 import xmlread
+
+        parse, unparsed = xmlread.parse, held[zipread.METADATA_XML]
+
+        def parse_or_fail(raw, *args, **kwargs):
+            if raw == unparsed:
+                raise RuntimeError("the parse step failed")
+            return parse(raw, *args, **kwargs)
+
+        monkeypatch.setattr(xmlread, "parse", parse_or_fail)
+    elif shape == "model-step":
+        from vdi2770_validate import runner
+
+        build = runner.build
+
+        def build_or_fail(tree, where):
+            if (where.container or "").endswith("held.zip"):
+                raise RuntimeError("the model step failed")
+            return build(tree, where)
+
+        monkeypatch.setattr(runner, "build", build_or_fail)
+    elif shape == "not-well-formed":
+        held[zipread.METADATA_XML] = held[zipread.METADATA_XML][:-20]
+        held_bytes = _delivery_bytes(held)
     if shape == "folder-depth":
         entries["held.zip"] = _delivery_bytes({"held/" + n: value for n, value in held.items()})
     elif shape.startswith("folder-"):
@@ -394,6 +445,49 @@ def test_missing_documents_wait_for_every_archive(shape, references, contradicti
     assert not read["complete"]
     assert not found & {"M11", "M12"}
     assert ("M13" in found) is contradiction
+
+
+# Every archive opened, and a document still unknown: its metadata refused by
+# the reader before its bytes came, or read and not modelled for a reason that
+# is this tool's -- its element budget, a document larger than it models, a
+# step of its own that failed.
+METADATA_PATHS = ("metadata-cap", "metadata-budget", "element-budget", "document-cap",
+                  "parse-step", "model-step")
+
+
+@pytest.mark.parametrize("shape", METADATA_PATHS)
+@pytest.mark.parametrize("references", [False, True])
+@pytest.mark.parametrize("contradiction", [False, True])
+def test_missing_documents_wait_for_every_metadata_file_to_be_modelled(
+        shape, references, contradiction, monkeypatch):
+    """Metadata this tool did not read, or read and did not model, may declare the target."""
+    import json
+
+    from vdi2770_validate.report import as_json
+    from vdi2770_validate.runner import check_bytes
+
+    report = check_bytes(_delivery_case(shape, references, contradiction, monkeypatch), "0")
+    read = json.loads(as_json(report))["read"]
+    found = {f.rule.id for f in report.findings}
+    assert report.read.archives_opened == report.read.archives_found
+    assert (report.read.metadata_read < report.read.metadata_found) is shape.startswith("metadata-")
+    assert not read["complete"]
+    assert any(f.severity.value == "error" and f.about.value == "tool" for f in report.findings)
+    assert not found & {"M11", "M12"}
+    assert ("M13" in found) is contradiction
+
+
+def test_a_document_whose_metadata_is_not_well_formed_is_one_nothing_declares(monkeypatch):
+    """Read, and refused for its own sake: this tool read the whole delivery, and
+    nothing in it declares the document that metadata would have."""
+    from vdi2770_validate.runner import check_bytes
+
+    report = check_bytes(_delivery_case("not-well-formed", True, False, monkeypatch), "0")
+    found = {f.rule.id for f in report.findings}
+    assert report.read.archives_opened == report.read.archives_found
+    assert report.read.metadata_read == report.read.metadata_found
+    assert "X1" in found
+    assert {"M11", "M12"} <= found
 
 
 def test_a_declared_bundle_does_not_contribute_its_contents_to_the_read(monkeypatch):
