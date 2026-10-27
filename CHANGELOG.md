@@ -33,7 +33,11 @@ build on the exit code should read the paragraph after the list.
   already are when matching files to declarations. A composed spelling in
   one and a decomposed spelling in the other no longer make the entry name
   two files. The field's spelling is kept; a genuinely different name, or
-  more than one Unicode Path field, is refused as before.
+  more than one Unicode Path field, is refused as before. Where either
+  spelling holds a character Unicode 3.2 did not have, the two are compared
+  as written, as before: NFC orders a combining mark by the Unicode version
+  of the Python running it, and 3.2 is the one version every Python carries
+  a table of, so the entry is named the same way on every Python.
   **This moves verdicts:** such an entry no longer draws `Z12` for naming two
   files, nor an `F1` caused by that refusal. Its file is read and judged as
   any other is, and draws what any file draws where it drew none: a declared
@@ -93,8 +97,8 @@ build on the exit code should read the paragraph after the list.
 
 **If your build gates on the exit code, this is the paragraph for you.** An
 otherwise conforming delivery whose header and Unicode Path field name the
-same entry in canonically equivalent spellings exits `0` now, where the
-name refusal made it exit `1`. This also holds when the entry is undeclared
+same entry in canonically equivalent spellings, of characters Unicode 3.2
+had, exits `0` now, where the name refusal made it exit `1`. This also holds when the entry is undeclared
 and now draws `F2`, a warning, under the default `--fail-on error`.
 Nothing else exits differently.
 

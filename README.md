@@ -531,7 +531,8 @@ changed what a pipeline sees:**
   reporting the documents inside it as missing. It also reads as one name the
   two spellings an entry's header and its Unicode Path field give it when they
   differ only in how the same characters are composed (canonically equivalent,
-  compared in NFC), where 1.0.0 refused that entry as `Z12`
+  compared in NFC wherever Unicode 3.2 had every character, so that every
+  Python compares them alike), where 1.0.0 refused that entry as `Z12`
   and missed the file it holds — so a container with nothing else wrong exits
   `0` now.
 

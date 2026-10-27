@@ -652,3 +652,83 @@ def test_canonical_equivalence_can_leave_only_a_warning(form):
     assert "Z12" not in {f.rule.id for f in report.findings}
     assert not any(f.severity.value == "error" for f in report.findings)
     assert "F2" in {f.rule.id for f in report.findings}
+
+
+# Two spellings that put two combining marks in the other order are one name
+# in NFC when the marks' classes tell them apart -- and the class is the running
+# Python's Unicode's to give. U+0350 has one from Unicode 4.0 and U+1AC1 from
+# 14.0: on Python 3.9, whose Unicode is 13.0, the second has none, NFC leaves it
+# where it stands, and the two orders were two files there and one name on 3.13.
+LATER_MARKS = {"unicode-4.0": "͐", "unicode-14.0": "᫁"}
+BELOW = "̣"
+
+
+def _spelled_twice(header, given):
+    """The subject with `header` in its header, bit 11 set, and `given` in its
+    Unicode Path field, declared as the field spells it."""
+    raw = header.encode("utf-8")
+    entries = []
+    for name, data in FILES.items():
+        if name == SUBJECT:
+            entries.append(ENTRIES.entry(raw, data, flags=ENTRIES.UTF8,
+                                         extra=ENTRIES.unicode_path(given.encode("utf-8"), of=raw)))
+        else:
+            if name == zipread.METADATA_XML:
+                data = data.replace(SUBJECT.encode(), given.encode("utf-8"))
+            entries.append(ENTRIES.entry(name.encode(), data))
+    return ENTRIES.build(entries)
+
+
+def _marked(first, second):
+    stem, dot, ext = SUBJECT.rpartition(".")
+    return f"{stem}{first}{second}{dot}{ext}"
+
+
+@pytest.mark.parametrize("mark", sorted(LATER_MARKS))
+@pytest.mark.parametrize("reverse", [False, True])
+def test_spellings_differing_in_a_mark_unicode_3_2_lacked_are_two_names_on_every_python(mark, reverse):
+    """Compared in NFC where Unicode 3.2 had every character of both, and as
+    written where it did not -- the one comparison every Python makes alike, and
+    for these two orders it is the one 1.0.0 made: `Z12`, and `F1` for the
+    declaration of the file that entry holds."""
+    later = LATER_MARKS[mark]
+    header, given = _marked(BELOW, later), _marked(later, BELOW)
+    if reverse:
+        header, given = given, header
+    report = check_bytes(_spelled_twice(header, given), "0")
+    refusals = [f for f in report.findings if f.rule.id == "Z12"]
+    assert len(refusals) == 1
+    assert "names two files" in refusals[0].detail
+    assert "F1" in {f.rule.id for f in report.findings}
+
+
+@pytest.mark.parametrize("mark", sorted(LATER_MARKS))
+def test_a_name_with_a_mark_unicode_3_2_lacked_spelled_alike_is_that_name(mark):
+    """The same spelling twice is one name whatever its characters are."""
+    name = _marked(BELOW, LATER_MARKS[mark])
+    raw = _spelled_twice(name, name)
+    report = check_bytes(raw, "0")
+    assert "Z12" not in {f.rule.id for f in report.findings}
+    assert not any(f.severity.value == "error" for f in report.findings)
+    assert name in zipread.read(raw, "0").file_names
+
+
+def test_spellings_differing_in_the_order_of_marks_unicode_3_2_had_are_one_name():
+    """U+0301 above and U+0323 below: NFC orders the two by class on every Python."""
+    raw = _spelled_twice(_marked(BELOW, "́"), _marked("́", BELOW))
+    report = check_bytes(raw, "0")
+    assert "Z12" not in {f.rule.id for f in report.findings}
+    assert not any(f.severity.value == "error" for f in report.findings)
+
+
+@pytest.mark.parametrize("reverse", [False, True])
+def test_a_spelling_alike_only_in_compatibility_is_another_name(reverse):
+    """NFC, not NFKC: a fullwidth letter is a character of its own, so a header
+    and a field giving `B` and its fullwidth form name two files."""
+    header, given = SUBJECT, "Ｂ" + SUBJECT[1:]
+    if reverse:
+        header, given = given, header
+    report = check_bytes(_spelled_twice(header, given), "0")
+    refusals = [f for f in report.findings if f.rule.id == "Z12"]
+    assert len(refusals) == 1
+    assert "names two files" in refusals[0].detail

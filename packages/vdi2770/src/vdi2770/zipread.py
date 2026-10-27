@@ -34,6 +34,29 @@ def nfc(name: str) -> str:
     return unicodedata.normalize("NFC", name)
 
 
+def _alike(one: str, other: str) -> bool:
+    """Whether two spellings of an entry's name are one name, the same way on
+    every Python.
+
+    In NFC, as names are matched to declarations, so that a character composed
+    one way and decomposed the other is no difference -- but only where Unicode
+    3.2 had every character of both. NFC orders combining marks by the classes
+    the running Python's Unicode gives them, and a mark Unicode added after a
+    Python's version has none there: U+1AC1, from 14.0, after a mark below, was
+    one name with the other order on Python 3.13 and two on 3.9, whose Unicode
+    is 13.0. What NFC does with a character a version had, no later version
+    changes (UAX #15, the stability of normalization forms), and 3.2 is the one
+    version every Python carries a table of, `unicodedata.ucd_3_2_0` -- so where
+    it lacks a character the two are compared as written, as 1.0.0 compared
+    them all.
+    """
+    if one == other:
+        return True
+    if any(unicodedata.ucd_3_2_0.category(c) == "Cn" for c in one + other):
+        return False
+    return nfc(one) == nfc(other)
+
+
 # Untrusted-input budget. Generous for real handover documentation, hostile to
 # archives that are trying to be expensive.
 MAX_MEMBERS = 10_000
@@ -648,9 +671,10 @@ def _name(info: zipfile.ZipInfo, header: _Header) -> Optional[str]:
     Page 437 and UTF-8 -- so a field giving either of those another name is not
     its UTF-8 version: the entry names two files, and a reader that ignores the
     field reads the other one. So does an extra field carrying two of them.
-    Compared as this reader names an entry -- composed (NFC), cut at its first NUL, its
-    separators as written -- so that only a difference the name keeps is one,
-    and a field the cut leaves no name in is no name at all.
+    Compared as this reader names an entry -- composed (NFC) where every Python
+    composes the two alike, cut at its first NUL, its separators as written --
+    so that only a difference the name keeps is one, and a field the cut leaves
+    no name in is no name at all.
     """
     if not info.filename:
         return None
@@ -669,7 +693,7 @@ def _name(info: zipfile.ZipInfo, header: _Header) -> Optional[str]:
     given = _as_written(header.unicode[0])
     if not given:
         return None
-    if nfc(given) != nfc(info.filename) and (header.utf8 or all(0x20 <= b <= 0x7E for b in header.raw)):
+    if not _alike(given, info.filename) and (header.utf8 or all(0x20 <= b <= 0x7E for b in header.raw)):
         return (f"its header calls it {info.filename!r} and its Info-ZIP Unicode Path field "
                 f"(APPNOTE 4.6.9) calls it {given!r}; that field is the UTF-8 version of the "
                 "header's name, so the entry names two files")
