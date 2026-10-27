@@ -56,7 +56,7 @@ makes about a gate, breaks the thing that gate protects, and checks the gate
 notices — including one row that must *survive*, because a harness that
 reports red for a change that does not matter is reporting red for
 everything. Run it when you add or change a gate. `tools/mutation_table.py`
-with no arguments lists the table; it holds 543 rows, each naming the pytest
+with no arguments lists the table; it holds 547 rows, each naming the pytest
 selection or the tool that has to go red. Rows that build the page run their
 checks only on the page's Python (3.13); on other versions those checks are
 skipped.

@@ -237,3 +237,61 @@ def test_a_job_that_holds_these_on_one_kind_of_release_runs_on_that_kind():
         pytest.skip("this run names no kind of release")
     assert _generation() == want, f"this Python reads zip64 ends as {_generation()}, the job says {want}"
 
+
+
+# Each end below sits on the other side of one condition from a case above: the
+# case above holds the reader to the condition, and these to its edge, which a
+# reader testing the condition the wrong way round reads differently.
+
+
+def test_the_last_record_the_library_takes_is_the_one_the_reader_takes():
+    """The library takes the last 22 bytes as the end record only when they are
+    one with no comment, and otherwise the last signature in the file. Here the
+    record's own offset and comment length spell a second signature four bytes
+    from the end, with no room for a record after it: no archive, in the
+    library's words on every release. A reader that took the last 22 bytes for
+    the record whatever its comment length says took another record, and
+    refused the file in other words."""
+    data = ENDS.end(PLAIN, offset=int.from_bytes(b"\0\0PK", "little"),
+                    comment_length=int.from_bytes(b"\x05\x06", "little"))
+    assert data[-4:] == ENDS.END
+    c = zipread.read(data, "spelled.zip")
+    assert c.kind is Kind.UNREADABLE
+    assert [d.detail for d in c.defects if d.kind == "not-a-zip"] == ["File is not a zip file"]
+
+
+@pytest.mark.parametrize("placeholders", [True, False])
+def test_a_zip64_record_smaller_than_its_fixed_fields_is_refused(placeholders):
+    """A record of version 1 with nothing extensible gives its size as 44
+    (4.3.14.1), and one giving 43 says it ends a byte before its locator begins.
+    Refused, as one giving more is, in this reader's words -- where a reader
+    holding the size only against records too large handed it to the library."""
+    data = ENDS.zip64(PLAIN, size=43, placeholders=placeholders)
+    c = zipread.read(data, "smaller.zip")
+    assert c.kind is Kind.UNREADABLE
+    assert [d.detail for d in c.defects if d.kind == "not-a-zip"] == [
+        "the zip64 end record gives its size as 55 bytes, and the locator follows it after 56"]
+
+
+def test_the_empty_archive_the_library_writes_is_read():
+    """Twenty-two bytes: an end record counting no entries in a central directory
+    of no bytes, at the start of the file. The directory fits in front of the
+    record with nothing to spare, and the archive is read."""
+    data = ENDS.plain({})
+    assert len(data) == 22
+    c = zipread.read(data, "empty.zip")
+    assert c.kind is not Kind.UNREADABLE
+    assert [d.detail for d in c.defects if d.kind == "not-a-zip"] == []
+
+
+@pytest.mark.parametrize("form", ["end", "zip64"])
+def test_an_end_counting_fewer_entries_than_its_directory_holds_is_refused(form):
+    """As many entries as the end records count (4.4.22) -- fewer, as well as
+    more: a reader comparing in one direction only read the third entry of an
+    archive that says it has two."""
+    data = ENDS.end(PLAIN, entries=2) if form == "end" else ENDS.zip64(PLAIN, entries=2)
+    which = "end record" if form == "end" else "zip64 end record"
+    c = zipread.read(data, "fewer.zip")
+    assert c.kind is Kind.UNREADABLE
+    assert [d.detail for d in c.defects if d.kind == "not-a-zip"] == [
+        f"the {which} counts 2 entries and the central directory holds 3"]
