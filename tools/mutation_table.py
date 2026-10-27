@@ -82,11 +82,35 @@ TABLE = [
 
     ("delivery/every-archive-before-missing-documents",
      "packages/vdi2770/src/vdi2770/validate/runner.py",
-     "                           report.read.archives_opened == report.read.archives_found\n"
+     "                           report.read.archives_opened + closed == report.read.archives_found\n"
      "                           and report.read.metadata_read >= report.read.metadata_found\n",
      "                           report.read.metadata_read >= report.read.metadata_found\n",
      ["tests/test_a_delivery_carries_the_documents_it_refers_to.py::test_missing_documents_wait_for_every_archive"],
      "an unopened archive may hold a referenced document"),
+
+    ("delivery/a-declared-file-left-closed-is-not-waited-for",
+     "packages/vdi2770/src/vdi2770/validate/runner.py",
+     "                           report.read.archives_opened + closed == report.read.archives_found\n",
+     "                           report.read.archives_opened == report.read.archives_found\n",
+     ["tests/test_a_delivery_carries_the_documents_it_refers_to.py::test_missing_documents_do_not_wait_for_a_declared_file_left_closed"],
+     "a parts bundle the depth limit kept closed would silence a dangling reference with nothing saying why"),
+
+    ("delivery/only-a-declared-file-left-closed-is-not-waited-for",
+     "packages/vdi2770/src/vdi2770/validate/runner.py",
+     "                          and d.where.member and folder_path(d.where.member) in declared)\n",
+     "                          and d.where.member)\n",
+     ["tests/test_a_delivery_carries_the_documents_it_refers_to.py::test_missing_documents_wait_for_every_archive"],
+     "an inner container the depth limit kept closed would be taken for a declared file, and its documents for absent"),
+
+    ("container/a-declared-file-left-closed-is-said-to-be",
+     "packages/vdi2770/src/vdi2770/validate/rules/container.py",
+     '            r = rule("Z14")\n'
+     "            yield Finding(r, r.title, d.where,\n"
+     '                          detail=f"{as_written(d.where.member)} is declared in the metadata as one "\n'
+     '                                 f"of the document\'s files, and was not opened: {d.detail}")\n',
+     "",
+     ["tests/test_a_delivery_carries_the_documents_it_refers_to.py::test_missing_documents_do_not_wait_for_a_declared_file_left_closed"],
+     "a parts bundle the depth limit kept closed would be passed over in silence, its contents taken as checked"),
 
     ("delivery/every-metadata-file-before-missing-documents",
      "packages/vdi2770/src/vdi2770/validate/runner.py",

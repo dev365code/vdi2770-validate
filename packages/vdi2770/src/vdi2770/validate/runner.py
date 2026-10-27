@@ -292,6 +292,9 @@ def check_bytes(data: bytes, name: str) -> Report:
     # failed. Counted as read, as the figure says it was -- and what such a file
     # declares is as unknown as what an archive left unopened holds.
     unmodelled = 0
+    # Files a container declares, kept closed by the depth limit: found, not
+    # opened, and no reason for the delivery check to wait (see below).
+    closed = 0
 
     beyond = set()       # id(container) of each declared payload and of all inside one
 
@@ -518,6 +521,16 @@ def check_bytes(data: bytes, name: str) -> Report:
         declared = frozenset(folder_path(f.file_name) for f in document.all_files
                              if f.file_name) if document else frozenset()
         declared_of[id(c)] = declared if modelled else None
+        # What a document declares as one of its files is that document's
+        # content (`sealed`), and nothing in it is searched for the documents a
+        # relationship names: opened, it answers no reference. Kept closed by
+        # the depth limit, which the reader reached before any metadata said
+        # it was a file, it is found and not opened all the same -- and the
+        # delivery check waited for it, with nothing saying why: `Z6` is not
+        # about a file, so a dangling reference passed.
+        if modelled and not payload:
+            closed += sum(1 for d in c.defects if d.kind == "nesting-too-deep"
+                          and d.where.member and folder_path(d.where.member) in declared)
 
         # A container whose metadata we declined to model has an empty `declared`,
         # and the rules that read it then said things about the sender: a
@@ -585,7 +598,7 @@ def check_bytes(data: bytes, name: str) -> Report:
     # inside the container doing the pointing can answer it.
     _into(report,
           r_delivery.check(delivery,
-                           report.read.archives_opened == report.read.archives_found
+                           report.read.archives_opened + closed == report.read.archives_found
                            and report.read.metadata_read >= report.read.metadata_found
                            and not unmodelled),
           root.where, "delivery")

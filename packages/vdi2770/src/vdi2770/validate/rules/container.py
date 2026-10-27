@@ -321,9 +321,17 @@ def check(container, declared, is_declared_payload) -> Iterator[Finding]:
         # bundle, a CAD archive. Reported as `Z6` it says a container is nested
         # too deep, names a member that never claimed to be a container, and
         # asks the sender to check an inner container that does not exist. The
-        # same argument that excuses `Z3` and `Z11` excuses this.
+        # same argument that excuses `Z3` and `Z11` excuses this. It is the
+        # declared payload `Z14` names once, at the payload, when the walk
+        # reaches one -- and passed over in silence here, a reader takes what
+        # is in it as checked, and the read counted an archive nobody opened
+        # without a word about why.
         if (rid == "Z6" and declared is not None and d.where.member
                 and folder_path(d.where.member) in declared):
+            r = rule("Z14")
+            yield Finding(r, r.title, d.where,
+                          detail=f"{as_written(d.where.member)} is declared in the metadata as one "
+                                 f"of the document's files, and was not opened: {d.detail}")
             continue
         # Inside a declared payload the containers are the payload's business
         # and are not walked, so the reader's word on how deep they go or how

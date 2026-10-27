@@ -381,10 +381,29 @@ def _delivery_case(shape, references, contradiction, monkeypatch):
     elif shape == "not-well-formed":
         held[zipread.METADATA_XML] = held[zipread.METADATA_XML][:-20]
         held_bytes = _delivery_bytes(held)
+    elif shape.startswith("declared-bundle-"):
+        # KNOWN declares P.zip, a parts bundle holding the HELD container, and
+        # the depth limit keeps the bundle closed: at a limit one lower, or,
+        # with no limit moved, as the fourth level under a collection.
+        declaration = b'<DigitalFile FileFormat="application/zip">P.zip</DigitalFile>'
+        known[zipread.METADATA_XML] = known[zipread.METADATA_XML].replace(
+            b"</DocumentVersion>", declaration + b"</DocumentVersion>", 1)
+        known["P.zip"] = _delivery_bytes({"held.zip": held_bytes})
+        if shape == "declared-bundle-at-the-limit":
+            entries["known.zip"] = _delivery_bytes(known)
+            monkeypatch.setattr(zipread, "MAX_CONTAINER_LEVELS", 2)
+        else:
+            with zipfile.ZipFile(CLEAN_DOCUMENTATION) as src:
+                collection = {n: src.read(n) for n in src.namelist() if not n.lower().endswith(".zip")}
+            collection[zipread.MAIN_XML] = metadata(collection[zipread.MAIN_XML], "COLLECTION", "Type", False)
+            del entries["known.zip"]
+            entries["X.zip"] = _delivery_bytes({**collection, "known.zip": _delivery_bytes(known)})
     if shape == "folder-depth":
         entries["held.zip"] = _delivery_bytes({"held/" + n: value for n, value in held.items()})
     elif shape.startswith("folder-"):
         entries.update({"held/" + n: value for n, value in held.items()})
+    elif shape.startswith("declared-bundle-"):
+        pass
     elif shape == "declared-bundle":
         held_bytes = _delivery_bytes({"held.zip": held_bytes})
         entries["held.zip"] = held_bytes
@@ -488,6 +507,29 @@ def test_a_document_whose_metadata_is_not_well_formed_is_one_nothing_declares(mo
     assert report.read.metadata_read == report.read.metadata_found
     assert "X1" in found
     assert {"M11", "M12"} <= found
+
+
+@pytest.mark.parametrize("shape", ["declared-bundle-at-the-limit", "declared-bundle-past-the-depth-limit"])
+@pytest.mark.parametrize("references", [False, True])
+@pytest.mark.parametrize("contradiction", [False, True])
+def test_missing_documents_do_not_wait_for_a_declared_file_left_closed(
+        shape, references, contradiction, monkeypatch):
+    """What a document declares as one of its files is its content, and nothing
+    in it is searched for the documents a relationship names (`sealed`):
+    opened, it does not answer a reference, and kept closed by the depth limit
+    it is no reason to wait for one. The read still counts it, unopened, and
+    `Z14` says so, as it does for one the walk reaches. The second shape moves
+    no limit: a collection, its document, and the document's parts bundle."""
+    from vdi2770_validate.runner import check_bytes
+
+    report = check_bytes(_delivery_case(shape, references, contradiction, monkeypatch), "0")
+    found = {f.rule.id for f in report.findings}
+    assert report.read.archives_opened + 1 == report.read.archives_found
+    assert ("M11" in found) is references and ("M12" in found) is references
+    assert ("M13" in found) is contradiction
+    said = [f.detail for f in report.findings if f.rule.id == "Z14"]
+    assert len(said) == 1 and "was not opened" in said[0], said
+    assert "Z6" not in found
 
 
 def test_a_declared_bundle_does_not_contribute_its_contents_to_the_read(monkeypatch):
