@@ -138,7 +138,7 @@ Why this is ours: A folder holding VDI2770_Metadata.xml or VDI2770_Main.xml is a
 
 *info* · obligation `ours`
 
-Why this is ours: A file the metadata declares is part of a document's content, not of the container's structure, so what is inside it is its own business, the way what is inside a PDF is: nothing in it is judged as VDI 2770, not a container and not a metadata file. The reference implementation reports nothing about what is inside one either. How the archive stores its entries is still reported -- a name that climbs out, an entry that cannot be read, a name stored twice -- because that is true of any archive handed over, whatever it holds. Saying so every time keeps a reader from taking the archive's contents as checked.
+Why this is ours: A file the metadata declares is part of a document's content, not of the container's structure, so what is inside it is its own business, the way what is inside a PDF is: nothing in it is judged as VDI 2770, not a container and not a metadata file. The reference implementation reports nothing about what is inside one either. For one this reader opens, how the archive stores its entries is still reported -- a name that climbs out, an entry that cannot be read, a name stored twice -- because that is true of any archive handed over, whatever it holds; one the depth limit keeps closed is reported as not opened, and nothing in it is read. Saying so every time keeps a reader from taking the archive's contents as checked.
 
 **Remedy.** Nothing to change if the archive is the document's content. If it holds documents meant to be checked as VDI 2770 containers, put them in the documentation container as containers of their own rather than inside a document's file.
 

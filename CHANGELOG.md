@@ -14,7 +14,7 @@ them, and one of them its reason. Whoever passes the single file on should take 
 well: it now carries the licence texts of what it bundles. Whoever gates a
 build on the exit code should read the paragraph after the list.
 
-- **Missing documents are reported only after every archive was opened.**
+- **Missing documents are reported only after every archive was opened, a file a document declares aside.**
   `M11` and `M12` need every archive as well as every listed metadata file to
   have been read: an archive this reader could not open may hold the document
   a relationship names. Counting metadata only from archives that did open
@@ -23,10 +23,12 @@ build on the exit code should read the paragraph after the list.
   its element budget spent, the document larger than it models, or a step
   of its own failed (`X6`, `X5`): what that file declares is unknown, not
   absent. They do not wait for an archive a document declares as one of its
-  files and this reader did not open: one the depth limit keeps closed draws
-  `Z14`, as one this reader opens does, and one it cannot read draws the
-  finding that says why. `M13` still reports contradictions in the documents
-  that were read.
+  files and this reader did not open, which they take for the document's
+  content even where, opened, it would have been judged as a container: one
+  the depth limit keeps closed draws `Z14`, as a declared archive that is not
+  a container does when this reader opens it, and one it cannot read draws
+  the finding that says why. `M13` still reports contradictions in the
+  documents that were read.
   **This moves verdicts:** `M11` and `M12` no longer fire when an archive that
   is not a declared file was left unopened, or a metadata file read and left
   unmodelled. Such a delivery still exits `1` for the finding explaining why
@@ -46,9 +48,10 @@ build on the exit code should read the paragraph after the list.
   two files. The field's spelling is kept; a genuinely different name, or
   more than one Unicode Path field, is refused as before. Where either
   spelling holds a character Unicode 3.2 did not have, the two are compared
-  as written, as before: NFC orders a combining mark by the Unicode version
-  of the Python running it, and 3.2 is the one version every Python carries
-  a table of, so the entry is named the same way on every Python.
+  as written, as before: NFC orders combining marks by the classes the
+  Unicode version of the Python running it gives them, and 3.2 is the one
+  version every Python carries a table of, so the entry is named the same
+  way on every Python.
   **This moves verdicts:** such an entry no longer draws `Z12` for naming two
   files, nor an `F1` caused by that refusal. Its file is read and judged as
   any other is, and draws what any file draws where it drew none: a declared

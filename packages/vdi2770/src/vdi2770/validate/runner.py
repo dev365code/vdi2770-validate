@@ -523,16 +523,19 @@ def check_bytes(data: bytes, name: str) -> Report:
                              if f.file_name) if document else frozenset()
         declared_of[id(c)] = declared if modelled else None
         # What a document declares as one of its files is that document's
-        # content (`sealed`), and nothing in it is searched for the documents a
-        # relationship names: opened, it answers no reference. Not opened, it
-        # is found all the same, and the delivery check waited for it and let a
-        # dangling reference pass. Kept closed by the depth limit, which the
-        # reader reached before any metadata said it was a file, nothing said
-        # why (`Z6` is not about a file); with bytes that are not an archive,
-        # an archive that ends early or a method this reader does not inflate,
-        # the refusal said why and the reference went unnamed. So a declared
-        # `.zip` this listing counted as found, and that no child here opened,
-        # is one the check does not wait for, whatever kept it shut.
+        # content (`sealed`) unless it opens as a container: opened as content,
+        # nothing in it is searched for the documents a relationship names, and
+        # it answers no reference. Not opened, it is found all the same, and the
+        # delivery check waited for it and let a dangling reference pass. Kept
+        # closed by the depth limit, which the reader reached before any
+        # metadata said it was a file, nothing said why (`Z6` is not about a
+        # file); with bytes that are not an archive, an archive that ends early
+        # or a method this reader does not inflate, the refusal said why and
+        # the reference went unnamed. So a declared `.zip` this listing counted
+        # as found, and that no child here opened, is one the check does not
+        # wait for, whatever kept it shut -- taken for content even where,
+        # opened, it would have been judged as a container, which is where
+        # 1.0.0 named the reference too.
         if modelled and not payload:
             opened_here = {folder_path(ch.member_name) for ch in c.children
                            if ch.member_name and ch.kind is not Kind.UNREADABLE}
