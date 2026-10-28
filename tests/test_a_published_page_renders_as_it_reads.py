@@ -19,7 +19,7 @@ import re
 from conftest import ROOT
 
 PAGES = ["README.md", "CHANGELOG.md", "CONTRIBUTING.md", "SECURITY.md",
-         "THIRD_PARTY.md", "NOTICE"]
+         "SUPPORT.md", "THIRD_PARTY.md", "NOTICE"]
 
 _DIVIDER = re.compile(r"^\s*\|[\s:|-]+\|\s*$")
 
