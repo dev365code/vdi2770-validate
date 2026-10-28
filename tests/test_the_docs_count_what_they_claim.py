@@ -421,7 +421,7 @@ def test_no_document_cites_a_file_that_is_not_here():
     """
     import re
 
-    docs = ["README.md", "CONTRIBUTING.md", "SECURITY.md", "packages/vdi2770/README.md"]
+    docs = ["README.md", "CONTRIBUTING.md", "SECURITY.md", "SUPPORT.md", "packages/vdi2770/README.md"]
     docs += [str(p.relative_to(ROOT)) for p in sorted((ROOT / "docs").glob("*.md"))]
     # And the files that ship inside both wheels as the licence notice. NOTICE
     # names, for each third-party file, where it came from and what may be done

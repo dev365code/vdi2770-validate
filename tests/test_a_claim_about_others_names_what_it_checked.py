@@ -57,7 +57,7 @@ UNSUPPORTABLE = re.compile(
 #: text, which is the same reason `test_the_docs_count_what_they_claim.py`
 #: reads them -- prose in a published artefact, outside every `.md` gate.
 PAGES = ["README.md", "README-vdi2770-validate.md", "packages/vdi2770/README.md",
-         "CHANGELOG.md", "CONTRIBUTING.md", "SECURITY.md", "action.yml",
+         "CHANGELOG.md", "CONTRIBUTING.md", "SECURITY.md", "SUPPORT.md", "action.yml",
          "NOTICE", "THIRD_PARTY.md", "packages/vdi2770/NOTICE"]
 
 RULES = "packages/vdi2770/src/vdi2770/validate/data/rules.json"

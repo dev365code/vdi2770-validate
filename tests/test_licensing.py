@@ -281,7 +281,7 @@ def test_the_vendored_message_set_is_the_bytes_that_were_extracted():
 #: `CHANGELOG.md` are what PyPI links to, `NOTICE` and `THIRD_PARTY.md` travel
 #: in the wheel, and `docs/` is what a reader follows from either.
 PROSE = ["README.md", "CHANGELOG.md", "CONTRIBUTING.md", "SECURITY.md",
-         "NOTICE", "THIRD_PARTY.md"]
+         "SUPPORT.md", "NOTICE", "THIRD_PARTY.md"]
 
 _ASSERTS = re.compile(
     r"(VDI\s?2770|the guideline|the standard)\s+"
