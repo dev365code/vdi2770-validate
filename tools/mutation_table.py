@@ -2758,7 +2758,7 @@ LISTING_BUDGET_ROWS = [
 
     ("pages/an-action-ref-a-reader-copies-is-past-every-advisory",
      "README.md",
-     "| `uses: dev365code/vdi2770-validate@v1.0.0` |",
+     "| `uses: dev365code/vdi2770-validate@v1.0.1` |",
      "| `uses: dev365code/vdi2770-validate@v0.7.0` |",
      ["tests/test_an_advisory_and_its_release_name_each_other.py::"
       "test_every_pin_a_page_hands_a_reader_is_past_every_advisory"],
@@ -2768,7 +2768,7 @@ LISTING_BUDGET_ROWS = [
 
     ("pages/a-ref-written-alone-is-past-every-advisory",
      "README.md",
-     "`@v1.0.0` installs 1.0.0",
+     "`@v1.0.1` installs 1.0.1",
      "`@v0.7.0` installs 0.7.0",
      ["tests/test_an_advisory_and_its_release_name_each_other.py::"
       "test_every_pin_a_page_hands_a_reader_is_past_every_advisory"],
