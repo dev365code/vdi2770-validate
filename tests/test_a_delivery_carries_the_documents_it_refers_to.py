@@ -383,15 +383,24 @@ def _delivery_case(shape, references, contradiction, monkeypatch):
         held_bytes = _delivery_bytes(held)
     elif shape.startswith("declared-bundle-"):
         # KNOWN declares P.zip, a parts bundle holding the HELD container, and
-        # the depth limit keeps the bundle closed: at a limit one lower, or,
-        # with no limit moved, as the fourth level under a collection.
+        # this read does not open the bundle. The depth limit keeps it closed:
+        # at a limit one lower, or, with no limit moved, as the fourth level
+        # under a collection. Or its bytes are not an archive, or end before
+        # its directory does, or it is stored by a method this reader does not
+        # inflate.
         declaration = b'<DigitalFile FileFormat="application/zip">P.zip</DigitalFile>'
         known[zipread.METADATA_XML] = known[zipread.METADATA_XML].replace(
             b"</DocumentVersion>", declaration + b"</DocumentVersion>", 1)
-        known["P.zip"] = _delivery_bytes({"held.zip": held_bytes})
+        bundle = _delivery_bytes({"held.zip": held_bytes})
+        known["P.zip"] = {"declared-bundle-not-an-archive": b"not an archive",
+                          "declared-bundle-cut-short": bundle[:len(bundle) * 6 // 10]}.get(shape, bundle)
         if shape == "declared-bundle-at-the-limit":
             entries["known.zip"] = _delivery_bytes(known)
             monkeypatch.setattr(zipread, "MAX_CONTAINER_LEVELS", 2)
+        elif shape != "declared-bundle-past-the-depth-limit":
+            entries["known.zip"] = _delivery_bytes(known)
+            if shape == "declared-bundle-refused-method":
+                entries["known.zip"] = _stored_by_method(entries["known.zip"], "P.zip", 99)
         else:
             with zipfile.ZipFile(CLEAN_DOCUMENTATION) as src:
                 collection = {n: src.read(n) for n in src.namelist() if not n.lower().endswith(".zip")}
@@ -434,17 +443,27 @@ def _delivery_case(shape, references, contradiction, monkeypatch):
     if shape == "member-read":
         raw = unopened(raw, "held.zip")
     elif shape == "method":
-        data = bytearray(raw)
-        with zipfile.ZipFile(io.BytesIO(raw)) as src:
-            item = src.getinfo("held.zip")
-            struct.pack_into("<H", data, item.header_offset + 8, 99)
-            at = src.start_dir
-            for info in src.infolist():
-                if info.filename == item.filename:
-                    struct.pack_into("<H", data, at + 10, 99)
-                at += 46 + len(info.filename.encode()) + len(info.extra) + len(info.comment)
-        raw = bytes(data)
+        raw = _stored_by_method(raw, "held.zip", 99)
     return raw
+
+
+def _stored_by_method(raw, name, method):
+    """`raw` with member `name` saying, in both of its headers, that it is
+    compressed by `method`."""
+    import io
+    import struct
+    import zipfile
+
+    data = bytearray(raw)
+    with zipfile.ZipFile(io.BytesIO(raw)) as src:
+        item = src.getinfo(name)
+        struct.pack_into("<H", data, item.header_offset + 8, method)
+        at = src.start_dir
+        for info in src.infolist():
+            if info.filename == item.filename:
+                struct.pack_into("<H", data, at + 10, method)
+            at += 46 + len(info.filename.encode()) + len(info.extra) + len(info.comment)
+    return bytes(data)
 
 
 @pytest.mark.parametrize("shape", ARCHIVE_PATHS)
@@ -529,6 +548,33 @@ def test_missing_documents_do_not_wait_for_a_declared_file_left_closed(
     assert ("M13" in found) is contradiction
     said = [f.detail for f in report.findings if f.rule.id == "Z14"]
     assert len(said) == 1 and "was not opened" in said[0], said
+    assert "Z6" not in found
+
+
+#: What the reader says about a declared bundle it could not open, by why not.
+UNOPENED_DECLARED = {"declared-bundle-not-an-archive": "Z1", "declared-bundle-cut-short": "Z1",
+                     "declared-bundle-refused-method": "Z12"}
+
+
+@pytest.mark.parametrize("shape", sorted(UNOPENED_DECLARED))
+@pytest.mark.parametrize("references", [False, True])
+@pytest.mark.parametrize("contradiction", [False, True])
+def test_missing_documents_do_not_wait_for_a_declared_file_this_read_could_not_open(
+        shape, references, contradiction, monkeypatch):
+    """Left unopened for a reason other than the depth limit -- bytes that are
+    not an archive, an archive that ends before its directory, a method this
+    reader does not inflate -- a declared file is the document's content all
+    the same, and no more a reason to wait for a reference than one kept
+    closed: 1.0.0 named the dangling reference beside the refusal, and so does
+    this. The refusal is the reader's own finding, as it is for any archive."""
+    from vdi2770_validate.runner import check_bytes
+
+    report = check_bytes(_delivery_case(shape, references, contradiction, monkeypatch), "0")
+    found = {f.rule.id for f in report.findings}
+    assert report.read.archives_opened + 1 == report.read.archives_found
+    assert ("M11" in found) is references and ("M12" in found) is references
+    assert ("M13" in found) is contradiction
+    assert UNOPENED_DECLARED[shape] in found, sorted(found)
     assert "Z6" not in found
 
 

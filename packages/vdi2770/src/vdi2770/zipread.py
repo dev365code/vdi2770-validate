@@ -44,10 +44,12 @@ def _alike(one: str, other: str) -> bool:
     the running Python's Unicode gives them, and a mark Unicode added after a
     Python's version has none there: U+1AC1, from 14.0, after a mark below, was
     one name with the other order on Python 3.13 and two on 3.9, whose Unicode
-    is 13.0. What NFC does with a character a version had, no later version
-    changes (UAX #15, the stability of normalization forms), and 3.2 is the one
-    version every Python carries a table of, `unicodedata.ucd_3_2_0` -- so where
-    it lacks a character the two are compared as written, as 1.0.0 compared
+    is 13.0. What NFC does with a character a version had, no version from 4.1
+    on changes (UAX #15, the stability of normalization forms; five characters
+    3.2 had were corrected in 4.0), and every Python's own table is past 4.1.
+    3.2 is the one version every Python carries a table of,
+    `unicodedata.ucd_3_2_0`, and it is asked only whether it had a character --
+    so where it lacks one the two are compared as written, as 1.0.0 compared
     them all.
     """
     if one == other:

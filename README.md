@@ -97,7 +97,7 @@ come back looking like one it read end to end.
 | documents delivered as folders instead of nested containers | `warn Z9` — and each folder is read as the container it holds, its findings under the folder's path; `error Z13` only for one this tool could not open, said plainly as this tool declining to look |
 | a member name that would escape the extraction directory | `error Z4` — refused, and nothing was ever written to disk to escape into |
 | a declared PDF the scan could not confirm is a PDF | `error P5` — reported as *not confirmed*, never as *not a PDF* |
-| a main document that refers to documents the handover does not contain | `error M11` — each dangling reference named, and silent when this tool did not read the whole delivery |
+| a main document that refers to documents the handover does not contain | `error M11` — each dangling reference named, and silent when this tool did not read the whole delivery, unless what it did not read is a file a document declares |
 
 Every code carries a remedy and the source its requirement comes from —
 [docs/rules.md](https://github.com/dev365code/vdi2770-validate/blob/main/docs/rules.md)

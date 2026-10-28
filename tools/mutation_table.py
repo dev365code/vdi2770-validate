@@ -97,10 +97,28 @@ TABLE = [
 
     ("delivery/only-a-declared-file-left-closed-is-not-waited-for",
      "packages/vdi2770/src/vdi2770/validate/runner.py",
-     "                          and d.where.member and folder_path(d.where.member) in declared)\n",
-     "                          and d.where.member)\n",
+     "                          and folder_path(n) in declared\n",
+     "                          and True\n",
      ["tests/test_a_delivery_carries_the_documents_it_refers_to.py::test_missing_documents_wait_for_every_archive"],
-     "an inner container the depth limit kept closed would be taken for a declared file, and its documents for absent"),
+     "an archive this read did not open would be taken for a declared file, and its documents for absent"),
+
+    ("delivery/a-declared-file-this-read-could-not-open-is-not-waited-for",
+     "packages/vdi2770/src/vdi2770/validate/runner.py",
+     "                           if ch.member_name and ch.kind is not Kind.UNREADABLE}\n",
+     "                           if ch.member_name}\n",
+     ["tests/test_a_delivery_carries_the_documents_it_refers_to.py::"
+      "test_missing_documents_do_not_wait_for_a_declared_file_this_read_could_not_open"],
+     "a declared bundle that is not an archive, or ends early, would silence a dangling reference "
+     "beside the refusal that names it"),
+
+    ("delivery/a-declared-file-this-read-opened-is-not-counted-twice",
+     "packages/vdi2770/src/vdi2770/validate/runner.py",
+     "                          and folder_path(n) not in opened_here)\n",
+     "                          and True)\n",
+     ["tests/test_a_delivery_carries_the_documents_it_refers_to.py::"
+      "test_a_declared_bundle_does_not_contribute_its_contents_to_the_read"],
+     "a declared bundle this read opened would count as opened and as left shut, and the "
+     "delivery check would wait for an archive it had read"),
 
     ("container/a-declared-file-left-closed-is-said-to-be",
      "packages/vdi2770/src/vdi2770/validate/rules/container.py",

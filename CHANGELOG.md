@@ -23,14 +23,16 @@ build on the exit code should read the paragraph after the list.
   its element budget spent, the document larger than it models, or a step
   of its own failed (`X6`, `X5`): what that file declares is unknown, not
   absent. They do not wait for an archive a document declares as one of its
-  files, which is never searched for documents: one the depth limit keeps
-  closed draws `Z14`, as one this reader opens does. `M13` still reports
-  contradictions in the documents that were read.
-  **This moves verdicts:** `M11` and `M12` no longer fire when an archive was
-  left unopened, or a metadata file read and left unmodelled. Such a delivery
-  still exits `1` for the finding explaining why that archive was not opened,
-  or why that file was not modelled. A declared archive the depth limit kept
-  closed draws `Z14`, an info finding, where it drew none.
+  files and this reader did not open: one the depth limit keeps closed draws
+  `Z14`, as one this reader opens does, and one it cannot read draws the
+  finding that says why. `M13` still reports contradictions in the documents
+  that were read.
+  **This moves verdicts:** `M11` and `M12` no longer fire when an archive that
+  is not a declared file was left unopened, or a metadata file read and left
+  unmodelled. Such a delivery still exits `1` for the finding explaining why
+  that archive was not opened, or why that file was not modelled. A declared
+  archive the depth limit kept closed draws `Z14`, an info finding, where it
+  drew none.
 - **An unnamed compression method is identified as a method number.** A
   method outside this reader's name table is described as `method 99`, for
   example, in the reader's finding and in the `Z12` and `F1` remedies. Named
