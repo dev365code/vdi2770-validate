@@ -4,7 +4,9 @@ Sections through 0.7.0 had their wording tidied after their tags; the text each 
 
 ## 1.0.2 — unreleased
 
-Changes being written for this release. **This moves verdicts:** none.
+- **Make accepts an interpreter path with spaces.** Every Python recipe quotes
+  `$(PYTHON)`, so `make PYTHON="<path>"` runs the interpreter the path names.
+  **This moves verdicts:** none.
 
 ## 1.0.1 — 2026-10-29
 

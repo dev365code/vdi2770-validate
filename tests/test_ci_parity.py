@@ -220,7 +220,7 @@ def test_ci_runs_the_command_not_merely_mentions_it():
     commands = ci_commands()
     assert commands, "no run: steps found in the workflow"
     for cmd in recipe_commands():
-        core = cmd.replace("$(PYTHON)", "python").strip()
+        core = cmd.replace('"$(PYTHON)"', "python").replace("$(PYTHON)", "python").strip()
         if core.startswith("rm "):
             continue
         assert any(core in c for c in commands), (
@@ -308,7 +308,7 @@ def test_ci_runs_nothing_the_gate_does_not():
     }
     # The `check` recipes, plus the targets named above — a CI step matching one
     # of those is recognised because somebody wrote down why it is there.
-    recipes = [c.replace("$(PYTHON)", "python").strip()
+    recipes = [c.replace('"$(PYTHON)"', "python").replace("$(PYTHON)", "python").strip()
                for c in recipe_commands(include={"zipapp", "paths-disjoint",
                                                  "wheels", "installed-runs",
                                                  "upgrade-paths-from-wheels",
@@ -1586,3 +1586,20 @@ def test_the_reader_publication_checks_the_changelog_cut_before_building():
     for step in guarded:
         assert "if: ${{ github.event_name != 'workflow_dispatch' || !inputs.dry_run }}" in step
     assert "check_changelog_is_cut.py" not in body.replace(reader, "")
+
+
+def test_make_quotes_every_python_recipe_when_the_path_has_spaces(tmp_path):
+    import subprocess
+
+    python = tmp_path / "a directory" / "python3"
+    targets, current = [], None
+    for line in MAKEFILE.splitlines():
+        if re.match(r"^[a-zA-Z0-9_-]+:", line):
+            current = line.split(":", 1)[0]
+        elif line.startswith("\t") and "$(PYTHON)" in line and current not in targets:
+            targets.append(current)
+    done = subprocess.run(["make", "-n", f"PYTHON={python}", *targets],
+                          cwd=ROOT, capture_output=True, text=True)
+    assert done.returncode == 0, done.stderr
+    assert done.stdout.count(str(python)) == 28
+    assert done.stdout.count(f'"{python}"') == 28, done.stdout

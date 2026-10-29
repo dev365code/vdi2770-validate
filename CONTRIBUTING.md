@@ -47,9 +47,9 @@ order, and a test compares the two recipes.
 
 `make check` also builds distributions, which needs `pip install build`.
 
-`make PYTHON=<path>` breaks when the path has a space in it: the recipes use
-`$(PYTHON)` unquoted, so the shell splits it. Put the virtual environment first
-on `PATH` and run plain `make` instead.
+`make PYTHON="<path>"` accepts an interpreter path with spaces: every recipe
+quotes `"$(PYTHON)"` so the shell keeps it as one path. Putting the virtual
+environment first on `PATH` and running plain `make` works too.
 
 `make mutations` is separate and slower. It takes every claim this project
 makes about a gate, breaks the thing that gate protects, and checks the gate
