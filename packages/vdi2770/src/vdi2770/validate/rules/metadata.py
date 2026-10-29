@@ -12,6 +12,21 @@ from ..catalog import CLASSIFICATION_SYSTEM, ISO_639_1, document_classes, englis
 from ..model import NS, Finding, Kind
 from ..names import as_written, escaped, nfc, spelled_where_not_ascii, told_apart
 
+NAMESPACE_DECLARATION = (
+    f'Declare the VDI 2770 namespace on the root element — '
+    f'xmlns="{NS}" — or put the prefix that binds it on every '
+    f'element and not only on the root. The schema declares its '
+    f'elements qualified, so a file in another namespace, or in '
+    f'none, holds no VDI 2770 names at all, and nothing else in '
+    f'this report could look at the metadata\'s content.'
+)
+
+PUBLISHED_ENGLISH = (
+    "Use the published English name, or drop the English name: matching here is keyed on "
+    "the class id and the German name, which both sources give the same for all twelve."
+)
+
+
 RELEASED = "Released"
 
 
@@ -94,12 +109,7 @@ def check(container, document, foreign) -> Iterator[Finding]:
                     f"this metadata's names are in '{found}'")
                    + f", and VDI 2770 names are in '{ours}', so nothing in it is "
                      f"a VDI 2770 element — the classification included",
-            fix=f'Declare the VDI 2770 namespace on the root element — '
-                f'xmlns="{NS}" — or put the prefix that binds it on every '
-                f'element and not only on the root. The schema declares its '
-                f'elements qualified, so a file in another namespace, or in '
-                f'none, holds no VDI 2770 names at all, and nothing else in '
-                f'this report could look at the metadata\'s content.')
+            fix=NAMESPACE_DECLARATION)
         return
 
     # An identifier is (domain, value): the schema makes DomainId required, and
@@ -210,10 +220,7 @@ def check(container, document, foreign) -> Iterator[Finding]:
                     detail=_two_names(written, want_en, c.class_id,
                                       "the published name is" if one
                                       else "published renderings are"),
-                    fix="Use the published English name, or drop the English "
-                        "name: matching here is keyed on the class id and the "
-                        "German name, which both sources give the same for all "
-                        "twelve." if one else None)
+                    fix=PUBLISHED_ENGLISH if one else None)
 
     for v in document.versions:
         for tag in v.languages:

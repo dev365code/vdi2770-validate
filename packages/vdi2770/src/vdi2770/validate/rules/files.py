@@ -8,6 +8,73 @@ from ..model import MAIN_PDF, MAIN_XML, METADATA_XML, About, Finding, Kind
 from ..names import Members, as_written, escaped, extracts_to, folder_path, nfc, without_edge_space
 from .container import MAX_ALIKE, ONE_NAME, _inside, layout_remedy, method_remedy
 
+ONE_PRINTED_NAME = (
+    "Store one spelling. The names below are different bytes that print the same, so "
+    "nothing can say which of them this declaration meant — and a reader asking for the "
+    "name you wrote may get either."
+)
+
+ONE_EXTRACTED_PATH = (
+    "Store the file once, at one path. The names below are different bytes that extract "
+    "to the same place, so nothing can say which of them this declaration meant — and "
+    "which one a recipient ends up with is their unzip tool's business."
+)
+
+REMOVE_REPEATS = (
+    "Remove the repeats. The name denotes more than one member, and which one a reader "
+    "extracts is its own business — so this tool will not say which of them you declared."
+)
+
+def name_flag_remedy(member):
+    return (
+        f"The member {member!r} stores this name as UTF-8 bytes without "
+        "general purpose bit 11 (APPNOTE 4.4.4), so it reads as IBM Code "
+        "Page 437 (APPENDIX D). Set bit 11 on that entry -- or write the "
+        "archive with a tool that sets it -- for the name to read as UTF-8."
+    )
+
+ONE_KIND = (
+    "Remove or rename the classifying name you did not mean. An archive that answers to "
+    "both kinds is a different delivery depending on who opens it, and declaring this "
+    "file would only make that silent."
+)
+
+RENAME_EDGE_SPACE = (
+    "Rename the member: whitespace at the edge of a name cannot be declared, because the "
+    "metadata's text is read with it removed. Or remove the member from the container."
+)
+
+RENAME_DECLARED = (
+    "Rename the member to the name you declared. Writing the space into the metadata does"
+    " not help: it is read back without it, which is what lets an ordinary indented "
+    "declaration work at all."
+)
+
+READ_SEPARATELY = (
+    "Nothing here is necessarily wrong with the file: it is inside a limit this tool sets"
+    " for untrusted input, and the finding beside this one says which. Send it "
+    "separately, or check it with something that will read it."
+)
+
+RENAME_RELATIVE = (
+    "Rename the member and the DigitalFile that names it, to a plain relative path inside"
+    " the container. This tool never read those bytes: the name is what it refused, and "
+    "the finding beside this one says why. Re-creating the archive from the same tree "
+    "writes the same name."
+)
+
+REMOVE_PASSWORD = (
+    "Remove the password from this member before handing the container over. A recipient "
+    "who cannot open a file has not been given it, and nothing here can check what it "
+    "cannot read."
+)
+
+SEND_AGAIN = (
+    "Re-create the archive and send it again. The file is listed, so the metadata is "
+    "right; the bytes behind the name are not readable."
+)
+
+
 #: Declared media types whose file extension is not a matter of taste, and the
 #: spellings each one is honestly carried by. `F3` compares a declaration
 #: against the name beside it, so a type may only appear here if naming its
@@ -169,21 +236,13 @@ def check(container, document, foreign) -> Iterator[Finding]:
                 reached_ambiguously.update(spellings)
                 message = ("A file named in the metadata matches more than one "
                            "member of the container")
-                fix = ("Store one spelling. The names below are different bytes "
-                       "that print the same, so nothing can say which of them "
-                       "this declaration meant — and a reader asking for the "
-                       "name you wrote may get either.") if look_alike else (
-                    "Store the file once, at one path. The names below are "
-                    "different bytes that extract to the same place, so nothing "
-                    "can say which of them this declaration meant — and which "
-                    "one a recipient ends up with is their unzip tool's business.")
+                fix = (ONE_PRINTED_NAME) if look_alike else (
+                    ONE_EXTRACTED_PATH)
                 whose = None
             elif twice:
                 message = ("A file named in the metadata is in the container more "
                            "than once")
-                fix = ("Remove the repeats. The name denotes more than one member, "
-                       "and which one a reader extracts is its own business — so "
-                       "this tool will not say which of them you declared.")
+                fix = (REMOVE_REPEATS)
                 whose = None
             elif because is None and len(meant.get(folder_path(f.file_name), ())) == 1:
                 # The verdict is the one APPNOTE gives -- the reference
@@ -193,20 +252,14 @@ def check(container, document, foreign) -> Iterator[Finding]:
                 read_as_cp437.add(member)
                 message = ("A file named in the metadata is in the container under a "
                            "name read as IBM Code Page 437")
-                fix = (f"The member {member!r} stores this name as UTF-8 bytes without "
-                       "general purpose bit 11 (APPNOTE 4.4.4), so it reads as IBM Code "
-                       "Page 437 (APPENDIX D). Set bit 11 on that entry -- or write the "
-                       "archive with a tool that sets it -- for the name to read as UTF-8.")
+                fix = (name_flag_remedy(member))
                 whose = None
             elif because is None:
                 message, fix, whose = r.title, None, None
             elif ours:
                 message = ("A file named in the metadata is in the container and this "
                            "tool declined to read it")
-                fix = ("Nothing here is necessarily wrong with the file: it is inside a "
-                       "limit this tool sets for untrusted input, and the finding beside "
-                       "this one says which. Send it separately, or check it with "
-                       "something that will read it.")
+                fix = (READ_SEPARATELY)
                 whose = About.TOOL
             elif because.kind == "unsafe-member-name":
                 # The name, not the bytes. This fell into the generic branch and
@@ -217,11 +270,7 @@ def check(container, document, foreign) -> Iterator[Finding]:
                 # name; re-zipping the same tree produces the same name.
                 message = ("A file named in the metadata has a name that would "
                            "escape the extraction directory")
-                fix = ("Rename the member and the DigitalFile that names it, to "
-                       "a plain relative path inside the container. This tool "
-                       "never read those bytes: the name is what it refused, and "
-                       "the finding beside this one says why. Re-creating the "
-                       "archive from the same tree writes the same name.")
+                fix = (RENAME_RELATIVE)
                 whose = None
             elif "encrypted" in (because.detail or "").lower():
                 # A member the sender locked is not a truncated transfer. The
@@ -231,10 +280,7 @@ def check(container, document, foreign) -> Iterator[Finding]:
                 # "password required" -- and the remedy ignored it.
                 message = ("A file named in the metadata is in the container and "
                            "needs a password")
-                fix = ("Remove the password from this member before handing the "
-                       "container over. A recipient who cannot open a file has "
-                       "not been given it, and nothing here can check what it "
-                       "cannot read.")
+                fix = (REMOVE_PASSWORD)
                 whose = None
             elif "Info-ZIP Unicode Path" in (because.detail or ""):
                 # Its bytes are readable: what the entry does not settle is
@@ -263,8 +309,7 @@ def check(container, document, foreign) -> Iterator[Finding]:
             else:
                 message = ("A file named in the metadata is in the container but could "
                            "not be read")
-                fix = ("Re-create the archive and send it again. The file is listed, so "
-                       "the metadata is right; the bytes behind the name are not readable.")
+                fix = (SEND_AGAIN)
                 whose = None
             if spellings and not twice:
                 # Bounded the way `Z10` bounds its partner list: rendering the
@@ -302,10 +347,7 @@ def check(container, document, foreign) -> Iterator[Finding]:
                               f"holds {_named_members(unnameable)}, which no "
                               f"declaration can name — the metadata's text is "
                               f"read with the whitespace at its edge removed")
-                    fix = ("Rename the member to the name you declared. Writing "
-                           "the space into the metadata does not help: it is "
-                           "read back without it, which is what lets an ordinary "
-                           "indented declaration work at all.")
+                    fix = (RENAME_DECLARED)
                 else:
                     detail = f"{f.file_name!r} is declared but not in the archive"
             yield Finding(r, message, f.src.child(container=container.path,
@@ -372,10 +414,7 @@ def check(container, document, foreign) -> Iterator[Finding]:
                        f"{MAIN_XML}, so this tool read it as a documentation "
                        f"container — and a reader that looks for "
                        f"{METADATA_XML} first opens it as the other kind",
-                fix="Remove or rename the classifying name you did not mean. "
-                    "An archive that answers to both kinds is a different "
-                    "delivery depending on who opens it, and declaring this "
-                    "file would only make that silent.")
+                fix=ONE_KIND)
             continue
         # And "declare it" is not on offer for a member whose name carries a
         # space at its edge: the metadata's text is read with that removed, so
@@ -383,10 +422,7 @@ def check(container, document, foreign) -> Iterator[Finding]:
         # cannot be followed is worse than the half that can.
         yield Finding(r, r.title, container.where.child(member=name, subject=name),
                       fix=None if without_edge_space(name) == name else
-                      ("Rename the member: whitespace at the edge of a name "
-                       "cannot be declared, because the metadata's text is read "
-                       "with it removed. Or remove the member from the "
-                       "container."))
+                      (RENAME_EDGE_SPACE))
 
     for f in document.all_files:
         # The type, without any parameter after it: `application/rtf` and

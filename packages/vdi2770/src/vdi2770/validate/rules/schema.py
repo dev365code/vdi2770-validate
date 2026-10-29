@@ -6,6 +6,13 @@ from typing import Iterator
 from ..catalog import rule
 from ..model import Finding, UnsafeXml, XmlTooLarge
 
+CORRECT_LISTED = (
+    "Correct the violations this report does list and run it again; the ones past the "
+    "limit are reported once there is room for them. They are your document's, not this "
+    "tool's — only the stopping is ours."
+)
+
+
 #: The remedy for a document in an encoding this reader does not read. Its first
 #: bytes said what it is in (XML 1.0 Appendix F), so there is no position in it
 #: to fix, which is what `X1`'s own remedy says to do.
@@ -50,10 +57,7 @@ def check(container, parse_error, schema_errors) -> Iterator[Finding]:
             yield Finding(r, r.title, container.where.child(member=container.metadata_name),
                           detail=err.get("reason"),
                           fix=None if blame != "listing" else
-                          "Correct the violations this report does list and run it "
-                          "again; the ones past the limit are reported once there "
-                          "is room for them. They are your document's, not this "
-                          "tool's — only the stopping is ours.")
+                          CORRECT_LISTED)
             continue
         r = rule("X2")
         where = container.where.child(member=container.metadata_name,

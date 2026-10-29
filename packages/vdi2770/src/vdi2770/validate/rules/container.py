@@ -8,6 +8,81 @@ from ..catalog import rule
 from ..model import MAIN_PDF, MAIN_XML, METADATA_XML, Finding, Kind
 from ..names import as_written, escaped, extracts_to, folder_path, ignoring_case, nfc
 
+REMOVE_PASSWORD = (
+    "Remove the password from this member before handing the container over. A recipient "
+    "who cannot open a file has not been given it, and nothing here can check what it "
+    "cannot read."
+)
+
+def folder_remedy(also_a_container, opened_container, reserved_in):
+    if not (also_a_container or opened_container):
+        return None
+    return (
+        rule("Z9").remedy
+        + ("" if not also_a_container else
+           " Not by hand for "
+           + ", ".join(as_written(f) for f in also_a_container[:5])
+           + (", ..." if len(also_a_container) > 5 else "")
+           + (": the finding beside this one says that folder is a "
+              "container this tool did not open, and zipping it into "
+              "a .zip member is what removes the folder without "
+              "flattening what is inside it."
+              if len(also_a_container) == 1 else
+              ": the findings beside this one say those folders are "
+              "containers this tool did not open, and zipping each "
+              "into its own .zip member is what removes the folders "
+              "without flattening what is inside them."))
+        + ("" if not opened_container else
+           (" Nor" if also_a_container else " Not") + " by hand for "
+           + ", ".join(as_written(f) for f in opened_container[:5])
+           + (", ..." if len(opened_container) > 5 else "")
+           + (f": it holds "
+              f"{' and '.join(sorted(reserved_in[folder_path(opened_container[0]) + '/']))}, "
+              f"which makes it a container delivered unzipped, and "
+              f"zipping it into a .zip member is what removes the "
+              f"folder without flattening what is inside it."
+              if len(opened_container) == 1 else
+              ": each holds VDI2770_Metadata.xml or VDI2770_Main.xml, "
+              "which makes it a container delivered unzipped, and "
+              "zipping each into its own .zip member is what removes "
+              "the folders without flattening what is inside them."))
+    )
+
+ONE_SPELLING = (
+    "Store one spelling. A reader asking for the name as you wrote it may get either "
+    "member, and nothing here can say which one you meant."
+)
+
+ONE_CASE = (
+    "Rebuild the archive with one entry per name once case is folded, and name each "
+    "DigitalFile after the entry you kept. Rename as you write the archive rather than on"
+    " disk: a filesystem that folds case cannot hold both of these side by side, so there"
+    " is nothing there to rename."
+)
+
+ONE_PATH = (
+    "Store the file once, at one path. Which of them a recipient ends up with is their "
+    "unzip tool's business, and nothing here can say which one you meant."
+)
+
+ONE_SPELLING_AND_PATH = (
+    "Store the file once, under one spelling and one path. On a filesystem that composes "
+    "names — macOS, Windows — these are one file and the later member wins; on one that "
+    "does not, they are two. Nothing here can say which your recipient has."
+)
+
+MOVE_CONTAINER = (
+    "Move it up into the documentation container if it is a container, or — if it is "
+    "genuinely payload — rename the reserved file inside it, which is what makes it one."
+)
+
+MOVE_FOLDER = (
+    "Move it up into the documentation container, zipped or as it is, where containers "
+    "belong. If what it holds are this document's own files, rename the reserved file in "
+    "it, which is what makes the folder a container."
+)
+
+
 
 def _partners(group, index):
     """The members `group[index]` collides with, bounded, starting after it.
@@ -232,9 +307,7 @@ def _remedy_for(defect):
     """
     if (defect.kind == "member-unreadable"
             and "encrypted" in (defect.detail or "").lower()):
-        return ("Remove the password from this member before handing the "
-                "container over. A recipient who cannot open a file has not been "
-                "given it, and nothing here can check what it cannot read.")
+        return (REMOVE_PASSWORD)
     if (defect.kind == "member-unreadable"
             and "Info-ZIP Unicode Path" in (defect.detail or "")):
         return ONE_NAME
@@ -518,35 +591,7 @@ def check(container, declared, is_declared_payload) -> Iterator[Finding]:
                              f"folder{'' if len(named) == 1 else 's'}: "
                              + ", ".join(shown)
                              + (", ..." if len(named) > 5 else ""),
-                      fix=None if not (also_a_container or opened_container) else
-                      (rule("Z9").remedy
-                       + ("" if not also_a_container else
-                          " Not by hand for "
-                          + ", ".join(as_written(f) for f in also_a_container[:5])
-                          + (", ..." if len(also_a_container) > 5 else "")
-                          + (": the finding beside this one says that folder is a "
-                             "container this tool did not open, and zipping it into "
-                             "a .zip member is what removes the folder without "
-                             "flattening what is inside it."
-                             if len(also_a_container) == 1 else
-                             ": the findings beside this one say those folders are "
-                             "containers this tool did not open, and zipping each "
-                             "into its own .zip member is what removes the folders "
-                             "without flattening what is inside them."))
-                       + ("" if not opened_container else
-                          (" Nor" if also_a_container else " Not") + " by hand for "
-                          + ", ".join(as_written(f) for f in opened_container[:5])
-                          + (", ..." if len(opened_container) > 5 else "")
-                          + (f": it holds "
-                             f"{' and '.join(sorted(reserved_in[folder_path(opened_container[0]) + '/']))}, "
-                             f"which makes it a container delivered unzipped, and "
-                             f"zipping it into a .zip member is what removes the "
-                             f"folder without flattening what is inside it."
-                             if len(opened_container) == 1 else
-                             ": each holds VDI2770_Metadata.xml or VDI2770_Main.xml, "
-                             "which makes it a container delivered unzipped, and "
-                             "zipping each into its own .zip member is what removes "
-                             "the folders without flattening what is inside them."))))
+                      fix=folder_remedy(also_a_container, opened_container, reserved_in))
 
     if container.duplicate_names:
         r = rule("Z10")
@@ -634,9 +679,7 @@ def check(container, declared, is_declared_payload) -> Iterator[Finding]:
                     detail=f"this is {as_written(name)}; the archive also holds "
                            f"{shown} — different names for one path, "
                            f"{as_written(extracts_to(name))}",
-                    fix="Store the file once, at one path. Which of them a "
-                        "recipient ends up with is their unzip tool's business, "
-                        "and nothing here can say which one you meant.")
+                    fix=ONE_PATH)
                 continue
 
             shown = _named(alike, escaped, len(group))
@@ -650,11 +693,7 @@ def check(container, declared, is_declared_payload) -> Iterator[Finding]:
                            f"spelled and in path segments that name nothing, so "
                            f"a filesystem that normalises names sees one file "
                            f"where this archive has {len(group)}",
-                    fix="Store the file once, under one spelling and one path. "
-                        "On a filesystem that composes names — macOS, Windows — "
-                        "these are one file and the later member wins; on one "
-                        "that does not, they are two. Nothing here can say which "
-                        "your recipient has.")
+                    fix=ONE_SPELLING_AND_PATH)
                 continue
             # "different bytes, the same glyphs" was true of the archive and
             # became false of the page: once `escaped` spells out the spelling
@@ -673,9 +712,7 @@ def check(container, declared, is_declared_payload) -> Iterator[Finding]:
                        f"{len(group)} ways. A spelling that is not the "
                        f"canonical one is printed here as code points, because "
                        f"otherwise these lines would be identical",
-                fix="Store one spelling. A reader asking for the name as you "
-                    "wrote it may get either member, and nothing here can say "
-                    "which one you meant.")
+                fix=ONE_SPELLING)
 
     # And the collision the reader does not group on, because it is not a fact
     # about the archive: `B.pdf` beside `b.pdf` is two entries here and one file
@@ -715,11 +752,7 @@ def check(container, declared, is_declared_payload) -> Iterator[Finding]:
                        f"that fold to one name, so a recipient on Windows, or on "
                        f"macOS as it ships, unpacks them into one file and keeps "
                        f"whichever their unzip tool wrote last",
-                fix="Rebuild the archive with one entry per name once case is "
-                    "folded, and name each DigitalFile after the entry you kept. "
-                    "Rename as you write the archive rather than on disk: a "
-                    "filesystem that folds case cannot hold both of these side "
-                    "by side, so there is nothing there to rename.")
+                fix=ONE_CASE)
 
     if container.kind is Kind.DOCUMENT:
         unopened_here = {folder_path(f)
@@ -762,9 +795,7 @@ def check(container, declared, is_declared_payload) -> Iterator[Finding]:
                            f"{'document' if child.kind is Kind.DOCUMENT else 'documentation'} "
                            f"container: its root holds the reserved name that "
                            f"makes every reader of this format open it as one",
-                    fix="Move it up into the documentation container if it is a "
-                        "container, or — if it is genuinely payload — rename the "
-                        "reserved file inside it, which is what makes it one.")
+                    fix=MOVE_CONTAINER)
         # A folder holding a reserved name is a container that was not zipped,
         # and the reader opens it as the one it is -- so inside a document
         # container it is what this rule is about, as a `.zip` is. `F2` says
@@ -788,10 +819,7 @@ def check(container, declared, is_declared_payload) -> Iterator[Finding]:
                     detail=f"{as_written(where + '/')} holds "
                            f"{', '.join(sorted(held[where]))}, which makes it a "
                            f"container delivered unzipped",
-                    fix="Move it up into the documentation container, zipped or "
-                        "as it is, where containers belong. If what it holds "
-                        "are this document's own files, rename the reserved "
-                        "file in it, which is what makes the folder a container.")
+                    fix=MOVE_FOLDER)
 
     # Whatever kind of container this is. `files.py` keeps `F2` quiet about every
     # file inside a folder that holds its own metadata, in any container, because

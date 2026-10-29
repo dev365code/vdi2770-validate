@@ -8,6 +8,36 @@ from ..catalog import rule
 from ..model import _READ_INFLATION_STOP, MAIN_PDF, About, Finding, Kind
 from ..names import Members, as_written, folder_path
 
+SPLIT_PDF_READ = (
+    "Split the delivery into several containers, or re-export PDFs with smaller "
+    "compressed structures. The PDF/A claim search stops once it finds a claim, but "
+    "page-tree reading may also need inflation. The header, indirect-object probe and "
+    "encryption check still ran; P6 names any page-count comparison this budget "
+    "prevented."
+)
+
+CHECK_PAGE_TREE = (
+    "Check that this is the intended PDF and verify its xref and page tree. Re-export it "
+    "if appropriate; this bounded reader does not recover damaged xref data or evaluate "
+    "structures beyond its limits. No page-count comparison was made."
+)
+
+REEXPORT_MAIN = (
+    "If this is a real PDF, re-export it: a file that fills its own beginning with `obj` "
+    "before its first indirect object is not something a producer writes, and whatever "
+    "wrote this is worth looking at. If it is not a PDF, the name is reserved and the "
+    "recipient's system will open it as one, so put the main document here. If you "
+    "believe this is a conforming file this tool cannot read, please report it with the "
+    "file."
+)
+
+WRITE_CONFORMANCE = (
+    "Parts 1, 2 and 3 of PDF/A each require a conformance level beside the part. "
+    "Re-export with a producer that writes one into the XMP metadata, then run a PDF/A "
+    "validator such as veraPDF if you need the claim itself verified."
+)
+
+
 UNVERIFIED = "this tool cannot verify PDF/A conformance"
 
 @dataclass(frozen=True)
@@ -92,10 +122,7 @@ def _page_findings(container, document, facts_for):
             yield Finding(
                 r, "The PDF's page tree could not be read", where,
                 detail=f"{as_written(name)}: the page tree could not be read: {facts.page_count_why}",
-                fix="Check that this is the intended PDF and verify its xref and page tree. "
-                    "Re-export it if appropriate; this bounded reader does not recover damaged "
-                    "xref data or evaluate structures beyond its limits. No page-count "
-                    "comparison was made.",
+                fix=CHECK_PAGE_TREE,
                 as_about=About.TOOL)
         elif facts.page_count is not None:
             declared = str(facts.page_count)
@@ -225,14 +252,7 @@ def check(container, document, facts_for) -> Iterator[Finding]:
                        + "the scan looked as far into it as it looks and found "
                          "no indirect object. Whether there is one beyond that "
                          "is not known",
-                fix=("If this is a real PDF, re-export it: a file that fills its "
-                     "own beginning with `obj` before its first indirect object "
-                     "is not something a producer writes, and whatever wrote "
-                     "this is worth looking at. If it is not a PDF, the name is "
-                     "reserved and the recipient's system will open it as one, "
-                     "so put the main document here. If you believe this is a "
-                     "conforming file this tool cannot read, please report it "
-                     "with the file.") if reserved else None,
+                fix=(REEXPORT_MAIN) if reserved else None,
                 as_about=About.TOOL)
             # And then fall through. Whether the file is a PDF document says
             # nothing about the other three facts -- the header, the encryption
@@ -304,11 +324,7 @@ def check(container, document, facts_for) -> Iterator[Finding]:
                     detail=f"claims PDF/A part {facts.pdfa_claim[:-1]} and names "
                            f"no conformance level — {UNVERIFIED}, and this claim "
                            f"is incomplete besides",
-                    fix="Parts 1, 2 and 3 of PDF/A each require a conformance "
-                        "level beside the part. Re-export with a producer that "
-                        "writes one into the XMP metadata, then run a PDF/A "
-                        "validator such as veraPDF if you need the claim itself "
-                        "verified.")
+                    fix=WRITE_CONFORMANCE)
             else:
                 yield Finding(
                     r, r.title, where,
@@ -343,8 +359,4 @@ def check(container, document, facts_for) -> Iterator[Finding]:
                    + (", ..." if len(unopened) > MAX_NAMED else "")
                    + ". The report retains any declarations it did read; "
                      "this is a limit on the comparison or search",
-            fix="Split the delivery into several containers, or re-export PDFs with "
-                "smaller compressed structures. The PDF/A claim search stops once "
-                "it finds a claim, but page-tree reading may also need inflation. "
-                "The header, indirect-object probe and encryption check still ran; "
-                "P6 names any page-count comparison this budget prevented.")
+            fix=SPLIT_PDF_READ)

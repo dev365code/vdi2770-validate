@@ -4,6 +4,10 @@ Sections through 0.7.0 had their wording tidied after their tags; the text each 
 
 ## 1.0.2 — unreleased
 
+- **Reason-specific remedies are named where the rules use them.** The rule
+  modules keep their advice in module constants and small template functions.
+  The emitted `fix` bytes stay the same.
+  **This moves verdicts:** none.
 - **Make accepts an interpreter path with spaces.** Every Python recipe quotes
   `$(PYTHON)`, so `make PYTHON="<path>"` runs the interpreter the path names.
   **This moves verdicts:** none.
