@@ -607,7 +607,7 @@
       "layer": "container",
       "severity": "error",
       "obligation": "container",
-      "title": "A file in the container could not be read",
+      "title": "An entry in the container was refused",
       "remedy": "Re-create the archive and send it again. A member with a broken CRC is usually a truncated transfer; a member that needs a password has not been handed over, because the recipient cannot open it.",
       "refKeys": [],
       "refCodes": [],

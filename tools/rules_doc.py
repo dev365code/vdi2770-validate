@@ -94,7 +94,7 @@ def reason_rows():
             ("`A file named in the metadata has a name that would escape the extraction directory`", files.RENAME_RELATIVE),
             ("`A file named in the metadata is in the container and needs a password`", files.REMOVE_PASSWORD),
             ("`A file named in the metadata is in the container under an entry that names itself more than once`", files.ONE_NAME),
-            ("`its local header, at byte` or `its data runs to byte` describes the declared entry", files.layout_remedy("its data runs to byte <offset>")),
+            ("`A file named in the metadata is in the container under an entry laid out where no ordinary writer puts one` (`its local header, at byte` or `its data runs to byte`)", files.layout_remedy("its data runs to byte <offset>")),
             ("`A file named in the metadata is in the container, compressed with a method this tool does not expand`", files.method_remedy("member compressed with <method>;")),
             ("`A file named in the metadata is in the container but could not be read`", files.SEND_AGAIN),
             ("`A file named in the metadata is in the container under a name no declaration can reach`", files.RENAME_DECLARED),

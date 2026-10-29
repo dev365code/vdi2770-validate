@@ -12,6 +12,10 @@ from conftest import ROOT
 RULES_JSON = json.loads((ROOT / "packages" / "vdi2770" / "src" / "vdi2770" / "validate" / "data" / "rules.json").read_text(encoding="utf-8"))
 
 
+def test_z12_names_the_refusal_shared_by_all_its_reasons():
+    assert rules()["Z12"].title == "An entry in the container was refused"
+
+
 def test_ids_unique_and_shaped():
     ids = [r["id"] for r in RULES_JSON["rules"]]
     assert len(ids) == len(set(ids))

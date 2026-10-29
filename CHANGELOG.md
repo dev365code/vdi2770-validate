@@ -4,6 +4,20 @@ Sections through 0.7.0 had their wording tidied after their tags; the text each 
 
 ## 1.0.2 — unreleased
 
+- **Refused entries have descriptions that fit their reasons.** The `Z12`
+  `title` is now "An entry in the container was refused". The `F1` `message`
+  for a refused placement is now "A file named in the metadata is in the
+  container under an entry laid out where no ordinary writer puts one".
+  Consumers matching those strings should update their matches.
+  **This moves verdicts:** none.
+- **The front page distinguishes declared archives this reader opens from
+  those the depth limit keeps closed.** The latter draw `Z14`; their entries
+  are not read and they are not judged as containers.
+  **This moves verdicts:** none.
+- **Four archive-end conditions have boundary tests and mutation rows.** They
+  hold the last-record choice, ZIP64 record size, empty directory size and
+  listed-entry count to both sides of their existing conditions.
+  **This moves verdicts:** none.
 - **The rules page pairs each reason with its remedy.** The generated lists
   read the rule modules' advice, including placeholders for a compression
   method or a member name. A check holds the lists to the named `fix` sources.

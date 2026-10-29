@@ -341,6 +341,11 @@ def test_an_entry_laid_out_where_no_writer_puts_one_is_told_to_rebuild_the_archi
     assert sorted((f.rule.id, f.severity.value, f.about.value) for f in report.findings) == [
         (rule, "error", "container") for rule in LAID_OUT[name]]
     assert {f.fix for f in report.findings} == {REBUILD}
+    for finding in report.findings:
+        if finding.rule.id == "F1":
+            assert finding.message == (
+                "A file named in the metadata is in the container under an entry "
+                "laid out where no ordinary writer puts one")
 
 
 @pytest.mark.parametrize("name", sorted(CASES))

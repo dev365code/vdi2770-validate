@@ -293,8 +293,8 @@ def check(container, document, foreign) -> Iterator[Finding]:
                 # Its bytes may be whole: what the entry does not have is a
                 # place of its own in the archive, and sending the same file
                 # again sends the same layout.
-                message = ("A file named in the metadata is in the container but could "
-                           "not be read")
+                message = ("A file named in the metadata is in the container under an entry "
+                           "laid out where no ordinary writer puts one")
                 fix = layout_remedy(because.detail)
                 whose = None
             elif method_remedy(because.detail):
