@@ -137,3 +137,21 @@ def test_the_namespace_and_english_advice_stay_with_their_findings():
     assert metadata.NAMESPACE_DECLARATION in [fix for _, fix in rows["M1"]]
     assert metadata.PUBLISHED_ENGLISH in [fix for _, fix in rows["M4"]]
     assert "M3" not in rows
+
+
+def test_the_file_reasons_quote_the_messages_the_rule_prints():
+    import ast
+    import inspect
+    import sys
+
+    from vdi2770.validate.rules import files
+
+    sys.path.insert(0, str(ROOT / "tools"))
+    import rules_doc
+
+    messages = {node.value.value for node in ast.walk(ast.parse(inspect.getsource(files)))
+                if isinstance(node, ast.Assign) and isinstance(node.value, ast.Constant)
+                and isinstance(node.value.value, str)
+                and any(isinstance(t, ast.Name) and t.id == "message" for t in node.targets)}
+    headings = [when for when, _ in rules_doc.reason_rows()["F1"]]
+    assert all(any(message in when for when in headings) for message in messages)
