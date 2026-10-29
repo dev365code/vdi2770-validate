@@ -46,6 +46,17 @@ def in_order(r):
     return (r.layer, letters, int(r.id[len(letters):] or 0))
 
 
+#: Said once above each list: a finding no line names takes the rule's remedy.
+UNLISTED = "A finding these lines do not name takes the remedy above."
+
+
+def lead(when):
+    """A line's opening: what the finding says, or -- where the finding does not
+    carry the words the remedy turns on, as `Z9` and one `F2` do not -- the
+    condition itself."""
+    return when if when.startswith("When ") else f"When the finding says {when}"
+
+
 def reason_rows():
     """Reason-specific advice, read from the same names the findings use."""
     rows = {
@@ -60,9 +71,9 @@ def reason_rows():
             ("decompression-budget-exhausted", "`this read has inflated` its allowance"),
         ]] + [("`this read spent its <limit> GiB budget for inflating PDF streams`", pdf.SPLIT_PDF_READ)],
         "Z9": [
-            ("a folder is a container this tool did not open",
+            ("When a folder it names is one the `Z13` beside it reports",
              container.folder_remedy(["<member>"], [], {})),
-            ("a folder this tool opened holds a reserved name",
+            ("When a folder it names holds a reserved name",
              container.folder_remedy([], ["<member>"], {"<member>/": {"<reserved-name>"}})),
         ],
         "Z10": [
@@ -75,13 +86,14 @@ def reason_rows():
         ],
         "Z11": [
             ("a declared file is a container whose root holds a reserved name", container.MOVE_CONTAINER),
-            ("a folder holds a container delivered unzipped", container.MOVE_FOLDER),
+            ("a folder holds `VDI2770_Metadata.xml` or `VDI2770_Main.xml`, which makes it a "
+             "container delivered unzipped", container.MOVE_FOLDER),
         ],
         "Z12": [
             ("the entry needs a password",
              container._remedy_for(Defect("member-unreadable", Location(), "encrypted"))),
             ("an Info-ZIP Unicode Path field names another file, or occurs more than once", container.ONE_NAME),
-            ("`its local header, at byte` or `its data runs to byte` describes an entry's placement",
+            ("`its local header, at byte …` or `its data runs to byte …`, about where the entry lies",
              container.layout_remedy("its data runs to byte <offset>")),
             ("`member compressed with <method>`", container.method_remedy("member compressed with <method>;")),
         ],
@@ -101,7 +113,7 @@ def reason_rows():
         ],
         "F2": [
             ("the other kind's classifying name is present at the root", files.ONE_KIND),
-            ("whitespace at the edge of the name cannot be declared", files.RENAME_EDGE_SPACE),
+            ("When the name it reports has whitespace at its edge", files.RENAME_EDGE_SPACE),
         ],
         "M1": [("`this metadata's names are in` another namespace, or `in no namespace at all`", metadata.NAMESPACE_DECLARATION)],
         "M4": [("`The English class name is not the published one`", metadata.PUBLISHED_ENGLISH)],
@@ -191,7 +203,7 @@ def page() -> str:
                 out += [f"Why this is ours: {r.why_ours}", ""]
             out += [f"**Remedy.** {r.remedy}", ""]
             if r.id in reasons:
-                out += [f"- When the finding says {when}: {remedy}"
+                out += [UNLISTED, ""] + [f"- {lead(when)}: {remedy}"
                         for when, remedy in reasons[r.id]] + [""]
     return "\n".join(out).rstrip() + "\n"
 

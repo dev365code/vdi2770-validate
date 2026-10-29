@@ -73,6 +73,8 @@ Why this is ours: Supplier archives arrive from outside. A validator must not be
 
 **Remedy.** Split the delivery into several containers, or report the archive to whoever produced it if the size looks unintentional.
 
+A finding these lines do not name takes the remedy above.
+
 - When the finding says the tree names more members than this read will hold: Split the delivery. This tool holds a record for every file named across the whole tree of containers, and this one names more than it will hold.
 - When the finding says `<count> entries, limit is <limit>`: Split the delivery: this archive lists more members than this tool will open in one container.
 - When the finding says `the archive says <size> bytes, over the` limit, or a folder's members exceed it: The archive declares that member larger than this tool will read — nothing here inflated it to check. Send it on its own, or check it with something that has no such limit — the rest of the container was read normally.
@@ -115,8 +117,10 @@ Reference implementation: `processor:ZU_MESSAGE_001` (displayed as `ZU_001`). Ci
 
 **Remedy.** Store the members at the root of the archive. This tool resolves a metadata name that carries its folder path, so the file-set rules can stay quiet — but the reference implementation warns about the folders anyway, and it is the recipient's tooling that has to accept the container.
 
-- When the finding says a folder is a container this tool did not open: Store the members at the root of the archive. This tool resolves a metadata name that carries its folder path, so the file-set rules can stay quiet — but the reference implementation warns about the folders anyway, and it is the recipient's tooling that has to accept the container. Not by hand for `<member>`: the finding beside this one says that folder is a container this tool did not open, and zipping it into a .zip member is what removes the folder without flattening what is inside it.
-- When the finding says a folder this tool opened holds a reserved name: Store the members at the root of the archive. This tool resolves a metadata name that carries its folder path, so the file-set rules can stay quiet — but the reference implementation warns about the folders anyway, and it is the recipient's tooling that has to accept the container. Not by hand for `<member>`: it holds `<reserved-name>`, which makes it a container delivered unzipped, and zipping it into a .zip member is what removes the folder without flattening what is inside it.
+A finding these lines do not name takes the remedy above.
+
+- When a folder it names is one the `Z13` beside it reports: Store the members at the root of the archive. This tool resolves a metadata name that carries its folder path, so the file-set rules can stay quiet — but the reference implementation warns about the folders anyway, and it is the recipient's tooling that has to accept the container. Not by hand for `<member>`: the finding beside this one says that folder is a container this tool did not open, and zipping it into a .zip member is what removes the folder without flattening what is inside it.
+- When a folder it names holds a reserved name: Store the members at the root of the archive. This tool resolves a metadata name that carries its folder path, so the file-set rules can stay quiet — but the reference implementation warns about the folders anyway, and it is the recipient's tooling that has to accept the container. Not by hand for `<member>`: it holds `<reserved-name>`, which makes it a container delivered unzipped, and zipping it into a .zip member is what removes the folder without flattening what is inside it.
 
 ### `Z10` — Two members of the archive have the same name
 
@@ -125,6 +129,8 @@ Reference implementation: `processor:ZU_MESSAGE_001` (displayed as `ZU_001`). Ci
 Why this is ours: ZIP allows it and readers disagree about which one wins, so the container can show one thing to this tool and another to whoever unpacks it. Nothing good is ever delivered this way. Four relations reach this rule and each gets the sentence that is true of it: two entries that extract to one path, two spellings of one name, names that come to one once both are settled, and names that are one file wherever case is not kept apart — macOS as it ships, and every Windows filesystem. The last is the only one the archive itself keeps apart, which is why the sentence names the condition instead of calling them the same name.
 
 **Remedy.** Rebuild the archive with one entry per name, and with no two entries sharing a name once case is folded. If two files genuinely differ, give them names that differ by more than case, and declare both.
+
+A finding these lines do not name takes the remedy above.
 
 - When the finding says `<count> entries in this archive carry this name`: Rebuild the archive with one entry per name. More than one entry shares this one, so nothing here can say which bytes you meant and none was read — a reader that guessed would show you one file and your unpacker another.
 - When the finding says `Two members of the archive extract to the same path`: Store the file once, at one path. Which of them a recipient ends up with is their unzip tool's business, and nothing here can say which one you meant.
@@ -140,8 +146,10 @@ Why this is ours: Document containers hold a document's files. A container insid
 
 **Remedy.** Move the inner container up into the documentation container, where containers belong. If it is payload rather than a container, it takes two things: declare it in this document container's metadata as a DigitalFile with FileFormat application/zip, and make sure its root does not hold VDI2770_Metadata.xml or VDI2770_Main.xml — a reserved name at the root is what makes an archive a container, and a declaration saying otherwise is a disagreement this tool reports rather than resolves.
 
+A finding these lines do not name takes the remedy above.
+
 - When the finding says a declared file is a container whose root holds a reserved name: Move it up into the documentation container if it is a container, or — if it is genuinely payload — rename the reserved file inside it, which is what makes it one.
-- When the finding says a folder holds a container delivered unzipped: Move it up into the documentation container, zipped or as it is, where containers belong. If what it holds are this document's own files, rename the reserved file in it, which is what makes the folder a container.
+- When the finding says a folder holds `VDI2770_Metadata.xml` or `VDI2770_Main.xml`, which makes it a container delivered unzipped: Move it up into the documentation container, zipped or as it is, where containers belong. If what it holds are this document's own files, rename the reserved file in it, which is what makes the folder a container.
 
 ### `Z12` — An entry in the container was refused
 
@@ -149,9 +157,11 @@ Why this is ours: Document containers hold a document's files. A container insid
 
 **Remedy.** Re-create the archive and send it again. A member with a broken CRC is usually a truncated transfer; a member that needs a password has not been handed over, because the recipient cannot open it.
 
+A finding these lines do not name takes the remedy above.
+
 - When the finding says the entry needs a password: Remove the password from this member before handing the container over. A recipient who cannot open a file has not been given it, and nothing here can check what it cannot read.
 - When the finding says an Info-ZIP Unicode Path field names another file, or occurs more than once: Give the entry one name. An Info-ZIP Unicode Path field (APPNOTE 4.6.9) holds the UTF-8 version of the name its header already carries; this entry's says something else, or there is more than one, and readers then differ on which file it is -- zipping the same files again writes the same fields. Store the name once, in UTF-8 with general purpose bit 11 set (APPNOTE 4.4.4), or leave the field out.
-- When the finding says `its local header, at byte` or `its data runs to byte` describes an entry's placement: Rebuild the archive with a standard ZIP tool. No ordinary writer lays an entry out this way -- its bytes are read as another entry's too, or reach into or past the central directory (APPNOTE 4.3.6) -- so sending this file again draws the same finding; the files themselves may be fine.
+- When the finding says `its local header, at byte …` or `its data runs to byte …`, about where the entry lies: Rebuild the archive with a standard ZIP tool. No ordinary writer lays an entry out this way -- its bytes are read as another entry's too, or reach into or past the central directory (APPNOTE 4.3.6) -- so sending this file again draws the same finding; the files themselves may be fine.
 - When the finding says `member compressed with <method>`: Recompress this member with deflate, or store it, and send the container again. It is compressed with `<method>`, and this tool expands stored and deflate members and no other method, so zipping it again the same way draws the same finding; the file itself may be fine.
 
 ### `Z13` — A folder holds a container this tool did not open
@@ -180,6 +190,8 @@ Reference implementation: `processor:REP_MESSAGE_007` (displayed as `REP_007`). 
 
 **Remedy.** Add the missing file to the container, or remove its DigitalFile entry from the metadata. The two must agree.
 
+A finding these lines do not name takes the remedy above.
+
 - When the finding says `A file named in the metadata matches more than one member of the container`, with names that print alike: Store one spelling. The names below are different bytes that print the same, so nothing can say which of them this declaration meant — and a reader asking for the name you wrote may get either.
 - When the finding says `A file named in the metadata matches more than one member of the container`, with names that extract to the same path: Store the file once, at one path. The names below are different bytes that extract to the same place, so nothing can say which of them this declaration meant — and which one a recipient ends up with is their unzip tool's business.
 - When the finding says `A file named in the metadata is in the container more than once`: Remove the repeats. The name denotes more than one member, and which one a reader extracts is its own business — so this tool will not say which of them you declared.
@@ -201,8 +213,10 @@ Reference implementation: `processor:REP_MESSAGE_006` (displayed as `REP_006`). 
 
 **Remedy.** Declare the file as a DigitalFile in the metadata, or remove it from the container. An undeclared file is invisible to the recipient's system.
 
+A finding these lines do not name takes the remedy above.
+
 - When the finding says the other kind's classifying name is present at the root: Remove or rename the classifying name you did not mean. An archive that answers to both kinds is a different delivery depending on who opens it, and declaring this file would only make that silent.
-- When the finding says whitespace at the edge of the name cannot be declared: Rename the member: whitespace at the edge of a name cannot be declared, because the metadata's text is read with it removed. Or remove the member from the container.
+- When the name it reports has whitespace at its edge: Rename the member: whitespace at the edge of a name cannot be declared, because the metadata's text is read with it removed. Or remove the member from the container.
 
 ### `F3` — The declared file format disagrees with the file name
 
@@ -231,6 +245,8 @@ Reference implementation: `core:DigitalFile_VAL4` (displayed as `DF_004`). Citin
 Reference implementation: `core:Document_VAL2` (displayed as `D_002`). Citing a key records that the other project checks something in the same area; it does not borrow its claim.
 
 **Remedy.** Add a DocumentClassification whose ClassificationSystem is VDI2770:2018 and whose ClassId is one of the twelve published classes.
+
+A finding these lines do not name takes the remedy above.
 
 - When the finding says `this metadata's names are in` another namespace, or `in no namespace at all`: Declare the VDI 2770 namespace on the root element — xmlns="http://www.vdi.de/schemas/vdi2770" — or put the prefix that binds it on every element and not only on the root. The schema declares its elements qualified, so a file in another namespace, or in none, holds no VDI 2770 names at all, and nothing else in this report could look at the metadata's content.
 
@@ -263,6 +279,8 @@ Reference implementation: `core:DocumentClassification_VAL4` (displayed as `DC_0
 Why this is ours: The two freely published sources give different English names for five of the twelve classes, so an English name alone cannot decide conformance. We report which renderings exist and never fail a document on this basis.
 
 **Remedy.** Either published spelling is defensible until the disagreement is resolved. Prefer the IDTA 02004 spelling if the container is destined for an Asset Administration Shell.
+
+A finding these lines do not name takes the remedy above.
 
 - When the finding says `The English class name is not the published one`: Use the published English name, or drop the English name: matching here is keyed on the class id and the German name, which both sources give the same for all twelve.
 
@@ -348,6 +366,8 @@ Reference implementation: `processor:PV_EXCEPTION_010` (displayed as `PV_010`). 
 
 **Remedy.** Replace the file with a real PDF, or correct the declared FileFormat if the file was never meant to be one. For VDI2770_Main.pdf there is no second option: the name is reserved and the recipient's system will open it as a PDF.
 
+A finding these lines do not name takes the remedy above.
+
 - When the finding says the reserved main document has no indirect object within this scan: If this is a real PDF, re-export it: a file that fills its own beginning with `obj` before its first indirect object is not something a producer writes, and whatever wrote this is worth looking at. If it is not a PDF, the name is reserved and the recipient's system will open it as one, so put the main document here. If you believe this is a conforming file this tool cannot read, please report it with the file.
 
 ### `P2` — The PDF appears to be encrypted
@@ -380,6 +400,8 @@ Why this is ours: Verifying PDF/A conformance needs a full PDF/A validator. Repo
 
 **Remedy.** Run a PDF/A validator such as veraPDF if you need the claim verified. This tool only confirms that a claim is present and well-formed.
 
+A finding these lines do not name takes the remedy above.
+
 - When the finding says a PDF/A part 1, 2 or 3 claim has no conformance level: Parts 1, 2 and 3 of PDF/A each require a conformance level beside the part. Re-export with a producer that writes one into the XMP metadata, then run a PDF/A validator such as veraPDF if you need the claim itself verified.
 
 ### `P5` — A declared PDF could not be confirmed to be a PDF document
@@ -400,6 +422,8 @@ Why this is ours: This compares two declarations to surface a wrongly attached f
 
 **Remedy.** Correct NumberOfPages if the metadata is wrong; otherwise check that this is the intended PDF revision and verify its page tree's Count. This compares declarations, not rendered pages.
 
+A finding these lines do not name takes the remedy above.
+
 - When the finding says `The PDF's page tree could not be read`: Check that this is the intended PDF and verify its xref and page tree. Re-export it if appropriate; this bounded reader does not recover damaged xref data or evaluate structures beyond its limits. No page-count comparison was made.
 
 ## schema
@@ -419,6 +443,8 @@ Why this is ours: This is about us, not about the container. It is an error beca
 Reference implementation: `core:XmlReader_EX3`. Citing a key records that the other project checks something in the same area; it does not borrow its claim.
 
 **Remedy.** Open the file in an XML editor and fix the reported position. Nothing else can be checked until the file parses.
+
+A finding these lines do not name takes the remedy above.
 
 - When the finding says `the document is in <encoding>, as its first bytes say, and this reader does not read <encoding>`: Save the metadata as UTF-8 (or UTF-16) and send it again.
 
@@ -447,6 +473,8 @@ Why this is ours: A metadata file is data. Entity expansion lets it read local f
 Why this is ours: The document did something the schema checker would not follow to the end — nesting past its depth limit, for instance. We cannot say the metadata conforms and we cannot say it does not, so we say what happened instead. It is an error because a report that quietly skipped the check would be worse than no report.
 
 **Remedy.** Simplify the metadata so the checker can reach the end of it — the reported reason says what stopped it. If the file is genuinely this shape, check it against the schema with a validator of your own: the limit that gave up belongs to this tool, not to VDI 2770.
+
+A finding these lines do not name takes the remedy above.
 
 - When the finding says the schema violation listing reached its limit: Correct the violations this report does list and run it again; the ones past the limit are reported once there is room for them. They are your document's, not this tool's — only the stopping is ours.
 

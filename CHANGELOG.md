@@ -4,23 +4,32 @@ Sections through 0.7.0 had their wording tidied after their tags; the text each 
 
 ## 1.0.2 — unreleased
 
-- **Refused entries have descriptions that fit their reasons.** The `Z12`
-  `title` is now "An entry in the container was refused". The `F1` `message`
-  for a refused placement is now "A file named in the metadata is in the
-  container under an entry laid out where no ordinary writer puts one".
-  Consumers matching those strings should update their matches.
+- **Refused entries have descriptions that fit their reasons.** Every `Z12`
+  finding's `message`, which is the rule's `title`, now reads "An entry in the
+  container was refused" where it read "A file in the container could not be
+  read". The `F1` for a declared file whose entry was refused for where its
+  bytes lie now reads "A file named in the metadata is in the container under
+  an entry laid out where no ordinary writer puts one" where it read "A file
+  named in the metadata is in the container but could not be read", which
+  `F1` still says for an entry whose bytes could not be read. The `detail` of
+  that `F1`, and of the one for an entry that names itself more than once,
+  gives the reader's reason without saying the bytes could not be read.
+  Consumers matching the old strings should update their matches.
   **This moves verdicts:** none.
 - **The front page distinguishes declared archives this reader opens from
-  those the depth limit keeps closed.** The latter draw `Z14`; their entries
-  are not read and they are not judged as containers.
+  those the depth limit keeps closed.** The latter draw `Z14` too, as an
+  opened one that is not a container does; their entries are not read and
+  they are not judged as containers.
   **This moves verdicts:** none.
 - **Four archive-end conditions have boundary tests and mutation rows.** They
   hold the last-record choice, ZIP64 record size, empty directory size and
   listed-entry count to both sides of their existing conditions.
   **This moves verdicts:** none.
-- **The rules page pairs each reason with its remedy.** The generated lists
-  read the rule modules' advice, including placeholders for a compression
-  method or a member name. A check holds the lists to the named `fix` sources.
+- **The rules page pairs each reason that has a remedy of its own with it.**
+  The generated lists read the rule modules' advice, including placeholders
+  for a compression method, a member name or a reserved name, and say that a
+  finding they do not name takes the rule's remedy. A check holds the lists
+  to the named `fix` sources.
   **This moves verdicts:** none.
 - **Reason-specific remedies are named where the rules use them.** The rule
   modules keep their advice in module constants and small template functions.

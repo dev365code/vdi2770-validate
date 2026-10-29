@@ -552,7 +552,8 @@ from deciding how a line begins and measures only a finding that can fit;
 `0.10.1`, which carried only this project's pages about itself; `0.10.2`,
 which writes a bug report a person can attach and leaves every verdict where it
 was; `0.10.3`, which gives every rule a container can break a fixture pair;
-and `1.0.2`, whose changes move no verdict.
+and `1.0.2`, which rewords the `Z12` title and the `F1` message for an entry
+refused for where its bytes lie, and moves no verdict.
 A patch is a smaller promise than a minor release;
 it is not a promise that nothing your pipeline reads can change.
 

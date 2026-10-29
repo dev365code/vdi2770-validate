@@ -348,6 +348,33 @@ def test_an_entry_laid_out_where_no_writer_puts_one_is_told_to_rebuild_the_archi
                 "laid out where no ordinary writer puts one")
 
 
+def _whole_bytes_details():
+    """The `F1` details of the refused entries whose bytes may be whole: the
+    entry naming two files, and those laid out where no ordinary writer puts
+    one that a declaration names."""
+    files = dict(FILES)
+    files[LAST] = files[LAST].replace(b"B.pdf", b"X.pdf")
+    shapes = {"a-unicode-path-naming-another-file":
+              ENTRIES.cases(files, SUBJECT)["a-unicode-path-naming-another-file"]}
+    shapes.update({name: CASES[name] for name, rules in LAID_OUT.items() if "F1" in rules})
+    return {name: [f.detail or "" for f in check_bytes(data, "0").findings if f.rule.id == "F1"]
+            for name, data in shapes.items()}
+
+
+def test_an_entry_whose_bytes_may_be_whole_is_not_said_to_be_unreadable():
+    """The headline of these `F1`s says what the refusal was -- an entry that
+    names itself more than once, or one laid out where no ordinary writer puts
+    one -- and the detail under it went on to say the bytes could not be read,
+    which is the one thing nobody established about them. The detail gives the
+    reader's own sentence for why it refused the entry, and nothing else."""
+    details = _whole_bytes_details()
+    assert len(details) == 4 and all(details.values()), details
+    for name, said in details.items():
+        for detail in said:
+            assert "could not be read" not in detail, (name, detail)
+            assert " is in the archive but was refused: its " in detail, (name, detail)
+
+
 @pytest.mark.parametrize("name", sorted(CASES))
 def test_a_later_read_with_no_list_refuses_what_the_first_one_refused(name):
     """`member_bytes` and `member_reader` are public, and a caller need not

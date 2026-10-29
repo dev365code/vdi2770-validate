@@ -120,8 +120,12 @@ def test_the_page_puts_each_reason_beside_its_remedy():
     body = PAGE.read_text(encoding="utf-8")
     for rid, rows in rules_doc.reason_rows().items():
         section = body.split(f"### `{rid}` — ", 1)[1].split("\n### ", 1)[0]
+        # A line opens with what the finding says, or with the condition where
+        # the finding does not carry the words its remedy turns on; and above
+        # the lines, that a finding they do not name takes the rule's remedy.
+        assert rules_doc.UNLISTED in section
         for when, remedy in rows:
-            assert f"- When the finding says {when}: {remedy}" in section
+            assert f"- {rules_doc.lead(when)}: {remedy}" in section
     assert "<method>" in body and "<member>" in body
 
 

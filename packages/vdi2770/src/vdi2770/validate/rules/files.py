@@ -192,6 +192,9 @@ def check(container, document, foreign) -> Iterator[Finding]:
             r = rule("F1")
             rejected = members.refusal(f.file_name)
             because = members.refused_by(f.file_name)
+            # The reader's own sentence, for a refusal whose bytes may be whole: the
+            # sentence the table keeps for the kind says they could not be read.
+            own = None
             # The headline has to match the detail, and the detail has to match
             # *why*. A declared file that is in the archive is not missing, and
             # printing the rule's own title over that put a false sentence above
@@ -288,6 +291,7 @@ def check(container, document, foreign) -> Iterator[Finding]:
                 message = ("A file named in the metadata is in the container under "
                            "an entry that names itself more than once")
                 fix = ONE_NAME
+                own = because.detail
                 whose = None
             elif layout_remedy(because.detail):
                 # Its bytes may be whole: what the entry does not have is a
@@ -296,6 +300,7 @@ def check(container, document, foreign) -> Iterator[Finding]:
                 message = ("A file named in the metadata is in the container under an entry "
                            "laid out where no ordinary writer puts one")
                 fix = layout_remedy(because.detail)
+                own = because.detail
                 whose = None
             elif method_remedy(because.detail):
                 # Not a truncated transfer either: the tool and the settings
@@ -332,7 +337,7 @@ def check(container, document, foreign) -> Iterator[Finding]:
                           else f"{f.file_name!r} names more than one member of "
                                f"the archive")
             elif rejected:
-                detail = f"{f.file_name!r} is in the archive but was refused: {rejected}"
+                detail = f"{f.file_name!r} is in the archive but was refused: {own or rejected}"
             else:
                 # A member no declaration can reach is a different thing from a
                 # file nobody sent. The archive held `B.pdf ` and the metadata

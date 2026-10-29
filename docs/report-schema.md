@@ -84,6 +84,9 @@ It does **not** promise that the same container draws the same findings
 forever. Rules are added and verdicts move; that is what a minor release is,
 and `toolVersion` is what tells you which rule set judged this run.
 
+`message`, `detail` and `remedy` are sentences for a person: any release may
+reword them, and the CHANGELOG names it when it does. Match on `rule`.
+
 ## The fields
 
 | field | meaning |
