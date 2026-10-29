@@ -334,7 +334,7 @@ def build_commands(text):
         # `$(PYTHON)` into `(PYTHON)`, so the Makefile's two recipes were read
         # as no builds at all and this compared CI against the release while
         # silently skipping the third file it names.
-        stripped = line.replace("$(PYTHON)", "python").strip()
+        stripped = line.replace('"$(PYTHON)"', "python").replace("$(PYTHON)", "python").strip()
         if not stripped.startswith(("python -m build", "run: python -m build")):
             continue
         words = stripped.split("run: ", 1)[-1].split("#", 1)[0].split()
