@@ -155,3 +155,9 @@ def test_the_file_reasons_quote_the_messages_the_rule_prints():
                 and any(isinstance(t, ast.Name) and t.id == "message" for t in node.targets)}
     headings = [when for when, _ in rules_doc.reason_rows()["F1"]]
     assert all(any(message in when for when in headings) for message in messages)
+
+
+def test_template_slots_are_visible_in_markdown():
+    body = PAGE.read_text(encoding="utf-8")
+    assert "It is compressed with `<method>`, and this tool" in body
+    assert "The member '`<member>`' stores this name" in body

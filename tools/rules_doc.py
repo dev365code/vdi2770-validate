@@ -112,6 +112,11 @@ def reason_rows():
                 schema.encoding_remedy(", as its first bytes say, and this reader does not read <encoding>"))],
         "X4": [("the schema violation listing reached its limit", schema.CORRECT_LISTED)],
     }
+    for entries in rows.values():
+        for n, (when, remedy) in enumerate(entries):
+            for slot in ("<method>", "<member>", "<reserved-name>"):
+                remedy = remedy.replace(slot, f"`{slot}`")
+            entries[n] = (when, remedy)
     return rows
 
 
