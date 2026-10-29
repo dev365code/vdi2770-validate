@@ -28,6 +28,9 @@ sys.path.insert(1, str(ROOT / "packages" / "vdi2770" / "src"))
 from vdi2770_validate.catalog import rules  # noqa: E402
 from vdi2770_validate.model import About, Obligation  # noqa: E402
 
+from vdi2770.model import Defect, Location  # noqa: E402
+from vdi2770.validate.rules import container, files, metadata, pdf, schema  # noqa: E402
+
 BASIS = {
     Obligation.SCHEMA: "the XSD VDI publishes free says so, mechanically",
     Obligation.PUBLISHED_TABLE: "a freely published table says so (IDTA 02004)",
@@ -43,13 +46,84 @@ def in_order(r):
     return (r.layer, letters, int(r.id[len(letters):] or 0))
 
 
+def reason_rows():
+    """Reason-specific advice, read from the same names the findings use."""
+    rows = {
+        "Z5": [(when, container.REMEDY_FOR_DEFECT[kind]) for kind, when in [
+            ("member-budget-exhausted", "the tree names more members than this read will hold"),
+            ("too-many-members", "`<count> entries, limit is <limit>`"),
+            ("member-too-large", "`the archive says <size> bytes, over the` limit, or a folder's members exceed it"),
+            ("suspicious-compression", "`the archive says it expands` past this tool's ratio limit"),
+            ("archive-too-large", "`the sizes this archive declares add up to` more than this tool will read"),
+            ("metadata-too-large", "`<size> bytes; this tool parses at most <limit>`"),
+            ("container-budget-exhausted", "this read has opened its limit of containers, or reading metadata would pass its byte limit"),
+            ("decompression-budget-exhausted", "`this read has inflated` its allowance"),
+        ]] + [("`this read spent its <limit> GiB budget for inflating PDF streams`", pdf.SPLIT_PDF_READ)],
+        "Z9": [
+            ("a folder is a container this tool did not open",
+             container.folder_remedy(["<member>"], [], {})),
+            ("a folder this tool opened holds a reserved name",
+             container.folder_remedy([], ["<member>"], {"<member>/": {"<reserved-name>"}})),
+        ],
+        "Z10": [
+            ("`<count> entries in this archive carry this name`",
+             container.REMEDY_FOR_DEFECT["ambiguous-name"]),
+            ("`Two members of the archive extract to the same path`", container.ONE_PATH),
+            ("`Two members of the archive come to one name`", container.ONE_SPELLING_AND_PATH),
+            ("two spellings print alike", container.ONE_SPELLING),
+            ("two names become one when case is folded", container.ONE_CASE),
+        ],
+        "Z11": [
+            ("a declared file is a container whose root holds a reserved name", container.MOVE_CONTAINER),
+            ("a folder holds a container delivered unzipped", container.MOVE_FOLDER),
+        ],
+        "Z12": [
+            ("the entry needs a password",
+             container._remedy_for(Defect("member-unreadable", Location(), "encrypted"))),
+            ("an Info-ZIP Unicode Path field names another file, or occurs more than once", container.ONE_NAME),
+            ("`its local header, at byte` or `its data runs to byte` describes an entry's placement",
+             container.layout_remedy("its data runs to byte <offset>")),
+            ("`member compressed with <method>`", container.method_remedy("member compressed with <method>;")),
+        ],
+        "F1": [
+            ("the declaration matches more than one member whose names print alike", files.ONE_PRINTED_NAME),
+            ("the declaration matches more than one member at one extracted path", files.ONE_EXTRACTED_PATH),
+            ("the file is in the container more than once", files.REMOVE_REPEATS),
+            ("the name is read as IBM Code Page 437", files.name_flag_remedy("<member>")),
+            ("this tool declined to read the file", files.READ_SEPARATELY),
+            ("the name would escape the extraction directory", files.RENAME_RELATIVE),
+            ("the file needs a password", files.REMOVE_PASSWORD),
+            ("the entry names itself more than once", files.ONE_NAME),
+            ("the entry's placement is refused", files.layout_remedy("its data runs to byte <offset>")),
+            ("the method is not expanded", files.method_remedy("member compressed with <method>;")),
+            ("the listed file could not be read", files.SEND_AGAIN),
+            ("no declaration can reach the name", files.RENAME_DECLARED),
+        ],
+        "F2": [
+            ("the other kind's classifying name is present at the root", files.ONE_KIND),
+            ("whitespace at the edge of the name cannot be declared", files.RENAME_EDGE_SPACE),
+        ],
+        "M1": [("the metadata's names are in another namespace, or none", metadata.NAMESPACE_DECLARATION)],
+        "M4": [("`The English class name is not the published one`", metadata.PUBLISHED_ENGLISH)],
+        "P1": [("the reserved main document has no indirect object within this scan", pdf.REEXPORT_MAIN)],
+        "P4": [("a PDF/A part 1, 2 or 3 claim has no conformance level", pdf.WRITE_CONFORMANCE)],
+        "P6": [("`The PDF's page tree could not be read`", pdf.CHECK_PAGE_TREE)],
+        "X1": [("the first bytes name an encoding this reader does not read",
+                schema.encoding_remedy(", as its first bytes say, and this reader does not read <encoding>"))],
+        "X4": [("the schema violation listing reached its limit", schema.CORRECT_LISTED)],
+    }
+    return rows
+
+
 def page() -> str:
     catalogue = sorted(rules().values(), key=in_order)
+    reasons = reason_rows()
     out = [
         "# The rules",
         "",
         "Generated from [`rules.json`](../packages/vdi2770/src/vdi2770/validate/data/rules.json) by",
-        "`tools/rules_doc.py`. Edit the data, not this page — `make check` compares them.",
+        "`tools/rules_doc.py`, which also reads reason-specific remedies from the rule modules.",
+        "Edit those sources, not this page — `make check` compares them.",
         "",
         "`obligation` says where a requirement comes from, and the vocabulary is deliberately",
         "not MUST/SHOULD: this project has not read VDI 2770, so it never claims to quote",
@@ -111,6 +185,9 @@ def page() -> str:
             if getattr(r, "why_ours", ""):
                 out += [f"Why this is ours: {r.why_ours}", ""]
             out += [f"**Remedy.** {r.remedy}", ""]
+            if r.id in reasons:
+                out += [f"- When the finding says {when}: {remedy}"
+                        for when, remedy in reasons[r.id]] + [""]
     return "\n".join(out).rstrip() + "\n"
 
 

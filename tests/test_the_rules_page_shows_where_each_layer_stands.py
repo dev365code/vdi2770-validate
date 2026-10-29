@@ -70,3 +70,70 @@ def test_the_totals_are_the_sum_of_the_rules():
     assert last[0].strip("*").lower() == "total", last
     assert int(last[-1]) == len(rules()), (
         f"the table totals {last[-1]} and the catalogue holds {len(rules())}")
+
+
+def test_every_named_fix_source_is_used_in_the_page_lists():
+    import ast
+    import inspect
+    import sys
+
+    from vdi2770.validate.rules import container, files, metadata, pdf, schema
+
+    sys.path.insert(0, str(ROOT / "tools"))
+    import rules_doc
+
+    generator = ast.parse(inspect.getsource(rules_doc))
+    listed = {(node.value.id, node.attr) for node in ast.walk(generator)
+              if isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name)}
+    body = PAGE.read_text(encoding="utf-8")
+    expected = set()
+    for module in (container, files, metadata, pdf, schema):
+        tree = ast.parse(inspect.getsource(module))
+        module_name = module.__name__.rsplit(".", 1)[-1]
+        named = {node.name for node in tree.body if isinstance(node, ast.FunctionDef)}
+        named |= {target.id for node in tree.body if isinstance(node, ast.Assign)
+                  for target in node.targets if isinstance(target, ast.Name)}
+        if module is files:
+            named |= {"ONE_NAME", "layout_remedy", "method_remedy"}
+        expressions = [node.value for node in ast.walk(tree)
+                       if isinstance(node, ast.keyword) and node.arg == "fix"
+                       or isinstance(node, ast.Assign)
+                       and any(isinstance(t, ast.Name) and t.id == "fix" for t in node.targets)]
+        for expression in expressions:
+            for node in ast.walk(expression):
+                if isinstance(node, ast.Name) and node.id in named:
+                    expected.add((module_name, node.id))
+                    remedy = getattr(module, node.id)
+                    if isinstance(remedy, str):
+                        assert remedy in body, (module_name, node.id)
+    assert expected <= listed, sorted(expected - listed)
+    for remedy in container.REMEDY_FOR_DEFECT.values():
+        assert remedy in body
+
+
+def test_the_page_puts_each_reason_beside_its_remedy():
+    import sys
+
+    sys.path.insert(0, str(ROOT / "tools"))
+    import rules_doc
+
+    body = PAGE.read_text(encoding="utf-8")
+    for rid, rows in rules_doc.reason_rows().items():
+        section = body.split(f"### `{rid}` — ", 1)[1].split("\n### ", 1)[0]
+        for when, remedy in rows:
+            assert f"- When the finding says {when}: {remedy}" in section
+    assert "<method>" in body and "<member>" in body
+
+
+def test_the_namespace_and_english_advice_stay_with_their_findings():
+    import sys
+
+    from vdi2770.validate.rules import metadata
+
+    sys.path.insert(0, str(ROOT / "tools"))
+    import rules_doc
+
+    rows = rules_doc.reason_rows()
+    assert metadata.NAMESPACE_DECLARATION in [fix for _, fix in rows["M1"]]
+    assert metadata.PUBLISHED_ENGLISH in [fix for _, fix in rows["M4"]]
+    assert "M3" not in rows

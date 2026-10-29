@@ -4,6 +4,10 @@ Sections through 0.7.0 had their wording tidied after their tags; the text each 
 
 ## 1.0.2 — unreleased
 
+- **The rules page pairs each reason with its remedy.** The generated lists
+  read the rule modules' advice, including placeholders for a compression
+  method or a member name. A check holds the lists to the named `fix` sources.
+  **This moves verdicts:** none.
 - **Reason-specific remedies are named where the rules use them.** The rule
   modules keep their advice in module constants and small template functions.
   The emitted `fix` bytes stay the same.
