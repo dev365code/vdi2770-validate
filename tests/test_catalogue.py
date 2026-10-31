@@ -150,7 +150,6 @@ def test_an_unknown_class_id_has_no_published_names():
 # schema or table. Listing them here makes the claim a decision someone made.
 CONTAINER_RULES = {
     "Z1": "a file that is not a readable ZIP is not one; zipfile decides, not VDI",
-    "Z2": "an archive with no members has no members",
     "X1": "well-formedness is XML 1.0. The VDI schema cannot speak until this holds",
     "Z12": "a member whose CRC fails or that needs a password cannot be decompressed; zlib decides",
 }

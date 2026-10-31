@@ -57,6 +57,14 @@ def lead(when):
     return when if when.startswith("When ") else f"When the finding says {when}"
 
 
+#: A paragraph the page adds under a rule, written here rather than in rules.json because it speaks of how this
+#: reader reads rather than of the requirement. The quoted phrases are the reader's own, and
+#: tests/test_the_rules_page_quotes_the_reader_on_a_zip_it_does_not_read.py holds them to its findings.
+NOTES = {
+    "Z1": ('Some of these reasons are this reader declining a structure the ZIP specification allows, not a fault in the file: an archive split across several files (APPNOTE 8.2) and a zip64 end record carrying extensible data (APPNOTE 4.3.14.3). The finding says so in its own words — "this reader reads an archive that is one file", "which this reader does not read".'),
+}
+
+
 def reason_rows():
     """Reason-specific advice, read from the same names the findings use."""
     rows = {
@@ -201,6 +209,8 @@ def page() -> str:
                           "the same area; it does not borrow its claim.", ""]
             if getattr(r, "why_ours", ""):
                 out += [f"Why this is ours: {r.why_ours}", ""]
+            if r.id in NOTES:
+                out += [NOTES[r.id], ""]
             out += [f"**Remedy.** {r.remedy}", ""]
             if r.id in reasons:
                 out += [UNLISTED, ""] + [f"- {lead(when)}: {remedy}"

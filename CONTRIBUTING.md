@@ -61,7 +61,7 @@ selection or the tool that has to go red. Rows that build the page run their
 checks only on the page's Python (3.13); on other versions those checks are
 skipped.
 
-`make standalone` runs each of the 122 test files on its own. A suite is a shared
+`make standalone` runs each of the 124 test files on its own. A suite is a shared
 process, so a file can pass because an earlier one imported something —
 `tests/test_offline.py` did exactly that for weeks. Run it when you add a
 module-level import to a test.

@@ -11,9 +11,9 @@ tool, because both are errors on purpose and severity cannot carry the differenc
 
 - **`schema`** (1) — the XSD VDI publishes free says so, mechanically
 - **`table`** (2) — a freely published table says so (IDTA 02004)
-- **`container`** (4) — mechanics of ZIP and XML — true without VDI 2770
+- **`container`** (3) — mechanics of ZIP and XML — true without VDI 2770
 - **`reference`** (14) — observed in the MIT reference implementation, **not** verified against the guideline, which is paywalled
-- **`ours`** (23) — our own judgement, and it carries a reason
+- **`ours`** (24) — our own judgement, and it carries a reason
 
 44 rules.
 
@@ -21,13 +21,13 @@ Where each layer stands:
 
 | layer | `schema` | `table` | `container` | `reference` | `ours` | total |
 |---|---|---|---|---|---|---|
-| `container` | 0 | 0 | 3 | 3 | 8 | 14 |
+| `container` | 0 | 0 | 2 | 3 | 9 | 14 |
 | `files` | 0 | 0 | 0 | 3 | 1 | 4 |
 | `metadata` | 0 | 2 | 0 | 7 | 4 | 13 |
 | `pdf` | 0 | 0 | 0 | 1 | 5 | 6 |
 | `schema` | 1 | 0 | 1 | 0 | 4 | 6 |
 | `tool` | 0 | 0 | 0 | 0 | 1 | 1 |
-| **total** | **1** | **2** | **4** | **14** | **23** | **44** |
+| **total** | **1** | **2** | **3** | **14** | **24** | **44** |
 
 ## container
 
@@ -37,13 +37,17 @@ Where each layer stands:
 
 Reference implementation: `processor:ZU_MESSAGE_002`, `processor:ZU_MESSAGE_003` (displayed as `ZU_002`, `ZU_003`). Citing a key records that the other project checks something in the same area; it does not borrow its claim.
 
+Some of these reasons are this reader declining a structure the ZIP specification allows, not a fault in the file: an archive split across several files (APPNOTE 8.2) and a zip64 end record carrying extensible data (APPNOTE 4.3.14.3). The finding says so in its own words — "this reader reads an archive that is one file", "which this reader does not read".
+
 **Remedy.** A VDI 2770 container is a ZIP archive. Rebuild it with a standard ZIP tool and check the file was not truncated in transfer.
 
 ### `Z2` — The archive is empty
 
-*error* · obligation `container`
+*error* · obligation `ours`
 
 Reference implementation: `processor:REP_MESSAGE_002` (displayed as `REP_002`). Citing a key records that the other project checks something in the same area; it does not borrow its claim.
+
+Why this is ours: "A ZIP file containing only an "end of central directory record" is considered an empty ZIP file" (APPNOTE 4.3.1), so an empty archive is a ZIP file, and nothing about it is wrong as ZIP. It is an error here because an archive with nothing in it is neither a document container nor a documentation container — the same ground `Z3` stands on.
 
 **Remedy.** Add the metadata file and the documents. An empty archive cannot be classified as either container kind.
 

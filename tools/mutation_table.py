@@ -2121,8 +2121,8 @@ PLATFORM_ROWS = [
 
     ('docs/a-layer-total-is-checked-like-any-other-cell',
      'docs/rules.md',
-     '| `container` | 0 | 0 | 3 | 3 | 8 | 14 |',
-     '| `container` | 0 | 0 | 3 | 3 | 8 | 15 |',
+     '| `container` | 0 | 0 | 2 | 3 | 9 | 14 |',
+     '| `container` | 0 | 0 | 2 | 3 | 9 | 15 |',
      ['tests/test_the_rules_page_shows_where_each_layer_stands.py::test_every_number_in_the_table_is_the_number_in_the_data'],
      'the totals were skipped as sums of the cells above them, so a generator that miscounted them, regenerated, read as a page that matched its catalogue'),
 
@@ -3034,7 +3034,7 @@ LISTING_BUDGET_ROWS = [
 
     ("pages/the-samples-page-is-what-the-tool-says",
      "docs/official-samples.md",
-     "| `empty.zip` | 1 | 1 | 0 | 0 | Z2 ×1 (container) |",
+     "| `empty.zip` | 1 | 1 | 0 | 0 | Z2 ×1 (ours) |",
      "| `empty.zip` | 0 | 0 | 0 | 0 | none |",
      ["tests/test_the_samples_page_is_what_the_tool_says.py::"
       "test_the_samples_page_is_what_the_tool_says"],

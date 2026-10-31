@@ -259,6 +259,10 @@ Six more, this time observed in the sweep rather than read:
   further back than the longest comment reaches. Which bytes that project took
   for the central directory in those seven is not visible in the codes a run
   records, and is not claimed here.
+  Python's own ZIP reading refuses a zip64 end record whose size field does not
+  match where its locator follows in the patch releases measured here — 3.9.25,
+  3.10.21, 3.11.16, 3.12.14, 3.13.15 and 3.14.7 — and reads one in 3.9.6,
+  3.12.5, 3.12.10 and 3.13.2; this tool refuses it on every Python.
 - **An entry Python's own ZIP reading names or places two ways is read as it
   stands.** Four fixtures rename or move the conforming container's PDF entry
   field by field. This tool takes an entry's name from its Info-ZIP Unicode Path
