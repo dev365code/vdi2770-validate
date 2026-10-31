@@ -52,7 +52,7 @@ def test_ci_checks_the_command_as_pip_gives_it_without_applying_the_page_lock():
     # wheels are the locked ones. Three files of it witnessed the command and
     # nothing else, so a dependency the index resolves differently could break
     # every other check and this row would still be green.
-    assert rows[0] == {"os": "ubuntu-latest", "python-version": "3.13",
+    assert rows[0] == {"os": "ubuntu-24.04", "python-version": "3.13",
                        "dependencies": "as pip gives it",
                        "test-selection": "--deselect tests/test_bundles_take_only_the_lock.py::"
                                          "test_the_locked_wheels_require_only_versions_inside_the_lock"}

@@ -18,8 +18,11 @@ permissions:
   contents: read
 
 jobs:
+  # `ubuntu-latest` now resolves to Ubuntu 26.04, where setup-python offers
+  # neither 3.9 nor 3.13.2; pinned to 24.04, the image this project's releases
+  # have run on, until the matrix moves.
   moved:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 

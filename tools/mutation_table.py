@@ -2993,8 +2993,8 @@ LISTING_BUDGET_ROWS = [
 
     ("gates/a-condition-can-skip-the-weekly-question",
      ".github/workflows/upstream.yml",
-     "  moved:\n    runs-on: ubuntu-latest",
-     "  moved:\n    if: false\n    runs-on: ubuntu-latest",
+     "  moved:\n    runs-on: ubuntu-24.04",
+     "  moved:\n    if: false\n    runs-on: ubuntu-24.04",
      ["tests/test_the_reference_is_watched.py::"
       "test_the_question_is_asked_every_week"],
      "a condition skips the job that asks, and a skipped job is reported as a "

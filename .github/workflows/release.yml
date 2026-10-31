@@ -69,6 +69,9 @@ on:
 # without its engine, which is why the order is what it is.
 
 jobs:
+  # `ubuntu-latest` now resolves to Ubuntu 26.04, where setup-python offers
+  # neither 3.9 nor 3.13.2; pinned to 24.04, the image this project's releases
+  # have run on, until the matrix moves.
   # The trigger is where a release decides whether to happen. A tag push is a
   # release; a manual run is a rehearsal unless its `dry_run` input is off.
   # This job is the whole of that decision -- it runs for a real release and
@@ -80,14 +83,14 @@ jobs:
   # on an input a push does not carry.
   not-a-dry-run:
     if: ${{ github.event_name != 'workflow_dispatch' || !inputs.dry_run }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - run: echo "a real release; the publish jobs will run"
 
   # The reader goes first, and the whole gate runs here — before anything at all
   # has been published, which is the only moment a refusal is still free.
   build-reader:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       # Only to ask whether CI judged this commit. The default token can read
       # the repository; run history is a separate scope, and without it the gate
@@ -182,7 +185,7 @@ jobs:
 
   publish-reader:
     needs: [upgrade-gate, not-a-dry-run]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment: pypi-vdi2770
     permissions:
       id-token: write        # Trusted Publishing; no API token is stored anywhere
@@ -226,7 +229,7 @@ jobs:
   # question that does need the reader published has moved to its own job.
   build-rules:
     needs: build-reader
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       # `fetch-depth: 0` although nothing in this job reads the tags: the two
       # tag checks below take the tag from the ref that started the run. The
@@ -278,7 +281,7 @@ jobs:
   # by name, which is where every upgrade failure here has been.
   upgrade-gate:
     needs: [build-reader, build-rules]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       # Run history and its artifacts are a separate read scope. This job
       # compares against the page CI opened before offering a release asset.
@@ -398,7 +401,7 @@ jobs:
   # holds `id-token: write` for a distribution.
   reader-is-on-the-index:
     needs: publish-reader
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       # `fetch-depth: 0`: the gate asks the tag history whether this release is
       # tagged, and a default checkout is `--depth 1 --no-tags`.
@@ -463,7 +466,7 @@ jobs:
   # rather than a release to take back.
   the-index-as-it-now-is:
     needs: publish-rules
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
@@ -497,7 +500,7 @@ jobs:
 
   publish-rules:
     needs: [reader-is-on-the-index, upgrade-gate, not-a-dry-run]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # Not the reader's environment. The environment is half of what PyPI keys
     # the publisher on, so sharing it would let either job publish as the other
     # package.
