@@ -292,7 +292,7 @@ def test_the_gate_can_read_this_repositorys_own_manifest():
 
 
 def test_a_floor_at_this_release_is_what_the_merge_left():
-    """`>=` rather than `==`, because after the merge the alias is two lines.
+    """`>=` rather than `==`, because after the merge the alias only makes one name another.
 
     The exact pin existed to stop a pair of code distributions being half-moved.
     There is no pair now. What must still be true is that installing the alias

@@ -47,7 +47,7 @@ DISTRIBUTIONS = [
 #: is answered below by a different question, and a distribution reaching this
 #: table has to say what it is.
 NO_SUITE = {
-    "vdi2770-validate": "two lines that make the old import name the same "
+    "vdi2770-validate": "an alias that makes the old import name the same "
                         "object as `vdi2770.validate`. The rules, the data and "
                         "the suite are in the other distribution and travel in "
                         "its sdist; shipping them here would run them against "

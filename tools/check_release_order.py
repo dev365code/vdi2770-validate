@@ -94,7 +94,7 @@ def floor_of(requirement: str):
     """The version below which this requirement cannot go, or `None`.
 
     Before the merge the rules named the reader with an exact `==`, because the
-    two carried code that had to match. The alias is two lines now and there is
+    two carried code that had to match. The alias carries no such code now and there is
     no pair to hold together, so the requirement is a floor at its own version:
     installing it can never leave an engine older than the release it stands
     for. `==` still says that, more strongly, so both are read the same way.

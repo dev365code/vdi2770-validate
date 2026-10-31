@@ -305,7 +305,7 @@ def case_3_the_engine_cannot_be_older_than_the_alias(env: Env) -> str:
     """What the installed metadata asks for, not what the repository declares.
 
     Until 0.8.0 this was an exact pin, and an exact pin is what made the pair
-    impossible to half-move. There is no pair now -- the alias is two lines and
+    impossible to half-move. There is no pair now -- the alias only makes one name another and
     the rules live in the engine -- so the requirement is a floor at the alias's
     own version, which says the same thing that still needs saying: installing
     it can never leave an engine older than the release it stands for.

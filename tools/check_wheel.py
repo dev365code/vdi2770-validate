@@ -168,7 +168,7 @@ def pin_names_what_was_built(wheels: list) -> list:
     """The alias asks for an engine at least as new as itself, with the extra.
 
     An exact pin was the invariant while two distributions carried code that had
-    to match. The alias carries none — it is two lines making one name another —
+    to match. The alias carries none — it only makes one name another —
     so what has to be true is narrower and different: the floor equals the
     alias's own version, and the extra is named, or the schema check cannot run
     on a machine that did everything right.

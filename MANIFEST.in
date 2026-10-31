@@ -1,6 +1,6 @@
 # What the alias distribution ships.
 #
-# `vdi2770-validate` is two lines that make the old import name the same object
+# `vdi2770-validate` is an alias that makes the old import name the same object
 # as `vdi2770.validate`. The rules, the schema, the corpus, the tools and the
 # suite all live in `vdi2770` now and travel in its sdist — shipping them here
 # would put a copy of the tool inside a distribution that contains none of it,
