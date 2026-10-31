@@ -260,6 +260,21 @@ def test_the_last_record_the_library_takes_is_the_one_the_reader_takes():
     assert [d.detail for d in c.defects if d.kind == "not-a-zip"] == ["File is not a zip file"]
 
 
+@pytest.mark.parametrize("length", [6, 256])
+def test_either_byte_of_the_comment_length_keeps_the_last_22_bytes_from_being_the_record(length):
+    """The comment length is two bytes, and the last 22 bytes are the end record
+    only when both are zero. A length of 6 sets the first of them and one of 256
+    the second; with the record's own offset spelling a signature six bytes from
+    the end, either is no archive, in the library's words on every release. A
+    reader that read one byte of the two took the last 22 bytes for a record
+    whose comment the file does not hold, and refused the file in other words."""
+    data = ENDS.end(PLAIN, offset=int.from_bytes(ENDS.END, "little"), comment_length=length)
+    assert data[-6:-2] == ENDS.END
+    c = zipread.read(data, "comment.zip")
+    assert c.kind is Kind.UNREADABLE
+    assert [d.detail for d in c.defects if d.kind == "not-a-zip"] == ["File is not a zip file"]
+
+
 @pytest.mark.parametrize("placeholders", [True, False])
 def test_a_zip64_record_smaller_than_its_fixed_fields_is_refused(placeholders):
     """A record of version 1 with nothing extensible gives its size as 44
@@ -282,6 +297,19 @@ def test_the_empty_archive_the_library_writes_is_read():
     c = zipread.read(data, "empty.zip")
     assert c.kind is not Kind.UNREADABLE
     assert [d.detail for d in c.defects if d.kind == "not-a-zip"] == []
+
+
+def test_a_central_directory_one_byte_larger_than_what_precedes_it_is_refused():
+    """The other side of that edge: an end record giving its central directory
+    one byte more than comes before the record. Refused, in this reader's words
+    -- where a reader that let the one byte through handed the archive to the
+    library, whose words for it differ from one release to the next."""
+    data = ENDS.end(PLAIN, size=AT + 1)
+    c = zipread.read(data, "larger.zip")
+    assert c.kind is Kind.UNREADABLE
+    assert [d.detail for d in c.defects if d.kind == "not-a-zip"] == [
+        f"the end record gives the central directory {AT + 1:,} bytes, more than the {AT:,} "
+        f"that come before it"]
 
 
 @pytest.mark.parametrize("form", ["end", "zip64"])
