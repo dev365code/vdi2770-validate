@@ -2,7 +2,7 @@
 
 Sections through 0.7.0 had their wording tidied after their tags; the text each version carried when it was published is in that tag's own `CHANGELOG.md`. From 0.8.0 on, a released section is frozen at its tag and takes only appended `*(Correction ...)*` lines.
 
-## 1.0.2 — unreleased
+## 1.0.2 — 2026-11-01
 
 Who should take this release: anyone who matches the text of a `Z12` finding,
 or of the `F1` for a declared file whose entry was refused for where its bytes
