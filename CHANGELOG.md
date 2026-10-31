@@ -5,15 +5,16 @@ Sections through 0.7.0 had their wording tidied after their tags; the text each 
 ## 1.0.3 — unreleased
 
 Who should take this release: anyone who filters findings by `obligation`, or
-matches the text of a `Z1` finding for a split archive: every `Z2` finding,
-for an archive with nothing in it, now says `ours` where it said `container`,
-and the rules page says why; and the `Z1` finding for an archive whose zip64
-locator names another disk, or more than one, gives this reader's sentence for
-a split archive where it gave Python's. No verdict or exit code moves, and the
-report keeps its fields. Readers of the rules page and the divergences page
-get two more things written down: which `Z1` reasons are this reader declining
-a structure the ZIP specification allows, and where Python's own ZIP reading
-and this tool part on a zip64 end record's size field.
+matches the line the text report prints under a `Z2` finding or the text of a
+`Z1` finding for a split archive: every `Z2` finding, for an archive with
+nothing in it, now says `ours` where it said `container`, and the rules page
+says why; and the `Z1` finding for an archive whose zip64 locator names
+another disk, or more than one, gives this reader's sentence for a split
+archive where it gave Python's. No verdict or exit code moves, and the report
+keeps its fields. Readers of the rules page and the divergences page get two
+more things written down: which `Z1` reasons are this reader declining a
+structure the ZIP specification allows, and where Python's own ZIP reading and
+this tool part on a zip64 end record's size field.
 
 - **`Z2` is this project's own judgement, and says why.** An archive holding
   only its end record is an empty ZIP file, and nothing about it is wrong as

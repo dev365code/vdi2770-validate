@@ -553,10 +553,10 @@ from deciding how a line begins and measures only a finding that can fit;
 which writes a bug report a person can attach and leaves every verdict where it
 was; `0.10.3`, which gives every rule a container can break a fixture pair;
 `1.0.2`, which rewords the `Z12` title and the `F1` message for an entry
-refused for where its bytes lie, and moves no verdict; and `1.0.3`, which says
-why an empty archive is this project's own judgement and which `Z1` reasons are
-this reader declining what ZIP allows, rewords the `Z1` sentence for an archive
-its zip64 locator splits, and moves no verdict.
+refused for where its bytes lie, and moves no verdict; and `1.0.3`, which moves
+an empty archive's `Z2` to obligation `ours` and says why, says which `Z1`
+reasons are this reader declining what ZIP allows, rewords the `Z1` sentence
+for an archive its zip64 locator splits, and moves no verdict.
 A patch is a smaller promise than a minor release;
 it is not a promise that nothing your pipeline reads can change.
 
