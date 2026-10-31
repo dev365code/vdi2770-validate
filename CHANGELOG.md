@@ -16,7 +16,10 @@ own ZIP reading and this tool part on a zip64 end record's size field.
   only its end record is an empty ZIP file, and nothing about it is wrong as
   ZIP; it is an error here because it is neither container kind. Every `Z2`
   finding's `obligation` now reads `ours` where it read `container`, in the
-  JSON report and on the samples page.
+  JSON report and on the samples page, and the text report, which is the
+  command's default output and what the Action's log and the browser page
+  show, prints "per this tool's own rule" under it where it printed "per ZIP
+  and XML mechanics, true without VDI 2770".
   **This moves verdicts:** none.
 - **The rules page says which `Z1` reasons are this reader declining what ZIP
   allows.** A split archive and a zip64 end record carrying extensible data
