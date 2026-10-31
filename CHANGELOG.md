@@ -25,11 +25,11 @@ Sections through 0.7.0 had their wording tidied after their tags; the text each 
   hold the last-record choice, ZIP64 record size, empty directory size and
   listed-entry count to both sides of their existing conditions.
   **This moves verdicts:** none.
-- **The rules page pairs each reason that has a remedy of its own with it.**
-  The generated lists read the rule modules' advice, including placeholders
-  for a compression method, a member name or a reserved name, and say that a
-  finding they do not name takes the rule's remedy. A check holds the lists
-  to the named `fix` sources.
+- **The rules page pairs each reason the rule modules give a remedy of its own
+  with it.** The generated lists read the rule modules' advice, including
+  placeholders for a compression method, a member name or a reserved name, and
+  say that a finding they do not name takes the rule's remedy. A check holds
+  the lists to the named `fix` sources.
   **This moves verdicts:** none.
 - **Reason-specific remedies are named where the rules use them.** The rule
   modules keep their advice in module constants and small template functions.

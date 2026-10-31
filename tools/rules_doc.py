@@ -73,7 +73,7 @@ def reason_rows():
         "Z9": [
             ("When a folder it names is one the `Z13` beside it reports",
              container.folder_remedy(["<member>"], [], {})),
-            ("When a folder it names holds a reserved name",
+            ("When a folder it names is one this tool opened, for the reserved name it holds",
              container.folder_remedy([], ["<member>"], {"<member>/": {"<reserved-name>"}})),
         ],
         "Z10": [
