@@ -2,6 +2,39 @@
 
 Sections through 0.7.0 had their wording tidied after their tags; the text each version carried when it was published is in that tag's own `CHANGELOG.md`. From 0.8.0 on, a released section is frozen at its tag and takes only appended `*(Correction ...)*` lines.
 
+## 1.0.3 — unreleased
+
+Who should take this release: anyone who filters findings by `obligation`:
+every `Z2` finding, for an archive with nothing in it, now says `ours` where
+it said `container`, and the rules page says why. No verdict or exit code
+moves, and the report keeps its fields. Readers of the rules page and the
+divergences page get two more things written down: which `Z1` reasons are this
+reader declining a structure the ZIP specification allows, and where Python's
+own ZIP reading and this tool part on a zip64 end record's size field.
+
+- **`Z2` is this project's own judgement, and says why.** An archive holding
+  only its end record is an empty ZIP file, and nothing about it is wrong as
+  ZIP; it is an error here because it is neither container kind. Every `Z2`
+  finding's `obligation` now reads `ours` where it read `container`, in the
+  JSON report and on the samples page.
+  **This moves verdicts:** none.
+- **The rules page says which `Z1` reasons are this reader declining what ZIP
+  allows.** A split archive and a zip64 end record carrying extensible data
+  are structures the ZIP specification defines; the `Z1` finding says so in
+  its own words, and a test holds the page's quotation of them to the
+  findings.
+  **This moves verdicts:** none.
+- **The divergences page says where Python's own ZIP reading parts from this
+  tool.** A zip64 end record whose size field does not match where its locator
+  follows is refused by some measured patch releases of Python and read by
+  others; this tool refuses it on every Python. A test holds the sentence to
+  the Python it runs on.
+  **This moves verdicts:** none.
+- **Two archive-end conditions are held to the byte.** Tests set each byte of
+  an end record's comment length on its own and give the central directory one
+  byte more than comes before its record, and three mutation rows hold them.
+  **This moves verdicts:** none.
+
 ## 1.0.2 — 2026-11-01
 
 Who should take this release: anyone who matches the text of a `Z12` finding,

@@ -1,6 +1,6 @@
 {
   "product": "vdi2770-validate",
-  "as_of": "1.0.2",
+  "as_of": "1.0.3",
   "detail": "docs/what-it-catches.md",
   "axes": [
     {
