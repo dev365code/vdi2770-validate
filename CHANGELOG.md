@@ -21,8 +21,10 @@ own ZIP reading and this tool part on a zip64 end record's size field.
 - **The rules page says which `Z1` reasons are this reader declining what ZIP
   allows.** A split archive and a zip64 end record carrying extensible data
   are structures the ZIP specification defines; the `Z1` finding says so in
-  its own words, and a test holds the page's quotation of them to the
-  findings.
+  its own words, now also where the zip64 locator names another disk or more
+  than one, whose `detail` read Python's own "zipfiles that span multiple
+  disks are not supported", and a test holds the page's quotation of them to
+  the findings.
   **This moves verdicts:** none.
 - **The divergences page says where Python's own ZIP reading parts from this
   tool.** A zip64 end record whose size field does not match where its locator

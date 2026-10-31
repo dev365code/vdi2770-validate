@@ -60,12 +60,17 @@ READ = ["plain", "zip64", "zip64-with-its-values-in-the-end-record", "zip64-on-n
 _PREFIX = ("the archive its end record describes begins 7 bytes into the file, and what "
            "comes before it is not part of it")
 
+#: How a split archive is refused, wherever its end says it is split.
+_ONE_FILE = "of a split archive; this reader reads an archive that is one file"
+
 #: The rest, each with the one reason it is not a readable ZIP archive.
 REFUSED = {
+    # A zip64 locator naming another disk, or more than one (4.3.15): a split
+    # archive, in this reader's words as the end records' disk fields are.
+    "zip64-locator-on-disk-1": f"the zip64 locator places the zip64 end record on disk 1 {_ONE_FILE}",
+    "zip64-locator-of-two-disks": f"the zip64 locator counts 2 disks {_ONE_FILE}",
+    "zip64-locator-of-two-disks-pointing-past-its-record": f"the zip64 locator counts 2 disks {_ONE_FILE}",
     # The library's own words, the same on every release.
-    "zip64-locator-on-disk-1": "zipfiles that span multiple disks are not supported",
-    "zip64-locator-of-two-disks": "zipfiles that span multiple disks are not supported",
-    "zip64-locator-of-two-disks-pointing-past-its-record": "zipfiles that span multiple disks are not supported",
     "no-end-record": "File is not a zip file",
     # Bytes in front of the archive, its offsets counted from where it begins.
     "plain-with-bytes-in-front": _PREFIX,
@@ -105,7 +110,6 @@ REFUSED = {
 }
 
 #: Read by every release, and alike, and each a contradiction: refused here.
-_ONE_FILE = "of a split archive; this reader reads an archive that is one file"
 CONTRADICTORY = {
     # One end record, and the file ends with it and its comment (4.3.1, 4.3.16).
     "end-record-with-bytes-after-it":

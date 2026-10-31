@@ -9,6 +9,7 @@ fixtures use. If the reader's sentence changes, the page has to change with it.
 import sys
 import zipfile
 
+import pytest
 from vdi2770_validate.runner import check_bytes
 
 from conftest import CLEAN_DOCUMENT, ROOT
@@ -38,8 +39,16 @@ def test_the_page_quotes_both_phrases_under_z1():
     assert note in z1
 
 
-def test_a_split_archive_draws_the_quoted_words():
-    details = _z1_details(ENDS.end(_plain(), disk=1))
+@pytest.mark.parametrize("split", ["end record on disk 1", "zip64 locator naming disk 1",
+                                   "zip64 locator counting 2 disks"])
+def test_a_split_archive_draws_the_quoted_words(split):
+    """Every place an end can say the archive is split says it in the quoted
+    words -- the end record's disk fields and the zip64 locator's alike, the
+    locator's being refused here before the library is asked."""
+    data = {"end record on disk 1": lambda: ENDS.end(_plain(), disk=1),
+            "zip64 locator naming disk 1": lambda: ENDS.zip64(_plain(), locator_disk=1),
+            "zip64 locator counting 2 disks": lambda: ENDS.zip64(_plain(), disks=2)}[split]()
+    details = _z1_details(data)
     assert details and any(SPLIT in d for d in details), details
 
 

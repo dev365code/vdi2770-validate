@@ -495,8 +495,13 @@ def _described(data: bytes, p: int):
                         "in a zip64 end record, and the archive has none")
         return _one_disk("end record", *counts) or _placed("end record", offset, size, p, counts[3])
     disk, at, disks = struct.unpack_from("<LQL", data, loc + 4)
-    if disk != 0 or disks > 1:
-        return "zipfiles that span multiple disks are not supported"
+    # The locator says where the zip64 end record is and on how many disks the
+    # archive lies (4.3.15): another disk, or more than one, is a split archive,
+    # said in the words the end records' disk fields draw.
+    if disk != 0:
+        return f"the zip64 locator places the zip64 end record on disk {disk:,} {_SPLIT}"
+    if disks > 1:
+        return f"the zip64 locator counts {disks:,} disks {_SPLIT}"
     # A zip64 end record of version 1 with nothing extensible is 56 bytes, and
     # it is the record right in front of its locator (4.3.6, 4.3.14.1).
     rec = loc - 56
