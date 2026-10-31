@@ -47,7 +47,7 @@ Some of these reasons are this reader declining a structure the ZIP specificatio
 
 Reference implementation: `processor:REP_MESSAGE_002` (displayed as `REP_002`). Citing a key records that the other project checks something in the same area; it does not borrow its claim.
 
-Why this is ours: "A ZIP file containing only an "end of central directory record" is considered an empty ZIP file" (APPNOTE 4.3.1), so an empty archive is a ZIP file, and nothing about it is wrong as ZIP. It is an error here because an archive with nothing in it is neither a document container nor a documentation container — the same ground `Z3` stands on.
+Why this is ours: "A ZIP file containing only an "end of central directory record" is considered an empty ZIP file" (APPNOTE 4.3.1), so an empty archive is a ZIP file, and nothing about it is wrong as ZIP. It is an error here because an archive with nothing in it is neither a document container nor a documentation container, the condition `Z3` reports for an archive that has entries.
 
 **Remedy.** Add the metadata file and the documents. An empty archive cannot be classified as either container kind.
 
