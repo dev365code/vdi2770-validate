@@ -4,6 +4,14 @@ Sections through 0.7.0 had their wording tidied after their tags; the text each 
 
 ## 1.0.2 — unreleased
 
+Who should take this release: anyone who matches the text of a `Z12` finding,
+or of the `F1` for a declared file whose entry was refused for where its bytes
+lie or for naming itself more than once: those sentences change, and the page
+on the JSON report now says to match on `rule`. No verdict or exit code moves,
+the report keeps its fields, and no rule changes what it checks. Whoever runs
+`make` with an interpreter path that has a space in it can now pass it as
+`PYTHON`.
+
 - **Refused entries have descriptions that fit their reasons.** Every `Z12`
   finding's `message`, which is the rule's `title`, now reads "An entry in the
   container was refused" where it read "A file in the container could not be
