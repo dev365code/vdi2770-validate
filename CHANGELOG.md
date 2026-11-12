@@ -58,6 +58,11 @@ which the package carries.
   says first what it is checking. `check` given the example and paths, or
   neither, is a usage error and exits `64`, as `check` given no path did.
   **This moves verdicts:** none.
+- **Both package pages say how to get the command and run it.** The page
+  PyPI shows for `vdi2770-validate` gives the command that checks a
+  container, and the page for `vdi2770` says first that installing it
+  alone gives the reader and no command, and which package gives one.
+  **This moves verdicts:** none.
 
 **If your build gates on the exit code, this is the paragraph for you.** A
 delivery whose metadata is in 16-bit code units and begins with neither a
