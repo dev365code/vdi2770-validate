@@ -13,16 +13,17 @@ CORRECT_LISTED = (
 )
 
 
-#: The remedy for a document in an encoding this reader does not read. Its first
-#: bytes said what it is in (XML 1.0 Appendix F), so there is no position in it
-#: to fix, which is what `X1`'s own remedy says to do.
+#: The remedy for a document in an encoding this reader does not read, or in a
+#: 16-bit one that begins with neither a byte order mark nor an encoding
+#: declaration. Its first bytes said what it is in (XML 1.0 Appendix F), so
+#: there is no position in it to fix, which is what `X1`'s own remedy says to do.
 RESAVE = "Save the metadata as UTF-8 (or UTF-16) and send it again."
 
 
 def encoding_remedy(message):
     """`RESAVE` for a document the reader refused for the encoding its first
     bytes say it is in, read from the sentence it refused it in -- or None."""
-    if ", as its first bytes say, and this reader does not read " in (message or ""):
+    if ", as its first bytes say, and " in (message or ""):
         return RESAVE
     return None
 

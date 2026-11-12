@@ -4,7 +4,35 @@ Sections through 0.7.0 had their wording tidied after their tags; the text each 
 
 ## 1.1.0 — unreleased
 
-Changes being written for this release. **This moves verdicts:** none.
+Who should take this release: anyone who receives metadata saved in UTF-16
+without a byte order mark, and anyone who gates a build on the exit code for
+it: metadata in 16-bit code units that begins with neither a byte order mark
+nor an encoding declaration is `X1` now, where it was read and passed.
+
+- **Metadata in 16 bits with neither a byte order mark nor an encoding
+  declaration is not well-formed.** XML 1.0 (4.3.3) makes it a fatal error
+  for a document that begins with neither to be in any encoding but UTF-8.
+  The parser read such a file as UTF-16 all the same, from its first bytes,
+  and the report found nothing wrong with it. It is `X1` now, saying so,
+  with the remedy a file in an encoding this reader does not read has: save
+  the metadata as UTF-8 (or UTF-16) and send it again. That holds whether it
+  begins with an element, white space, a comment or a processing
+  instruction, or with an XML declaration that names no encoding; one that
+  declares its encoding, or starts with a byte order mark, is read as
+  before, and `vdi2770.parse_xml` refuses such a document in the same
+  sentence. A file of that shape that was `X1` already, for something
+  further in it, gives this reason now -- one with white space before its XML
+  declaration said `XML or text declaration not at start of entity` -- and
+  one in 16 bits whose XML declaration is never closed says so, as it does
+  in every other encoding, where it said `unclosed token`.
+  **This moves verdicts:** such metadata is `X1`, an error, where it drew no
+  finding, and what the rest of its container drew is not reported while it
+  does not parse, as with any `X1`.
+
+**If your build gates on the exit code, this is the paragraph for you.** A
+delivery whose metadata is in 16-bit code units and begins with neither a
+byte order mark nor an encoding declaration exited `0` when nothing else was
+wrong with it, and exits `1` now. Nothing else exits differently.
 
 ## 1.0.3 — 2026-11-01
 

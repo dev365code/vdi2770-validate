@@ -203,7 +203,10 @@ it under every name in that table. A name outside the table is `X1` -- but for
 `UTF-16`, `UTF-16BE` and `UTF-16LE`, which the parser reads itself, and for the
 names a document that starts with a byte order mark may give the encoding the
 mark settles. A document in UCS-4 or EBCDIC is `X1` saying it is in an encoding
-this reader does not read.
+this reader does not read, and one in 16-bit code units that begins with neither
+a byte order mark nor an encoding declaration is `X1` saying so: XML 1.0 (4.3.3)
+has a document with neither be in UTF-8, though the parser would read it as
+UTF-16.
 
 ## Upstream
 

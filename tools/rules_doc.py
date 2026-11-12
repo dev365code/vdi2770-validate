@@ -129,7 +129,11 @@ def reason_rows():
         "P4": [("a PDF/A part 1, 2 or 3 claim has no conformance level", pdf.WRITE_CONFORMANCE)],
         "P6": [("`The PDF's page tree could not be read`", pdf.CHECK_PAGE_TREE)],
         "X1": [("`the document is in <encoding>, as its first bytes say, and this reader does not read <encoding>`",
-                schema.encoding_remedy(", as its first bytes say, and this reader does not read <encoding>"))],
+                schema.encoding_remedy(", as its first bytes say, and this reader does not read <encoding>")),
+               ("`the document is in a 16-bit encoding, as its first bytes say, and begins with neither a byte "
+                "order mark nor an encoding declaration`",
+                schema.encoding_remedy(", as its first bytes say, and begins with neither a byte order mark "
+                                       "nor an encoding declaration"))],
         "X4": [("the schema violation listing reached its limit", schema.CORRECT_LISTED)],
     }
     for entries in rows.values():
