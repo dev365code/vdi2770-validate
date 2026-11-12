@@ -4144,6 +4144,29 @@ TABLE += [
      ["tests/test_a_document_is_read_in_the_encoding_it_declares.py::"
       "test_a_document_in_ucs4_that_begins_with_white_space_is_not_taken_for_16_bits"],
      "a document in UCS-4 that begins with white space would be told it is in a 16-bit encoding"),
+    ("rules/a-structure-zip-defines-and-this-reader-declines-is-about-this-tool",
+     "packages/vdi2770/src/vdi2770/validate/rules/container.py",
+     '    return About.TOOL if (defect.detail or "").endswith(_DECLINED) else None\n',
+     "    return None\n",
+     ["tests/test_an_archive_ends_where_its_end_records_say.py::"
+      "test_a_refusal_is_about_this_tool_only_where_this_reader_declines_what_zip_defines",
+      "tests/test_an_archive_ends_where_its_end_records_say.py::"
+      "test_a_refusal_about_this_tool_is_counted_as_one_and_exits_as_before"],
+     "a split archive and an unread zip64 sector would be handed to the sender as the container's fault"),
+    ("reader/a-split-archive-is-declined-in-words-the-rules-read",
+     "packages/vdi2770/src/vdi2770/zipread.py",
+     "_DECLINED = (_SPLIT, _PAST_FIXED)\n",
+     "_DECLINED = (_PAST_FIXED,)\n",
+     ["tests/test_an_archive_ends_where_its_end_records_say.py::"
+      "test_a_refusal_is_about_this_tool_only_where_this_reader_declines_what_zip_defines"],
+     "a split archive would be about the container again"),
+    ("reader/bytes-past-a-zip64-records-fixed-fields-are-declined-in-words-the-rules-read",
+     "packages/vdi2770/src/vdi2770/zipread.py",
+     "_DECLINED = (_SPLIT, _PAST_FIXED)\n",
+     "_DECLINED = (_SPLIT,)\n",
+     ["tests/test_an_archive_ends_where_its_end_records_say.py::"
+      "test_a_refusal_is_about_this_tool_only_where_this_reader_declines_what_zip_defines"],
+     "a zip64 end record with bytes past its fixed fields would be about the container again"),
     ("reader/a-16-bit-document-that-declares-its-encoding-is-read",
      "packages/vdi2770/src/vdi2770/xmlread.py",
      '                and _declaration(data, b"", codec) is None):\n',

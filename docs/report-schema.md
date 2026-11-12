@@ -109,8 +109,12 @@ reword them, and the CHANGELOG names it when it does. Match on `rule`.
 was opened, every metadata file those archives list was read, and nothing was
 declined. The third is the one the four numbers above cannot say — a container
 whose metadata this tool read and could not model has every count full — so it
-is read from the findings instead: any rule that is `about: tool` is this tool
-saying it stopped, and one of those is enough to make `complete` false.
+is read from the findings instead: any finding that is `about: tool` is this
+tool saying it stopped, and one of those is enough to make `complete` false. A
+finding's `about` is its rule's unless the rule is reached two ways: `Z1`, for
+one, is `about: tool` for an archive split across several files or a zip64 end
+record carrying bytes past its fixed fields, which APPNOTE defines and this
+reader does not read, and about the container for every other reason.
 
 When it is `false`, the verdict covers less than the whole delivery, and the
 four numbers describe only the archive and metadata reading scope. PDF

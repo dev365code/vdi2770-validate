@@ -37,7 +37,7 @@ Where each layer stands:
 
 Reference implementation: `processor:ZU_MESSAGE_002`, `processor:ZU_MESSAGE_003` (displayed as `ZU_002`, `ZU_003`). Citing a key records that the other project checks something in the same area; it does not borrow its claim.
 
-Some of these reasons are this reader declining a structure the ZIP specification allows, not a fault in the file: an archive split across several files (APPNOTE 8.2) and a zip64 end record carrying extensible data (APPNOTE 4.3.14.3). The finding says so in its own words — "this reader reads an archive that is one file", "which this reader does not read".
+Some of these reasons are this reader declining a structure the ZIP specification allows, not a fault in the file: an archive split across several files (APPNOTE 8.2) and a zip64 end record carrying extensible data (APPNOTE 4.3.14.3). The finding says so in its own words — "this reader reads an archive that is one file", "which this reader does not read" — and is `about: tool`, as this tool declining to look; every other `Z1` finding is about the container.
 
 **Remedy.** A VDI 2770 container is a ZIP archive. Rebuild it with a standard ZIP tool and check the file was not truncated in transfer.
 

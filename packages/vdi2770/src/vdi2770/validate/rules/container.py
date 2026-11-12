@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Iterator
 
 from ..catalog import rule
-from ..model import MAIN_PDF, MAIN_XML, METADATA_XML, Finding, Kind
+from ..model import _DECLINED, MAIN_PDF, MAIN_XML, METADATA_XML, About, Finding, Kind
 from ..names import as_written, escaped, extracts_to, folder_path, ignoring_case, nfc
 
 REMOVE_PASSWORD = (
@@ -318,6 +318,16 @@ def _remedy_for(defect):
     return REMEDY_FOR_DEFECT.get(defect.kind)
 
 
+def _about_for(defect):
+    """`About.TOOL` for an archive refused for a structure APPNOTE defines and
+    this reader does not read -- a split archive, or bytes in a zip64 end record
+    past its fixed fields -- told by the words the reader's refusal ends in; and
+    None, the rule's own, for every other. `Z1` says the file is not a readable
+    ZIP archive, which is the container's doing when its end says two things or
+    points at nothing, and this reader's when it is an archive ZIP defines."""
+    return About.TOOL if (defect.detail or "").endswith(_DECLINED) else None
+
+
 # What the reader saw that nearly matched a reserved name. `Z3` has read these
 # since they existed; `Z7` did not, and told a supplier to add `VDI2770_Main.pdf`
 # to an archive holding `vdi2770_main.pdf` -- which on their own machine is not
@@ -418,7 +428,7 @@ def check(container, declared, is_declared_payload) -> Iterator[Finding]:
         r = rule(rid)
         yield Finding(r, r.title, d.where,
                       detail=f"{d.kind}: {d.detail}" if d.detail else d.kind,
-                      fix=_remedy_for(d))
+                      fix=_remedy_for(d), as_about=_about_for(d))
 
     if container.kind is Kind.UNREADABLE:
         return

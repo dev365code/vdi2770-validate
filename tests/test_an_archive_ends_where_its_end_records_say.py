@@ -28,6 +28,7 @@ import sys
 import zipfile
 
 import pytest
+from vdi2770_validate.runner import check_bytes
 
 from conftest import CLEAN_DOCUMENT, ROOT
 
@@ -35,6 +36,8 @@ sys.path.insert(0, str(ROOT / "tools"))
 import archive_ends as ENDS  # noqa: E402 - after sys.path
 from vdi2770 import zipread  # noqa: E402
 from vdi2770.zipread import Kind  # noqa: E402
+from vdi2770_validate import cli  # noqa: E402
+from vdi2770_validate import report as rendering  # noqa: E402
 
 
 def _members(path):
@@ -145,6 +148,48 @@ CONTRADICTORY = {
     "end-record-entries-wrong": "the end record counts 4 entries and the central directory holds 3",
     "zip64-entries-wrong": "the zip64 end record counts 4 entries and the central directory holds 3",
 }
+
+
+#: The refusals that are this reader declining a structure APPNOTE defines -- an
+#: archive split across several files (8.1, 8.2), bytes in a zip64 end record
+#: past its fixed fields (4.3.14.2, 4.3.14.3) -- where every other refusal above
+#: is the archive's end saying two things, or nothing.
+DECLINED = ["end-record-directory-on-disk-1", "end-record-on-disk-1", "zip64-end-record-on-disk-1",
+            "zip64-locator-of-two-disks", "zip64-locator-of-two-disks-pointing-past-its-record",
+            "zip64-locator-on-disk-1", "zip64-record-directory-on-disk-1", "zip64-record-on-disk-1",
+            "zip64-record-with-extensible-data", "zip64-record-with-extensible-data-values-in-the-end-record"]
+
+
+def _z1(name):
+    found = check_bytes(CASES[name], name + ".zip")
+    return found, [f for f in found.findings if f.rule.id == "Z1"]
+
+
+@pytest.mark.parametrize("name", sorted(REFUSED) + sorted(CONTRADICTORY))
+def test_a_refusal_is_about_this_tool_only_where_this_reader_declines_what_zip_defines(name):
+    """`Z1` says the file is not a readable ZIP archive, which is the
+    container's doing when its end says two things or points at nothing. A
+    split archive and a zip64 end record with bytes past its fixed fields are
+    not that: APPNOTE defines both, and the finding says in this reader's
+    words that this reader does not read them. Its `about` says so too, so a
+    job that keeps the sender's findings apart from this tool's does not hand
+    these to the sender."""
+    _, z1 = _z1(name)
+    assert len(z1) == 1, z1
+    assert z1[0].about.value == ("tool" if name in DECLINED else "container"), z1[0].detail
+
+
+@pytest.mark.parametrize("name", ["end-record-on-disk-1", "zip64-record-with-extensible-data"])
+def test_a_refusal_about_this_tool_is_counted_as_one_and_exits_as_before(name, tmp_path, capsys):
+    """The text report counts the errors that are this tool declining to look,
+    and this is one of them now. The exit code does not look at `about`: such
+    an archive exited `1`, and still does."""
+    found, _ = _z1(name)
+    assert ("1 error(s), 0 warning(s), 0 note(s) — 1 of the errors is this tool declining to "
+            "look, not the container") in rendering.as_text(found)
+    path = tmp_path / (name + ".zip")
+    path.write_bytes(CASES[name])
+    assert cli.main(["check", str(path)]) == 1, capsys.readouterr().out
 
 
 def _refusals(name):
