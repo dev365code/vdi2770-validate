@@ -125,6 +125,8 @@ def reason_rows():
         ],
         "M1": [("`this metadata's names are in` another namespace, or `in no namespace at all`", metadata.NAMESPACE_DECLARATION)],
         "M4": [("`The English class name is not the published one`", metadata.PUBLISHED_ENGLISH)],
+        "M5": [("When the language is a regional form whose first part is a two-letter ISO 639-1 code, "
+                "as `de-DE` is", metadata.language_remedy("de-DE"))],
         "P1": [("the reserved main document has no indirect object within this scan", pdf.REEXPORT_MAIN)],
         "P4": [("a PDF/A part 1, 2 or 3 claim has no conformance level", pdf.WRITE_CONFORMANCE)],
         "P6": [("`The PDF's page tree could not be read`", pdf.CHECK_PAGE_TREE)],

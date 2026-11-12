@@ -43,6 +43,11 @@ past its fixed fields, is one of those now.
   nothing, and stays the container's.
   **This moves verdicts:** `about` alone, on those `Z1` findings. No rule,
   severity or exit code moves with it.
+- **`M5` shows what a language code looks like.** Its remedy gives `en`
+  and `de` as examples of a two-letter ISO 639-1 code, and for a regional
+  form whose first part is one, such as `de-DE` or `en_US`, it names that
+  code.
+  **This moves verdicts:** none.
 
 **If your build gates on the exit code, this is the paragraph for you.** A
 delivery whose metadata is in 16-bit code units and begins with neither a

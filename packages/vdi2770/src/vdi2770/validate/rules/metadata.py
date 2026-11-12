@@ -39,6 +39,21 @@ def _iso_ok(code: str) -> bool:
     return len(c) == 3 and all("a" <= ch <= "z" for ch in c)
 
 
+def language_remedy(code: str):
+    """The remedy for a language `M5` refused that is a regional form whose first
+    part is an ISO 639-1 code, naming that code -- or None, and the rule's own
+    remedy, for every other value. A value the table holds is not refused, so a
+    first part it holds has a region after it. Nothing is guessed: the code is
+    the value's own first part, and only when the table holds it."""
+    # Where a regional form ends its language: BCP 47's hyphen (`de-DE`), or the
+    # underscore of a POSIX locale name (`en_US`).
+    first = code.strip().lower().replace("_", "-").split("-", 1)[0]
+    if first in ISO_639_1:
+        return (f"Write the language as {first}, the two-letter ISO 639-1 code it begins with; "
+                f"the region after it does not belong here.")
+    return None
+
+
 def _two_names(text: str, published, class_id: str, lead: str) -> str:
     """The observed class name beside the published one, told apart.
 
@@ -228,7 +243,8 @@ def check(container, document, foreign) -> Iterator[Finding]:
                 r = rule("M5")
                 yield Finding(r, r.title, tag.src.child(container=container.path,
                                                         member=container.metadata_name),
-                              detail=f"Language '{spelled_where_not_ascii(tag.code)}'")
+                              detail=f"Language '{spelled_where_not_ascii(tag.code)}'",
+                              fix=language_remedy(tag.code))
         for d in v.descriptions:
             # `and d.language` here let an empty attribute switch the check
             # off, which is the shape M8's own whyOurs warns about. `is not
@@ -238,7 +254,8 @@ def check(container, document, foreign) -> Iterator[Finding]:
                 r = rule("M5")
                 yield Finding(r, r.title, d.src.child(container=container.path,
                                                       member=container.metadata_name),
-                              detail=f"DocumentDescription Language '{spelled_where_not_ascii(d.language)}'")
+                              detail=f"DocumentDescription Language '{spelled_where_not_ascii(d.language)}'",
+                              fix=language_remedy(d.language))
         if not any(f.file_format.split(";")[0].strip().lower() == "application/pdf" for f in v.files):
             r = rule("M6")
             yield Finding(r, r.title, v.src.child(container=container.path,
