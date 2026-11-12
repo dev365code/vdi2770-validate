@@ -56,6 +56,17 @@ def test_check_takes_the_example_or_paths(argv, capsys):
     assert "--example" in capsys.readouterr().err
 
 
+def test_a_bug_report_of_the_example_says_it_was_the_example(tmp_path, capsys):
+    """The bundle says how the run was asked for, and asked for again its way
+    it has to be the same run: without `--example`, `check` with no path is a
+    usage error."""
+    assert cli.main(["check", "--example", "--bug-report", "--bundle-out", str(tmp_path)]) == 0
+    capsys.readouterr()
+    [written] = list(tmp_path.glob("bug-report-*.json"))
+    argv = json.loads(written.read_text(encoding="utf-8"))["invocation"]["argv"]
+    assert "--example" in argv and not [a for a in argv if a.startswith("<input-")], argv
+
+
 def test_the_example_is_read_out_of_a_zip_as_the_single_file_holds_it(tmp_path):
     """From the single file the example is a member of an archive, not a file,
     and the check reads files."""

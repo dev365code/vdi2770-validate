@@ -50,7 +50,7 @@ def language_remedy(code: str):
     first = code.strip().lower().replace("_", "-").split("-", 1)[0]
     if first in ISO_639_1:
         return (f"Write the language as {first}, the two-letter ISO 639-1 code it begins with; "
-                f"the region after it does not belong here.")
+                f"what follows it does not belong here.")
     return None
 
 

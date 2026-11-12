@@ -19,12 +19,13 @@ which the package carries.
   declaration is not well-formed.** XML 1.0 (4.3.3) makes it a fatal error
   for a document that begins with neither to be in any encoding but UTF-8.
   The parser read such a file as UTF-16 all the same, from its first bytes,
-  and the report found nothing wrong with it. It is `X1` now, saying so.
-  That holds whether it begins with an element, white space, a comment or a
-  processing instruction, or with an XML declaration that names no
-  encoding; one that declares its encoding, or starts with a byte order
-  mark, is read as before, and `vdi2770.parse_xml` refuses such a document
-  in the same sentence. Its remedy is the one a file in an encoding this
+  and the report found nothing wrong with it. It is `X1` now, saying so,
+  whatever it begins with -- an element, a document type declaration, white
+  space, a comment, a processing instruction, or an XML declaration that
+  names no encoding, which is all a document can begin with; one that
+  declares its encoding, or starts with a byte order mark, is read as
+  before, and `vdi2770.parse_xml` refuses such a document in the same
+  sentence. Its remedy is the one a file in an encoding this
   reader does not read has, and that remedy now says to save the metadata
   as UTF-8, or as UTF-16 with a byte order mark, and send it again, where it
   said `UTF-8 (or UTF-16)`: saved again as UTF-16 without a mark, the file
@@ -33,10 +34,19 @@ which the package carries.
   before its XML declaration said
   `XML or text declaration not at start of entity` -- and one in 16 bits
   whose XML declaration is never closed says so, as it does in every other
-  encoding, where it said `unclosed token`.
+  encoding, where it said `unclosed token`. One that drew `X3` for declaring
+  an entity, or `X6` for holding more elements than this tool models, draws
+  `X1` instead, since the encoding is settled before anything in the
+  document is read; where it was `X6`, `about` says `container` where it
+  said `tool`, the text report no longer counts it among the errors that are
+  this tool declining to look, and the JSON report's `read.complete` is
+  true where it was false. Nor does such a document count toward the
+  elements one run will read, so a later document that drew `X6` for that
+  budget is read now and judged.
   **This moves verdicts:** such metadata is `X1`, an error, where it drew no
-  finding, and what the rest of its container drew is not reported while it
-  does not parse, as with any `X1`.
+  finding or drew `X3` or `X6`, and what the rest of its container drew is
+  not reported while it does not parse, as with any `X1`; a later document
+  the run's budget of elements refused is read.
 - **A split archive, or a zip64 end record carrying bytes past its fixed
   fields, is this tool declining to look.** APPNOTE defines both (8.1, 8.2,
   4.3.14.2, 4.3.14.3), and the `Z1` finding said already, in this reader's
@@ -70,10 +80,11 @@ which the package carries.
 
 **If your build gates on the exit code, this is the paragraph for you.** A
 delivery whose metadata is in 16-bit code units and begins with neither a
-byte order mark nor an encoding declaration -- with an element, white space,
-a comment, a processing instruction, or an XML declaration that names no
-encoding, in either byte order -- exited `0` when nothing else was wrong with
-it, and exits `1` now. No other delivery exits differently.
+byte order mark nor an encoding declaration, whatever it begins with -- an
+element, a document type declaration, white space, a comment, a processing
+instruction, or an XML declaration that names no encoding, in either byte
+order -- exited `0` when nothing else was wrong with it, and exits `1` now.
+No other delivery exits differently.
 
 ## 1.0.3 — 2026-11-01
 

@@ -65,6 +65,7 @@ def _refused(document) -> bool:
 def _options(args):
     """The options a run was given, by name and chosen value only."""
     chosen = [flag for flag, on in (("--json", args.json), ("--quiet", args.quiet),
+                                    ("--example", args.example),
                                     ("--bug-report", args.bug_report),
                                     ("--show-bundle", args.show_bundle),
                                     ("--no-bundle", args.no_bundle)) if on]

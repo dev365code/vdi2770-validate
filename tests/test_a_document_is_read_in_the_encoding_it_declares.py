@@ -389,13 +389,15 @@ def test_a_document_in_an_encoding_this_reader_does_not_read_is_told_to_save_it_
     assert findings[0].fix == "Save the metadata as UTF-8, or as UTF-16 with a byte order mark, and send it again."
 
 
-#: What a document can begin with when it declares no encoding -- an element,
-#: white space (each of the four characters production 3 allows), a comment or
-#: a processing instruction (productions 1, 22 and 27), or an XML declaration
-#: that names no encoding (production 23 without 80) -- and the two byte orders
+#: What a document can begin with when it declares no encoding -- an element, a
+#: document type declaration, white space (each of the four characters
+#: production 3 allows), a comment or a processing instruction (productions 1,
+#: 22, 27 and 28), or an XML declaration that names no encoding (production 23
+#: without 80): everything a document can begin with -- and the two byte orders
 #: of 16-bit code units, with no byte order mark before either.
-UNDECLARED = [("element", ""), ("space", " "), ("tab", "\t"), ("CR", "\r"), ("LF", "\n"), ("comment", "<!-- c -->"),
-              ("PI", "<?vdi x?>"), ("declaration, no encoding", '<?xml version="1.0"?>')]
+UNDECLARED = [("element", ""), ("DOCTYPE", "<!DOCTYPE Document>"), ("space", " "), ("tab", "\t"), ("CR", "\r"),
+              ("LF", "\n"), ("comment", "<!-- c -->"), ("PI", "<?vdi x?>"),
+              ("declaration, no encoding", '<?xml version="1.0"?>')]
 SIXTEEN_BITS = [("LE", "utf-16-le"), ("BE", "utf-16-be")]
 SAID_FOR_SIXTEEN_BITS = ("the document is in a 16-bit encoding, as its first bytes say, and begins with "
                          "neither a byte order mark nor an encoding declaration; a document with neither "
@@ -435,6 +437,56 @@ def test_a_document_in_16_bits_with_neither_a_mark_nor_an_encoding_declaration_e
     path = tmp_path / "undeclared.zip"
     path.write_bytes(_container(_undeclared("").encode(codec)))
     assert cli.main(["check", str(path)]) == 1, capsys.readouterr().out
+
+
+@pytest.mark.parametrize("order,codec", SIXTEEN_BITS, ids=[b[0] for b in SIXTEEN_BITS])
+def test_a_document_in_16_bits_that_declares_an_entity_is_refused_for_its_encoding_first(order, codec):
+    """The encoding is settled before anything in the document is read, so a
+    document of that shape that declares an entity -- `X3` while expat read it
+    -- is the same `X1`."""
+    raw = _container(_undeclared('<!DOCTYPE Document [<!ENTITY e "x">]>').encode(codec))
+    findings = check_bytes(raw, "entity.zip").findings
+    assert [(f.rule.id, f.detail) for f in findings] == [("X1", SAID_FOR_SIXTEEN_BITS)], findings
+
+
+def test_a_document_in_16_bits_too_large_to_model_is_refused_for_its_encoding_first(monkeypatch):
+    """`X6` -- this tool declining to build so large a tree, about the tool --
+    while expat read it; the same `X1`, about the container, now. A report
+    that holds it says it read everything there was to read."""
+    from vdi2770 import xmlread
+
+    monkeypatch.setattr(xmlread, "MAX_ELEMENTS", 10)
+    raw = _container(_undeclared("").encode("utf-16-le"))
+    report = check_bytes(raw, "large.zip")
+    assert [(f.rule.id, f.about.value) for f in report.findings] == [("X1", "container")], report.findings
+    assert json.loads(rendering.as_json(report))["read"]["complete"] is True
+
+
+def test_a_document_in_16_bits_is_not_charged_to_the_budget_of_the_ones_after_it(monkeypatch):
+    """Its markup is not read, so it charges the run's budget of elements
+    nothing, and a document after it that the budget refused -- `X6`, once
+    the first had spent it -- is read and judged."""
+    from vdi2770_validate import runner
+
+    monkeypatch.setattr(runner, "MAX_TOTAL_ELEMENTS", 1_000)
+    many = ('<Document xmlns="http://www.vdi.de/schemas/vdi2770">' + "<a/>" * 1_200 + "</Document>")
+    plain = (b'<?xml version="1.0"?><Document xmlns="http://www.vdi.de/schemas/vdi2770">'
+             b'<DocumentId DomainId="d">X</DocumentId></Document>')
+
+    def zipped(members):
+        out = io.BytesIO()
+        with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as z:
+            for name, data in members.items():
+                z.writestr(name, data)
+        return out.getvalue()
+
+    archive = zipped({"VDI2770_Main.xml": plain, "VDI2770_Main.pdf": b"%PDF-1.4",
+                      "a.zip": zipped({META: many.encode("utf-16-le"), "a.pdf": b"%PDF-1.4"}),
+                      "b.zip": zipped({META: _metadata("UTF-8", "Technische Spezifikation").encode("utf-8"),
+                                       "b.pdf": b"%PDF-1.4"})})
+    found = runner.check_bytes(archive, "budget.zip").findings
+    assert "X6" not in [f.rule.id for f in found], [(f.rule.id, f.detail) for f in found if f.rule.id == "X6"]
+    assert [f.rule.id for f in found if f.rule.id == "X1"] == ["X1"], found
 
 
 #: The shapes around those that are read as they were: a declaration that

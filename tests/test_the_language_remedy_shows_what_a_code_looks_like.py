@@ -40,11 +40,11 @@ def _m5(value: str):
     return found[0]
 
 
-@pytest.mark.parametrize("value,code", [("de-DE", "de"), ("en_US", "en")])
+@pytest.mark.parametrize("value,code", [("de-DE", "de"), ("en_US", "en"), ("zh-Hant", "zh")])
 def test_a_regional_form_is_told_the_code_it_begins_with(value, code):
     f = _m5(value)
     assert f.remedy == (f"Write the language as {code}, the two-letter ISO 639-1 code it begins "
-                        f"with; the region after it does not belong here."), f.remedy
+                        f"with; what follows it does not belong here."), f.remedy
 
 
 def test_a_regional_form_whose_first_part_is_no_code_is_told_what_a_code_looks_like():

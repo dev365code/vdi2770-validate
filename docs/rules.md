@@ -298,7 +298,7 @@ Reference implementation: `core:DocumentVersion_VAL7`, `core:DocumentDescription
 
 A finding these lines do not name takes the remedy above.
 
-- When the language is a regional form whose first part is a two-letter ISO 639-1 code, as `de-DE` is: Write the language as de, the two-letter ISO 639-1 code it begins with; the region after it does not belong here.
+- When the language is a regional form whose first part is a two-letter ISO 639-1 code, as `de-DE` is: Write the language as de, the two-letter ISO 639-1 code it begins with; what follows it does not belong here.
 
 ### `M6` — The document version declares no PDF file
 

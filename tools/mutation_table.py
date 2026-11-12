@@ -4204,6 +4204,13 @@ TABLE += [
      "            pass\n",
      ["tests/test_the_official_example_travels_with_the_command.py::test_check_example_says_what_it_is_checking"],
      "the report would name a path inside the package as if the caller had given it"),
+    ("cli/a-bug-report-of-the-example-says-it-was-the-example",
+     "packages/vdi2770/src/vdi2770/validate/cli.py",
+     '                                    ("--example", args.example),\n',
+     "",
+     ["tests/test_the_official_example_travels_with_the_command.py::"
+      "test_a_bug_report_of_the_example_says_it_was_the_example"],
+     "a bug report of check --example would give a command line that is a usage error"),
     ("resources/the-example-is-copied-out-of-a-zip",
      "packages/vdi2770/src/vdi2770/validate/resources.py",
      '    with as_file(files(__package__) / "data" / "example" / EXAMPLE_FILE) as path:\n'
