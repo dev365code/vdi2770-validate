@@ -8,7 +8,7 @@ Licensed under the Apache License, Version 2.0.
 Third-party material bundled with this package
 --------------------------------------------------------------------------
 
-Two files, both under `vdi2770/validate/data/` in the wheel:
+Three files, all under `vdi2770/validate/data/` in the wheel:
 
 1. VDI 2770 XML schema — vdi2770/validate/data/VDI2770_Schema_2019-08-23.xsd
 
@@ -27,8 +27,15 @@ Two files, both under `vdi2770/validate/data/` in the wheel:
    the `ddcReference` names beside them are MIT © 2021 Johannes Schmidt.
    See THIRD_PARTY.md.
 
-Nothing else here is anybody else's: no corpus, no message list, no vendored
-text. Those are test material and are in neither wheel.
+3. The example document container — vdi2770/validate/data/example/documentcontainer.zip
+
+   The reference implementation's own example, from
+   DigitalDataChainConsortium/vdi2770 @ e47c13c, examples/, MIT © 2021
+   Johannes Schmidt. Redistributed byte for byte, as corpus/ holds it, for
+   `vdi2770-validate check --example`. The MIT text is in THIRD_PARTY.md.
+
+Nothing else here is anybody else's: no other corpus file, no message list, no
+vendored text. Those are test material and are in neither wheel.
 
 Until 0.8.0 these two files shipped in `vdi2770-validate` and this notice said
 this package carried none. They moved when the two distributions became one;

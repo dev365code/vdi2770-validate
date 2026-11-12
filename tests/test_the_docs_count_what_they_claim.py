@@ -568,8 +568,10 @@ def test_no_document_cites_a_file_that_is_not_here():
     # the test that holds a later read without the list to the first read's
     # limits.
     # 64 to 65: table row 9 now cites the browser page's request and storage gate.
-    assert seen == 65, (
-        f"{seen} citations found, not 65. If you added or removed one, say so "
+    # 65 to 66 when the engine's wheel came to carry the example `check --example`
+    # reads: THIRD_PARTY.md names the manifest that pins its bytes.
+    assert seen == 66, (
+        f"{seen} citations found, not 66. If you added or removed one, say so "
         f"here; if you did not, some of them just stopped being checked.")
 
 

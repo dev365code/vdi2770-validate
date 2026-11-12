@@ -31,6 +31,7 @@ from .agreement import MARKER, InstallationDisagrees, refuse_if_disagreeing
 from .catalog import document_classes, rules
 from .model import Severity, without_addresses
 from .names import not_a_command, on_one_line
+from .resources import example_path
 from .runner import check_file
 
 #: What a person is told when a file was refused or this tool declined: once,
@@ -95,7 +96,23 @@ def _bundle(args, path, document, exit_code, started, *, trigger, error=None):
         return None
 
 
+#: What `check --example` prints first, in the text report: the path the report
+#: names is the package's own file, or a copy of it out of the single file, and
+#: neither is a path the caller gave.
+EXAMPLE = ("The example this package carries: the document container of the VDI 2770 "
+           "reference implementation, MIT, (c) 2021 Johannes Schmidt.")
+
+
 def _cmd_check(args) -> int:
+    if not args.example:
+        return _check(args, args.paths)
+    with example_path() as path:
+        if not (args.json or args.quiet):
+            print(EXAMPLE)
+        return _check(args, [path])
+
+
+def _check(args, paths) -> int:
     worst = 0
     unreadable = 0
     # A failure of this tool's own code on any file, wherever it was caught:
@@ -108,7 +125,7 @@ def _cmd_check(args) -> int:
     # as machine-readable could not be read by a machine the moment a CI job
     # passed it a second container.
     documents = []
-    for path in args.paths:
+    for path in paths:
         started = time.perf_counter()
         try:
             rep = check_file(path)
@@ -190,7 +207,7 @@ def _cmd_check(args) -> int:
             worst = 1
     if args.json:
         print(_json_this_console_can_carry(documents))
-    elif unreadable < len(args.paths):
+    elif unreadable < len(paths):
         # Once for the run, whatever the flags. This is the refusal the project
         # leads with, and it was carried by `P4` -- a note, which `--quiet`
         # removes, so the flag a CI log reaches for deleted it. (`P3` is a
@@ -221,7 +238,7 @@ def _cmd_check(args) -> int:
     if ours:
         return EX_SOFTWARE
     if unreadable:
-        return 2 if unreadable == len(args.paths) else max(worst, 1)
+        return 2 if unreadable == len(paths) else max(worst, 1)
     return worst
 
 
@@ -313,7 +330,7 @@ def main(argv=None) -> int:
     sub = p.add_subparsers(dest="cmd", required=True)
 
     c = sub.add_parser("check", help="check one or more containers")
-    c.add_argument("paths", nargs="+")
+    c.add_argument("paths", nargs="*")
     c.add_argument("--json", action="store_true", help="machine-readable output")
     c.add_argument("--quiet", action="store_true", help="hide notes")
     c.add_argument("--bug-report", action="store_true",
@@ -327,6 +344,10 @@ def main(argv=None) -> int:
     c.add_argument("--fail-on", choices=("error", "warning"), default="error",
                    help="exit 1 on findings of this severity or worse "
                         "(default: error)")
+    c.add_argument("--example", action="store_true",
+                   help="check the example container this package carries, the VDI 2770 "
+                        "reference implementation's own: no file of yours, no repository "
+                        "and no network")
     c.set_defaults(func=_cmd_check)
 
     r = sub.add_parser("rules", help="list the rules this tool applies")
@@ -337,6 +358,11 @@ def main(argv=None) -> int:
 
     try:
         args = p.parse_args(argv)
+        # The example or paths. Given both, whichever won, the other would go
+        # unchecked without a word; given neither, there is nothing to check.
+        if args.cmd == "check" and bool(args.paths) == args.example:
+            c.error("give --example or paths, not both" if args.example
+                    else "the following arguments are required: paths, or --example")
         return args.func(args)
     except InstallationDisagrees as e:
         # One place, so every surface that can state an identity -- `check`,

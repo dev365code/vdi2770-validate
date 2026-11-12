@@ -56,6 +56,8 @@ Full table, licence texts and modification statements are in
 3. **The conformance corpus.** Copied from the MIT-licensed reference
    implementation `DigitalDataChainConsortium/vdi2770`, Copyright (C) 2021
    Johannes Schmidt. Verbatim, hash-pinned, attributed in `corpus/NOTICE`.
+   One of its containers, the example document container, ships in the
+   reader's wheel as well, for `vdi2770-validate check --example`.
 
 ## Which wheel carries it
 
@@ -65,7 +67,9 @@ schema and the IDTA-derived table, under `vdi2770/validate/data/` in its wheel
 beside `rules.json`, which is this project's own. Its `NOTICE` and
 `THIRD_PARTY.md` travel beside the licence in the same wheel, so a product that
 embeds the reader embeds the two files and their notices together. The corpus
-is test material and is in neither wheel. `vdi2770-validate` is an alias — its
+is test material and is in neither wheel, but for the example document
+container `check --example` reads, which the reader's wheel carries under
+`vdi2770/validate/data/example/` and its `NOTICE` names. `vdi2770-validate` is an alias — its
 own two modules, a licence and a notice — and carries none of it, which its own
 `NOTICE` says.
 

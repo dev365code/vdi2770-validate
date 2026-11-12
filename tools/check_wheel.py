@@ -140,7 +140,8 @@ def check(project: Path, roots: list, notices: tuple, wheel: Path,
     # And the other direction. NOTICE and THIRD_PARTY.md tell readers which
     # MIT-derived material this project carries and where; the sentence that
     # matters to anyone installing it is that none of it is in what they
-    # install. `corpus/`, `docs/oracle-sweep.json`, `tests/data/` and
+    # install but what those name -- the example `check --example` reads, a
+    # copy of one corpus file inside the package. `corpus/`, `docs/oracle-sweep.json`, `tests/data/` and
     # `tools/oracle/` are all in the sdist and none belong here, and no gate
     # could tell if a `package-data` glob started sweeping them in.
     for n in names:
@@ -283,7 +284,7 @@ def smoke(wheels: list) -> list:
 #: Files a wheel carries that are somebody else's work. Extensions rather than a
 #: list of names: the point is to notice a *new* one arriving without its
 #: paperwork, and a list of names cannot do that.
-NOT_OURS = (".xsd", ".json", ".xml", ".csv")
+NOT_OURS = (".xsd", ".json", ".xml", ".csv", ".zip")
 
 #: Ours, and named so that a data file this project wrote is not demanded of a
 #: notice that has nothing to say about it.

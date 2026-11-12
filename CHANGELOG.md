@@ -11,7 +11,9 @@ nor an encoding declaration is `X1` now, where it was read and passed. And
 anyone who filters findings by `about`, or reads the text report's count of
 the errors that are this tool declining to look: the `Z1` finding for an
 archive split across several files, or for a zip64 end record carrying bytes
-past its fixed fields, is one of those now.
+past its fixed fields, is one of those now. And anyone looking at the tool for
+the first time: `vdi2770-validate check --example` checks the official example,
+which the package carries.
 
 - **Metadata in 16 bits with neither a byte order mark nor an encoding
   declaration is not well-formed.** XML 1.0 (4.3.3) makes it a fatal error
@@ -47,6 +49,14 @@ past its fixed fields, is one of those now.
   and `de` as examples of a two-letter ISO 639-1 code, and for a regional
   form whose first part is one, such as `de-DE` or `en_US`, it names that
   code.
+  **This moves verdicts:** none.
+- **`check --example` checks the official example, with nothing to fetch.**
+  The package carries the reference implementation's own document
+  container, byte for byte as it publishes it under MIT, and
+  `check --example` checks it: a first look at a report needs no container
+  of one's own, no clone of this repository and no network. The text report
+  says first what it is checking. `check` given the example and paths, or
+  neither, is a usage error and exits `64`, as `check` given no path did.
   **This moves verdicts:** none.
 
 **If your build gates on the exit code, this is the paragraph for you.** A

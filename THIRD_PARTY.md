@@ -8,6 +8,7 @@ whether we changed it.
 | `packages/vdi2770/src/vdi2770/validate/data/VDI2770_Schema_2019-08-23.xsd` | VDI, from the [VDI 2770 guideline programme page](https://www.vdi.de/richtlinien/programme-zu-vdi-richtlinien/vdi-2770) | **No grant — the publisher reserves its rights** — see below | **No — byte-for-byte verbatim** |
 | `packages/vdi2770/src/vdi2770/validate/data/document-classes.json` | Table 1 of IDTA 02004 "Handover Documentation" v2.0.1, as published in [admin-shell-io/submodel-templates](https://github.com/admin-shell-io/submodel-templates); the `ddcReference` names beside them from `Constants.java` of the reference implementation | **CC BY 4.0** © Industrial Digital Twin Association (IDTA names, IRDIs) **and MIT** © 2021 Johannes Schmidt (`ddcReference` names) | **Yes** — extracted and reformatted as JSON; one hyphen joined in `03-01`, see below |
 | `corpus/examples/` (49 files) | [DigitalDataChainConsortium/vdi2770](https://github.com/DigitalDataChainConsortium/vdi2770) @ `e47c13c`, `examples/` | **MIT**, © 2021 Johannes Schmidt | **No — byte-for-byte verbatim, SHA-256 per file in `corpus/MANIFEST.json`** |
+| `packages/vdi2770/src/vdi2770/validate/data/example/documentcontainer.zip` (in the engine's wheel, the single file and the browser page, for `check --example`) | the same repository @ `e47c13c`, `examples/container/documentcontainer.zip` | **MIT**, © 2021 Johannes Schmidt | **No** — byte for byte the corpus file, SHA-256 in `corpus/MANIFEST.json` |
 | `tests/data/oracle-messages.json` | English message bundles of the same project | **MIT**, © 2021 Johannes Schmidt | **Yes** — the message strings were extracted into a JSON list; no wording changed |
 | `packages/vdi2770/src/vdi2770/validate/data/rules.json` | this project | Apache-2.0 | n/a — titles and remedies are ours, checked against the reference's messages by `tests/test_catalogue.py::test_no_remedy_is_copied_from_the_reference_implementation`; its codes appear only in `refCodes`/`refKeys` as cross-references |
 | `docs/oracle-sweep.json` | produced by running the reference implementation over our containers | **derived from MIT** work, © 2021 Johannes Schmidt | **Yes** — it records message *codes* (`REP_038`) and nothing else. A test asserts no string in it is longer than a code, so their message text cannot drift into it |
@@ -25,7 +26,9 @@ whether we changed it.
 | Emscripten, the compiler and runtime that runtime was built with — in the browser page only | [emscripten-core/emscripten](https://github.com/emscripten-core/emscripten) @ `4.0.9` | **MIT** or University of Illinois/NCSA | No |
 | musl, the C library Emscripten carries — in the browser page only | [emscripten-core/emscripten](https://github.com/emscripten-core/emscripten) `system/lib/libc/musl` @ `4.0.9` | **MIT** | No |
 
-The corpus and the message list are **test material** and are in neither wheel.
+The corpus and the message list are **test material** and are in neither wheel,
+but for the one container above: the engine's wheel carries the reference
+implementation's example document container, for `check --example`.
 
 The browser page, `vdi2770.html`, is a release asset and is in no wheel and no
 sdist. It carries the engine's wheel contents, `xmlschema`, `elementpath` and the
@@ -123,8 +126,9 @@ This project is not endorsed by, affiliated with, or certified by the IDTA.
 
 ## MIT License — corpus and message list
 
-The following applies to `corpus/examples/` and `tests/data/oracle-messages.json`,
-both taken from `DigitalDataChainConsortium/vdi2770`:
+The following applies to `corpus/examples/`, the example container the engine's
+wheel carries, and `tests/data/oracle-messages.json`, all taken from
+`DigitalDataChainConsortium/vdi2770`:
 
 ```
 MIT License
