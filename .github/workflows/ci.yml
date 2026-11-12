@@ -33,7 +33,9 @@ concurrency:
 jobs:
   # `ubuntu-latest` now resolves to Ubuntu 26.04, where setup-python offers
   # neither 3.9 nor 3.13.2; pinned to 24.04, the image this project's releases
-  # have run on, until the matrix moves.
+  # have run on, until the matrix moves. One job is not pinned:
+  # `the-action-on-a-runner-as-it-comes` sets up no Python and runs on the
+  # runner a reader gets by default.
   # One Windows row beside the three Linux ones, on the interpreter in the
   # middle of the supported range.
   #
@@ -401,7 +403,9 @@ jobs:
   # no build. Every other use of the action here is preceded by both, so the line
   # a reader actually copies was the one nothing ran.
   the-action-on-a-runner-as-it-comes:
-    runs-on: ubuntu-24.04
+    # `ubuntu-latest`, not the pin above: the question is what the default
+    # runner a reader's workflow lands on does with the line they copy.
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       # The same question as above, asked again rather than passed between jobs:
