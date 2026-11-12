@@ -392,6 +392,16 @@ def _prefixed(skipped: int) -> str:
 
 _SPLIT = "of a split archive; this reader reads an archive that is one file"
 
+#: How a zip64 end record's bytes past its fixed fields are refused: an
+#: extensible data sector (4.3.14.3), or the fields of a later version of the
+#: record (4.3.14.2) -- structures APPNOTE defines, and this reader does not read.
+_PAST_FIXED = "which this reader does not read"
+
+#: How the refusals end that are this reader declining a structure APPNOTE
+#: defines -- a split archive (8.1, 8.2), or those bytes -- where every other
+#: refusal of an archive's end is the end saying two things, or nothing.
+_DECLINED = (_SPLIT, _PAST_FIXED)
+
 #: The fields of the end record a zip64 end record holds as well (4.4.21 to
 #: 4.4.24), and what each holds when it leaves its value to the zip64 record.
 _SHARED = (("number of entries on this disk", 0xFFFF), ("number of entries", 0xFFFF),
@@ -517,7 +527,7 @@ def _described(data: bytes, p: int):
             # version of the record (4.3.14.2): what the library's releases
             # disagree on reading, and nothing this reader reads.
             return (f"the zip64 end record carries {rec - at:,} bytes past its fixed fields, "
-                    "which this reader does not read")
+                    f"{_PAST_FIXED}")
         size, offset = struct.unpack_from("<2Q", data, at + 40)
         if size <= at:
             gap = at - size - offset

@@ -7,7 +7,11 @@ Sections through 0.7.0 had their wording tidied after their tags; the text each 
 Who should take this release: anyone who receives metadata saved in UTF-16
 without a byte order mark, and anyone who gates a build on the exit code for
 it: metadata in 16-bit code units that begins with neither a byte order mark
-nor an encoding declaration is `X1` now, where it was read and passed.
+nor an encoding declaration is `X1` now, where it was read and passed. And
+anyone who filters findings by `about`, or reads the text report's count of
+the errors that are this tool declining to look: the `Z1` finding for an
+archive split across several files, or for a zip64 end record carrying bytes
+past its fixed fields, is one of those now.
 
 - **Metadata in 16 bits with neither a byte order mark nor an encoding
   declaration is not well-formed.** XML 1.0 (4.3.3) makes it a fatal error
@@ -28,6 +32,17 @@ nor an encoding declaration is `X1` now, where it was read and passed.
   **This moves verdicts:** such metadata is `X1`, an error, where it drew no
   finding, and what the rest of its container drew is not reported while it
   does not parse, as with any `X1`.
+- **A split archive, or a zip64 end record carrying bytes past its fixed
+  fields, is this tool declining to look.** APPNOTE defines both (8.1, 8.2,
+  4.3.14.3), and the `Z1` finding said already, in this reader's words, that
+  this reader does not read them. Its `about` now says `tool` where it said
+  `container`, in the JSON report, and the text report, which is the
+  command's default output and what the Action's log and the browser page
+  show, counts it among the errors that are this tool declining to look.
+  Every other `Z1` reason is the archive's end saying two things, or
+  nothing, and stays the container's.
+  **This moves verdicts:** `about` alone, on those `Z1` findings. No rule,
+  severity or exit code moves with it.
 
 **If your build gates on the exit code, this is the paragraph for you.** A
 delivery whose metadata is in 16-bit code units and begins with neither a
