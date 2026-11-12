@@ -9,7 +9,15 @@ pip install vdi2770-validate
 
 That command means what it has always meant: it brings the whole tool, the
 `vdi2770-validate` command, and everything written against
-`import vdi2770_validate`. If that is what you came for, you are done — the
+`import vdi2770_validate`. The command checks a container and prints, for
+every finding, what is wrong, the evidence as read from the file, and how to
+fix it:
+
+```bash
+vdi2770-validate check YOUR-CONTAINER.zip
+```
+
+If that is what you came for, you are done — the
 [front page](https://github.com/dev365code/vdi2770-validate#readme) is where the
 tool is documented.
 

@@ -1,5 +1,10 @@
 # vdi2770
 
+**To check a container from the command line, install `vdi2770-validate`:**
+`pip install vdi2770-validate` gives the command
+`vdi2770-validate check YOUR-CONTAINER.zip`. `pip install vdi2770` installs
+the reader this page describes, and no command.
+
 Read a VDI 2770 handover-documentation container and get back a typed model —
 without extracting anything to disk, without opening a socket, and without
 importing anything outside the standard library.
