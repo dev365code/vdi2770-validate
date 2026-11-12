@@ -19,28 +19,32 @@ which the package carries.
   declaration is not well-formed.** XML 1.0 (4.3.3) makes it a fatal error
   for a document that begins with neither to be in any encoding but UTF-8.
   The parser read such a file as UTF-16 all the same, from its first bytes,
-  and the report found nothing wrong with it. It is `X1` now, saying so,
-  with the remedy a file in an encoding this reader does not read has: save
-  the metadata as UTF-8 (or UTF-16) and send it again. That holds whether it
-  begins with an element, white space, a comment or a processing
-  instruction, or with an XML declaration that names no encoding; one that
-  declares its encoding, or starts with a byte order mark, is read as
-  before, and `vdi2770.parse_xml` refuses such a document in the same
-  sentence. A file of that shape that was `X1` already, for something
-  further in it, gives this reason now -- one with white space before its XML
-  declaration said `XML or text declaration not at start of entity` -- and
-  one in 16 bits whose XML declaration is never closed says so, as it does
-  in every other encoding, where it said `unclosed token`.
+  and the report found nothing wrong with it. It is `X1` now, saying so.
+  That holds whether it begins with an element, white space, a comment or a
+  processing instruction, or with an XML declaration that names no
+  encoding; one that declares its encoding, or starts with a byte order
+  mark, is read as before, and `vdi2770.parse_xml` refuses such a document
+  in the same sentence. Its remedy is the one a file in an encoding this
+  reader does not read has, and that remedy now says to save the metadata
+  as UTF-8, or as UTF-16 with a byte order mark, and send it again, where it
+  said `UTF-8 (or UTF-16)`: saved again as UTF-16 without a mark, the file
+  would draw the same `X1`. A file of that shape that was `X1` already, for
+  something further in it, gives this reason now -- one with white space
+  before its XML declaration said
+  `XML or text declaration not at start of entity` -- and one in 16 bits
+  whose XML declaration is never closed says so, as it does in every other
+  encoding, where it said `unclosed token`.
   **This moves verdicts:** such metadata is `X1`, an error, where it drew no
   finding, and what the rest of its container drew is not reported while it
   does not parse, as with any `X1`.
 - **A split archive, or a zip64 end record carrying bytes past its fixed
   fields, is this tool declining to look.** APPNOTE defines both (8.1, 8.2,
-  4.3.14.3), and the `Z1` finding said already, in this reader's words, that
-  this reader does not read them. Its `about` now says `tool` where it said
-  `container`, in the JSON report, and the text report, which is the
-  command's default output and what the Action's log and the browser page
-  show, counts it among the errors that are this tool declining to look.
+  4.3.14.2, 4.3.14.3), and the `Z1` finding said already, in this reader's
+  words, that this reader does not read them. Its `about` now says `tool`
+  where it said `container`, in the JSON report, and the text report, which
+  is the command's default output and what the Action's log and the browser
+  page show, counts it among the errors that are this tool declining to
+  look.
   Every other `Z1` reason is the archive's end saying two things, or
   nothing, and stays the container's.
   **This moves verdicts:** `about` alone, on those `Z1` findings. No rule,
@@ -69,7 +73,7 @@ delivery whose metadata is in 16-bit code units and begins with neither a
 byte order mark nor an encoding declaration -- with an element, white space,
 a comment, a processing instruction, or an XML declaration that names no
 encoding, in either byte order -- exited `0` when nothing else was wrong with
-it, and exits `1` now. Nothing else exits differently.
+it, and exits `1` now. No other delivery exits differently.
 
 ## 1.0.3 — 2026-11-01
 

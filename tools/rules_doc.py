@@ -61,7 +61,7 @@ def lead(when):
 #: reader reads rather than of the requirement. The quoted phrases are the reader's own, and
 #: tests/test_the_rules_page_quotes_the_reader_on_a_zip_it_does_not_read.py holds them to its findings.
 NOTES = {
-    "Z1": ('Some of these reasons are this reader declining a structure the ZIP specification allows, not a fault in the file: an archive split across several files (APPNOTE 8.2) and a zip64 end record carrying extensible data (APPNOTE 4.3.14.3). The finding says so in its own words — "this reader reads an archive that is one file", "which this reader does not read" — and is `about: tool`, as this tool declining to look; every other `Z1` finding is about the container.'),
+    "Z1": ('Some of these reasons are this reader declining a structure the ZIP specification allows, not a fault in the file: an archive split across several files (APPNOTE 8.2) and a zip64 end record carrying bytes past its fixed fields, extensible data (APPNOTE 4.3.14.3) or the fields of a later version of the record (4.3.14.2). The finding says so in its own words — "this reader reads an archive that is one file", "which this reader does not read" — and is `about: tool`, as this tool declining to look; every other `Z1` finding is about the container.'),
 }
 
 

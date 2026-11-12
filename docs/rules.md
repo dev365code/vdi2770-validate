@@ -37,7 +37,7 @@ Where each layer stands:
 
 Reference implementation: `processor:ZU_MESSAGE_002`, `processor:ZU_MESSAGE_003` (displayed as `ZU_002`, `ZU_003`). Citing a key records that the other project checks something in the same area; it does not borrow its claim.
 
-Some of these reasons are this reader declining a structure the ZIP specification allows, not a fault in the file: an archive split across several files (APPNOTE 8.2) and a zip64 end record carrying extensible data (APPNOTE 4.3.14.3). The finding says so in its own words — "this reader reads an archive that is one file", "which this reader does not read" — and is `about: tool`, as this tool declining to look; every other `Z1` finding is about the container.
+Some of these reasons are this reader declining a structure the ZIP specification allows, not a fault in the file: an archive split across several files (APPNOTE 8.2) and a zip64 end record carrying bytes past its fixed fields, extensible data (APPNOTE 4.3.14.3) or the fields of a later version of the record (4.3.14.2). The finding says so in its own words — "this reader reads an archive that is one file", "which this reader does not read" — and is `about: tool`, as this tool declining to look; every other `Z1` finding is about the container.
 
 **Remedy.** A VDI 2770 container is a ZIP archive. Rebuild it with a standard ZIP tool and check the file was not truncated in transfer.
 
@@ -454,8 +454,8 @@ Reference implementation: `core:XmlReader_EX3`. Citing a key records that the ot
 
 A finding these lines do not name takes the remedy above.
 
-- When the finding says `the document is in <encoding>, as its first bytes say, and this reader does not read <encoding>`: Save the metadata as UTF-8 (or UTF-16) and send it again.
-- When the finding says `the document is in a 16-bit encoding, as its first bytes say, and begins with neither a byte order mark nor an encoding declaration`: Save the metadata as UTF-8 (or UTF-16) and send it again.
+- When the finding says `the document is in <encoding>, as its first bytes say, and this reader does not read <encoding>`: Save the metadata as UTF-8, or as UTF-16 with a byte order mark, and send it again.
+- When the finding says `the document is in a 16-bit encoding, as its first bytes say, and begins with neither a byte order mark nor an encoding declaration`: Save the metadata as UTF-8, or as UTF-16 with a byte order mark, and send it again.
 
 ### `X2` — The metadata file does not conform to the published VDI 2770 schema
 

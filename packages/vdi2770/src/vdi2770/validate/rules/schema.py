@@ -17,7 +17,10 @@ CORRECT_LISTED = (
 #: 16-bit one that begins with neither a byte order mark nor an encoding
 #: declaration. Its first bytes said what it is in (XML 1.0 Appendix F), so
 #: there is no position in it to fix, which is what `X1`'s own remedy says to do.
-RESAVE = "Save the metadata as UTF-8 (or UTF-16) and send it again."
+#: UTF-16 with a byte order mark: without one, or an encoding declaration, a
+#: document has to be in UTF-8 (4.3.3), and saved again in the 16 bits it was
+#: in, it would draw the same refusal.
+RESAVE = "Save the metadata as UTF-8, or as UTF-16 with a byte order mark, and send it again."
 
 
 def encoding_remedy(message):

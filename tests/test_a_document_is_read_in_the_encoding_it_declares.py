@@ -386,7 +386,7 @@ def test_a_document_in_an_encoding_this_reader_does_not_read_is_told_to_save_it_
     raw = _container(mark + _metadata(declared, "Technische Spezifikation").encode(codec))
     findings = check_bytes(raw, "unread.zip").findings
     assert [(f.rule.id, f.severity.value) for f in findings] == [("X1", "error")]
-    assert findings[0].fix == "Save the metadata as UTF-8 (or UTF-16) and send it again."
+    assert findings[0].fix == "Save the metadata as UTF-8, or as UTF-16 with a byte order mark, and send it again."
 
 
 #: What a document can begin with when it declares no encoding -- an element,
@@ -424,7 +424,7 @@ def test_a_document_in_16_bits_with_neither_a_mark_nor_an_encoding_declaration_i
     findings = check_bytes(raw, "undeclared.zip").findings
     assert [(f.rule.id, f.severity.value) for f in findings] == [("X1", "error")], f"{label}, {order}: {findings}"
     assert [f[1] for f in _findings(raw, "undeclared.zip")] == [SAID_FOR_SIXTEEN_BITS]
-    assert findings[0].fix == "Save the metadata as UTF-8 (or UTF-16) and send it again."
+    assert findings[0].fix == "Save the metadata as UTF-8, or as UTF-16 with a byte order mark, and send it again."
 
 
 @pytest.mark.parametrize("order,codec", SIXTEEN_BITS, ids=[b[0] for b in SIXTEEN_BITS])
