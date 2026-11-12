@@ -294,7 +294,11 @@ A finding these lines do not name takes the remedy above.
 
 Reference implementation: `core:DocumentVersion_VAL7`, `core:DocumentDescription_VAL2` (displayed as `DV_007`, `DD_002`). Citing a key records that the other project checks something in the same area; it does not borrow its claim.
 
-**Remedy.** Write the language as a two-letter ISO 639-1 code, or a three-letter ISO 639-2 code where no two-letter code exists. Regional forms such as de-DE do not belong here.
+**Remedy.** Write the language as a two-letter ISO 639-1 code, such as en or de, or a three-letter ISO 639-2 code where no two-letter code exists. Regional forms such as de-DE do not belong here.
+
+A finding these lines do not name takes the remedy above.
+
+- When the language is a regional form whose first part is a two-letter ISO 639-1 code, as `de-DE` is: Write the language as de, the two-letter ISO 639-1 code it begins with; the region after it does not belong here.
 
 ### `M6` — The document version declares no PDF file
 

@@ -148,7 +148,7 @@
       "severity": "error",
       "obligation": "reference",
       "title": "The language code is not an ISO 639 code",
-      "remedy": "Write the language as a two-letter ISO 639-1 code, or a three-letter ISO 639-2 code where no two-letter code exists. Regional forms such as de-DE do not belong here.",
+      "remedy": "Write the language as a two-letter ISO 639-1 code, such as en or de, or a three-letter ISO 639-2 code where no two-letter code exists. Regional forms such as de-DE do not belong here.",
       "refKeys": [
         "core:DocumentVersion_VAL7",
         "core:DocumentDescription_VAL2"
