@@ -299,6 +299,15 @@ _MARKS = ((b"\xef\xbb\xbf", "UTF-8", "utf-8", {"utf-8", "csutf8"}),
           (b"\xff\xfe", "UTF-16", "utf-16-le", {"utf-16", "csutf16", "utf-16le", "csutf16le"}),
           (b"\xfe\xff", "UTF-16", "utf-16-be", {"utf-16", "csutf16", "utf-16be", "csutf16be"}))
 
+#: How the first bytes say a document is in 16-bit code units when no byte
+#: order mark says so (Appendix F): its first character -- `<` or white space,
+#: all a document can begin with (productions 1, 22, 27 and 3) -- beside a zero
+#: byte, and the codec of that byte order.
+_SIXTEEN_BITS = ((b"<\x00", "utf-16-le"), (b" \x00", "utf-16-le"), (b"\t\x00", "utf-16-le"),
+                 (b"\r\x00", "utf-16-le"), (b"\n\x00", "utf-16-le"),
+                 (b"\x00<", "utf-16-be"), (b"\x00 ", "utf-16-be"), (b"\x00\t", "utf-16-be"),
+                 (b"\x00\r", "utf-16-be"), (b"\x00\n", "utf-16-be"))
+
 #: Half of a surrogate pair: a code point no document holds (production 2).
 _SURROGATE = re.compile("[\ud800-\udfff]")
 
@@ -310,7 +319,10 @@ def _readable(data: bytes) -> Union[bytes, str]:
     one of those -- or one that declares no encoding -- is handed over as the
     bytes it is. So is one that starts with a byte order mark: the declaration is
     looked for at the first byte, the mark settles the encoding before any
-    declaration is read (Appendix F), and expat holds the declaration to it.
+    declaration is read (Appendix F), and expat holds the declaration to it. One
+    in 16-bit code units with neither a mark nor an encoding declaration is not:
+    expat would read it as UTF-16, from its first bytes, and XML 1.0 (4.3.3)
+    makes that a fatal error -- a document with neither has to be in UTF-8.
 
     For any other encoding a declaration names, pyexpat lends expat a table it
     builds by decoding each byte on its own, which is a reading only where every
@@ -342,6 +354,13 @@ def _readable(data: bytes) -> Union[bytes, str]:
                                f"declares {name}; its declaration has to name the encoding "
                                f"the mark says it is in", 1, 0)
             return data
+    for first, codec in _SIXTEEN_BITS:
+        # Two zero bytes after the first character are UCS-4's, not a second one.
+        if (data.startswith(first) and data[2:4] != b"\x00\x00"
+                and _declaration(data, b"", codec) is None):
+            raise XmlError("the document is in a 16-bit encoding, as its first bytes say, and "
+                           "begins with neither a byte order mark nor an encoding declaration; "
+                           "a document with neither has to be in UTF-8", 1, 0)
     name = _declaration(data)
     if name is None:
         return data

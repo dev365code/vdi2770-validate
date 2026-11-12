@@ -18,8 +18,10 @@ any name the table in vdi2770/xmlread.py holds is read, and what the report
 quotes from it comes back unchanged. A name outside the table is X1 -- but for
 UTF-16 and its two byte orders, which the parser reads itself, and for the names
 a byte order mark's encoding goes by after the mark -- and so is a document in
-UCS-4 or EBCDIC, which says what it is in. And what the declaration says is still
-the whole question: bytes that are not the encoding it names are still `X1`.
+UCS-4 or EBCDIC, which says what it is in, and one in 16 bits that begins with
+neither a byte order mark nor an encoding declaration. And what the declaration
+says is still the whole question: bytes that are not the encoding it names are
+still `X1`.
 """
 from __future__ import annotations
 
@@ -32,6 +34,7 @@ import pytest
 from vdi2770_validate.runner import check_bytes
 
 from conftest import CLEAN_DOCUMENT
+from vdi2770_validate import cli
 from vdi2770_validate import report as rendering
 
 META = "VDI2770_Metadata.xml"
@@ -386,6 +389,107 @@ def test_a_document_in_an_encoding_this_reader_does_not_read_is_told_to_save_it_
     assert findings[0].fix == "Save the metadata as UTF-8 (or UTF-16) and send it again."
 
 
+#: What a document can begin with when it declares no encoding -- an element,
+#: white space (each of the four characters production 3 allows), a comment or
+#: a processing instruction (productions 1, 22 and 27), or an XML declaration
+#: that names no encoding (production 23 without 80) -- and the two byte orders
+#: of 16-bit code units, with no byte order mark before either.
+UNDECLARED = [("an element", ""), ("a space", " "), ("a tab", "\t"), ("a carriage return", "\r"),
+              ("a line feed", "\n"), ("a comment", "<!-- c -->"), ("a processing instruction", "<?vdi x?>"),
+              ("a declaration that names no encoding", '<?xml version="1.0"?>')]
+SIXTEEN_BITS = [("little-endian", "utf-16-le"), ("big-endian", "utf-16-be")]
+SAID_FOR_SIXTEEN_BITS = ("the document is in a 16-bit encoding, as its first bytes say, and begins with "
+                         "neither a byte order mark nor an encoding declaration; a document with neither "
+                         "has to be in UTF-8")
+
+
+def _undeclared(start: str) -> str:
+    """The sample's metadata with its declaration taken off and `start` first."""
+    text = _metadata("UTF-8", "Technische Spezifikation")
+    declaration = '<?xml version="1.0" encoding="UTF-8"?>'
+    assert text.startswith(declaration), "the premise"
+    return start + text[len(declaration):].lstrip("\r\n")
+
+
+@pytest.mark.parametrize("order,codec", SIXTEEN_BITS, ids=[b[0] for b in SIXTEEN_BITS])
+@pytest.mark.parametrize("label,start", UNDECLARED, ids=[u[0] for u in UNDECLARED])
+def test_a_document_in_16_bits_with_neither_a_mark_nor_an_encoding_declaration_is_not_well_formed(
+        label, start, order, codec):
+    """XML 1.0 (4.3.3): it is a fatal error for an entity which begins with
+    neither a byte order mark nor an encoding declaration to use an encoding
+    other than UTF-8. expat read such a document as UTF-16 all the same, from
+    its first bytes, and the report found nothing wrong with it. Its first bytes
+    say what it is in, so there is no position in it to fix: the remedy is the
+    one for a document in an encoding this reader does not read."""
+    raw = _container(_undeclared(start).encode(codec))
+    findings = check_bytes(raw, "undeclared.zip").findings
+    assert [(f.rule.id, f.severity.value) for f in findings] == [("X1", "error")], f"{label}, {order}: {findings}"
+    assert [f[1] for f in _findings(raw, "undeclared.zip")] == [SAID_FOR_SIXTEEN_BITS]
+    assert findings[0].fix == "Save the metadata as UTF-8 (or UTF-16) and send it again."
+
+
+@pytest.mark.parametrize("order,codec", SIXTEEN_BITS, ids=[b[0] for b in SIXTEEN_BITS])
+def test_a_document_in_16_bits_with_neither_a_mark_nor_an_encoding_declaration_exits_1(
+        order, codec, tmp_path, capsys):
+    """The number a build gates on: the sample, in 16 bits from its first `<`,
+    with nothing else wrong in it, exited `0`."""
+    path = tmp_path / "undeclared.zip"
+    path.write_bytes(_container(_undeclared("").encode(codec)))
+    assert cli.main(["check", str(path)]) == 1, capsys.readouterr().out
+
+
+#: The shapes around those that are read as they were: a declaration that
+#: names an encoding, with no mark -- `UTF-16` in either byte order, `UTF-16LE`
+#: and `UTF-16BE` each in its own -- a byte order mark, with a declaration or
+#: without one, and UTF-8, with neither, with a declaration and with a mark.
+READ_AS_BEFORE = [
+    ("UTF-16LE, declared UTF-16", b"", "UTF-16", "utf-16-le"),
+    ("UTF-16BE, declared UTF-16", b"", "UTF-16", "utf-16-be"),
+    ("UTF-16LE, declared UTF-16LE", b"", "UTF-16LE", "utf-16-le"),
+    ("UTF-16BE, declared UTF-16BE", b"", "UTF-16BE", "utf-16-be"),
+    ("UTF-16LE mark, declared UTF-16", b"\xff\xfe", "UTF-16", "utf-16-le"),
+    ("UTF-16BE mark, declared UTF-16", b"\xfe\xff", "UTF-16", "utf-16-be"),
+    ("UTF-16LE mark, no declaration", b"\xff\xfe", None, "utf-16-le"),
+    ("UTF-16BE mark, no declaration", b"\xfe\xff", None, "utf-16-be"),
+    ("UTF-8, no declaration", b"", None, "utf-8"),
+    ("UTF-8, declared UTF-8", b"", "UTF-8", "utf-8"),
+    ("UTF-8 mark, declared UTF-8", b"\xef\xbb\xbf", "UTF-8", "utf-8"),
+]
+
+
+@pytest.mark.parametrize("label,mark,declared,codec", READ_AS_BEFORE, ids=[r[0] for r in READ_AS_BEFORE])
+def test_a_document_with_a_mark_or_an_encoding_declaration_is_read_as_before(label, mark, declared, codec):
+    text = _metadata(declared or "UTF-8", "Technische Größe")
+    if declared is None:
+        declaration = '<?xml version="1.0" encoding="UTF-8"?>'
+        assert text.startswith(declaration), "the premise"
+        text = text[len(declaration):].lstrip("\r\n")
+    findings = _findings(_container(mark + text.encode(codec)), "read.zip")
+    assert "X1" not in [f[0] for f in findings], f"{label}: {findings}"
+    quoted = [f[1] for f in findings if f[0] == "M3"][0].split("'")[1]
+    assert quoted == "Technische Größe", quoted
+
+
+@pytest.mark.parametrize("declared,codec", [("UTF-16BE", "utf-16-le"), ("UTF-16LE", "utf-16-be")],
+                         ids=["UTF-16LE, declared UTF-16BE", "UTF-16BE, declared UTF-16LE"])
+def test_a_document_in_16_bits_that_declares_the_other_byte_order_is_refused_as_before(declared, codec):
+    """It begins with an encoding declaration, so it is not the document above:
+    expat holds the declaration to the first bytes, and the refusal is its own."""
+    raw = _container(_metadata(declared, "Technische Spezifikation").encode(codec))
+    findings = check_bytes(raw, "declared.zip").findings
+    assert [(f.rule.id, f.severity.value) for f in findings] == [("X1", "error")], findings
+    assert findings[0].detail != SAID_FOR_SIXTEEN_BITS and findings[0].fix is None, findings[0]
+
+
+def test_a_document_in_ucs4_that_begins_with_white_space_is_not_taken_for_16_bits():
+    """A space and a zero byte, as UTF-16LE begins -- and then two more zero
+    bytes, which no character in 16 bits has: in UCS-4 that is the space's
+    other half. Appendix F tells the two apart by the first four bytes."""
+    raw = _container(_undeclared(" ").encode("utf-32-le"))
+    x1 = [f for f in _findings(raw, "ucs4.zip") if f[0] == "X1"]
+    assert x1 and x1[0][1] != SAID_FOR_SIXTEEN_BITS, x1
+
+
 #: A byte order mark, the declaration that follows it, and what the file is in.
 #: The mark settles the encoding before any declaration is read (Appendix F),
 #: and the declaration still has to name the encoding the file is in (4.3.3).
@@ -472,8 +576,10 @@ def test_a_long_declaration_without_a_mark_is_read_in_the_encoding_it_names():
     assert quoted == "Technische Größe", quoted
 
 
-@pytest.mark.parametrize("mark,codec", [(b"", "utf-8"), (b"\xef\xbb\xbf", "utf-8"), (b"\xff\xfe", "utf-16-le")],
-                         ids=["no mark", "UTF-8 mark", "UTF-16LE mark"])
+@pytest.mark.parametrize("mark,codec", [(b"", "utf-8"), (b"\xef\xbb\xbf", "utf-8"), (b"\xff\xfe", "utf-16-le"),
+                                        (b"", "utf-16-le"), (b"", "utf-16-be")],
+                         ids=["no mark", "UTF-8 mark", "UTF-16LE mark", "UTF-16LE without a mark",
+                              "UTF-16BE without a mark"])
 def test_a_declaration_that_is_never_closed_is_not_well_formed(mark, codec):
     """A declaration ends with `?>` (production 23). One that never does is
     X1, saying so, on every Python -- the name it began to give is not a name

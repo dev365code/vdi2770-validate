@@ -451,6 +451,7 @@ Reference implementation: `core:XmlReader_EX3`. Citing a key records that the ot
 A finding these lines do not name takes the remedy above.
 
 - When the finding says `the document is in <encoding>, as its first bytes say, and this reader does not read <encoding>`: Save the metadata as UTF-8 (or UTF-16) and send it again.
+- When the finding says `the document is in a 16-bit encoding, as its first bytes say, and begins with neither a byte order mark nor an encoding declaration`: Save the metadata as UTF-8 (or UTF-16) and send it again.
 
 ### `X2` — The metadata file does not conform to the published VDI 2770 schema
 
