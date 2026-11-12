@@ -276,9 +276,10 @@ jobs:
   # It installs what is on the index today and then upgrades to the wheel that
   # is about to replace it, and the verdict is that the command still runs --
   # `pip check` calls a destroyed install healthy, so it is recorded and not
-  # believed. This cannot protect the reader's publish, which has already
-  # happened by the time both wheels exist; it protects the one people install
-  # by name, which is where every upgrade failure here has been.
+  # believed. Both publishes wait for it -- `publish-reader` and `publish-rules`
+  # name it in `needs:` -- so a failure here publishes neither; what it upgrades
+  # is the one people install by name, which is where every upgrade failure here
+  # has been.
   upgrade-gate:
     needs: [build-reader, build-rules]
     runs-on: ubuntu-24.04
