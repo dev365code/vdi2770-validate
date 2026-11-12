@@ -66,8 +66,10 @@ which the package carries.
 
 **If your build gates on the exit code, this is the paragraph for you.** A
 delivery whose metadata is in 16-bit code units and begins with neither a
-byte order mark nor an encoding declaration exited `0` when nothing else was
-wrong with it, and exits `1` now. Nothing else exits differently.
+byte order mark nor an encoding declaration -- with an element, white space,
+a comment, a processing instruction, or an XML declaration that names no
+encoding, in either byte order -- exited `0` when nothing else was wrong with
+it, and exits `1` now. Nothing else exits differently.
 
 ## 1.0.3 — 2026-11-01
 
