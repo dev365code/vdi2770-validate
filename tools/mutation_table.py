@@ -413,8 +413,8 @@ TABLE = [
 
     ("gates/the-wheel-carries-only-the-package",
      "packages/vdi2770/pyproject.toml",
-     '"vdi2770.validate" = ["data/*.json", "data/*.xsd"]',
-     '"vdi2770.validate" = ["data/*.json", "data/*.xsd"]\n\n'
+     '"vdi2770.validate" = ["data/*.json", "data/*.xsd", "data/example/*.zip"]',
+     '"vdi2770.validate" = ["data/*.json", "data/*.xsd", "data/example/*.zip"]\n\n'
      '[tool.setuptools.data-files]\n"share/vdi2770" = ["README.md"]',
      ["tools/check_wheel.py"],
      "NOTICE tells readers the MIT-derived oracle evidence is in the sdist and in "
@@ -2345,7 +2345,7 @@ PUBLISHING_PATH_ROWS = [
 
     ('release/the-notice-knows-what-the-wheel-carries',
      'packages/vdi2770/NOTICE',
-     'Two files, both under `vdi2770/validate/data/` in the wheel:',
+     'Three files, all under `vdi2770/validate/data/` in the wheel:',
      'None. This package contains no schema, no table, no corpus and no vendored text of any kind.',
      ['tools/check_wheel.py'],
      "the engine's wheel carries VDI's schema, redistributed under a "
@@ -4186,6 +4186,31 @@ TABLE += [
      "two-letter ISO 639-1 code, or a three-letter",
      ["tests/test_the_language_remedy_shows_what_a_code_looks_like.py::test_a_language_name_is_told_what_a_code_looks_like"],
      "english would be told to write a two-letter code without being shown one"),
+    ("cli/check-takes-the-example-or-paths",
+     "packages/vdi2770/src/vdi2770/validate/cli.py",
+     '        if args.cmd == "check" and bool(args.paths) == args.example:\n',
+     "        if False:\n",
+     ["tests/test_the_official_example_travels_with_the_command.py::test_check_takes_the_example_or_paths"],
+     "check given the example and a path would check one of them without a word about the other"),
+    ("cli/check-example-checks-the-example",
+     "packages/vdi2770/src/vdi2770/validate/cli.py",
+     "    if not args.example:\n        return _check(args, args.paths)\n",
+     "    if True:\n        return _check(args, args.paths)\n",
+     ["tests/test_the_official_example_travels_with_the_command.py::test_check_example_reports_on_the_example_and_exits_with_its_verdict"],
+     "check --example would check nothing and exit 0"),
+    ("cli/check-example-says-what-it-is-checking",
+     "packages/vdi2770/src/vdi2770/validate/cli.py",
+     "            print(EXAMPLE)\n",
+     "            pass\n",
+     ["tests/test_the_official_example_travels_with_the_command.py::test_check_example_says_what_it_is_checking"],
+     "the report would name a path inside the package as if the caller had given it"),
+    ("resources/the-example-is-copied-out-of-a-zip",
+     "packages/vdi2770/src/vdi2770/validate/resources.py",
+     '    with as_file(files(__package__) / "data" / "example" / EXAMPLE_FILE) as path:\n'
+     "        yield str(path)\n",
+     '    yield str(files(__package__) / "data" / "example" / EXAMPLE_FILE)\n',
+     ["tests/test_the_official_example_travels_with_the_command.py::test_the_example_is_read_out_of_a_zip_as_the_single_file_holds_it"],
+     "the single file would name a path inside itself that nothing can open"),
     ("reader/a-16-bit-document-that-declares-its-encoding-is-read",
      "packages/vdi2770/src/vdi2770/xmlread.py",
      '                and _declaration(data, b"", codec) is None):\n',

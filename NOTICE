@@ -18,9 +18,12 @@ both:
 
   * VDI's XML schema and the IDTA document class table ship inside `vdi2770`,
     under `vdi2770/validate/data/`.
-  * The reference implementation's corpus (`corpus/examples/`) and its message
-    list (`tests/data/oracle-messages.json`) are test material and are in
-    neither wheel; they are in this repository and in its sdist.
+  * One container of the reference implementation's corpus, its example
+    document container, ships inside `vdi2770` as well, under
+    `vdi2770/validate/data/example/`, for `vdi2770-validate check --example`.
+  * The rest of that corpus (`corpus/examples/`) and its message list
+    (`tests/data/oracle-messages.json`) are test material and are in neither
+    wheel; they are in this repository and in its sdist.
 
 The two distributions are released together under one version, so the notices
 that apply to a machine holding both are that pair read side by side.

@@ -296,7 +296,7 @@ def test_the_listing_cap_does_not_soften_the_exit_code(capsys, tmp_path):
 
 
 def test_json_over_several_paths_is_one_document_a_parser_accepts():
-    """`--json` is advertised as machine-readable and `paths` is `nargs="+"`.
+    """`--json` is advertised as machine-readable and `check` takes several paths.
     It printed one pretty-printed object per path with no separator, which is
     neither JSON nor NDJSON — and every `target` was the basename, so a sweep
     over `a/x.zip` and `b/x.zip` gave a consumer no way to tell them apart.

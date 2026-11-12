@@ -55,7 +55,7 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 vdi2770 = ["py.typed"]
-"vdi2770.validate" = ["data/*.json", "data/*.xsd"]
+"vdi2770.validate" = ["data/*.json", "data/*.xsd", "data/example/*.zip"]
 
 # How this package's own suite runs is in `pytest.ini` beside this file, not
 # here: it is not about packaging, and it has to keep working in an sdist that

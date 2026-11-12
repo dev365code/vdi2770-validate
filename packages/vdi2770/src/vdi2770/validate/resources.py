@@ -18,12 +18,14 @@ text.
 """
 from __future__ import annotations
 
+import contextlib
 import json
 import re
 from functools import cache
 from typing import Optional
 
 SCHEMA_FILE = "VDI2770_Schema_2019-08-23.xsd"
+EXAMPLE_FILE = "documentcontainer.zip"
 
 
 def _read(name: str) -> str:
@@ -75,3 +77,15 @@ def schema_stamp() -> Optional[str]:
 @cache
 def load_json(name: str) -> dict:
     return json.loads(_read(name))
+
+
+@contextlib.contextmanager
+def example_path():
+    """The example container this package carries, as a path the check can
+    open: the file itself where the package is a directory, and where it is in
+    a zip -- the single file -- a copy for as long as the block runs, because
+    there the example is not a file until something copies it out."""
+    from importlib.resources import as_file, files
+
+    with as_file(files(__package__) / "data" / "example" / EXAMPLE_FILE) as path:
+        yield str(path)

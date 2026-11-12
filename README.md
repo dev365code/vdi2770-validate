@@ -24,6 +24,7 @@ $ pip install vdi2770-validate
 
 > [!TIP]
 > No install for a first try: `uvx vdi2770-validate check YOUR-CONTAINER.zip` runs it in a throwaway environment.
+> No container to hand either: `vdi2770-validate check --example` checks the example the package carries, the reference implementation's own.
 
 VDI 2770 is how manufacturers hand over technical documentation in the process
 industry: PDFs bundled into ZIP "document containers" with an XML metadata file,

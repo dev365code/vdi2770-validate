@@ -17,6 +17,10 @@ fix it:
 vdi2770-validate check YOUR-CONTAINER.zip
 ```
 
+With no container to hand, `vdi2770-validate check --example` checks the
+example the package carries: the reference implementation's own document
+container.
+
 If that is what you came for, you are done — the
 [front page](https://github.com/dev365code/vdi2770-validate#readme) is where the
 tool is documented.
