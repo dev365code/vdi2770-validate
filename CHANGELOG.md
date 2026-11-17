@@ -2,7 +2,7 @@
 
 Sections through 0.7.0 had their wording tidied after their tags; the text each version carried when it was published is in that tag's own `CHANGELOG.md`. From 0.8.0 on, a released section is frozen at its tag and takes only appended `*(Correction ...)*` lines.
 
-## 1.1.0 — unreleased
+## 1.1.0 — 2026-11-18
 
 Who should take this release: anyone who receives metadata saved in UTF-16
 without a byte order mark, and anyone who gates a build on the exit code for
