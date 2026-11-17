@@ -41,12 +41,13 @@ which the package carries.
   said `tool`, the text report no longer counts it among the errors that are
   this tool declining to look, and the JSON report's `read.complete` is
   true where it was false. Nor does such a document count toward the
-  elements one run will read, so a later document that drew `X6` for that
+  elements a read may build, so a later document that drew `X6` for that
   budget is read now and judged.
   **This moves verdicts:** such metadata is `X1`, an error, where it drew no
-  finding or drew `X3` or `X6`, and what the rest of its container drew is
-  not reported while it does not parse, as with any `X1`; a later document
-  the run's budget of elements refused is read.
+  finding, or drew `X3`, or `X6` for holding more elements than this tool
+  models, and what the rest of its container drew is not reported while it
+  does not parse, as with any `X1`; a later document that drew `X6` for the
+  budget of elements is read and judged.
 - **A split archive, or a zip64 end record carrying bytes past its fixed
   fields, is this tool declining to look.** APPNOTE defines both (8.1, 8.2,
   4.3.14.2, 4.3.14.3), and the `Z1` finding said already, in this reader's
@@ -83,7 +84,9 @@ delivery whose metadata is in 16-bit code units and begins with neither a
 byte order mark nor an encoding declaration, whatever it begins with -- an
 element, a document type declaration, white space, a comment, a processing
 instruction, or an XML declaration that names no encoding, in either byte
-order -- exited `0` when nothing else was wrong with it, and exits `1` now.
+order -- exits `1` now where it exited `0`: by default, whenever nothing
+else in it was an error, whatever warnings and notes it drew, and with
+`--fail-on warning`, whenever nothing else in it was a warning or an error.
 No other delivery exits differently.
 
 ## 1.0.3 — 2026-11-01
